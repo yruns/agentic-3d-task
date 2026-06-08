@@ -1,0 +1,94 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# macOS
+.DS_Store
+
+.ccb
+
+# Git worktrees (isolated workspaces for parallel feature work)
+.worktrees/
+worktrees/
+
+# Virtual environments
+.venv/
+.venv-*/
+venv/
+ENV/
+
+.ttadk
+.codex
+.codex-home/
+.cursor
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Logs
+*.log
+logs/
+
+# Data: ignore every immediate child of data/ so large datasets stay out of git.
+# Use `data/*` (not `data/`) so sub-paths can be selectively re-included below.
+data/*
+data/nr3d/
+*.pkl
+*.pth
+*.pt
+
+# Exception: keep tracked metadata for the nav-plan dataset (README, human-QA verdicts).
+# Bulk synthetic JSONL + SG3D cache stay ignored via explicit subpatterns below.
+!data/navplan/
+data/navplan/synthetic/
+data/navplan/sg3d_cache/
+data/navplan/**/*.jsonl
+!data/navplan/human_qa/review_notes.jsonl
+
+# Runtime / experiment artifacts
+tmp/
+outputs/
+
+# Generated benchmark databases are large binary artifacts. Keep durable
+# summaries/docs in git; keep SQLite databases local unless explicitly archived.
+docs/benchmark/**/*.sqlite
+docs/benchmark/**/*.sqlite-*
+
+# External vendored repos (not submodules)
+external/
+
+# ConceptGraph pipeline outputs (generated data, not code)
+conceptgraph/configs/slam_pipeline/*.yaml
+!conceptgraph/configs/slam_pipeline/base.yaml
+
+# Bash scripts / scratch (tracked)
+
+# Per-feature git worktrees (created via using-git-worktrees skill)
+.worktrees/

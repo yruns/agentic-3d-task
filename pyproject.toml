@@ -1,0 +1,126 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "3dvlm-reasoning"
+version = "0.1.0"
+description = "Two-Stage 3D Scene Understanding with Evidence-Seeking VLM Agents"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Research Team", email = "research@example.com" }]
+keywords = ["3D", "VLM", "scene understanding", "visual reasoning", "agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "numpy>=1.24.0",
+    "pydantic>=2.0.0",
+    "langchain>=0.1.0",
+    "langchain-openai>=0.0.5",
+    "langchain-core>=0.1.0",
+    "openai>=1.0.0",
+    "pillow>=10.0.0",
+    "loguru>=0.7.0",
+    "tqdm>=4.65.0",
+    "scipy>=1.10.0",
+    "scikit-learn>=1.2.0",
+    "matplotlib>=3.7.0",
+    "opencv-python>=4.8.0",
+    "jsonschema>=4.0.0",
+    "plyfile>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.3.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.0.270",
+    "black>=24.0.0",
+    "mypy>=1.3.0",
+    "hypothesis>=6.75.0",
+]
+full = [
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
+    "open3d>=0.17.0",
+]
+agents = [
+    "deepagents>=0.4.0",
+    "openai-codex",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/research/3DVLMReasoning"
+"Documentation" = "https://github.com/research/3DVLMReasoning#readme"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/query_scene", "src/agents", "src/benchmarks", "src/utils"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/"]
+
+[tool.pytest.ini_options]
+testpaths = ["src"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"
+pythonpath = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310", "py311", "py312"]
+include = "\\.pyi?$"
+exclude = '''
+/(
+    \.git
+    | \.hatch
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+)/
+'''
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B", "C4", "UP"]
+ignore = [
+    "E501",   # line too long (handled by black)
+    "E402",   # module level import not at top (common in ML: conditional imports)
+    "E741",   # ambiguous variable name (l, O, I — common in math/ML)
+    "N806",   # variable in function should be lowercase (N, H, W — ML convention)
+    "N803",   # argument name should be lowercase (same reason)
+    "N802",   # function name should be lowercase (external API compat)
+    "N812",   # lowercase imported as non-lowercase
+    "N813",   # camelCase imported as lowercase
+    "N999",   # invalid module name
+    "B905",   # zip() without strict= (ML code: lengths always match)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["query_scene", "agents", "benchmarks", "utils", "conceptgraph"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+ignore_missing_imports = true
