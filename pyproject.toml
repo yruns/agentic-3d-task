@@ -24,20 +24,11 @@ classifiers = [
 
 dependencies = [
     "numpy>=1.24.0",
+    "scipy>=1.10.0",
     "pydantic>=2.0.0",
-    "langchain>=0.1.0",
+    "loguru>=0.7.0",
     "langchain-openai>=0.0.5",
     "langchain-core>=0.1.0",
-    "openai>=1.0.0",
-    "pillow>=10.0.0",
-    "loguru>=0.7.0",
-    "tqdm>=4.65.0",
-    "scipy>=1.10.0",
-    "scikit-learn>=1.2.0",
-    "matplotlib>=3.7.0",
-    "opencv-python>=4.8.0",
-    "jsonschema>=4.0.0",
-    "plyfile>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -50,14 +41,14 @@ dev = [
     "mypy>=1.3.0",
     "hypothesis>=6.75.0",
 ]
-full = [
-    "torch>=2.0.0",
-    "transformers>=4.30.0",
-    "open3d>=0.17.0",
+vision = [
+    "opencv-python>=4.8.0",
+    "pillow>=10.0.0",
+    "plyfile>=1.0.0",
 ]
-agents = [
-    "deepagents>=0.4.0",
-    "openai-codex",
+clip = [
+    "torch>=2.0.0",
+    "open-clip-torch>=2.20.0",
 ]
 
 [project.urls]
@@ -65,7 +56,7 @@ agents = [
 "Documentation" = "https://github.com/research/3DVLMReasoning#readme"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/query_scene", "src/agents", "src/benchmarks", "src/utils"]
+packages = ["src/keyframe"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/"]
@@ -117,7 +108,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["query_scene", "agents", "benchmarks", "utils", "conceptgraph"]
+known-first-party = ["keyframe"]
 
 [tool.mypy]
 python_version = "3.10"

@@ -92,3 +92,7 @@ conceptgraph/configs/slam_pipeline/*.yaml
 
 # Per-feature git worktrees (created via using-git-worktrees skill)
 .worktrees/
+
+# LLM secrets: real endpoints + API keys must never be committed.
+# Keep configs/llm.example.toml (placeholders) tracked instead.
+configs/llm.toml

@@ -1,0 +1,27 @@
+# LLM configuration template. Copy to configs/llm.toml and fill in real
+# endpoints + API keys. configs/llm.toml is gitignored.
+#
+# Each model has an Azure-compatible endpoint, an api_version, and one or more
+# keys. A model may define a weighted pool of keys for load balancing; a key
+# may override the model-level endpoint.
+
+default_model = "gemini-2.5-pro"
+
+# Example weighted pool: weight controls round-robin share; a per-key endpoint
+# overrides the model-level endpoint.
+[models."gemini-2.5-pro"]
+api_version = "2024-03-01-preview"
+temperature = 0.0
+timeout = 120
+keys = [
+    { api_key = "REPLACE_WITH_API_KEY", weight = 1, endpoint = "https://YOUR_ENDPOINT/openai/deployments/gpt_openapi" },
+    { api_key = "REPLACE_WITH_API_KEY", weight = 3, endpoint = "https://YOUR_ENDPOINT/v2/crawl" },
+]
+
+# Example single-key model.
+[models."gpt-5.2-2025-12-11"]
+endpoint = "https://YOUR_ENDPOINT/v2/crawl"
+api_version = "2024-03-01-preview"
+temperature = 0.0
+timeout = 120
+keys = [{ api_key = "REPLACE_WITH_API_KEY" }]
