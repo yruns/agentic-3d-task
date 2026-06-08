@@ -50,13 +50,16 @@ clip = [
     "torch>=2.0.0",
     "open-clip-torch>=2.20.0",
 ]
+codex = [
+    "openai-codex>=0.1.0b2",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/research/3DVLMReasoning"
 "Documentation" = "https://github.com/research/3DVLMReasoning#readme"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/keyframe"]
+packages = ["src/keyframe", "src/codex_agent"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/"]
@@ -108,7 +111,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["keyframe"]
+known-first-party = ["keyframe", "codex_agent"]
 
 [tool.mypy]
 python_version = "3.10"

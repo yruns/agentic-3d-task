@@ -1,0 +1,43 @@
+{
+  "run_id": "v1_codex_runtime_grounding_strat600_gpt54_20260608",
+  "fold": "v9_3_strat600 (canonical, 600)",
+  "workers": 50,
+  "model": "gpt-5.4-2026-03-05",
+  "leaderboard": {
+    "Overall": {
+      "n": 600,
+      "Acc@0.25": 0.6383,
+      "Acc@0.50": 0.6383,
+      "mean_iou": 0.6434
+    },
+    "Easy": {
+      "n": 290,
+      "Acc@0.25": 0.731,
+      "Acc@0.50": 0.731,
+      "mean_iou": 0.7343
+    },
+    "Hard": {
+      "n": 310,
+      "Acc@0.25": 0.5516,
+      "Acc@0.50": 0.5516,
+      "mean_iou": 0.5584
+    },
+    "View-Dep": {
+      "n": 211,
+      "Acc@0.25": 0.5166,
+      "Acc@0.50": 0.5166,
+      "mean_iou": 0.5232
+    },
+    "View-Indep": {
+      "n": 389,
+      "Acc@0.25": 0.7044,
+      "Acc@0.50": 0.7044,
+      "mean_iou": 0.7086
+    }
+  },
+  "failed_target_absent": [
+    "scannet/scene0578_00::18::13314",
+    "scannet/scene0353_00::5::27624"
+  ],
+  "infra_errors": 0
+}

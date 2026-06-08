@@ -1,0 +1,103 @@
+{
+  "run_id": "v1_codex_runtime_grounding_smoke10_20260608",
+  "fold": "first 10 of v9_3_strat600 (canonical)",
+  "metric": {
+    "n": 10,
+    "mean_iou": 0.7034,
+    "Acc@0.25": 0.7,
+    "Acc@0.50": 0.7,
+    "errors": 0
+  },
+  "per_sample": [
+    {
+      "sample_id": "scannet/scene0207_00::20::12189",
+      "status": "completed",
+      "selected_object_id": 20,
+      "iou": 1.0,
+      "confidence": 0.93,
+      "query": "The closet doors across from the bed.",
+      "turn_duration_ms": 8944
+    },
+    {
+      "sample_id": "scannet/scene0221_00::47::4274",
+      "status": "completed",
+      "selected_object_id": 6,
+      "iou": 0.0,
+      "confidence": 0.92,
+      "query": "The correct table is square and close to the door.",
+      "turn_duration_ms": 8027
+    },
+    {
+      "sample_id": "scannet/scene0246_00::5::12312",
+      "status": "completed",
+      "selected_object_id": 5,
+      "iou": 1.0,
+      "confidence": 0.97,
+      "query": "The lamp on the square bedside table.",
+      "turn_duration_ms": 16456
+    },
+    {
+      "sample_id": "scannet/scene0426_00::22::9868",
+      "status": "completed",
+      "selected_object_id": 22,
+      "iou": 1.0,
+      "confidence": 0.88,
+      "query": "the dark colored pillow in the corner.",
+      "turn_duration_ms": 28170
+    },
+    {
+      "sample_id": "scannet/scene0462_00::6::40854",
+      "status": "completed",
+      "selected_object_id": 6,
+      "iou": 1.0,
+      "confidence": 0.94,
+      "query": "CHoose the door next to the big grey box, NOT the one with the cardboard box iront of it.",
+      "turn_duration_ms": 8655
+    },
+    {
+      "sample_id": "scannet/scene0500_00::25::13471",
+      "status": "completed",
+      "selected_object_id": 25,
+      "iou": 1.0,
+      "confidence": 0.64,
+      "query": "The middle rectangular window on the wall left of the chalkboard.",
+      "turn_duration_ms": 11461
+    },
+    {
+      "sample_id": "scannet/scene0591_00::14::19171",
+      "status": "completed",
+      "selected_object_id": 16,
+      "iou": 0.0,
+      "confidence": 0.78,
+      "query": "The darker pillow, it is laying against the armrest.",
+      "turn_duration_ms": 9205
+    },
+    {
+      "sample_id": "scannet/scene0608_00::9::17679",
+      "status": "completed",
+      "selected_object_id": 9,
+      "iou": 1.0,
+      "confidence": 0.89,
+      "query": "Looking for a black ottoman, it's right in front of the love seat sofa with the green pillow",
+      "turn_duration_ms": 8465
+    },
+    {
+      "sample_id": "scannet/scene0653_00::18::29686",
+      "status": "completed",
+      "selected_object_id": 18,
+      "iou": 1.0,
+      "confidence": 0.9,
+      "query": "The desk on the right side of the room closest to the whiteboard",
+      "turn_duration_ms": 16769
+    },
+    {
+      "sample_id": "scannet/scene0699_00::26::40486",
+      "status": "completed",
+      "selected_object_id": 25,
+      "iou": 0.0335,
+      "confidence": 0.66,
+      "query": "the pillow on the side near the kitchen table.",
+      "turn_duration_ms": 15674
+    }
+  ]
+}

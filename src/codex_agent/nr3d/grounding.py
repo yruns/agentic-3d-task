@@ -1,0 +1,217 @@
+"""NR3D visual-grounding task: catalog-first proposal selection via Codex.
+
+The task presents the referring expression, a BEV render, and the scene's
+proposal catalog, and asks Codex to pick exactly one ``proposal_id`` (or ``-1``
+when the target is absent). For a ``source: gt`` pool the selected proposal's
+box is the prediction scored against ground truth.
+
+No ground-truth fields (the target id, category, or box) are ever placed in the
+prompt — only the user's query and the candidate catalog.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from typing import Literal
+
+from pydantic import BaseModel, Field, ValidationError
+
+from ..errors import CodexResponseError
+from ..json_extraction import extract_json_object
+from ..models import CodexSkill, CodexTurnRequest
+from .proposals import Proposal
+from .sample import Nr3dSample, Nr3dScene
+
+TASK_NAME = "nr3d_visual_grounding"
+_TARGET_ABSENT_ID = -1
+_DEFAULT_NOTE_CHARS = 220
+_DEFAULT_VISIBLE_PREVIEW = 8
+
+
+class Nr3dGroundingDecision(BaseModel):
+    """The strict JSON contract requested from Codex for one sample."""
+
+    model_config = {"extra": "forbid"}
+
+    proposal_id: int = Field(
+        description="Selected proposal id from the pool; -1 if the target is absent."
+    )
+    confidence: float = Field(ge=0.0, le=1.0)
+    summary: str
+    uncertainties: list[str] = Field(default_factory=list)
+    cited_frame_indices: list[int] = Field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class Nr3dGroundingOutcome:
+    """Parsed result of one grounding turn."""
+
+    proposal_id: int
+    selected_bbox_9dof: tuple[float, ...] | None
+    confidence: float
+    summary: str
+    uncertainties: tuple[str, ...] = field(default_factory=tuple)
+    cited_frame_indices: tuple[int, ...] = field(default_factory=tuple)
+
+    @property
+    def target_present(self) -> bool:
+        """Whether Codex claims the referred target exists in the pool."""
+        return self.proposal_id != _TARGET_ABSENT_ID
+
+    @property
+    def status(self) -> Literal["completed", "failed"]:
+        """``completed`` when a proposal was selected, else ``failed``."""
+        return "completed" if self.target_present else "failed"
+
+
+class Nr3dGroundingTask:
+    """A :class:`codex_agent.tasks.base.CodexTask` for one NR3D sample."""
+
+    def __init__(
+        self,
+        *,
+        sample: Nr3dSample,
+        scene: Nr3dScene,
+        skill: CodexSkill | None = None,
+        note_max_chars: int = _DEFAULT_NOTE_CHARS,
+        visible_frames_preview: int = _DEFAULT_VISIBLE_PREVIEW,
+    ) -> None:
+        self.sample = sample
+        self.scene = scene
+        self.skill = skill
+        self.note_max_chars = note_max_chars
+        self.visible_frames_preview = visible_frames_preview
+
+    @property
+    def task_name(self) -> str:
+        return TASK_NAME
+
+    def build_turn_request(self) -> CodexTurnRequest:
+        return CodexTurnRequest(
+            prompt=self._build_prompt(),
+            output_schema=Nr3dGroundingDecision.model_json_schema(),
+            skills=(self.skill,) if self.skill is not None else (),
+            image_paths=(self.scene.bev_image_path,),
+        )
+
+    def is_valid_response(self, response_text: str) -> bool:
+        try:
+            self._parse_decision(response_text)
+        except CodexResponseError:
+            return False
+        return True
+
+    def parse_response(self, response_text: str) -> Nr3dGroundingOutcome:
+        decision = self._parse_decision(response_text)
+        valid_ids = self.scene.proposal_pool.ids()
+        if (
+            decision.proposal_id != _TARGET_ABSENT_ID
+            and decision.proposal_id not in valid_ids
+        ):
+            raise CodexResponseError(
+                f"Codex selected proposal_id={decision.proposal_id}, which is not "
+                f"in the pool for scene {self.scene.scene_id}"
+            )
+        selected_bbox: tuple[float, ...] | None = None
+        if decision.proposal_id != _TARGET_ABSENT_ID:
+            selected_bbox = self.scene.proposal_pool.require(
+                decision.proposal_id
+            ).bbox_3d_9dof
+        return Nr3dGroundingOutcome(
+            proposal_id=decision.proposal_id,
+            selected_bbox_9dof=selected_bbox,
+            confidence=decision.confidence,
+            summary=decision.summary,
+            uncertainties=tuple(decision.uncertainties),
+            cited_frame_indices=tuple(decision.cited_frame_indices),
+        )
+
+    def _parse_decision(self, response_text: str) -> Nr3dGroundingDecision:
+        payload = extract_json_object(response_text)
+        try:
+            return Nr3dGroundingDecision.model_validate(payload)
+        except ValidationError as exc:
+            raise CodexResponseError(
+                f"Codex response does not match the grounding schema: {exc}"
+            ) from exc
+
+    def _build_prompt(self) -> str:
+        pool = self.scene.proposal_pool
+        category_lines = [
+            f"- {category}: {ids}" for category, ids in pool.ids_by_category().items()
+        ]
+        proposal_lines = [
+            self._format_proposal(proposal)
+            for proposal in sorted(pool.proposals, key=lambda p: p.proposal_id)
+        ]
+        schema = Nr3dGroundingDecision.model_json_schema()
+        return (
+            "You are solving one NR3D visual grounding sample using the Codex "
+            "Agent SDK.\n\n"
+            "Rules:\n"
+            "- Pick exactly one proposal id from the provided proposal pool.\n"
+            "- Use -1 only if the described target is absent from the pool.\n"
+            "- A top-down BEV image of the scene is attached; use it together "
+            "with the printed proposal metadata.\n"
+            "- Do not use benchmark ground-truth fields; none are provided.\n"
+            "- Return only one JSON object matching the schema. Do not write "
+            "files.\n\n"
+            "Task:\n"
+            f"- query: {self.sample.query}\n"
+            f"- scene_id: {self.scene.scene_id}\n"
+            f"- scene_category: {self.scene.scene_category or 'unknown'}\n"
+            f"- total_frames: {self._fmt(self.scene.total_frames)}\n"
+            f"- frame_id_range: {self._fmt_range(self.scene.frame_id_range)}\n\n"
+            "Proposals by category:\n"
+            + "\n".join(category_lines)
+            + "\n\nProposal pool:\n"
+            + "\n".join(proposal_lines)
+            + "\n\nOutput JSON schema:\n"
+            + json.dumps(schema, ensure_ascii=False)
+        )
+
+    def _format_proposal(self, proposal: Proposal) -> str:
+        cx, cy, cz, sx, sy, sz, rx, ry, rz = proposal.bbox_3d_9dof
+        enriched = (
+            f", enriched={proposal.enriched_category}"
+            if proposal.enriched_category
+            else ""
+        )
+        note = _truncate(
+            proposal.compact_note or proposal.enriched_category or "",
+            self.note_max_chars,
+        )
+        visible = proposal.visible_frame_ids
+        preview = list(visible[: self.visible_frames_preview])
+        return (
+            f"- #{proposal.proposal_id}: category={proposal.category}{enriched}; "
+            f"center=({cx:.3f},{cy:.3f},{cz:.3f}); "
+            f"size=({sx:.3f},{sy:.3f},{sz:.3f}); "
+            f"rot=({rx:.3f},{ry:.3f},{rz:.3f}); "
+            f"visible_frames={len(visible)} {preview}; "
+            f"note={note}"
+        )
+
+    @staticmethod
+    def _fmt(value: int | None) -> str:
+        return "unknown" if value is None else str(value)
+
+    @staticmethod
+    def _fmt_range(value: tuple[int, int] | None) -> str:
+        return "unknown" if value is None else f"[{value[0]}, {value[1]}]"
+
+
+def _truncate(value: str, max_chars: int) -> str:
+    normalized = " ".join(str(value).split())
+    if len(normalized) <= max_chars:
+        return normalized
+    return normalized[: max_chars - 3] + "..."
+
+
+__all__ = [
+    "TASK_NAME",
+    "Nr3dGroundingDecision",
+    "Nr3dGroundingOutcome",
+    "Nr3dGroundingTask",
+]
