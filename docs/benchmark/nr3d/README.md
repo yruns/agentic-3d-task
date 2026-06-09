@@ -18,6 +18,29 @@ Process archive for NR3D evaluations in `agentic-3d-task`. Mirrors the
 | [v2_codex_tools_grounding_strat600_20260609](v2_codex_tools_grounding_strat600_20260609.md) | 2026-06-09 | Codex agent VG | `CodexAgentRuntime` + 9 in-turn evidence tools + `view_image`, strat600, gpt-5.4, 40 workers — **PARTIAL 169/600 (halted: throughput collapse)** | **Acc@0.25 = 63.31%** on 169 (Easy 70.6 / Hard 56.0 / V-Dep 50.0 / V-Indep 71.0) — **flat vs v1 prompt-only floor.** Trace analysis: spatial/co-visible tools *are* used (V-Dep 19/22), but **91% of slow-tail shell calls are `SKILL.md` re-reads** (median 58×/case) — a re-read loop `project_doc_max_bytes=0` didn't stop. Fix v3: inline skill into prompt + strip ambient skills + turn hard-cap |
 | [v3_codex_tools_loopfix_strat600_20260609](v3_codex_tools_loopfix_strat600_20260609.md) | 2026-06-09 | Codex agent VG | `CodexAgentRuntime` + 9 tools + **loop fix** (inline playbook, tool-call guard, ≤768px images, model_context_window, reasoning ON), strat600, gpt-5.4, 40 workers — **COMPLETE 600/600** | **Acc@0.25 = 78.33%** (Easy 84.8 / Hard 72.3 / **V-Dep 71.1** / V-Indep 82.3) — **+14.5 pp Overall, +19.4 pp View-Dep vs v1.** Loop gone: median 5 tool calls/case (was 80–224), 23/600 guard interrupts, 0 failures. Tools finally pay off where designed (V-Dep/Hard). Code `d58328f` |
 
+## Codex agent VG — per-tier accuracy (canonical strat600)
+
+`Acc@0.25` (== `Acc@0.50`, pool is `source = gt`), oriented 3D IoU vs GT 9-DOF
+box, gpt-5.4 via ModelHub adapter. v1 = catalog-first **prompt-only**; v3 =
+v1 + 9 in-turn evidence tools + the SKILL.md-loop fix. Both are full 600/600 on
+the same fold, so this is apples-to-apples. (v2 added the tools but looped, so it
+only ran 169/600 flat at the v1 floor — see the timeline.)
+
+| Slice | n | **v3** (tools + loop fix) | v1 (prompt-only) | Δ |
+|---|---:|---:|---:|---:|
+| **Overall** | 600 | **78.33%** | 63.83% | **+14.50** |
+| Easy | 290 | 84.83% | 73.10% | +11.73 |
+| Hard | 310 | 72.26% | 55.16% | +17.10 |
+| **View-Dep** | 211 | **71.09%** | 51.66% | **+19.43** |
+| View-Indep | 389 | 82.26% | 70.44% | +11.82 |
+
+Every Δ exceeds the strat600 90 % variance band (Overall ±2.3 pp, Hard ±3.5 pp,
+View-Dep ±4.5 pp), so all gains are real. The largest lifts are on **View-Dep
+(+19.4 pp)** and **Hard (+17.1 pp)** — the slices the first-person /
+co-visible-frame / spatial-compare tools target. Full run + loop-health +
+operational notes:
+[v3_codex_tools_loopfix_strat600_20260609](v3_codex_tools_loopfix_strat600_20260609.md).
+
 ## Metric
 
 `hit@K`: fraction of fold samples where the selector's top-K returned frames
