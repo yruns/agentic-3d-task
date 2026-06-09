@@ -20,11 +20,19 @@ class _FakeRuntime:
     """A CodexExecutor that picks a fixed proposal and can fail N times first."""
 
     def __init__(
-        self, *, proposal_id: int, fail_times: int = 0, error: str = "boom"
+        self,
+        *,
+        proposal_id: int,
+        fail_times: int = 0,
+        error: str = "boom",
+        input_tokens: int | None = None,
+        cached_input_tokens: int | None = None,
     ) -> None:
         self.proposal_id = proposal_id
         self.fail_times = fail_times
         self.error = error
+        self.input_tokens = input_tokens
+        self.cached_input_tokens = cached_input_tokens
         self.calls = 0
 
     def execute(self, task: CodexTask[Any]) -> CodexTaskResult[Any]:
@@ -42,7 +50,12 @@ class _FakeRuntime:
             summary="fake",
         )
         turn = CodexTurnResult(
-            final_response="{}", metadata=CodexTurnMetadata(duration_ms=1)
+            final_response="{}",
+            metadata=CodexTurnMetadata(
+                duration_ms=1,
+                input_tokens=self.input_tokens,
+                cached_input_tokens=self.cached_input_tokens,
+            ),
         )
         return CodexTaskResult(task_name=task.task_name, outcome=outcome, turn=turn)
 
@@ -157,6 +170,19 @@ def test_duplicate_sample_ids_raise(nr3d_fixture: Nr3dFixture, tmp_path: Path) -
             output_dir=tmp_path / "out",
             runtime=_FakeRuntime(proposal_id=3),
         )
+
+
+def test_summary_reports_cache_stats(nr3d_fixture: Nr3dFixture, tmp_path: Path) -> None:
+    runtime = _FakeRuntime(proposal_id=3, input_tokens=20000, cached_input_tokens=7040)
+    summary = run_samples(
+        sample_ids=[nr3d_fixture.sample_id],
+        data_root=nr3d_fixture.data_root,
+        output_dir=tmp_path / "out",
+        runtime=runtime,
+    )
+    assert summary.cache_hit_rate == pytest.approx(1.0)
+    assert summary.mean_cache_ratio == pytest.approx(0.352)
+    assert summary.results[0].cached_input_tokens == 7040
 
 
 def test_load_sample_ids_list_of_strings(tmp_path: Path) -> None:

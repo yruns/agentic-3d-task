@@ -41,6 +41,33 @@ def test_prompt_contains_query_and_proposals_without_gt(
     assert "target_id" not in prompt
 
 
+def test_tool_mode_prompt_includes_cli_and_view_image(
+    nr3d_fixture: Nr3dFixture,
+) -> None:
+    sample = load_sample(nr3d_fixture.data_root, nr3d_fixture.sample_id)
+    scene = Nr3dScene.load(scene_dir_for(nr3d_fixture.data_root, nr3d_fixture.scene_id))
+    task = Nr3dGroundingTask(
+        sample=sample,
+        scene=scene,
+        tools_enabled=True,
+        scene_dir=nr3d_fixture.scene_dir,
+    )
+    prompt = task.build_turn_request().prompt
+    assert "python -m codex_agent.nr3d.tools" in prompt
+    assert str(nr3d_fixture.scene_dir) in prompt
+    assert "view_image" in prompt
+    assert "compare_proposals_spatial" in prompt
+    # Prompt-only "do not write files" rule must not be present in tool mode.
+    assert "Do not write\nfiles" not in prompt and "Do not write files" not in prompt
+
+
+def test_prompt_only_mode_keeps_no_write_rule(nr3d_fixture: Nr3dFixture) -> None:
+    task = _build_task(nr3d_fixture)
+    prompt = task.build_turn_request().prompt
+    assert "Do not write files" in prompt
+    assert "python -m codex_agent.nr3d.tools" not in prompt
+
+
 def test_is_valid_response(nr3d_fixture: Nr3dFixture) -> None:
     task = _build_task(nr3d_fixture)
     good = json.dumps(
@@ -74,6 +101,30 @@ def test_parse_selects_proposal_bbox(nr3d_fixture: Nr3dFixture) -> None:
     assert outcome.status == "completed"
     assert outcome.selected_bbox_9dof == nr3d_fixture.gt_bbox
     assert outcome.cited_frame_indices == (10,)
+
+
+def test_parse_rejects_missing_required_fields(nr3d_fixture: Nr3dFixture) -> None:
+    # The strict schema requires all fields; a terse {"proposal_id": 3} is invalid
+    # (the upstream's strict response_format prevents the model from sending it).
+    task = _build_task(nr3d_fixture)
+    with pytest.raises(CodexResponseError):
+        task.parse_response(json.dumps({"proposal_id": 3}))
+
+
+def test_parse_rejects_extra_keys(nr3d_fixture: Nr3dFixture) -> None:
+    task = _build_task(nr3d_fixture)
+    response = json.dumps(
+        {
+            "proposal_id": 7,
+            "confidence": 0.5,
+            "summary": "x",
+            "uncertainties": [],
+            "cited_frame_indices": [],
+            "reasoning": "extra",
+        }
+    )
+    with pytest.raises(CodexResponseError):
+        task.parse_response(response)
 
 
 def test_parse_target_absent(nr3d_fixture: Nr3dFixture) -> None:

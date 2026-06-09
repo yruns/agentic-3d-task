@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import threading
 import time
 import uuid
 from collections.abc import Callable, Mapping, Sequence
@@ -47,6 +48,23 @@ _RUN_HOME_SEED_FILES: tuple[str, ...] = (
     "config.toml",
     "installation_id",
     ".personality_migration",
+)
+
+#: Sub-directory of each run home used as an isolated ``HOME`` so the Codex
+#: app-server does not discover user/global skills under the real home.
+_ISOLATED_HOME_DIRNAME = ".home"
+
+#: Bundled ``.system`` skills the Codex app-server installs into every run home.
+#: They are irrelevant to focused task agents and are disabled (via the
+#: ``skills/config/write`` RPC) when ``restrict_skills_to_project`` is set, so the
+#: model is not tempted to read them. HOME isolation removes the much larger
+#: user/global skill set; these five are the only ones that live inside CODEX_HOME.
+_BUNDLED_SYSTEM_SKILLS: tuple[str, ...] = (
+    "imagegen",
+    "openai-docs",
+    "plugin-creator",
+    "skill-creator",
+    "skill-installer",
 )
 
 
@@ -98,6 +116,8 @@ class CodexAgentRuntime:
                     env=self._build_turn_env(run_home),
                 )
             ) as client:
+                if self.config.restrict_skills_to_project:
+                    self._disable_ambient_system_skills(client)
                 sandbox = self._sandbox(codex)
                 thread = client.thread_start(
                     model=self.config.model,
@@ -106,9 +126,9 @@ class CodexAgentRuntime:
                     cwd=str(self.config.project_root),
                 )
                 output_schema = dict(request.output_schema)
-                result = thread.run(
+                result = self._run_turn_bounded(
+                    thread,
                     self._build_turn_input(codex, request),
-                    cwd=str(self.config.project_root),
                     output_schema=output_schema,
                     sandbox=sandbox,
                 )
@@ -124,13 +144,15 @@ class CodexAgentRuntime:
                         retries + 1,
                         max_finalization_retries,
                     )
-                    result = thread.run(
+                    result = self._run_turn_bounded(
+                        thread,
                         [
                             codex.TextInput(
-                                self._finalization_prompt(result.final_response)
+                                self._finalization_prompt(
+                                    result.final_response, output_schema
+                                )
                             )
                         ],
-                        cwd=str(self.config.project_root),
                         output_schema=output_schema,
                         sandbox=sandbox,
                     )
@@ -149,6 +171,52 @@ class CodexAgentRuntime:
             final_response=str(final_response),
             metadata=self._build_metadata(result, attempts, run_home),
         )
+
+    def _run_turn_bounded(
+        self,
+        thread: Any,
+        turn_input: list[Any],
+        *,
+        output_schema: Mapping[str, Any],
+        sandbox: Any,
+    ) -> Any:
+        """Run one turn, interrupting it if it exceeds ``turn_timeout_s``.
+
+        Without a budget this is a plain blocking ``thread.run``. With a budget,
+        the turn is started via ``thread.turn`` (which exposes a handle), and a
+        watchdog requests interruption once the wall-clock budget elapses so a
+        runaway tool loop cannot stall the whole run. The (partial) result is
+        returned; the caller's finalization re-ask then collects a usable answer
+        from the evidence already gathered.
+        """
+        cwd = str(self.config.project_root)
+        schema = dict(output_schema)
+        timeout = self.config.turn_timeout_s
+        if timeout <= 0:
+            return thread.run(
+                turn_input, cwd=cwd, output_schema=schema, sandbox=sandbox
+            )
+        handle = thread.turn(turn_input, cwd=cwd, output_schema=schema, sandbox=sandbox)
+        interrupted = threading.Event()
+
+        def _interrupt() -> None:
+            interrupted.set()
+            try:
+                handle.interrupt()
+            except Exception as exc:  # interruption is best-effort
+                logger.warning("codex turn interrupt failed: {}", exc)
+
+        timer = threading.Timer(timeout, _interrupt)
+        timer.start()
+        try:
+            result = handle.run()
+        finally:
+            timer.cancel()
+        if interrupted.is_set():
+            logger.warning(
+                "codex turn exceeded {}s budget and was interrupted", timeout
+            )
+        return result
 
     def _validate_request(self, request: CodexTurnRequest) -> None:
         for skill in request.skills:
@@ -190,6 +258,8 @@ class CodexAgentRuntime:
             source = home / name
             if source.exists():
                 shutil.copy2(source, run_home / name)
+        if self.config.restrict_skills_to_project:
+            (run_home / _ISOLATED_HOME_DIRNAME).mkdir(parents=True, exist_ok=True)
         return run_home
 
     def _cleanup_run_home(self, run_home: Path) -> None:
@@ -204,6 +274,12 @@ class CodexAgentRuntime:
 
     def _build_turn_env(self, run_home: Path) -> dict[str, str]:
         env: dict[str, str] = {"CODEX_HOME": str(run_home)}
+        if self.config.restrict_skills_to_project:
+            # Isolate HOME so the app-server cannot discover user/global skills
+            # (``~/.agents/skills``, ``~/.codex/superpowers``); only the project's
+            # own repo skills remain. Merged onto os.environ by the SDK, so PATH
+            # / PYTHONPATH and other inherited vars are preserved.
+            env["HOME"] = str(run_home / _ISOLATED_HOME_DIRNAME)
         if not self.config.enable_prefix_cache:
             return env
         chat_run_id = sanitize_session_id(
@@ -221,27 +297,81 @@ class CodexAgentRuntime:
         return env
 
     def _build_config_overrides(self) -> tuple[str, ...]:
-        if not self.config.enable_prefix_cache:
-            return ()
-        provider_key = f"model_providers.{_toml_key_part(self.config.model_provider)}"
-        return (
-            f"{provider_key}.env_http_headers.extra="
-            f"{_toml_literal(MODELHUB_EXTRA_HEADER_ENV)}",
-            f"{provider_key}.env_http_headers.X-TT-LOGID="
-            f"{_toml_literal(MODELHUB_LOGID_ENV)}",
-        )
+        # Focused task agents must not inherit the repo's AGENTS.md (coding-agent
+        # rules) — injecting it makes the model behave like a coding agent and
+        # loop re-reading project docs instead of solving the task.
+        overrides: list[str] = ["project_doc_max_bytes=0"]
+        if self.config.enable_prefix_cache:
+            provider_key = (
+                f"model_providers.{_toml_key_part(self.config.model_provider)}"
+            )
+            overrides.append(
+                f"{provider_key}.env_http_headers.extra="
+                f"{_toml_literal(MODELHUB_EXTRA_HEADER_ENV)}"
+            )
+            overrides.append(
+                f"{provider_key}.env_http_headers.X-TT-LOGID="
+                f"{_toml_literal(MODELHUB_LOGID_ENV)}"
+            )
+        if (
+            self.config.sandbox == "workspace_write"
+            and self.config.sandbox_network_access
+        ):
+            overrides.append("sandbox_workspace_write.network_access=true")
+        if self.config.reasoning_effort:
+            overrides.append(f"model_reasoning_effort={self.config.reasoning_effort}")
+        return tuple(overrides)
+
+    def _disable_ambient_system_skills(self, client: Any) -> None:
+        """Disable the bundled ``.system`` skills for this turn.
+
+        HOME isolation (see :meth:`_build_turn_env`) stops the app-server from
+        discovering user/global skills, but it still installs a few bundled
+        ``.system`` skills into the run home. We disable them through the
+        official ``skills/config/write`` RPC so the model's skill catalog is
+        limited to the project's own skills. This is best-effort hardening:
+        a failure is logged but never aborts the turn (HOME isolation already
+        removes the bulk of the ambient skills).
+        """
+        raw_client = getattr(client, "_client", None)
+        request = getattr(raw_client, "request", None)
+        if request is None:
+            logger.warning(
+                "codex client exposes no request channel; "
+                "cannot disable ambient system skills"
+            )
+            return
+        try:
+            from openai_codex.generated.v2_all import SkillsConfigWriteResponse
+        except ImportError as exc:
+            logger.warning("cannot import SkillsConfigWriteResponse: {}", exc)
+            return
+        for name in _BUNDLED_SYSTEM_SKILLS:
+            try:
+                request(
+                    "skills/config/write",
+                    {"enabled": False, "name": name},
+                    response_model=SkillsConfigWriteResponse,
+                )
+            except Exception as exc:  # hardening RPC; degrade with visibility
+                logger.warning("could not disable system skill {}: {}", name, exc)
 
     def _sandbox(self, codex: ModuleType) -> Any:
         # Boundary to the untyped Codex SDK enum; members match SandboxMode.
         return getattr(codex.Sandbox, self.config.sandbox)
 
-    def _finalization_prompt(self, previous_response: str | None) -> str:
+    def _finalization_prompt(
+        self, previous_response: str | None, output_schema: Mapping[str, Any]
+    ) -> str:
         base = (
-            "The previous turn did not return the required structured final "
-            "answer. Using the evidence already present in this thread, return "
-            "only one JSON object that matches the requested output schema. Do "
-            "not include markdown, prose, or tool commands outside the JSON."
+            "Stop gathering evidence now. Do NOT run any more tools or shell "
+            "commands. Using only the evidence already present in this thread, "
+            "return one JSON object that matches the requested output schema as "
+            "your entire reply — no markdown, prose, or tool commands."
         )
+        required = _required_keys(output_schema)
+        if required:
+            base += f"\nThe JSON object must include these keys: {required}."
         preview = _truncate(previous_response or "", 600)
         if preview:
             return f"{base}\nPrevious non-JSON response: {preview}"
@@ -250,11 +380,14 @@ class CodexAgentRuntime:
     def _build_metadata(
         self, result: Any, attempts: Sequence[Any], run_home: Path
     ) -> CodexTurnMetadata:
+        input_tokens, cached_input_tokens = _extract_token_counts(result.usage)
         return CodexTurnMetadata(
             turn_id=result.id,
             status=_status_str(result.status),
             duration_ms=result.duration_ms,
             usage=_dump_usage(result.usage),
+            input_tokens=input_tokens,
+            cached_input_tokens=cached_input_tokens,
             run_home=str(run_home),
             attempts=tuple(
                 {
@@ -312,10 +445,34 @@ def _remove_tree_best_effort(path: Path, *, attempts: int = 4) -> None:
             time.sleep(0.25 * (attempt + 1))
 
 
+def _required_keys(output_schema: Mapping[str, Any]) -> list[str]:
+    required = output_schema.get("required")
+    if isinstance(required, list):
+        return [str(key) for key in required]
+    return []
+
+
 def _status_str(status: Any) -> str | None:
     if status is None:
         return None
     return str(getattr(status, "value", status))
+
+
+def _extract_token_counts(usage: Any) -> tuple[int | None, int | None]:
+    """Return ``(input_tokens, cached_input_tokens)`` from a Codex usage object.
+
+    Reads ``usage.last`` (a ``TokenUsageBreakdown``); returns ``(None, None)``
+    when the adapter/model did not report usage for the turn.
+    """
+    last = getattr(usage, "last", None)
+    if last is None:
+        return None, None
+    input_tokens = getattr(last, "input_tokens", None)
+    cached_input_tokens = getattr(last, "cached_input_tokens", None)
+    return (
+        int(input_tokens) if input_tokens is not None else None,
+        int(cached_input_tokens) if cached_input_tokens is not None else None,
+    )
 
 
 def _dump_usage(usage: Any) -> dict[str, Any] | None:

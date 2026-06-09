@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,71 @@ from typing import Any
 from ..errors import Nr3dDataError
 
 _BBOX_DOF = 9
+_BBOX_2D_LEN = 4
 _VALID_SOURCES: frozenset[str] = frozenset({"gt", "vdetr", "conceptgraph"})
+
+
+@dataclass(frozen=True)
+class FrameView:
+    """One proposal's 2D appearance in a single first-person frame."""
+
+    frame_id: int
+    bbox_2d: tuple[int, int, int, int]
+    raw_rgb_path: str
+
+    @property
+    def center_x(self) -> float:
+        """Horizontal pixel center of the 2D box (used for left/right voting)."""
+        return (float(self.bbox_2d[0]) + float(self.bbox_2d[2])) / 2.0
+
+
+@dataclass(frozen=True)
+class ProposalEnrichment:
+    """Structured VLM enrichment for a proposal (color/description/neighbors).
+
+    Modeled explicitly instead of a bare ``dict`` so downstream tools get a
+    typed, stable surface. Unknown/absent fields default to empty values.
+    """
+
+    category: str = ""
+    color: str = ""
+    description: str = ""
+    location: str = ""
+    usability: str = ""
+    nearby_objects: tuple[str, ...] = field(default_factory=tuple)
+
+    @classmethod
+    def from_mapping(cls, raw: Mapping[str, Any]) -> ProposalEnrichment:
+        """Build enrichment from an artifact mapping, coercing types safely."""
+        nearby = raw.get("nearby_objects")
+        nearby_objects = (
+            tuple(str(item) for item in nearby) if isinstance(nearby, list) else ()
+        )
+        return cls(
+            category=str(raw.get("category", "")),
+            color=str(raw.get("color", "")),
+            description=str(raw.get("description", "")),
+            location=str(raw.get("location", "")),
+            usability=str(raw.get("usability", "")),
+            nearby_objects=nearby_objects,
+        )
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return a JSON-serializable view, omitting empty fields."""
+        payload: dict[str, Any] = {}
+        if self.category:
+            payload["category"] = self.category
+        if self.color:
+            payload["color"] = self.color
+        if self.description:
+            payload["description"] = self.description
+        if self.location:
+            payload["location"] = self.location
+        if self.usability:
+            payload["usability"] = self.usability
+        if self.nearby_objects:
+            payload["nearby_objects"] = list(self.nearby_objects)
+        return payload
 
 
 @dataclass(frozen=True)
@@ -31,6 +96,8 @@ class Proposal:
     enriched_category: str | None = None
     compact_note: str | None = None
     visible_frame_ids: tuple[int, ...] = field(default_factory=tuple)
+    frame_views: Mapping[int, FrameView] = field(default_factory=dict)
+    enrichment: ProposalEnrichment | None = None
 
     def __post_init__(self) -> None:
         if len(self.bbox_3d_9dof) != _BBOX_DOF:
@@ -38,6 +105,15 @@ class Proposal:
                 f"proposal {self.proposal_id} bbox_3d_9dof must have "
                 f"{_BBOX_DOF} values, got {len(self.bbox_3d_9dof)}"
             )
+
+    @property
+    def position_3d(self) -> tuple[float, float, float]:
+        """The 3D box center ``(cx, cy, cz)`` (first three 9-DoF values)."""
+        return (
+            self.bbox_3d_9dof[0],
+            self.bbox_3d_9dof[1],
+            self.bbox_3d_9dof[2],
+        )
 
 
 @dataclass(frozen=True)
@@ -72,6 +148,14 @@ class ProposalPool:
         for proposal in self.proposals:
             grouped[proposal.category].append(proposal.proposal_id)
         return {category: sorted(ids) for category, ids in sorted(grouped.items())}
+
+    def frame_to_proposal_ids(self) -> dict[int, list[int]]:
+        """Return ``frame_id -> sorted proposal ids`` from per-frame 2D views."""
+        grouped: dict[int, list[int]] = defaultdict(list)
+        for proposal in self.proposals:
+            for frame_id in proposal.frame_views:
+                grouped[int(frame_id)].append(proposal.proposal_id)
+        return {frame_id: sorted(ids) for frame_id, ids in grouped.items()}
 
     def _by_id(self) -> dict[int, Proposal]:
         return {proposal.proposal_id: proposal for proposal in self.proposals}
@@ -133,6 +217,13 @@ def _parse_proposal(
             f"{_BBOX_DOF}-element list"
         )
     proposal_id = int(item["id"]) if "id" in item else index
+    frame_views = _parse_frame_views(item.get("frame_views"), proposal_id, source_path)
+    visible_from_views = sorted(frame_views)
+    visible_frame_ids = (
+        tuple(visible_from_views)
+        if visible_from_views
+        else tuple(sorted(frames_by_proposal.get(proposal_id, [])))
+    )
     return Proposal(
         proposal_id=proposal_id,
         bbox_3d_9dof=tuple(float(x) for x in bbox),
@@ -140,8 +231,59 @@ def _parse_proposal(
         score=float(item["score"]),
         enriched_category=_optional_str(item.get("enriched_category")),
         compact_note=_optional_str(item.get("compact_note")),
-        visible_frame_ids=tuple(sorted(frames_by_proposal.get(proposal_id, []))),
+        visible_frame_ids=visible_frame_ids,
+        frame_views=frame_views,
+        enrichment=_parse_enrichment(item.get("enrichment")),
     )
+
+
+def _parse_frame_views(
+    raw: Any, proposal_id: int, source_path: Path
+) -> dict[int, FrameView]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise Nr3dDataError(
+            f"{source_path}: proposal {proposal_id} frame_views must be an "
+            f"object, got {type(raw).__name__}"
+        )
+    frame_views: dict[int, FrameView] = {}
+    for frame_key, view in raw.items():
+        if not isinstance(view, dict):
+            raise Nr3dDataError(
+                f"{source_path}: proposal {proposal_id} frame_views[{frame_key!r}] "
+                f"must be an object, got {type(view).__name__}"
+            )
+        bbox_2d = view.get("bbox_2d")
+        if not isinstance(bbox_2d, list) or len(bbox_2d) != _BBOX_2D_LEN:
+            raise Nr3dDataError(
+                f"{source_path}: proposal {proposal_id} frame_views[{frame_key!r}]"
+                f".bbox_2d must be a {_BBOX_2D_LEN}-element list"
+            )
+        raw_rgb_path = view.get("raw_rgb_path")
+        if not isinstance(raw_rgb_path, str) or not raw_rgb_path:
+            raise Nr3dDataError(
+                f"{source_path}: proposal {proposal_id} frame_views[{frame_key!r}]"
+                ".raw_rgb_path must be a non-empty string"
+            )
+        frame_id = int(frame_key)
+        frame_views[frame_id] = FrameView(
+            frame_id=frame_id,
+            bbox_2d=(
+                int(round(float(bbox_2d[0]))),
+                int(round(float(bbox_2d[1]))),
+                int(round(float(bbox_2d[2]))),
+                int(round(float(bbox_2d[3]))),
+            ),
+            raw_rgb_path=raw_rgb_path,
+        )
+    return frame_views
+
+
+def _parse_enrichment(raw: Any) -> ProposalEnrichment | None:
+    if not isinstance(raw, dict) or not raw:
+        return None
+    return ProposalEnrichment.from_mapping(raw)
 
 
 def _invert_visibility(visibility_path: Path) -> dict[int, list[int]]:
@@ -176,4 +318,4 @@ def _optional_str(value: Any) -> str | None:
     return text or None
 
 
-__all__ = ["Proposal", "ProposalPool"]
+__all__ = ["FrameView", "ProposalEnrichment", "Proposal", "ProposalPool"]

@@ -66,8 +66,17 @@ class CodexTurnMetadata:
     status: str | None = None
     duration_ms: int | None = None
     usage: Mapping[str, Any] | None = None
+    input_tokens: int | None = None
+    cached_input_tokens: int | None = None
     run_home: str | None = None
     attempts: Sequence[Mapping[str, Any]] = field(default_factory=tuple)
+
+    @property
+    def cache_ratio(self) -> float | None:
+        """Fraction of input tokens served from the prompt cache, if known."""
+        if not self.input_tokens or self.cached_input_tokens is None:
+            return None
+        return self.cached_input_tokens / self.input_tokens
 
     def as_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable view of the metadata."""
@@ -76,6 +85,8 @@ class CodexTurnMetadata:
             "status": self.status,
             "duration_ms": self.duration_ms,
             "usage": dict(self.usage) if self.usage is not None else None,
+            "input_tokens": self.input_tokens,
+            "cached_input_tokens": self.cached_input_tokens,
             "run_home": self.run_home,
             "attempts": [dict(attempt) for attempt in self.attempts],
         }

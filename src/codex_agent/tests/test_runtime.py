@@ -16,6 +16,17 @@ from codex_agent.runtime import CodexAgentRuntime, _remove_tree_best_effort
 
 
 @dataclass
+class _FakeBreakdown:
+    input_tokens: int
+    cached_input_tokens: int
+
+
+@dataclass
+class _FakeUsage:
+    last: _FakeBreakdown
+
+
+@dataclass
 class _FakeResult:
     final_response: str | None
     id: str = "turn-1"
@@ -50,9 +61,23 @@ class _FakeThread:
         return self._results.pop(0)
 
 
+class _FakeRawClient:
+    """Stand-in for the low-level CodexClient that records RPC calls."""
+
+    def __init__(self) -> None:
+        self.requests: list[dict[str, Any]] = []
+
+    def request(
+        self, method: str, params: dict[str, Any], *, response_model: Any = None
+    ) -> None:
+        self.requests.append({"method": method, "params": params})
+        return None
+
+
 class _FakeClient:
     def __init__(self, thread: _FakeThread) -> None:
         self._thread = thread
+        self._client = _FakeRawClient()
         self.thread_start_kwargs: dict[str, Any] | None = None
 
     def __enter__(self) -> _FakeClient:
@@ -182,6 +207,75 @@ def test_prefix_cache_headers_present(
     assert any("env_http_headers" in override for override in fake.config_overrides)
 
 
+def test_workspace_write_network_override(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
+    config = CodexAgentConfig(
+        project_root=tmp_path,
+        codex_home=fake_codex_home,
+        sandbox="workspace_write",
+        sandbox_network_access=True,
+    )
+    runtime = CodexAgentRuntime(config)
+    monkeypatch.setattr(runtime, "_import_codex", lambda: fake)
+    runtime.run_turn(_request())
+    assert "sandbox_workspace_write.network_access=true" in fake.config_overrides
+
+
+def test_restrict_skills_isolates_home_and_disables_system_skills(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
+    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
+    runtime.run_turn(_request())
+    # HOME is isolated under the per-turn run home so user/global skills are hidden.
+    assert fake.env["HOME"].endswith("/" + runtime_module._ISOLATED_HOME_DIRNAME)
+    assert fake.env["HOME"].startswith(str(fake_codex_home / "runs"))
+    # Bundled .system skills are disabled via the skills/config/write RPC.
+    writes = [
+        call
+        for call in fake.client._client.requests
+        if call["method"] == "skills/config/write"
+    ]
+    assert {call["params"]["name"] for call in writes} == set(
+        runtime_module._BUNDLED_SYSTEM_SKILLS
+    )
+    assert all(call["params"]["enabled"] is False for call in writes)
+
+
+def test_no_skill_restriction_keeps_real_home(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
+    config = CodexAgentConfig(
+        project_root=tmp_path,
+        codex_home=fake_codex_home,
+        restrict_skills_to_project=False,
+    )
+    runtime = CodexAgentRuntime(config)
+    monkeypatch.setattr(runtime, "_import_codex", lambda: fake)
+    runtime.run_turn(_request())
+    assert "HOME" not in fake.env
+    assert not fake.client._client.requests
+
+
+def test_no_network_override_for_read_only(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
+    config = CodexAgentConfig(
+        project_root=tmp_path,
+        codex_home=fake_codex_home,
+        sandbox="read_only",
+        sandbox_network_access=True,
+    )
+    runtime = CodexAgentRuntime(config)
+    monkeypatch.setattr(runtime, "_import_codex", lambda: fake)
+    runtime.run_turn(_request())
+    assert not any("network_access" in o for o in fake.config_overrides)
+
+
 def test_missing_codex_home_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -227,6 +321,30 @@ def test_execute_runs_task_end_to_end(
     assert result.task_name == "demo"
     assert result.outcome == "OK-PAYLOAD"
     assert result.turn.final_response == "ok-payload"
+
+
+def test_run_turn_captures_cache_tokens(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    usage = _FakeUsage(
+        last=_FakeBreakdown(input_tokens=20000, cached_input_tokens=7040)
+    )
+    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}', usage=usage)])
+    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
+    result = runtime.run_turn(_request())
+    assert result.metadata.input_tokens == 20000
+    assert result.metadata.cached_input_tokens == 7040
+    assert result.metadata.cache_ratio == pytest.approx(0.352)
+
+
+def test_cache_ratio_none_without_usage(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}', usage=None)])
+    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
+    result = runtime.run_turn(_request())
+    assert result.metadata.cached_input_tokens is None
+    assert result.metadata.cache_ratio is None
 
 
 def test_remove_tree_best_effort_deletes_dir(tmp_path: Path) -> None:

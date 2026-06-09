@@ -60,6 +60,8 @@ class Nr3dSampleResult:
     error: str | None = None
     turn_duration_ms: int | None = None
     turn_usage: dict[str, Any] | None = None
+    input_tokens: int | None = None
+    cached_input_tokens: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable checkpoint view of the result."""
@@ -76,6 +78,8 @@ class Nr3dSampleResult:
             "error": self.error,
             "turn_duration_ms": self.turn_duration_ms,
             "turn_usage": self.turn_usage,
+            "input_tokens": self.input_tokens,
+            "cached_input_tokens": self.cached_input_tokens,
         }
 
     @classmethod
@@ -94,17 +98,21 @@ class Nr3dSampleResult:
             error=payload.get("error"),
             turn_duration_ms=payload.get("turn_duration_ms"),
             turn_usage=payload.get("turn_usage"),
+            input_tokens=payload.get("input_tokens"),
+            cached_input_tokens=payload.get("cached_input_tokens"),
         )
 
 
 @dataclass(frozen=True)
 class Nr3dRunSummary:
-    """Aggregate IoU metrics over a fold."""
+    """Aggregate IoU + prompt-cache metrics over a fold."""
 
     n: int
     mean_iou: float
     acc_025: float
     acc_050: float
+    cache_hit_rate: float = 0.0
+    mean_cache_ratio: float = 0.0
     results: tuple[Nr3dSampleResult, ...] = field(default_factory=tuple)
 
     def to_dict(self, *, include_per_sample: bool = True) -> dict[str, Any]:
@@ -113,6 +121,8 @@ class Nr3dRunSummary:
             "mean_iou": self.mean_iou,
             "Acc@0.25": self.acc_025,
             "Acc@0.50": self.acc_050,
+            "cache_hit_rate": self.cache_hit_rate,
+            "mean_cache_ratio": self.mean_cache_ratio,
         }
         if include_per_sample:
             payload["per_sample"] = [result.to_dict() for result in self.results]
@@ -126,13 +136,19 @@ def run_one_sample(
     runtime: CodexExecutor,
     pack_name: str = DEFAULT_PACK_NAME,
     skill: CodexSkill | None = None,
+    tools_enabled: bool = False,
 ) -> Nr3dSampleResult:
     """Execute and score a single NR3D sample."""
     sample = load_sample(data_root, sample_id, pack_name=pack_name)
-    scene = Nr3dScene.load(
-        scene_dir_for(data_root, sample.scene_id, pack_name=pack_name)
+    scene_dir = scene_dir_for(data_root, sample.scene_id, pack_name=pack_name)
+    scene = Nr3dScene.load(scene_dir)
+    task = Nr3dGroundingTask(
+        sample=sample,
+        scene=scene,
+        skill=skill,
+        tools_enabled=tools_enabled,
+        scene_dir=scene_dir,
     )
-    task = Nr3dGroundingTask(sample=sample, scene=scene, skill=skill)
     result = runtime.execute(task)
     outcome = result.outcome
     iou = _score_outcome(outcome, gt_bbox=sample.gt_bbox_3d_9dof)
@@ -152,6 +168,8 @@ def run_one_sample(
             if result.turn.metadata.usage is not None
             else None
         ),
+        input_tokens=result.turn.metadata.input_tokens,
+        cached_input_tokens=result.turn.metadata.cached_input_tokens,
     )
 
 
@@ -165,6 +183,7 @@ def run_samples(
     skill: CodexSkill | None = None,
     workers: int = 1,
     sample_retries: int = 2,
+    tools_enabled: bool = False,
 ) -> Nr3dRunSummary:
     """Run a fold with per-sample checkpointing and return aggregate metrics."""
     if workers <= 0:
@@ -195,6 +214,7 @@ def run_samples(
             pack_name=pack_name,
             skill=skill,
             sample_retries=sample_retries,
+            tools_enabled=tools_enabled,
         )
         _write_checkpoint(output_dir, result, pack_name)
 
@@ -226,6 +246,7 @@ def _run_with_retries(
     pack_name: str,
     skill: CodexSkill | None,
     sample_retries: int,
+    tools_enabled: bool,
 ) -> Nr3dSampleResult:
     last_error: Exception | None = None
     for attempt in range(sample_retries + 1):
@@ -236,6 +257,7 @@ def _run_with_retries(
                 runtime=runtime,
                 pack_name=pack_name,
                 skill=skill,
+                tools_enabled=tools_enabled,
             )
         except Exception as exc:
             last_error = exc
@@ -273,11 +295,22 @@ def _summarize(results: Sequence[Nr3dSampleResult]) -> Nr3dRunSummary:
     mean_iou = sum(ious) / denom if ious else 0.0
     acc_025 = sum(1 for v in ious if v >= _ACC_THRESHOLDS[0]) / denom
     acc_050 = sum(1 for v in ious if v >= _ACC_THRESHOLDS[1]) / denom
+
+    cache_ratios = [
+        result.cached_input_tokens / result.input_tokens
+        for result in results
+        if result.input_tokens and result.cached_input_tokens is not None
+    ]
+    measured = max(len(cache_ratios), 1)
+    cache_hit_rate = sum(1 for r in cache_ratios if r > 0.0) / measured
+    mean_cache_ratio = sum(cache_ratios) / measured if cache_ratios else 0.0
     return Nr3dRunSummary(
         n=n,
         mean_iou=mean_iou,
         acc_025=acc_025,
         acc_050=acc_050,
+        cache_hit_rate=cache_hit_rate,
+        mean_cache_ratio=mean_cache_ratio,
         results=tuple(results),
     )
 

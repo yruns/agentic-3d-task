@@ -19,9 +19,13 @@ from typing import Literal
 from .errors import CodexConfigError
 
 SandboxMode = Literal["read_only", "workspace_write", "full_access"]
+ReasoningEffort = Literal["", "minimal", "low", "medium", "high"]
 
 _VALID_SANDBOX_MODES: frozenset[str] = frozenset(
     {"read_only", "workspace_write", "full_access"}
+)
+_VALID_REASONING_EFFORTS: frozenset[str] = frozenset(
+    {"", "minimal", "low", "medium", "high"}
 )
 
 #: Repository root, derived from this file's location (``src/codex_agent/config.py``).
@@ -64,10 +68,28 @@ class CodexAgentConfig:
         model: Codex model name.
         model_provider: Codex model-provider key defined in ``config.toml``.
         sandbox: Codex sandbox mode for the turn. ``read_only`` is correct for
-            prompt-only tasks that never touch the filesystem.
+            prompt-only tasks that never touch the filesystem; ``workspace_write``
+            is required for tool-using turns that shell out and write annotated
+            images under the workspace.
+        sandbox_network_access: When ``True`` and ``sandbox`` is
+            ``workspace_write``, allow sandboxed commands to reach the network
+            (needed by ``keyframe_selector``, which calls the parsing LLM).
         enable_prefix_cache: Send ModelHub prefix-cache + log-id headers so the
             adapter can reuse the prompt prefix across turns.
         prefix_cache_session_id: Stable session id used for prefix caching.
+        turn_timeout_s: Wall-clock budget for one agentic turn. ``0`` disables
+            the budget; a positive value interrupts a turn that exceeds it so a
+            runaway tool loop cannot stall the run, after which a finalization
+            re-ask collects the answer from the evidence already gathered.
+        restrict_skills_to_project: When ``True`` the turn only exposes the
+            project's own skills (passed via ``SkillInput`` / discovered under
+            the repo ``.agents/skills``). Ambient skills are removed two ways:
+            the app-server runs with an isolated ``HOME`` so user/global skills
+            (``~/.agents/skills``, ``~/.codex/superpowers``) are not discovered,
+            and the bundled ``.system`` skills (skill-creator, using-superpowers,
+            ...) are disabled via the ``skills/config/write`` RPC. This stops the
+            model from compulsively re-reading dozens of irrelevant ``SKILL.md``
+            files (see ``docs/benchmark/nr3d`` trace analysis).
         keep_run_home: Keep the per-turn ``CODEX_HOME`` copy on disk for
             debugging instead of deleting it after the turn.
     """
@@ -77,8 +99,12 @@ class CodexAgentConfig:
     model: str = DEFAULT_CODEX_MODEL
     model_provider: str = DEFAULT_CODEX_MODEL_PROVIDER
     sandbox: SandboxMode = "read_only"
+    sandbox_network_access: bool = False
+    reasoning_effort: ReasoningEffort = ""
     enable_prefix_cache: bool = True
     prefix_cache_session_id: str = DEFAULT_PREFIX_CACHE_SESSION_ID
+    turn_timeout_s: float = 0.0
+    restrict_skills_to_project: bool = True
     keep_run_home: bool = False
 
     def __post_init__(self) -> None:
@@ -88,6 +114,15 @@ class CodexAgentConfig:
             raise CodexConfigError("model must be a non-empty string")
         if not self.model_provider:
             raise CodexConfigError("model_provider must be a non-empty string")
+        if self.reasoning_effort not in _VALID_REASONING_EFFORTS:
+            raise CodexConfigError(
+                f"reasoning_effort={self.reasoning_effort!r} is invalid; expected "
+                f"one of {sorted(_VALID_REASONING_EFFORTS)}"
+            )
+        if self.turn_timeout_s < 0:
+            raise CodexConfigError(
+                f"turn_timeout_s must be non-negative, got {self.turn_timeout_s}"
+            )
         if self.sandbox not in _VALID_SANDBOX_MODES:
             raise CodexConfigError(
                 f"sandbox={self.sandbox!r} is invalid; "
@@ -127,12 +162,24 @@ class CodexAgentConfig:
                 "CODEX_AGENT_MODEL_PROVIDER", DEFAULT_CODEX_MODEL_PROVIDER
             ),
             sandbox=_sandbox_from_env(os.environ.get("CODEX_AGENT_SANDBOX")),
+            sandbox_network_access=_env_bool(
+                os.environ.get("CODEX_AGENT_SANDBOX_NETWORK"), default=False
+            ),
+            reasoning_effort=_reasoning_effort_from_env(
+                os.environ.get("CODEX_AGENT_REASONING_EFFORT")
+            ),
             enable_prefix_cache=_env_bool(
                 os.environ.get("CODEX_AGENT_ENABLE_PREFIX_CACHE"), default=True
             ),
             prefix_cache_session_id=os.environ.get(
                 "CODEX_AGENT_PREFIX_CACHE_SESSION_ID",
                 DEFAULT_PREFIX_CACHE_SESSION_ID,
+            ),
+            turn_timeout_s=_env_float(
+                os.environ.get("CODEX_AGENT_TURN_TIMEOUT_S"), default=0.0
+            ),
+            restrict_skills_to_project=_env_bool(
+                os.environ.get("CODEX_AGENT_RESTRICT_SKILLS"), default=True
             ),
             keep_run_home=_env_bool(
                 os.environ.get("CODEX_AGENT_KEEP_RUN_HOME"), default=False
@@ -160,15 +207,40 @@ def _sandbox_from_env(raw: str | None) -> SandboxMode:
     return aliases[normalized]
 
 
+def _reasoning_effort_from_env(raw: str | None) -> ReasoningEffort:
+    if raw is None or not raw.strip():
+        return ""
+    normalized = raw.strip().lower()
+    if normalized not in _VALID_REASONING_EFFORTS:
+        raise CodexConfigError(
+            f"CODEX_AGENT_REASONING_EFFORT={raw!r} is invalid; expected one of "
+            f"{sorted(_VALID_REASONING_EFFORTS - {''})}"
+        )
+    # normalized is one of the valid literals here.
+    return normalized  # type: ignore[return-value]
+
+
 def _env_bool(raw: str | None, *, default: bool) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() not in {"0", "false", "no", "off", ""}
 
 
+def _env_float(raw: str | None, *, default: float) -> float:
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return float(raw)
+    except ValueError as exc:
+        raise CodexConfigError(
+            f"CODEX_AGENT_TURN_TIMEOUT_S={raw!r} must be a number"
+        ) from exc
+
+
 __all__ = [
     "CodexAgentConfig",
     "SandboxMode",
+    "ReasoningEffort",
     "sanitize_session_id",
     "DEFAULT_PROJECT_ROOT",
     "DEFAULT_CODEX_HOME",

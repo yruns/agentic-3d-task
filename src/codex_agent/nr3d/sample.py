@@ -10,16 +10,20 @@ paths embedded in the artifact (those point at the machine that generated them).
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from ..errors import Nr3dDataError
-from .proposals import ProposalPool
+from .proposals import FrameView, ProposalPool
+from .scene_assets import BevViewParams, CameraTrajectory
 
 DEFAULT_PACK_NAME = "pack_nr3d_v9_catalog_first"
 _BBOX_DOF = 9
 _BEV_FILENAME = "scene_bev_nr3d.png"
+_BEV_VIEW_FILENAME = "scene_bev_nr3d.view.json"
+_TRAJECTORY_FILENAME = "camera_trajectory.json"
+_RAW_DIRNAME = "raw"
 
 
 @dataclass(frozen=True)
@@ -109,9 +113,31 @@ class Nr3dScene:
     scene_id: str
     proposal_pool: ProposalPool
     bev_image_path: Path
+    scene_dir: Path = Path()
     scene_category: str = ""
     total_frames: int | None = None
     frame_id_range: tuple[int, int] | None = None
+    valid_frame_ids: tuple[int, ...] = field(default_factory=tuple)
+    camera_trajectory: CameraTrajectory | None = None
+    bev_view_params: BevViewParams | None = None
+
+    @property
+    def raw_dir(self) -> Path:
+        """Directory holding the scene's raw first-person RGB frames."""
+        return self.scene_dir.parent / _RAW_DIRNAME
+
+    def resolve_raw_rgb(self, frame_view: FrameView) -> Path:
+        """Resolve a frame view's raw RGB path to an absolute file path.
+
+        Prefers ``<scene_root>/raw/<basename>`` (robust to the absolute paths
+        embedded in the artifact, which point at the machine that produced it),
+        then falls back to the embedded path as written.
+        """
+        embedded = Path(frame_view.raw_rgb_path)
+        by_raw_dir = self.raw_dir / embedded.name
+        if by_raw_dir.exists():
+            return by_raw_dir
+        return embedded
 
     @classmethod
     def load(cls, scene_dir: Path) -> Nr3dScene:
@@ -133,13 +159,22 @@ class Nr3dScene:
         scene_category = str(catalog.get("scene_category") or "")
         total_frames = _optional_int(catalog.get("total_frames"))
         frame_id_range = _optional_int_pair(catalog.get("frame_id_range"))
+        valid_frame_ids = _coerce_valid_frame_ids(catalog.get("valid_frame_ids"))
         return cls(
             scene_id=str(catalog.get("scene_id") or pool.scene_id),
             proposal_pool=pool,
             bev_image_path=bev_image_path,
+            scene_dir=scene_dir,
             scene_category=scene_category,
             total_frames=total_frames,
             frame_id_range=frame_id_range,
+            valid_frame_ids=valid_frame_ids,
+            camera_trajectory=_load_optional_trajectory(
+                scene_dir / _TRAJECTORY_FILENAME
+            ),
+            bev_view_params=_load_optional_bev_view(
+                scene_dir / "bev" / _BEV_VIEW_FILENAME
+            ),
         )
 
 
@@ -187,6 +222,24 @@ def _load_optional_catalog(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise Nr3dDataError(f"{path}: scene catalog must be a JSON object")
     return payload
+
+
+def _load_optional_trajectory(path: Path) -> CameraTrajectory | None:
+    if not path.exists():
+        return None
+    return CameraTrajectory.load(path)
+
+
+def _load_optional_bev_view(path: Path) -> BevViewParams | None:
+    if not path.exists():
+        return None
+    return BevViewParams.load(path)
+
+
+def _coerce_valid_frame_ids(value: Any) -> tuple[int, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(sorted(int(frame_id) for frame_id in value))
 
 
 def _coerce_bbox_9dof(raw: Any, *, field_name: str) -> tuple[float, ...]:

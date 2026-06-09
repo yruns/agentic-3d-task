@@ -1,0 +1,71 @@
+{
+  "benchmark": "nr3d",
+  "fold": "v9_3_strat600",
+  "fold_total": 600,
+  "run_id": "v2_codex_tools_grounding_strat600_PARTIAL169_20260609",
+  "status": "PARTIAL_HALTED",
+  "completed": 169,
+  "reason_halted": "throughput collapse: turn-timeout=0 let ~4-6% runaway turns (1200-5190s) pin workers (head-of-line blocking); ETA ballooned to ~20h; halted by operator to report partial.",
+  "backend": "gpt-5.4-2026-03-05",
+  "workers": 40,
+  "sandbox": "workspace_write+network",
+  "metrics": {
+    "overall": {
+      "hit": 107,
+      "n": 169,
+      "acc_pct": 63.31,
+      "mean_iou": 0.6356
+    },
+    "easy": {
+      "hit": 60,
+      "n": 85,
+      "acc_pct": 70.59,
+      "mean_iou": 0.7091
+    },
+    "hard": {
+      "hit": 47,
+      "n": 84,
+      "acc_pct": 55.95,
+      "mean_iou": 0.5612
+    },
+    "view_dep": {
+      "hit": 31,
+      "n": 62,
+      "acc_pct": 50.0,
+      "mean_iou": 0.5034
+    },
+    "view_indep": {
+      "hit": 76,
+      "n": 107,
+      "acc_pct": 71.03,
+      "mean_iou": 0.7122
+    }
+  },
+  "v1_baseline_full600": {
+    "overall": 63.83,
+    "easy": 73.1,
+    "hard": 55.16,
+    "view_dep": 51.66,
+    "view_indep": 70.44
+  },
+  "duration_s": {
+    "median": 157,
+    "p90": 607,
+    "p95": 703,
+    "max": 5190,
+    "gt_600s": 18,
+    "gt_1200s": 6,
+    "gt_3000s": 4
+  },
+  "prompt_cache": {
+    "cached_input_tokens": 1867136,
+    "input_tokens": 2968237,
+    "cache_hit_pct": 62.9
+  },
+  "composition_bias": {
+    "easy_share_completed": 50.3,
+    "easy_share_fold": 48.3,
+    "view_dep_share_completed": 36.7,
+    "view_dep_share_fold": 35.2
+  }
+}
