@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..proposals import Proposal
 from ..sample import Nr3dScene
+from .image_io import downscale_for_view, scale_box
 from .models import ToolInputError
 
 #: High-contrast stroke colors cycled across the marked boxes (RGB).
@@ -106,10 +107,13 @@ def mark_frame_with_bbox(
         _draw_palette_bbox(image, box, color)
         _draw_label(image, f"#{proposal.proposal_id} {proposal.category}", box, color)
 
+    # Downscale before writing so the agent's view_image stays within the image
+    # token budget; report boxes in the written (scaled) image's coordinates.
+    rendered, scale = downscale_for_view(image)
     out_dir.mkdir(parents=True, exist_ok=True)
     ids_token = "_".join(str(p.proposal_id) for p in ordered)
     out_path = out_dir / f"{scene.scene_id}_frame_{args.frame_id}_ids_{ids_token}.png"
-    Image.fromarray(image).save(out_path, format="PNG")
+    Image.fromarray(rendered).save(out_path, format="PNG")
 
     return MarkFrameResult(
         frame_id=args.frame_id,
@@ -117,7 +121,8 @@ def mark_frame_with_bbox(
         visible_proposal_ids=tuple(p.proposal_id for p in ordered),
         left_to_right=tuple(f"#{p.proposal_id} {p.category}" for p in ordered),
         boxes_2d={
-            p.proposal_id: list(p.frame_views[args.frame_id].bbox_2d) for p in ordered
+            p.proposal_id: scale_box(p.frame_views[args.frame_id].bbox_2d, scale)
+            for p in ordered
         },
     )
 

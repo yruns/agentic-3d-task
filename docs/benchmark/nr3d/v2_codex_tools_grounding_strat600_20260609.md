@@ -26,6 +26,16 @@ BEV image.
 > loop. See [Trace analysis](#trace-analysis-the-skillmd-re-read-loop-answers-open-question-1).
 > This is a negative result with a clear, fixable cause.
 
+> **Update (2026-06-09, later): the cause is fixed.** The `SKILL.md` re-read loop
+> was root-caused and resolved — see
+> [`docs/codex_agent/skill_loop_and_reasoning_dropped_20260609.md` §Resolution](../../codex_agent/skill_loop_and_reasoning_dropped_20260609.md#resolution-landed--verified--2026-06-09).
+> Fixes: inline the tool playbook into the prompt (no on-disk `SKILL.md` to
+> re-read), an in-turn tool-call loop guard, ≤768 px viewed images, a real
+> `model_context_window`, reasoning kept ON. **10-case verification:** 0/10
+> loopers (was ~4/10), **0 real `SKILL.md` reads**, 2–14 tool calls/case (was
+> 80–224), Acc@0.25 **0.80** (was 0.633 partial). A full strat600 re-run with
+> this config is the next benchmark version (will get its own `vN_…` doc).
+
 ## Pre-run
 
 | Item | Value |

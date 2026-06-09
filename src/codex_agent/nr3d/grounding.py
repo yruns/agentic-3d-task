@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field, ValidationError
 from ..errors import CodexResponseError
 from ..json_extraction import extract_json_object
 from ..models import CodexSkill, CodexTurnRequest
+from .playbook import NR3D_TOOLS_PLAYBOOK
 from .proposals import Proposal
 from .sample import Nr3dSample, Nr3dScene
 
@@ -103,10 +104,19 @@ class Nr3dGroundingTask:
         return TASK_NAME
 
     def build_turn_request(self) -> CodexTurnRequest:
+        # Tool mode inlines the playbook into the prompt (see
+        # codex_agent.nr3d.playbook) and never attaches an on-disk skill:
+        # advertising a SKILL.md path re-introduces the unbounded re-read loop
+        # once Codex windows the context. Prompt-only mode may still attach the
+        # lightweight reasoning skill.
+        if self.tools_enabled:
+            skills: tuple[CodexSkill, ...] = ()
+        else:
+            skills = (self.skill,) if self.skill is not None else ()
         return CodexTurnRequest(
             prompt=self._build_prompt(),
             output_schema=Nr3dGroundingDecision.model_json_schema(),
-            skills=(self.skill,) if self.skill is not None else (),
+            skills=skills,
             image_paths=(self.scene.bev_image_path,),
         )
 
@@ -214,27 +224,25 @@ class Nr3dGroundingTask:
         if not self.tools_enabled or self.scene_dir is None:
             return ""
         return (
-            "\nEvidence tools (run in the shell; the attached skill explains the "
-            "full loop):\n"
+            "\nHow to run a tool (in the shell):\n"
             f"- scene_dir: {self.scene_dir}\n"
             f"- invoke: python -m {self.tool_cli_module} <tool> "
             f"--scene-dir {self.scene_dir} --args '<json>'\n"
-            "- tools: inspect_proposal, list_scene_proposals, select_by_proposal, "
-            "list_frame_proposals, keyframe_selector, mark_frame_with_bbox, "
-            "compare_proposals_spatial, compare_candidates_to_anchors, view_bev\n"
-            "- frame/BEV tools print an image_path; call view_image on it before "
-            "you rely on what it shows.\n"
-            "\nStay on task — hard limits:\n"
-            "- Do NOT read, cat, sed, grep, or open any SKILL.md, AGENTS.md, "
-            "README, docs, or source files. You already have every instruction "
-            "you need in this prompt and the attached skill.\n"
-            "- Use ONLY the nine NR3D tools above plus view_image. Ignore any "
-            "other skills, plugins, or playbooks.\n"
-            "- Never re-run a tool with the same arguments and never re-view an "
-            "image you have already seen.\n"
-            "- Decide within about 8 tool calls. Once you have inspected the top "
-            "candidates and confirmed with one frame or one spatial comparison, "
-            "output the final JSON immediately instead of gathering more.\n"
+            "- text tools print one JSON object; mark_frame_with_bbox and "
+            "view_bev also write a PNG and print its image_path — call "
+            "view_image on that path before you rely on what the frame shows.\n"
+            "\nYou are NOT exploring or editing a codebase — you are answering "
+            "one grounding question. Hard limits:\n"
+            "- Everything you need is in THIS message. Do NOT read, cat, sed, "
+            "head, grep, rg, or open any SKILL.md, AGENTS.md, README, docs, or "
+            "source file, and do NOT list or search the repository. There is no "
+            "separate skill file to consult.\n"
+            "- Use ONLY the nine NR3D tools plus view_image. Ignore any other "
+            "skills, plugins, or playbooks.\n"
+            "- Never re-run a tool with identical arguments and never re-view an "
+            "image you have already seen; if a result is empty or errors, change "
+            "approach instead of retrying.\n"
+            "\n" + NR3D_TOOLS_PLAYBOOK + "\n"
         )
 
     def _format_proposal(self, proposal: Proposal) -> str:

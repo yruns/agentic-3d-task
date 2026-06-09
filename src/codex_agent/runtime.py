@@ -23,6 +23,7 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -66,6 +67,71 @@ _BUNDLED_SYSTEM_SKILLS: tuple[str, ...] = (
     "skill-creator",
     "skill-installer",
 )
+
+#: Tool actions allowed *after* an interrupt request before the runtime gives up
+#: draining the stream. A cleanly-interrupted turn emits ``turn/completed`` within
+#: a step or two; this caps the rare case of a server that ignores the interrupt.
+_POST_INTERRUPT_GRACE_ACTIONS = 8
+
+
+@dataclass
+class _ToolCallLoopGuard:
+    """Bound a single turn's tool actions to break degenerate re-read loops.
+
+    Counts tool actions (shell commands, image views, MCP / dynamic tool calls)
+    as the turn streams and signals an interrupt when either the running total or
+    any single repeated action crosses its threshold. A threshold of ``0``
+    disables that check; ``active`` is ``False`` only when both are disabled.
+    """
+
+    max_tool_calls: int
+    max_repeated_calls: int
+    total: int = 0
+    _counts: dict[str, int] = field(default_factory=dict)
+
+    @property
+    def active(self) -> bool:
+        return self.max_tool_calls > 0 or self.max_repeated_calls > 0
+
+    def observe(self, signature: str) -> str | None:
+        """Record one tool action; return an interrupt reason when tripped."""
+        self.total += 1
+        repeats = self._counts.get(signature, 0) + 1
+        self._counts[signature] = repeats
+        if self.max_tool_calls > 0 and self.total > self.max_tool_calls:
+            return f"exceeded max_tool_calls={self.max_tool_calls}"
+        if self.max_repeated_calls > 0 and repeats >= self.max_repeated_calls:
+            return (
+                f"repeated an identical tool action {repeats} times "
+                f"(max_repeated_tool_calls={self.max_repeated_calls})"
+            )
+        return None
+
+
+@dataclass
+class _TurnInterruptState:
+    """One-shot interrupt flag shared between the stream loop and a watchdog."""
+
+    interrupted: bool = False
+    reason: str = ""
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+
+@dataclass(frozen=True)
+class _GuardedTurnResult:
+    """A ``TurnResult``-shaped value produced by the streaming guard path.
+
+    Exposes exactly the attributes :meth:`CodexAgentRuntime._build_metadata`
+    reads, so the guarded path and the plain ``thread.run`` fast path are
+    interchangeable downstream.
+    """
+
+    final_response: str | None
+    id: str | None = None
+    status: Any = None
+    error: Any = None
+    duration_ms: int | None = None
+    usage: Any = None
 
 
 class CodexAgentRuntime:
@@ -180,43 +246,135 @@ class CodexAgentRuntime:
         output_schema: Mapping[str, Any],
         sandbox: Any,
     ) -> Any:
-        """Run one turn, interrupting it if it exceeds ``turn_timeout_s``.
+        """Run one turn, bounding it against runaway tool loops.
 
-        Without a budget this is a plain blocking ``thread.run``. With a budget,
-        the turn is started via ``thread.turn`` (which exposes a handle), and a
-        watchdog requests interruption once the wall-clock budget elapses so a
-        runaway tool loop cannot stall the whole run. The (partial) result is
-        returned; the caller's finalization re-ask then collects a usable answer
-        from the evidence already gathered.
+        Codex's app-server silently *windows* the model's context once large
+        images enter it — older tool outputs and images are dropped — so a
+        "lost" model can no longer see its own recent actions and re-runs its
+        default orientation action (e.g. re-reading a skill file) indefinitely
+        (see ``docs/codex_agent/skill_loop_and_reasoning_dropped_20260609.md``).
+
+        When no bound is configured this is a plain blocking ``thread.run``. When
+        a tool-call cap (:attr:`CodexAgentConfig.max_tool_calls` /
+        ``max_repeated_tool_calls``) or a wall-clock budget
+        (``turn_timeout_s``) is set, the turn is streamed and interrupted the
+        moment a bound is crossed. The (partial) result is returned; the
+        caller's finalization re-ask then collects a usable answer from the
+        evidence already gathered.
         """
         cwd = str(self.config.project_root)
         schema = dict(output_schema)
+        guard = _ToolCallLoopGuard(
+            max_tool_calls=self.config.max_tool_calls,
+            max_repeated_calls=self.config.max_repeated_tool_calls,
+        )
         timeout = self.config.turn_timeout_s
-        if timeout <= 0:
+        if not guard.active and timeout <= 0:
             return thread.run(
                 turn_input, cwd=cwd, output_schema=schema, sandbox=sandbox
             )
         handle = thread.turn(turn_input, cwd=cwd, output_schema=schema, sandbox=sandbox)
-        interrupted = threading.Event()
+        return self._consume_guarded_turn(handle, guard=guard, timeout=timeout)
 
-        def _interrupt() -> None:
-            interrupted.set()
-            try:
-                handle.interrupt()
-            except Exception as exc:  # interruption is best-effort
-                logger.warning("codex turn interrupt failed: {}", exc)
+    def _consume_guarded_turn(
+        self, handle: Any, *, guard: _ToolCallLoopGuard, timeout: float
+    ) -> _GuardedTurnResult:
+        """Consume a turn's event stream, interrupting it when a bound trips.
 
-        timer = threading.Timer(timeout, _interrupt)
-        timer.start()
-        try:
-            result = handle.run()
-        finally:
-            timer.cancel()
-        if interrupted.is_set():
-            logger.warning(
-                "codex turn exceeded {}s budget and was interrupted", timeout
+        Returns a result shaped like the SDK's ``TurnResult`` (the attributes
+        :meth:`_build_metadata` reads). After an interrupt the model usually
+        emits ``turn/completed`` within a step or two; a bounded post-interrupt
+        grace caps the drain so a server that ignores the interrupt cannot stall
+        the run forever.
+        """
+        state = _TurnInterruptState()
+        watchdog: threading.Timer | None = None
+        if timeout > 0:
+            watchdog = threading.Timer(
+                timeout,
+                lambda: self._interrupt_turn(
+                    handle, state, f"exceeded turn_timeout_s={timeout:g}"
+                ),
             )
-        return result
+            watchdog.daemon = True
+            watchdog.start()
+
+        items: list[Any] = []
+        usage: Any = None
+        turn: Any = None
+        post_interrupt_actions = 0
+        stream = handle.stream()
+        try:
+            for event in stream:
+                method = getattr(event, "method", "")
+                payload = getattr(event, "payload", None)
+                if method == "turn/completed":
+                    turn = getattr(payload, "turn", None)
+                    continue
+                if method == "thread/tokenUsage/updated":
+                    usage = getattr(payload, "token_usage", usage)
+                    continue
+                if method != "item/completed":
+                    continue
+                item = getattr(payload, "item", None)
+                if item is None:
+                    continue
+                items.append(item)
+                signature = _tool_action_signature(item)
+                if signature is None:
+                    continue
+                if state.interrupted:
+                    post_interrupt_actions += 1
+                    if post_interrupt_actions > _POST_INTERRUPT_GRACE_ACTIONS:
+                        self._interrupt_turn(handle, state, state.reason)
+                        raise CodexTurnError(
+                            "codex turn kept calling tools after interrupt "
+                            f"({post_interrupt_actions} actions); abandoning turn "
+                            f"[{state.reason}]"
+                        )
+                    continue
+                reason = guard.observe(signature)
+                if reason is not None:
+                    self._interrupt_turn(handle, state, reason)
+        finally:
+            if watchdog is not None:
+                watchdog.cancel()
+            _close_stream(stream)
+
+        if turn is None:
+            raise CodexTurnError(
+                "codex turn stream ended without a turn/completed event"
+            )
+        if state.interrupted:
+            logger.warning(
+                "codex turn interrupted ({}); finalizing from evidence gathered "
+                "in {} tool actions",
+                state.reason,
+                guard.total,
+            )
+        return _GuardedTurnResult(
+            final_response=_final_response_from_items(items),
+            id=getattr(turn, "id", None),
+            status=getattr(turn, "status", None),
+            error=getattr(turn, "error", None),
+            duration_ms=getattr(turn, "duration_ms", None),
+            usage=usage,
+        )
+
+    def _interrupt_turn(
+        self, handle: Any, state: _TurnInterruptState, reason: str
+    ) -> None:
+        """Request a one-shot interrupt of an active turn (thread-safe)."""
+        with state.lock:
+            if state.interrupted:
+                return
+            state.interrupted = True
+            state.reason = reason
+        logger.warning("interrupting codex turn: {}", reason)
+        try:
+            handle.interrupt()
+        except Exception as exc:  # interruption is best-effort
+            logger.warning("codex turn interrupt request failed: {}", exc)
 
     def _validate_request(self, request: CodexTurnRequest) -> None:
         for skill in request.skills:
@@ -320,6 +478,8 @@ class CodexAgentRuntime:
             overrides.append("sandbox_workspace_write.network_access=true")
         if self.config.reasoning_effort:
             overrides.append(f"model_reasoning_effort={self.config.reasoning_effort}")
+        if self.config.model_context_window > 0:
+            overrides.append(f"model_context_window={self.config.model_context_window}")
         return tuple(overrides)
 
     def _disable_ambient_system_skills(self, client: Any) -> None:
@@ -443,6 +603,79 @@ def _remove_tree_best_effort(path: Path, *, attempts: int = 4) -> None:
                 )
                 return
             time.sleep(0.25 * (attempt + 1))
+
+
+def _tool_action_signature(item: Any) -> str | None:
+    """Return a stable signature for a tool-action thread item, else ``None``.
+
+    The loop guard uses this both to count tool actions and to detect identical
+    repeats. Recognises shell commands, image views, and MCP / dynamic tool
+    calls via the item's wire ``type`` discriminator; messages, reasoning, plans,
+    and other non-action items return ``None``.
+    """
+    root = getattr(item, "root", item)
+    item_type = getattr(root, "type", None)
+    if item_type == "commandExecution":
+        command = " ".join(str(getattr(root, "command", "")).split())
+        return f"cmd:{command}"
+    if item_type == "imageView":
+        # ``path`` is an ``AbsolutePathBuf`` (RootModel[str]); unwrap to the str.
+        return f"img:{_unwrap_root(getattr(root, 'path', ''))}"
+    if item_type == "mcpToolCall":
+        return (
+            f"mcp:{getattr(root, 'server', '')}:{getattr(root, 'tool', '')}:"
+            f"{_compact_json(getattr(root, 'arguments', None))}"
+        )
+    if item_type == "dynamicToolCall":
+        return (
+            f"dyn:{getattr(root, 'tool', '')}:"
+            f"{_compact_json(getattr(root, 'arguments', None))}"
+        )
+    return None
+
+
+def _final_response_from_items(items: Sequence[Any]) -> str | None:
+    """Extract the model's final answer text from completed thread items.
+
+    Mirrors the SDK's own ``agentMessage`` handling: prefer the most recent
+    ``final_answer`` phase message, else fall back to the most recent phase-less
+    agent message.
+    """
+    last_unknown_phase: str | None = None
+    for item in reversed(list(items)):
+        root = getattr(item, "root", item)
+        if getattr(root, "type", None) != "agentMessage":
+            continue
+        phase = getattr(root, "phase", None)
+        phase_value = getattr(phase, "value", phase)
+        text = getattr(root, "text", None)
+        if phase_value == "final_answer":
+            return text
+        if phase_value is None and last_unknown_phase is None:
+            last_unknown_phase = text
+    return last_unknown_phase
+
+
+def _unwrap_root(value: Any) -> str:
+    """Return the inner string of a ``RootModel[str]`` (or ``str(value)``)."""
+    return str(getattr(value, "root", value))
+
+
+def _compact_json(value: Any) -> str:
+    try:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _close_stream(stream: Any) -> None:
+    close = getattr(stream, "close", None)
+    if close is None:
+        return
+    try:
+        close()
+    except Exception as exc:  # cleanup must not mask the turn's own outcome
+        logger.debug("closing codex turn stream failed: {}", exc)
 
 
 def _required_keys(output_schema: Mapping[str, Any]) -> list[str]:

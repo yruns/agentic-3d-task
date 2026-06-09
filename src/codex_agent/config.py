@@ -81,6 +81,21 @@ class CodexAgentConfig:
             the budget; a positive value interrupts a turn that exceeds it so a
             runaway tool loop cannot stall the run, after which a finalization
             re-ask collects the answer from the evidence already gathered.
+        max_tool_calls: Maximum tool actions (shell commands, image views, MCP /
+            dynamic tool calls) the model may take in one turn before the runtime
+            interrupts it. ``0`` disables the cap. This is the reliable backstop
+            for the degenerate re-read loop that the wall-clock budget could not
+            stop (the SDK ``turn_interrupt`` lands cleanly between the quick
+            shell steps of a loop). A finalization re-ask then collects the
+            answer from the evidence already gathered.
+        max_repeated_tool_calls: Interrupt the turn once the *same* tool action
+            (identical command / image path / tool+args) has occurred this many
+            times. ``0`` disables it. Catches the pathological "run the identical
+            command forever" rut directly, independent of the total cap.
+        model_context_window: When positive, override Codex's
+            ``model_context_window`` for the (custom) model name. Codex falls
+            back to a conservative default for unrecognised model names; setting
+            the real window is config hygiene. ``0`` leaves Codex's default.
         restrict_skills_to_project: When ``True`` the turn only exposes the
             project's own skills (passed via ``SkillInput`` / discovered under
             the repo ``.agents/skills``). Ambient skills are removed two ways:
@@ -104,6 +119,9 @@ class CodexAgentConfig:
     enable_prefix_cache: bool = True
     prefix_cache_session_id: str = DEFAULT_PREFIX_CACHE_SESSION_ID
     turn_timeout_s: float = 0.0
+    max_tool_calls: int = 0
+    max_repeated_tool_calls: int = 0
+    model_context_window: int = 0
     restrict_skills_to_project: bool = True
     keep_run_home: bool = False
 
@@ -122,6 +140,20 @@ class CodexAgentConfig:
         if self.turn_timeout_s < 0:
             raise CodexConfigError(
                 f"turn_timeout_s must be non-negative, got {self.turn_timeout_s}"
+            )
+        if self.max_tool_calls < 0:
+            raise CodexConfigError(
+                f"max_tool_calls must be non-negative, got {self.max_tool_calls}"
+            )
+        if self.max_repeated_tool_calls < 0:
+            raise CodexConfigError(
+                "max_repeated_tool_calls must be non-negative, got "
+                f"{self.max_repeated_tool_calls}"
+            )
+        if self.model_context_window < 0:
+            raise CodexConfigError(
+                "model_context_window must be non-negative, got "
+                f"{self.model_context_window}"
             )
         if self.sandbox not in _VALID_SANDBOX_MODES:
             raise CodexConfigError(
@@ -177,6 +209,15 @@ class CodexAgentConfig:
             ),
             turn_timeout_s=_env_float(
                 os.environ.get("CODEX_AGENT_TURN_TIMEOUT_S"), default=0.0
+            ),
+            max_tool_calls=_env_int(
+                os.environ.get("CODEX_AGENT_MAX_TOOL_CALLS"), default=0
+            ),
+            max_repeated_tool_calls=_env_int(
+                os.environ.get("CODEX_AGENT_MAX_REPEATED_TOOL_CALLS"), default=0
+            ),
+            model_context_window=_env_int(
+                os.environ.get("CODEX_AGENT_MODEL_CONTEXT_WINDOW"), default=0
             ),
             restrict_skills_to_project=_env_bool(
                 os.environ.get("CODEX_AGENT_RESTRICT_SKILLS"), default=True
@@ -235,6 +276,15 @@ def _env_float(raw: str | None, *, default: float) -> float:
         raise CodexConfigError(
             f"CODEX_AGENT_TURN_TIMEOUT_S={raw!r} must be a number"
         ) from exc
+
+
+def _env_int(raw: str | None, *, default: int) -> int:
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise CodexConfigError(f"expected an integer, got {raw!r}") from exc
 
 
 __all__ = [

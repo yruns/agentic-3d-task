@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..proposals import Proposal
 from ..sample import Nr3dScene
 from ..scene_assets import BevViewParams
+from .image_io import downscale_for_view
 from .models import ToolInputError
 
 _HIGHLIGHT_RENDERER_VERSION = "v1"
@@ -143,7 +144,9 @@ def _render_highlighted_bev(
             continue
         _draw_marker(image, pixel, f"#{proposal.proposal_id} {proposal.category}")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    cv2.imwrite(str(out_path), image)
+    # Keep the written overlay within the view_image token budget.
+    rendered, _ = downscale_for_view(image)
+    cv2.imwrite(str(out_path), rendered)
 
 
 def _project_to_bev(

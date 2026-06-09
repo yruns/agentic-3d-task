@@ -36,9 +36,6 @@ from ..runtime import CodexAgentRuntime
 DEFAULT_SKILL_PATH = (
     DEFAULT_PROJECT_ROOT / ".agents" / "skills" / "nr3d-codex-sdk" / "SKILL.md"
 )
-DEFAULT_TOOLS_SKILL_PATH = (
-    DEFAULT_PROJECT_ROOT / ".agents" / "skills" / "nr3d-codex-tools" / "SKILL.md"
-)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -95,14 +92,32 @@ def build_arg_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help="Wall-clock budget (seconds) per agentic turn; a runaway tool loop "
-        "is interrupted and finalized. Default 0 (off), or 900 when --tools.",
+        "is interrupted and finalized. Default 0 (off); the tool-call cap is the "
+        "primary loop backstop.",
+    )
+    parser.add_argument(
+        "--max-tool-calls",
+        type=int,
+        default=None,
+        help="Interrupt a turn after this many tool actions (the reliable loop "
+        f"backstop). 0 disables. Default {_DEFAULT_TOOLS_MAX_TOOL_CALLS} when "
+        "--tools, else 0.",
+    )
+    parser.add_argument(
+        "--max-repeated-tool-calls",
+        type=int,
+        default=None,
+        help="Interrupt a turn once the same tool action repeats this many "
+        f"times. 0 disables. Default {_DEFAULT_TOOLS_MAX_REPEATED_TOOL_CALLS} "
+        "when --tools, else 0.",
     )
     parser.add_argument(
         "--reasoning-effort",
         default=None,
         choices=["minimal", "low", "medium", "high"],
-        help="Model reasoning effort. Lower is much faster per call; default "
-        "'low' when --tools (the deterministic tools carry the heavy reasoning).",
+        help="Model reasoning effort. Default: the model's own default (reasoning "
+        "ON) — it is a real accuracy win for spatial grounding. Lower is faster "
+        "per call but hurts accuracy.",
     )
     return parser
 
@@ -126,6 +141,8 @@ def main(argv: list[str] | None = None) -> int:
             tools=args.tools,
             turn_timeout=args.turn_timeout,
             reasoning_effort=args.reasoning_effort,
+            max_tool_calls=args.max_tool_calls,
+            max_repeated_tool_calls=args.max_repeated_tool_calls,
         )
     )
     skill = _resolve_skill(
@@ -158,11 +175,19 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-# A loose catastrophe guard, not a tight budget: per-turn wall-clock scales with
-# adapter contention under concurrency, so a tight cap would interrupt
-# legitimate slow turns. The loop fixes (no AGENTS.md, decisive skill) prevent
-# the pathological runaway loops this guards against. ``0`` disables it.
+# Wall-clock budget is OFF by default: per-turn latency scales with adapter
+# contention under concurrency, so a tight time cap would interrupt legitimate
+# slow turns. The tool-call cap below is the primary, timing-independent loop
+# backstop. ``0`` disables the time budget.
 _DEFAULT_TOOLS_TURN_TIMEOUT_S = 0.0
+
+
+# The reliable loop backstop. A legitimate tool run resolves in ~6-12 actions, so
+# 30 gives generous headroom while bounding the degenerate re-read loop (observed
+# at 80+ identical shell calls). Repeating one identical action 4x is already a
+# rut with no recovery value, so trip there too.
+_DEFAULT_TOOLS_MAX_TOOL_CALLS = 30
+_DEFAULT_TOOLS_MAX_REPEATED_TOOL_CALLS = 4
 
 
 # The model default effort is used for tools (empty string). Low effort was
@@ -177,6 +202,8 @@ def _build_config(
     tools: bool,
     turn_timeout: float | None,
     reasoning_effort: str | None,
+    max_tool_calls: int | None = None,
+    max_repeated_tool_calls: int | None = None,
 ) -> CodexAgentConfig:
     config = CodexAgentConfig.from_env()
     if model:
@@ -203,7 +230,31 @@ def _build_config(
         reasoning_effort=_resolve_reasoning_effort(
             reasoning_effort, tools=tools, config=config
         ),
+        max_tool_calls=_resolve_cap(
+            max_tool_calls,
+            tools=tools,
+            current=config.max_tool_calls,
+            tools_default=_DEFAULT_TOOLS_MAX_TOOL_CALLS,
+        ),
+        max_repeated_tool_calls=_resolve_cap(
+            max_repeated_tool_calls,
+            tools=tools,
+            current=config.max_repeated_tool_calls,
+            tools_default=_DEFAULT_TOOLS_MAX_REPEATED_TOOL_CALLS,
+        ),
     )
+
+
+def _resolve_cap(
+    override: int | None, *, tools: bool, current: int, tools_default: int
+) -> int:
+    if override is not None:
+        if override < 0:
+            raise ValueError(f"cap must be non-negative, got {override}")
+        return override
+    if current > 0:
+        return current
+    return tools_default if tools else 0
 
 
 def _resolve_reasoning_effort(
@@ -256,9 +307,12 @@ def _resolve_skill(
 ) -> CodexSkill | None:
     if no_skill:
         return None
-    resolved_path = skill_path or (
-        DEFAULT_TOOLS_SKILL_PATH if tools else DEFAULT_SKILL_PATH
-    )
+    # Tool mode inlines the playbook into the prompt and attaches no skill by
+    # default: an advertised SKILL.md path is the bait for the unbounded re-read
+    # loop. ``--skill-path`` still forces a skill for manual/legacy comparison.
+    if tools and skill_path is None:
+        return None
+    resolved_path = skill_path or DEFAULT_SKILL_PATH
     if not resolved_path.exists():
         logger.warning(
             "skill file not found at {}; running without a skill", resolved_path

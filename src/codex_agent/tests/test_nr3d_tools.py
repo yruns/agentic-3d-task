@@ -22,6 +22,11 @@ from codex_agent.nr3d.tools.frame_tools import (
     list_frame_proposals,
     select_by_proposal,
 )
+from codex_agent.nr3d.tools.image_io import (
+    MAX_VIEW_IMAGE_DIM,
+    downscale_for_view,
+    scale_box,
+)
 from codex_agent.nr3d.tools.models import ToolInputError
 from codex_agent.nr3d.tools.spatial_tools import (
     CompareCandidatesToAnchorsArgs,
@@ -209,6 +214,61 @@ def test_mark_frame_with_bbox_writes_image(scene: Nr3dScene, tmp_path: Path) -> 
     payload = result.to_payload()
     assert Path(payload["image_path"]).exists()
     assert payload["left_to_right"] == ["#3 chair", "#7 table"]
+
+
+def test_mark_frame_boxes_match_written_image(scene: Nr3dScene, tmp_path: Path) -> None:
+    from PIL import Image
+
+    result = mark_frame_with_bbox(
+        scene, MarkFrameArgs(frame_id=0, ids=[3, 7]), out_dir=tmp_path / "s"
+    )
+    payload = result.to_payload()
+    with Image.open(payload["image_path"]) as image:
+        width, height = image.size
+    # The written image respects the view-image budget and the reported boxes are
+    # expressed in that written image's coordinate space.
+    assert max(width, height) <= MAX_VIEW_IMAGE_DIM
+    for box in payload["boxes_2d"].values():
+        x1, y1, x2, y2 = box
+        assert 0 <= x1 <= x2 <= width
+        assert 0 <= y1 <= y2 <= height
+
+
+# ----- view-image sizing ------------------------------------------------------
+
+
+def test_downscale_for_view_shrinks_large_image() -> None:
+    import numpy as np
+
+    image = np.zeros((1000, 1500, 3), dtype=np.uint8)
+    resized, scale = downscale_for_view(image)
+    assert max(resized.shape[0], resized.shape[1]) == MAX_VIEW_IMAGE_DIM
+    assert resized.shape[1] >= resized.shape[0]  # aspect ratio preserved (landscape)
+    assert scale == pytest.approx(MAX_VIEW_IMAGE_DIM / 1500)
+    assert resized.dtype == np.uint8
+
+
+def test_downscale_for_view_is_noop_when_small() -> None:
+    import numpy as np
+
+    image = np.zeros((120, 200, 3), dtype=np.uint8)
+    resized, scale = downscale_for_view(image)
+    assert scale == 1.0
+    assert resized.shape == image.shape
+
+
+def test_downscale_for_view_disabled_with_zero_max_dim() -> None:
+    import numpy as np
+
+    image = np.zeros((1000, 1000, 3), dtype=np.uint8)
+    resized, scale = downscale_for_view(image, max_dim=0)
+    assert scale == 1.0
+    assert resized.shape == image.shape
+
+
+def test_scale_box_rounds_to_ints() -> None:
+    assert scale_box((10, 20, 30, 40), 0.5) == [5, 10, 15, 20]
+    assert scale_box((10, 20, 30, 40), 1.0) == [10, 20, 30, 40]
 
 
 def test_mark_frame_requires_ids_or_labels(scene: Nr3dScene, tmp_path: Path) -> None:

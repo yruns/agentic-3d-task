@@ -164,7 +164,7 @@ for the unknown custom model `gpt-5.4-2026-03-05`; the real window is ~1 M. This
 is a separate config hygiene issue but **not** the loop trigger (the loop ignites
 at ~83 K tokens, far below any limit).
 
-## Recommended fixes (not yet landed)
+## Recommended fixes (LANDED + verified — see Resolution below)
 
 1. **Inline the skill/playbook into the turn prompt and drop the on-disk skill
    file** — removes the specific degenerate action (no file to re-read). Highest
@@ -177,6 +177,10 @@ at ~83 K tokens, far below any limit).
 4. **Set `model_context_window` to the real value** in the codex config — hygiene.
 5. **Keep reasoning ON** — it is a real accuracy win and a real bug fix, even
    though it is not the loop cure and roughly doubles latency.
+
+All five landed; see **Resolution** for the code, the knobs, and the 10-case
+verification that the loop is gone (0 real `SKILL.md` reads, bounded tool calls,
+accuracy ↑ to 80 %).
 
 ## What landed in this repo
 
@@ -206,3 +210,72 @@ CODEX_AGENT_KEEP_RUN_HOME=1 PYTHONPATH=src python -m codex_agent.cli.run_nr3d \
   --data-root /Users/bytedance/project/3DVLMReasoning/data/nr3d/scannet \
   --output-dir tmp/nr3d_skill10 --limit 10 --workers 10 --tools --turn-timeout 0
 ```
+
+## Resolution (landed + verified — 2026-06-09)
+
+All five recommended fixes landed in this repo. The loop is a *defence in
+depth* problem: the inline playbook removes the specific bait, the guard caps any
+residual rut, and the smaller images + bigger window reduce the trigger.
+
+### What changed
+
+| # | Fix | Where |
+|---|---|---|
+| 1 | **Inline playbook, no on-disk skill in tool mode.** The whole tool catalog + loop + budget guidance is a prompt string; tool mode attaches **no** `SkillInput`, so there is no advertised `SKILL.md` path to re-read. | `src/codex_agent/nr3d/playbook.py` (new), `nr3d/grounding.py` (`build_turn_request` skips the skill in tool mode; `_tools_section` inlines `NR3D_TOOLS_PLAYBOOK`), `cli/run_nr3d.py` (`_resolve_skill` → `None` in tool mode unless `--skill-path`). |
+| 2 | **In-turn loop guard (reliable hard-cap).** The runtime *streams* the turn (`thread.turn(...).stream()`), counts tool actions, and `interrupt()`s when a total or repeated-action cap trips. If the server ignores the interrupt and keeps emitting tools, a post-interrupt grace abandons the turn → the `with Codex(...)` exit tears the app-server down. A finalization re-ask then collects an answer from the evidence already gathered. | `runtime.py` (`_run_turn_bounded`, `_consume_guarded_turn`, `_ToolCallLoopGuard`, `_tool_action_signature`, `_final_response_from_items`), `config.py` (`max_tool_calls`, `max_repeated_tool_calls`). Defaults when `--tools`: **30 / 4**. |
+| 3 | **Downscale viewed images to ≤768 px.** `mark_frame_with_bbox` / `view_bev` shrink the PNG before writing (boxes are reported in the written image's coords). | `src/codex_agent/nr3d/tools/image_io.py` (new, `MAX_VIEW_IMAGE_DIM=768`), used by `frame_annotation.py` + `bev_tools.py`. |
+| 4 | **`model_context_window` override.** Stops codex falling back to the conservative 258 400 default for the unknown custom model. | `config.py` (`model_context_window`, env `CODEX_AGENT_MODEL_CONTEXT_WINDOW`), `runtime.py` (`_build_config_overrides`). |
+| 5 | **Reasoning stays ON** (model default effort) — unchanged from Finding 2. | adapter forward (Finding 2). |
+
+### Anti-exploration prompt hardening
+
+`_tools_section` now states the agent is *"NOT exploring or editing a codebase"*
+and hard-forbids `read/cat/sed/head/grep/rg/open` of any `SKILL.md`, `AGENTS.md`,
+`README`, docs, or source — directly countering the injected coding-agent
+persona that biased the model toward file exploration.
+
+### Verification (10-case pilot, `tmp/nr3d_case10`, tools mode, all fixes on)
+
+Run: `--tools --workers 10`, `CODEX_AGENT_MODEL_CONTEXT_WINDOW=900000`,
+`CODEX_AGENT_KEEP_RUN_HOME=1`; whole run ≈ 3.5 min (no single case stalled).
+
+| metric | reasoning OFF (F1) | reasoning ON, pre-fix (F3) | **fixed (this)** |
+|---|---|---|---|
+| Acc@0.25 / Acc@0.50 | 0.62 / — | 0.75 / — | **0.80 / 0.80** |
+| mean IoU | — | — | **0.80** |
+| looping cases | 2/10 | ~4/10 (750–800 s each) | **0/10** |
+| guard interrupts | n/a | n/a | **0** (no case reached the cap) |
+| real `SKILL.md` / doc reads | 20 % of shell calls | 66 % (338 exec / 224 md) | **0** |
+| tool calls / case | — | 80–224 (loopers) | **2–14** (median ~4) |
+| `view_image` / case | — | — | **1–2** |
+| reasoning_output_tokens | 0 | 45 610 | **>0** (e.g. 512/turn) |
+| `model_context_window` | 258 400 | 258 400 | **~855 000** |
+| cache hit rate | — | — | **0.90** |
+
+The two "doc reads" my first grep flagged were **false positives** — the
+anti-exploration rule literally contains the strings `SKILL.md` / `AGENTS.md` /
+`README`, so rollout lines echoing the prompt matched. A structural walk of the
+`commandExecution` items found **zero** doc-file reads. The loop is gone because
+there is no longer a file to re-read, not merely because the guard cut it off
+(the guard never fired).
+
+### Knobs added (all default-safe)
+
+- `--max-tool-calls` / `CODEX_AGENT_MAX_TOOL_CALLS` (tools default 30; 0 = off)
+- `--max-repeated-tool-calls` / `CODEX_AGENT_MAX_REPEATED_TOOL_CALLS` (tools default 4)
+- `CODEX_AGENT_MODEL_CONTEXT_WINDOW` (0 = leave codex default)
+- `--skill-path` still forces the legacy on-disk tools skill for A/B.
+
+### Gate + tests
+
+`ruff`, `black --check`, `mypy` clean on `src/codex_agent/`; `pytest
+src/codex_agent/tests` = **156 passed**. New tests: `test_runtime_guard.py`
+(guard logic, stream consume/interrupt/abandon, signature drift vs the real
+`openai_codex` models), plus inline-playbook (`test_grounding.py`), caps
+(`test_run_nr3d_cli.py` / `test_config.py`), and downscale (`test_nr3d_tools.py`).
+
+### Next step
+
+Re-run the canonical **strat600** fold with this config and write a new
+`docs/benchmark/nr3d/vN_…` version doc + leaderboard update; this 10-case pilot
+is a bug-fix smoke check, not a decision-grade benchmark.

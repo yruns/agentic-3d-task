@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -49,6 +50,39 @@ def test_from_env_reads_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_from_env_rejects_bad_sandbox(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CODEX_AGENT_SANDBOX", "nope")
+    with pytest.raises(CodexConfigError):
+        CodexAgentConfig.from_env()
+
+
+def test_loop_cap_defaults_are_off() -> None:
+    config = CodexAgentConfig()
+    assert config.max_tool_calls == 0
+    assert config.max_repeated_tool_calls == 0
+    assert config.model_context_window == 0
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["max_tool_calls", "max_repeated_tool_calls", "model_context_window"],
+)
+def test_negative_int_fields_raise(field: str) -> None:
+    kwargs: dict[str, Any] = {field: -1}
+    with pytest.raises(CodexConfigError):
+        CodexAgentConfig(**kwargs)
+
+
+def test_from_env_reads_loop_caps(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CODEX_AGENT_MAX_TOOL_CALLS", "30")
+    monkeypatch.setenv("CODEX_AGENT_MAX_REPEATED_TOOL_CALLS", "4")
+    monkeypatch.setenv("CODEX_AGENT_MODEL_CONTEXT_WINDOW", "1000000")
+    config = CodexAgentConfig.from_env()
+    assert config.max_tool_calls == 30
+    assert config.max_repeated_tool_calls == 4
+    assert config.model_context_window == 1_000_000
+
+
+def test_from_env_rejects_non_integer_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CODEX_AGENT_MAX_TOOL_CALLS", "lots")
     with pytest.raises(CodexConfigError):
         CodexAgentConfig.from_env()
 
