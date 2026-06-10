@@ -1,4 +1,10 @@
-"""Unit tests for CodexAgentRuntime using a fake in-process Codex SDK module."""
+"""Unit tests for CodexAgentRuntime using a fake in-process Codex client.
+
+Only :class:`openai_codex.Codex` (which would spawn the app-server subprocess)
+is faked; the runtime uses the real ``CodexConfig`` / ``TextInput`` / ``Sandbox``
+and emits real ``TurnResult`` values, so these tests bind to the SDK's typed
+surface instead of ad-hoc stand-ins.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +13,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from openai_codex import CodexConfig, Sandbox, TurnResult
+from openai_codex.generated.v2_all import (
+    ThreadTokenUsage,
+    TokenUsageBreakdown,
+    TurnStatus,
+)
 
 import codex_agent.runtime as runtime_module
 from codex_agent.config import CodexAgentConfig
@@ -15,35 +27,39 @@ from codex_agent.models import CodexSkill, CodexTurnRequest
 from codex_agent.runtime import CodexAgentRuntime, _remove_tree_best_effort
 
 
-@dataclass
-class _FakeBreakdown:
-    input_tokens: int
-    cached_input_tokens: int
+def _usage(input_tokens: int, cached_input_tokens: int) -> ThreadTokenUsage:
+    breakdown = TokenUsageBreakdown(
+        cached_input_tokens=cached_input_tokens,
+        input_tokens=input_tokens,
+        output_tokens=0,
+        reasoning_output_tokens=0,
+        total_tokens=input_tokens,
+    )
+    return ThreadTokenUsage(last=breakdown, total=breakdown)
 
 
-@dataclass
-class _FakeUsage:
-    last: _FakeBreakdown
-
-
-@dataclass
-class _FakeResult:
-    final_response: str | None
-    id: str = "turn-1"
-    status: str = "completed"
-    duration_ms: int = 5
-    usage: Any = None
-    error: Any = None
-
-
-class _FakeSandbox:
-    read_only = "read_only"
-    workspace_write = "workspace_write"
-    full_access = "full_access"
+def _turn_result(
+    final_response: str | None,
+    *,
+    status: TurnStatus = TurnStatus.completed,
+    duration_ms: int = 5,
+    usage: ThreadTokenUsage | None = None,
+) -> TurnResult:
+    return TurnResult(
+        id="turn-1",
+        status=status,
+        error=None,
+        started_at=None,
+        completed_at=None,
+        duration_ms=duration_ms,
+        final_response=final_response,
+        items=[],
+        usage=usage,
+    )
 
 
 class _FakeThread:
-    def __init__(self, results: list[_FakeResult]) -> None:
+    def __init__(self, results: list[TurnResult]) -> None:
         self._results = list(results)
         self.calls: list[dict[str, Any]] = []
 
@@ -54,7 +70,7 @@ class _FakeThread:
         cwd: str | None = None,
         output_schema: dict[str, Any] | None = None,
         sandbox: Any = None,
-    ) -> _FakeResult:
+    ) -> TurnResult:
         self.calls.append({"items": items, "cwd": cwd, "sandbox": sandbox})
         if not self._results:
             raise AssertionError("fake thread ran out of results")
@@ -75,9 +91,12 @@ class _FakeRawClient:
 
 
 class _FakeClient:
+    """Stands in for ``openai_codex.Codex``; records config and RPC traffic."""
+
     def __init__(self, thread: _FakeThread) -> None:
-        self._thread = thread
+        self.thread = thread
         self._client = _FakeRawClient()
+        self.config: CodexConfig | None = None
         self.thread_start_kwargs: dict[str, Any] | None = None
 
     def __enter__(self) -> _FakeClient:
@@ -88,45 +107,44 @@ class _FakeClient:
 
     def thread_start(self, **kwargs: Any) -> _FakeThread:
         self.thread_start_kwargs = kwargs
-        return self._thread
+        return self.thread
+
+    @property
+    def config_overrides(self) -> tuple[str, ...]:
+        assert self.config is not None
+        return self.config.config_overrides
+
+    @property
+    def env(self) -> dict[str, str]:
+        assert self.config is not None and self.config.env is not None
+        return self.config.env
 
 
-class _FakeCodexModule:
-    def __init__(self, results: list[_FakeResult]) -> None:
-        self.thread = _FakeThread(results)
-        self.client = _FakeClient(self.thread)
-        self.Sandbox = _FakeSandbox
-        self.config_overrides: tuple[str, ...] = ()
-        self.env: dict[str, str] = {}
-
-    def Codex(self, *, config: dict[str, Any]) -> _FakeClient:
-        self.config_overrides = config["config_overrides"]
-        self.env = config["env"]
-        return self.client
-
-    def CodexConfig(self, **kwargs: Any) -> dict[str, Any]:
-        return kwargs
-
-    def TextInput(self, text: str) -> dict[str, Any]:
-        return {"type": "text", "text": text}
-
-    def SkillInput(self, *, name: str, path: str) -> dict[str, Any]:
-        return {"type": "skill", "name": name, "path": path}
-
-    def LocalImageInput(self, *, path: str) -> dict[str, Any]:
-        return {"type": "image", "path": path}
+@dataclass
+class _Fake:
+    runtime: CodexAgentRuntime
+    client: _FakeClient
 
 
-def _runtime(
+def _install(
     tmp_path: Path,
     codex_home: Path,
-    fake: _FakeCodexModule,
+    results: list[TurnResult],
     monkeypatch: pytest.MonkeyPatch,
-) -> CodexAgentRuntime:
-    config = CodexAgentConfig(project_root=tmp_path, codex_home=codex_home)
-    runtime = CodexAgentRuntime(config)
-    monkeypatch.setattr(runtime, "_import_codex", lambda: fake)
-    return runtime
+    **config_kwargs: Any,
+) -> _Fake:
+    agent_config = CodexAgentConfig(
+        project_root=tmp_path, codex_home=codex_home, **config_kwargs
+    )
+    runtime = CodexAgentRuntime(agent_config)
+    client = _FakeClient(_FakeThread(results))
+
+    def _factory(*, config: CodexConfig) -> _FakeClient:
+        client.config = config
+        return client
+
+    monkeypatch.setattr(runtime_module, "Codex", _factory)
+    return _Fake(runtime=runtime, client=client)
 
 
 def _request() -> CodexTurnRequest:
@@ -136,62 +154,69 @@ def _request() -> CodexTurnRequest:
 def test_run_turn_returns_final_response(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response='{"proposal_id": 3}')])
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
-    result = runtime.run_turn(_request())
+    fake = _install(
+        tmp_path, fake_codex_home, [_turn_result('{"proposal_id": 3}')], monkeypatch
+    )
+    result = fake.runtime.run_turn(_request())
     assert result.final_response == '{"proposal_id": 3}'
     assert result.metadata.status == "completed"
     assert result.metadata.duration_ms == 5
-    assert len(fake.thread.calls) == 1
+    assert len(fake.client.thread.calls) == 1
 
 
 def test_run_turn_issues_finalization_reask(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule(
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
         [
-            _FakeResult(final_response="I cannot answer in JSON"),
-            _FakeResult(final_response='{"proposal_id": 3}'),
-        ]
+            _turn_result("I cannot answer in JSON"),
+            _turn_result('{"proposal_id": 3}'),
+        ],
+        monkeypatch,
     )
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
-    result = runtime.run_turn(
+    result = fake.runtime.run_turn(
         _request(), response_validator=lambda text: "proposal_id" in text
     )
     assert result.final_response == '{"proposal_id": 3}'
-    assert len(fake.thread.calls) == 2
+    assert len(fake.client.thread.calls) == 2
     assert len(result.metadata.attempts) == 2
 
 
 def test_run_turn_respects_zero_retries(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response="still not json")])
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
-    result = runtime.run_turn(
+    fake = _install(
+        tmp_path, fake_codex_home, [_turn_result("still not json")], monkeypatch
+    )
+    result = fake.runtime.run_turn(
         _request(),
         response_validator=lambda text: "proposal_id" in text,
         max_finalization_retries=0,
     )
     assert result.final_response == "still not json"
-    assert len(fake.thread.calls) == 1
+    assert len(fake.client.thread.calls) == 1
 
 
 def test_run_turn_none_response_raises(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response=None, status="failed")])
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result(None, status=TurnStatus.failed)],
+        monkeypatch,
+    )
     with pytest.raises(CodexTurnError):
-        runtime.run_turn(_request())
+        fake.runtime.run_turn(_request())
 
 
 def test_run_turn_cleans_up_run_home(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
-    runtime.run_turn(_request())
+    fake = _install(tmp_path, fake_codex_home, [_turn_result('{"ok": 1}')], monkeypatch)
+    fake.runtime.run_turn(_request())
     runs_dir = fake_codex_home / "runs"
     assert not list(runs_dir.iterdir())
 
@@ -199,28 +224,28 @@ def test_run_turn_cleans_up_run_home(
 def test_prefix_cache_headers_present(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
-    runtime.run_turn(_request())
-    assert "CODEX_AGENT_MODELHUB_EXTRA_HEADER" in fake.env
-    assert "CODEX_HOME" in fake.env
-    assert any("env_http_headers" in override for override in fake.config_overrides)
+    fake = _install(tmp_path, fake_codex_home, [_turn_result('{"ok": 1}')], monkeypatch)
+    fake.runtime.run_turn(_request())
+    assert "CODEX_AGENT_MODELHUB_EXTRA_HEADER" in fake.client.env
+    assert "CODEX_HOME" in fake.client.env
+    assert any(
+        "env_http_headers" in override for override in fake.client.config_overrides
+    )
 
 
 def test_workspace_write_network_override(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
-    config = CodexAgentConfig(
-        project_root=tmp_path,
-        codex_home=fake_codex_home,
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
         sandbox="workspace_write",
         sandbox_network_access=True,
     )
-    runtime = CodexAgentRuntime(config)
-    monkeypatch.setattr(runtime, "_import_codex", lambda: fake)
-    runtime.run_turn(_request())
-    assert "sandbox_workspace_write.network_access=true" in fake.config_overrides
+    fake.runtime.run_turn(_request())
+    assert "sandbox_workspace_write.network_access=true" in fake.client.config_overrides
 
 
 def test_sandbox_mode_set_on_thread_not_overridden_per_turn(
@@ -230,32 +255,30 @@ def test_sandbox_mode_set_on_thread_not_overridden_per_turn(
     # a sandbox, or the SDK sends a default WorkspaceWriteSandboxPolicy with
     # network_access=False that overrides the config network grant (which would
     # silently break tools that shell out to the network, e.g. keyframe_selector).
-    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
-    config = CodexAgentConfig(
-        project_root=tmp_path,
-        codex_home=fake_codex_home,
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
         sandbox="workspace_write",
         sandbox_network_access=True,
     )
-    runtime = CodexAgentRuntime(config)
-    monkeypatch.setattr(runtime, "_import_codex", lambda: fake)
-    runtime.run_turn(_request())
+    fake.runtime.run_turn(_request())
     assert fake.client.thread_start_kwargs is not None
-    assert fake.client.thread_start_kwargs["sandbox"] == fake.Sandbox.workspace_write
-    assert fake.thread.calls and all(
-        call["sandbox"] is None for call in fake.thread.calls
+    assert fake.client.thread_start_kwargs["sandbox"] == Sandbox.workspace_write
+    assert fake.client.thread.calls and all(
+        call["sandbox"] is None for call in fake.client.thread.calls
     )
 
 
 def test_restrict_skills_isolates_home_and_disables_system_skills(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
-    runtime.run_turn(_request())
+    fake = _install(tmp_path, fake_codex_home, [_turn_result('{"ok": 1}')], monkeypatch)
+    fake.runtime.run_turn(_request())
     # HOME is isolated under the per-turn run home so user/global skills are hidden.
-    assert fake.env["HOME"].endswith("/" + runtime_module._ISOLATED_HOME_DIRNAME)
-    assert fake.env["HOME"].startswith(str(fake_codex_home / "runs"))
+    assert fake.client.env["HOME"].endswith("/" + runtime_module._ISOLATED_HOME_DIRNAME)
+    assert fake.client.env["HOME"].startswith(str(fake_codex_home / "runs"))
     # Bundled .system skills are disabled via the skills/config/write RPC.
     writes = [
         call
@@ -271,63 +294,62 @@ def test_restrict_skills_isolates_home_and_disables_system_skills(
 def test_no_skill_restriction_keeps_real_home(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
-    config = CodexAgentConfig(
-        project_root=tmp_path,
-        codex_home=fake_codex_home,
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
         restrict_skills_to_project=False,
     )
-    runtime = CodexAgentRuntime(config)
-    monkeypatch.setattr(runtime, "_import_codex", lambda: fake)
-    runtime.run_turn(_request())
-    assert "HOME" not in fake.env
+    fake.runtime.run_turn(_request())
+    assert "HOME" not in fake.client.env
     assert not fake.client._client.requests
 
 
 def test_no_network_override_for_read_only(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
-    config = CodexAgentConfig(
-        project_root=tmp_path,
-        codex_home=fake_codex_home,
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
         sandbox="read_only",
         sandbox_network_access=True,
     )
-    runtime = CodexAgentRuntime(config)
-    monkeypatch.setattr(runtime, "_import_codex", lambda: fake)
-    runtime.run_turn(_request())
-    assert not any("network_access" in o for o in fake.config_overrides)
+    fake.runtime.run_turn(_request())
+    assert not any("network_access" in o for o in fake.client.config_overrides)
 
 
 def test_missing_codex_home_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response="{}")])
-    runtime = _runtime(tmp_path, tmp_path / "missing-home", fake, monkeypatch)
+    fake = _install(
+        tmp_path, tmp_path / "missing-home", [_turn_result("{}")], monkeypatch
+    )
     with pytest.raises(CodexConfigError):
-        runtime.run_turn(_request())
+        fake.runtime.run_turn(_request())
 
 
 def test_missing_skill_file_raises(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response="{}")])
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
+    fake = _install(tmp_path, fake_codex_home, [_turn_result("{}")], monkeypatch)
     request = CodexTurnRequest(
         prompt="hi",
         output_schema={"type": "object"},
         skills=(CodexSkill(name="x", path=tmp_path / "nope.md"),),
     )
     with pytest.raises(CodexConfigError):
-        runtime.run_turn(request)
+        fake.runtime.run_turn(request)
 
 
 def test_execute_runs_task_end_to_end(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response="ok-payload")])
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
+    fake = _install(
+        tmp_path, fake_codex_home, [_turn_result("ok-payload")], monkeypatch
+    )
 
     class _Task:
         task_name = "demo"
@@ -341,7 +363,7 @@ def test_execute_runs_task_end_to_end(
         def parse_response(self, response_text: str) -> str:
             return response_text.upper()
 
-    result = runtime.execute(_Task())
+    result = fake.runtime.execute(_Task())
     assert result.task_name == "demo"
     assert result.outcome == "OK-PAYLOAD"
     assert result.turn.final_response == "ok-payload"
@@ -350,12 +372,13 @@ def test_execute_runs_task_end_to_end(
 def test_run_turn_captures_cache_tokens(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    usage = _FakeUsage(
-        last=_FakeBreakdown(input_tokens=20000, cached_input_tokens=7040)
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}', usage=_usage(20000, 7040))],
+        monkeypatch,
     )
-    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}', usage=usage)])
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
-    result = runtime.run_turn(_request())
+    result = fake.runtime.run_turn(_request())
     assert result.metadata.input_tokens == 20000
     assert result.metadata.cached_input_tokens == 7040
     assert result.metadata.cache_ratio == pytest.approx(0.352)
@@ -364,9 +387,10 @@ def test_run_turn_captures_cache_tokens(
 def test_cache_ratio_none_without_usage(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}', usage=None)])
-    runtime = _runtime(tmp_path, fake_codex_home, fake, monkeypatch)
-    result = runtime.run_turn(_request())
+    fake = _install(
+        tmp_path, fake_codex_home, [_turn_result('{"ok": 1}', usage=None)], monkeypatch
+    )
+    result = fake.runtime.run_turn(_request())
     assert result.metadata.cached_input_tokens is None
     assert result.metadata.cache_ratio is None
 

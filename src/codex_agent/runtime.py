@@ -22,13 +22,41 @@ import shutil
 import threading
 import time
 import uuid
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from types import ModuleType
-from typing import Any
+from typing import Any, Protocol
 
 from loguru import logger
+from openai_codex import (
+    Codex,
+    CodexConfig,
+    InputItem,
+    LocalImageInput,
+    Sandbox,
+    SkillInput,
+    TextInput,
+    Thread,
+    TurnResult,
+)
+from openai_codex.generated.v2_all import (
+    AgentMessageThreadItem,
+    CommandExecutionThreadItem,
+    DynamicToolCallThreadItem,
+    ImageViewThreadItem,
+    ItemCompletedNotification,
+    McpToolCallThreadItem,
+    MessagePhase,
+    SkillsConfigWriteResponse,
+    ThreadItem,
+    ThreadTokenUsage,
+    ThreadTokenUsageUpdatedNotification,
+    Turn,
+    TurnCompletedNotification,
+    TurnError,
+    TurnStatus,
+)
+from openai_codex.models import Notification
 
 from .config import CodexAgentConfig, sanitize_session_id
 from .errors import CodexConfigError, CodexTurnError
@@ -72,6 +100,20 @@ _BUNDLED_SYSTEM_SKILLS: tuple[str, ...] = (
 #: draining the stream. A cleanly-interrupted turn emits ``turn/completed`` within
 #: a step or two; this caps the rare case of a server that ignores the interrupt.
 _POST_INTERRUPT_GRACE_ACTIONS = 8
+
+
+class _TurnHandle(Protocol):
+    """The slice of :class:`openai_codex.TurnHandle` the streaming guard drives.
+
+    Declaring the structural interface (interrupt + notification stream) instead
+    of the concrete ``TurnHandle`` keeps the guard exercisable with a lightweight
+    fake handle in tests while still binding to the real SDK handle in
+    production, where ``thread.turn(...)`` returns a ``TurnHandle``.
+    """
+
+    def interrupt(self) -> object: ...
+
+    def stream(self) -> Iterator[Notification]: ...
 
 
 @dataclass
@@ -128,10 +170,10 @@ class _GuardedTurnResult:
 
     final_response: str | None
     id: str | None = None
-    status: Any = None
-    error: Any = None
+    status: TurnStatus | None = None
+    error: TurnError | None = None
     duration_ms: int | None = None
-    usage: Any = None
+    usage: ThreadTokenUsage | None = None
 
 
 class CodexAgentRuntime:
@@ -164,19 +206,17 @@ class CodexAgentRuntime:
             max_finalization_retries: Maximum number of finalization re-asks.
 
         Raises:
-            CodexConfigError: Invalid arguments, missing attachments, or the
-                ``openai-codex`` dependency not being installed.
+            CodexConfigError: Invalid arguments or missing attachments.
             CodexTurnError: The turn completed without a final response.
         """
         if max_finalization_retries < 0:
             raise CodexConfigError("max_finalization_retries must be non-negative")
         self._validate_request(request)
-        codex = self._import_codex()
         run_home = self._prepare_run_home()
-        attempts: list[Any] = []
+        attempts: list[TurnResult | _GuardedTurnResult] = []
         try:
-            with codex.Codex(
-                config=codex.CodexConfig(
+            with Codex(
+                config=CodexConfig(
                     config_overrides=self._build_config_overrides(),
                     cwd=str(self.config.project_root),
                     env=self._build_turn_env(run_home),
@@ -195,13 +235,13 @@ class CodexAgentRuntime:
                 thread = client.thread_start(
                     model=self.config.model,
                     model_provider=self.config.model_provider,
-                    sandbox=self._sandbox(codex),
+                    sandbox=self._sandbox(),
                     cwd=str(self.config.project_root),
                 )
                 output_schema = dict(request.output_schema)
                 result = self._run_turn_bounded(
                     thread,
-                    self._build_turn_input(codex, request),
+                    self._build_turn_input(request),
                     output_schema=output_schema,
                 )
                 attempts.append(result)
@@ -219,7 +259,7 @@ class CodexAgentRuntime:
                     result = self._run_turn_bounded(
                         thread,
                         [
-                            codex.TextInput(
+                            TextInput(
                                 self._finalization_prompt(
                                     result.final_response, output_schema
                                 )
@@ -245,11 +285,11 @@ class CodexAgentRuntime:
 
     def _run_turn_bounded(
         self,
-        thread: Any,
-        turn_input: list[Any],
+        thread: Thread,
+        turn_input: list[InputItem],
         *,
         output_schema: Mapping[str, Any],
-    ) -> Any:
+    ) -> TurnResult | _GuardedTurnResult:
         """Run one turn, bounding it against runaway tool loops.
 
         Codex's app-server silently *windows* the model's context once large
@@ -285,7 +325,7 @@ class CodexAgentRuntime:
         return self._consume_guarded_turn(handle, guard=guard, timeout=timeout)
 
     def _consume_guarded_turn(
-        self, handle: Any, *, guard: _ToolCallLoopGuard, timeout: float
+        self, handle: _TurnHandle, *, guard: _ToolCallLoopGuard, timeout: float
     ) -> _GuardedTurnResult:
         """Consume a turn's event stream, interrupting it when a bound trips.
 
@@ -307,26 +347,23 @@ class CodexAgentRuntime:
             watchdog.daemon = True
             watchdog.start()
 
-        items: list[Any] = []
-        usage: Any = None
-        turn: Any = None
+        items: list[ThreadItem] = []
+        usage: ThreadTokenUsage | None = None
+        turn: Turn | None = None
         post_interrupt_actions = 0
         stream = handle.stream()
         try:
             for event in stream:
-                method = getattr(event, "method", "")
-                payload = getattr(event, "payload", None)
-                if method == "turn/completed":
-                    turn = getattr(payload, "turn", None)
+                payload = event.payload
+                if isinstance(payload, TurnCompletedNotification):
+                    turn = payload.turn
                     continue
-                if method == "thread/tokenUsage/updated":
-                    usage = getattr(payload, "token_usage", usage)
+                if isinstance(payload, ThreadTokenUsageUpdatedNotification):
+                    usage = payload.token_usage
                     continue
-                if method != "item/completed":
+                if not isinstance(payload, ItemCompletedNotification):
                     continue
-                item = getattr(payload, "item", None)
-                if item is None:
-                    continue
+                item = payload.item
                 items.append(item)
                 signature = _tool_action_signature(item)
                 if signature is None:
@@ -362,15 +399,15 @@ class CodexAgentRuntime:
             )
         return _GuardedTurnResult(
             final_response=_final_response_from_items(items),
-            id=getattr(turn, "id", None),
-            status=getattr(turn, "status", None),
-            error=getattr(turn, "error", None),
-            duration_ms=getattr(turn, "duration_ms", None),
+            id=turn.id,
+            status=turn.status,
+            error=turn.error,
+            duration_ms=turn.duration_ms,
             usage=usage,
         )
 
     def _interrupt_turn(
-        self, handle: Any, state: _TurnInterruptState, reason: str
+        self, handle: _TurnHandle, state: _TurnInterruptState, reason: str
     ) -> None:
         """Request a one-shot interrupt of an active turn (thread-safe)."""
         with state.lock:
@@ -394,17 +431,13 @@ class CodexAgentRuntime:
             if not image.exists():
                 raise CodexConfigError(f"Codex turn image is missing: {image}")
 
-    def _build_turn_input(
-        self, codex: ModuleType, request: CodexTurnRequest
-    ) -> list[Any]:
-        items: list[Any] = [
-            codex.SkillInput(name=skill.name, path=str(skill.path))
+    def _build_turn_input(self, request: CodexTurnRequest) -> list[InputItem]:
+        items: list[InputItem] = [
+            SkillInput(name=skill.name, path=str(skill.path))
             for skill in request.skills
         ]
-        items.append(codex.TextInput(request.prompt))
-        items.extend(
-            codex.LocalImageInput(path=str(path)) for path in request.image_paths
-        )
+        items.append(TextInput(request.prompt))
+        items.extend(LocalImageInput(path=str(path)) for path in request.image_paths)
         return items
 
     def _prepare_run_home(self) -> Path:
@@ -490,7 +523,7 @@ class CodexAgentRuntime:
             overrides.append(f"model_context_window={self.config.model_context_window}")
         return tuple(overrides)
 
-    def _disable_ambient_system_skills(self, client: Any) -> None:
+    def _disable_ambient_system_skills(self, client: Codex) -> None:
         """Disable the bundled ``.system`` skills for this turn.
 
         HOME isolation (see :meth:`_build_turn_env`) stops the app-server from
@@ -501,22 +534,10 @@ class CodexAgentRuntime:
         a failure is logged but never aborts the turn (HOME isolation already
         removes the bulk of the ambient skills).
         """
-        raw_client = getattr(client, "_client", None)
-        request = getattr(raw_client, "request", None)
-        if request is None:
-            logger.warning(
-                "codex client exposes no request channel; "
-                "cannot disable ambient system skills"
-            )
-            return
-        try:
-            from openai_codex.generated.v2_all import SkillsConfigWriteResponse
-        except ImportError as exc:
-            logger.warning("cannot import SkillsConfigWriteResponse: {}", exc)
-            return
+        raw_client = client._client
         for name in _BUNDLED_SYSTEM_SKILLS:
             try:
-                request(
+                raw_client.request(
                     "skills/config/write",
                     {"enabled": False, "name": name},
                     response_model=SkillsConfigWriteResponse,
@@ -524,9 +545,9 @@ class CodexAgentRuntime:
             except Exception as exc:  # hardening RPC; degrade with visibility
                 logger.warning("could not disable system skill {}: {}", name, exc)
 
-    def _sandbox(self, codex: ModuleType) -> Any:
-        # Boundary to the untyped Codex SDK enum; members match SandboxMode.
-        return getattr(codex.Sandbox, self.config.sandbox)
+    def _sandbox(self) -> Sandbox:
+        # SandboxMode literals match the Sandbox enum member names exactly.
+        return Sandbox[self.config.sandbox]
 
     def _finalization_prompt(
         self, previous_response: str | None, output_schema: Mapping[str, Any]
@@ -546,7 +567,10 @@ class CodexAgentRuntime:
         return base
 
     def _build_metadata(
-        self, result: Any, attempts: Sequence[Any], run_home: Path
+        self,
+        result: TurnResult | _GuardedTurnResult,
+        attempts: Sequence[TurnResult | _GuardedTurnResult],
+        run_home: Path,
     ) -> CodexTurnMetadata:
         input_tokens, cached_input_tokens = _extract_token_counts(result.usage)
         return CodexTurnMetadata(
@@ -573,17 +597,6 @@ class CodexAgentRuntime:
         if not text:
             return False
         return bool(validator(text))
-
-    @staticmethod
-    def _import_codex() -> ModuleType:
-        try:
-            import openai_codex
-        except ImportError as exc:
-            raise CodexConfigError(
-                "openai-codex is required for CodexAgentRuntime. Install it with "
-                "`uv pip install openai-codex` or `uv pip install -e '.[codex]'`."
-            ) from exc
-        return openai_codex
 
 
 def _remove_tree_best_effort(path: Path, *, attempts: int = 4) -> None:
@@ -613,36 +626,28 @@ def _remove_tree_best_effort(path: Path, *, attempts: int = 4) -> None:
             time.sleep(0.25 * (attempt + 1))
 
 
-def _tool_action_signature(item: Any) -> str | None:
+def _tool_action_signature(item: ThreadItem) -> str | None:
     """Return a stable signature for a tool-action thread item, else ``None``.
 
     The loop guard uses this both to count tool actions and to detect identical
     repeats. Recognises shell commands, image views, and MCP / dynamic tool
-    calls via the item's wire ``type`` discriminator; messages, reasoning, plans,
+    calls via the discriminated ``ThreadItem`` union; messages, reasoning, plans,
     and other non-action items return ``None``.
     """
-    root = getattr(item, "root", item)
-    item_type = getattr(root, "type", None)
-    if item_type == "commandExecution":
-        command = " ".join(str(getattr(root, "command", "")).split())
-        return f"cmd:{command}"
-    if item_type == "imageView":
+    root = item.root
+    if isinstance(root, CommandExecutionThreadItem):
+        return f"cmd:{' '.join(root.command.split())}"
+    if isinstance(root, ImageViewThreadItem):
         # ``path`` is an ``AbsolutePathBuf`` (RootModel[str]); unwrap to the str.
-        return f"img:{_unwrap_root(getattr(root, 'path', ''))}"
-    if item_type == "mcpToolCall":
-        return (
-            f"mcp:{getattr(root, 'server', '')}:{getattr(root, 'tool', '')}:"
-            f"{_compact_json(getattr(root, 'arguments', None))}"
-        )
-    if item_type == "dynamicToolCall":
-        return (
-            f"dyn:{getattr(root, 'tool', '')}:"
-            f"{_compact_json(getattr(root, 'arguments', None))}"
-        )
+        return f"img:{root.path.root}"
+    if isinstance(root, McpToolCallThreadItem):
+        return f"mcp:{root.server}:{root.tool}:{_compact_json(root.arguments)}"
+    if isinstance(root, DynamicToolCallThreadItem):
+        return f"dyn:{root.tool}:{_compact_json(root.arguments)}"
     return None
 
 
-def _final_response_from_items(items: Sequence[Any]) -> str | None:
+def _final_response_from_items(items: Sequence[ThreadItem]) -> str | None:
     """Extract the model's final answer text from completed thread items.
 
     Mirrors the SDK's own ``agentMessage`` handling: prefer the most recent
@@ -651,32 +656,25 @@ def _final_response_from_items(items: Sequence[Any]) -> str | None:
     """
     last_unknown_phase: str | None = None
     for item in reversed(list(items)):
-        root = getattr(item, "root", item)
-        if getattr(root, "type", None) != "agentMessage":
+        root = item.root
+        if not isinstance(root, AgentMessageThreadItem):
             continue
-        phase = getattr(root, "phase", None)
-        phase_value = getattr(phase, "value", phase)
-        text = getattr(root, "text", None)
-        if phase_value == "final_answer":
-            return text
-        if phase_value is None and last_unknown_phase is None:
-            last_unknown_phase = text
+        if root.phase == MessagePhase.final_answer:
+            return root.text
+        if root.phase is None and last_unknown_phase is None:
+            last_unknown_phase = root.text
     return last_unknown_phase
 
 
-def _unwrap_root(value: Any) -> str:
-    """Return the inner string of a ``RootModel[str]`` (or ``str(value)``)."""
-    return str(getattr(value, "root", value))
-
-
-def _compact_json(value: Any) -> str:
+def _compact_json(value: object) -> str:
     try:
         return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
     except (TypeError, ValueError):
         return str(value)
 
 
-def _close_stream(stream: Any) -> None:
+def _close_stream(stream: Iterator[Notification]) -> None:
+    # Turn streams are generators (closable); guard the rare non-generator case.
     close = getattr(stream, "close", None)
     if close is None:
         return
@@ -693,38 +691,35 @@ def _required_keys(output_schema: Mapping[str, Any]) -> list[str]:
     return []
 
 
-def _status_str(status: Any) -> str | None:
+def _status_str(status: TurnStatus | None) -> str | None:
     if status is None:
         return None
-    return str(getattr(status, "value", status))
+    return status.value
 
 
-def _extract_token_counts(usage: Any) -> tuple[int | None, int | None]:
+def _extract_token_counts(
+    usage: ThreadTokenUsage | None,
+) -> tuple[int | None, int | None]:
     """Return ``(input_tokens, cached_input_tokens)`` from a Codex usage object.
 
     Reads ``usage.last`` (a ``TokenUsageBreakdown``); returns ``(None, None)``
     when the adapter/model did not report usage for the turn.
     """
-    last = getattr(usage, "last", None)
-    if last is None:
+    if usage is None:
         return None, None
-    input_tokens = getattr(last, "input_tokens", None)
-    cached_input_tokens = getattr(last, "cached_input_tokens", None)
+    last = usage.last
+    input_tokens = last.input_tokens
+    cached_input_tokens = last.cached_input_tokens
     return (
         int(input_tokens) if input_tokens is not None else None,
         int(cached_input_tokens) if cached_input_tokens is not None else None,
     )
 
 
-def _dump_usage(usage: Any) -> dict[str, Any] | None:
+def _dump_usage(usage: ThreadTokenUsage | None) -> dict[str, Any] | None:
     if usage is None:
         return None
-    if hasattr(usage, "model_dump"):
-        dumped = usage.model_dump(mode="json", exclude_none=True)
-        return dict(dumped) if isinstance(dumped, dict) else {"value": dumped}
-    if isinstance(usage, Mapping):
-        return dict(usage)
-    return {"value": str(usage)}
+    return dict(usage.model_dump(mode="json", exclude_none=True))
 
 
 def _truncate(value: str, max_chars: int) -> str:
@@ -734,7 +729,7 @@ def _truncate(value: str, max_chars: int) -> str:
     return normalized[: max_chars - 3] + "..."
 
 
-def _toml_literal(value: Any) -> str:
+def _toml_literal(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 

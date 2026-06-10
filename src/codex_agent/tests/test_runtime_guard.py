@@ -1,20 +1,45 @@
 """Tests for the in-turn loop guard: signatures, stream consumption, interrupt.
 
 The guard streams a turn's events and interrupts it when tool actions exceed a
-total or repeated cap. These tests drive it with a fake in-process Codex SDK
-module that yields scripted notifications, plus a drift test that ties the
-guard's wire discriminators to the real ``openai_codex`` models.
+total or repeated cap. These tests drive it with a fake Codex client whose turn
+handles yield real ``openai_codex`` notifications, so the guard is exercised
+against the SDK's actual wire models, plus a drift test that ties the guard's
+discriminators to those models.
 """
 
 from __future__ import annotations
 
 import typing
-from dataclasses import dataclass
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
+from openai_codex import CodexConfig, TurnResult
+from openai_codex.generated.v2_all import (
+    AbsolutePathBuf,
+    AgentMessageThreadItem,
+    CommandExecutionStatus,
+    CommandExecutionThreadItem,
+    DynamicToolCallStatus,
+    DynamicToolCallThreadItem,
+    ImageViewThreadItem,
+    ItemCompletedNotification,
+    McpToolCallStatus,
+    McpToolCallThreadItem,
+    MessagePhase,
+    ReasoningThreadItem,
+    ThreadItem,
+    ThreadTokenUsage,
+    ThreadTokenUsageUpdatedNotification,
+    TokenUsageBreakdown,
+    Turn,
+    TurnCompletedNotification,
+    TurnStatus,
+)
+from openai_codex.models import Notification
 
+import codex_agent.runtime as runtime_module
 from codex_agent.config import CodexAgentConfig
 from codex_agent.errors import CodexTurnError
 from codex_agent.models import CodexTurnRequest
@@ -24,112 +49,134 @@ from codex_agent.runtime import (
     _tool_action_signature,
     _ToolCallLoopGuard,
     _TurnInterruptState,
-    _unwrap_root,
 )
 
 # --------------------------------------------------------------------------- #
-# Fake streaming Codex SDK
+# Real-model builders
 # --------------------------------------------------------------------------- #
 
 
-@dataclass
-class _Root:
-    type: str
-    command: str = ""
-    path: Any = ""
-    server: str = ""
-    tool: str = ""
-    arguments: Any = None
-    text: str = ""
-    phase: Any = None
-
-
-@dataclass
-class _Item:
-    root: _Root
-
-
-@dataclass
-class _Phase:
-    value: str
-
-
-@dataclass
-class _Event:
-    method: str
-    payload: Any
-
-
-@dataclass
-class _ItemPayload:
-    item: Any
-
-
-@dataclass
-class _UsagePayload:
-    token_usage: Any
-
-
-@dataclass
-class _TurnPayload:
-    turn: Any
-
-
-@dataclass
-class _Turn:
-    id: str = "turn-1"
-    status: str = "completed"
-    error: Any = None
-    duration_ms: int = 9
-
-
-@dataclass
-class _Breakdown:
-    input_tokens: int
-    cached_input_tokens: int
-
-
-@dataclass
-class _Usage:
-    last: _Breakdown
-
-
-@dataclass
-class _RunResult:
-    final_response: str | None
-    id: str = "turn-run"
-    status: str = "completed"
-    error: Any = None
-    duration_ms: int = 3
-    usage: Any = None
-
-
-def _cmd(command: str) -> _Item:
-    return _Item(_Root(type="commandExecution", command=command))
-
-
-def _msg(text: str, *, phase: str | None = None) -> _Item:
-    return _Item(
-        _Root(type="agentMessage", text=text, phase=_Phase(phase) if phase else None)
+def _cmd(command: str) -> ThreadItem:
+    return ThreadItem(
+        root=CommandExecutionThreadItem(
+            command=command,
+            command_actions=[],
+            cwd=AbsolutePathBuf("/tmp"),
+            id="cmd",
+            status=CommandExecutionStatus.completed,
+            type="commandExecution",
+        )
     )
 
 
-def _item_event(item: _Item) -> _Event:
-    return _Event("item/completed", _ItemPayload(item))
+def _image(path: str) -> ThreadItem:
+    return ThreadItem(
+        root=ImageViewThreadItem(id="img", path=AbsolutePathBuf(path), type="imageView")
+    )
 
 
-def _usage_event(usage: Any) -> _Event:
-    return _Event("thread/tokenUsage/updated", _UsagePayload(usage))
+def _mcp(server: str, tool: str, arguments: Any) -> ThreadItem:
+    return ThreadItem(
+        root=McpToolCallThreadItem(
+            arguments=arguments,
+            id="mcp",
+            server=server,
+            status=McpToolCallStatus.completed,
+            tool=tool,
+            type="mcpToolCall",
+        )
+    )
 
 
-def _completed_event(turn: _Turn | None = None) -> _Event:
-    return _Event("turn/completed", _TurnPayload(turn or _Turn()))
+def _dyn(tool: str, arguments: Any) -> ThreadItem:
+    return ThreadItem(
+        root=DynamicToolCallThreadItem(
+            arguments=arguments,
+            id="dyn",
+            status=DynamicToolCallStatus.completed,
+            tool=tool,
+            type="dynamicToolCall",
+        )
+    )
+
+
+def _reasoning() -> ThreadItem:
+    return ThreadItem(root=ReasoningThreadItem(id="reasoning", type="reasoning"))
+
+
+def _msg(text: str, *, phase: MessagePhase | None = None) -> ThreadItem:
+    return ThreadItem(
+        root=AgentMessageThreadItem(
+            id="msg", text=text, phase=phase, type="agentMessage"
+        )
+    )
+
+
+def _usage(input_tokens: int, cached_input_tokens: int) -> ThreadTokenUsage:
+    breakdown = TokenUsageBreakdown(
+        cached_input_tokens=cached_input_tokens,
+        input_tokens=input_tokens,
+        output_tokens=0,
+        reasoning_output_tokens=0,
+        total_tokens=input_tokens,
+    )
+    return ThreadTokenUsage(last=breakdown, total=breakdown)
+
+
+def _turn(*, status: TurnStatus = TurnStatus.completed, duration_ms: int = 9) -> Turn:
+    return Turn(id="turn-1", items=[], status=status, duration_ms=duration_ms)
+
+
+def _run_result(final_response: str | None) -> TurnResult:
+    return TurnResult(
+        id="turn-run",
+        status=TurnStatus.completed,
+        error=None,
+        started_at=None,
+        completed_at=None,
+        duration_ms=3,
+        final_response=final_response,
+        items=[],
+        usage=None,
+    )
+
+
+def _item_event(item: ThreadItem) -> Notification:
+    return Notification(
+        method="item/completed",
+        payload=ItemCompletedNotification(
+            completed_at_ms=0, item=item, thread_id="th", turn_id="tn"
+        ),
+    )
+
+
+def _usage_event(usage: ThreadTokenUsage) -> Notification:
+    return Notification(
+        method="thread/tokenUsage/updated",
+        payload=ThreadTokenUsageUpdatedNotification(
+            thread_id="th", token_usage=usage, turn_id="tn"
+        ),
+    )
+
+
+def _completed_event(turn: Turn | None = None) -> Notification:
+    return Notification(
+        method="turn/completed",
+        payload=TurnCompletedNotification(thread_id="th", turn=turn or _turn()),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Fake streaming Codex client
+# --------------------------------------------------------------------------- #
 
 
 class _Handle:
-    """A fake ``TurnHandle`` whose ``stream`` yields scripted events."""
+    """A fake ``TurnHandle`` whose ``stream`` yields scripted notifications."""
 
-    def __init__(self, events: list[_Event], *, loop_item: _Item | None = None) -> None:
+    def __init__(
+        self, events: list[Notification], *, loop_item: ThreadItem | None = None
+    ) -> None:
         self._events = list(events)
         self._loop_item = loop_item
         self.interrupts = 0
@@ -137,7 +184,7 @@ class _Handle:
     def interrupt(self) -> None:
         self.interrupts += 1
 
-    def stream(self) -> Any:
+    def stream(self) -> Iterator[Notification]:
         yield from self._events
         if self._loop_item is not None:
             # Simulate a server that ignores the interrupt and keeps emitting the
@@ -148,18 +195,12 @@ class _Handle:
             yield _completed_event()
 
 
-class _Sandbox:
-    read_only = "read_only"
-    workspace_write = "workspace_write"
-    full_access = "full_access"
-
-
 class _Thread:
     def __init__(
         self,
         *,
         handles: list[_Handle] | None = None,
-        results: list[_RunResult] | None = None,
+        results: list[TurnResult] | None = None,
     ) -> None:
         self._handles = list(handles or [])
         self._results = list(results or [])
@@ -172,7 +213,7 @@ class _Thread:
             raise AssertionError("fake thread ran out of handles")
         return self._handles.pop(0)
 
-    def run(self, items: list[Any], **_: Any) -> _RunResult:
+    def run(self, items: list[Any], **_: Any) -> TurnResult:
         self.run_calls += 1
         if not self._results:
             raise AssertionError("fake thread ran out of run results")
@@ -190,7 +231,7 @@ class _RawClient:
 
 class _Client:
     def __init__(self, thread: _Thread) -> None:
-        self._thread = thread
+        self.thread = thread
         self._client = _RawClient()
 
     def __enter__(self) -> _Client:
@@ -200,28 +241,7 @@ class _Client:
         return None
 
     def thread_start(self, **_: Any) -> _Thread:
-        return self._thread
-
-
-class _Module:
-    def __init__(self, thread: _Thread) -> None:
-        self._thread = thread
-        self.Sandbox = _Sandbox
-
-    def Codex(self, *, config: dict[str, Any]) -> _Client:
-        return _Client(self._thread)
-
-    def CodexConfig(self, **kwargs: Any) -> dict[str, Any]:
-        return kwargs
-
-    def TextInput(self, text: str) -> dict[str, Any]:
-        return {"type": "text", "text": text}
-
-    def SkillInput(self, *, name: str, path: str) -> dict[str, Any]:
-        return {"type": "skill", "name": name, "path": path}
-
-    def LocalImageInput(self, *, path: str) -> dict[str, Any]:
-        return {"type": "image", "path": path}
+        return self.thread
 
 
 def _runtime(
@@ -231,15 +251,19 @@ def _runtime(
     monkeypatch: pytest.MonkeyPatch,
     **config_kwargs: Any,
 ) -> CodexAgentRuntime:
-    config = CodexAgentConfig(
+    agent_config = CodexAgentConfig(
         project_root=tmp_path,
         codex_home=codex_home,
         restrict_skills_to_project=False,
         enable_prefix_cache=False,
         **config_kwargs,
     )
-    runtime = CodexAgentRuntime(config)
-    monkeypatch.setattr(runtime, "_import_codex", lambda: _Module(thread))
+    runtime = CodexAgentRuntime(agent_config)
+
+    def _factory(*, config: CodexConfig) -> _Client:
+        return _Client(thread)
+
+    monkeypatch.setattr(runtime_module, "Codex", _factory)
     return runtime
 
 
@@ -293,41 +317,33 @@ def test_guard_repeated_cap_counts_per_action() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# _tool_action_signature / _final_response_from_items / _unwrap_root
+# _tool_action_signature / _final_response_from_items
 # --------------------------------------------------------------------------- #
 
 
 def test_signature_for_command_normalizes_whitespace() -> None:
-    item = _Item(_Root(type="commandExecution", command="sed  -n   SKILL.md"))
-    assert _tool_action_signature(item) == "cmd:sed -n SKILL.md"
+    assert _tool_action_signature(_cmd("sed  -n   SKILL.md")) == "cmd:sed -n SKILL.md"
 
 
 def test_signature_for_image_unwraps_root_path() -> None:
-    @dataclass
-    class _AbsPath:
-        root: str
-
-    item = _Item(_Root(type="imageView", path=_AbsPath(root="/x/frame.png")))
-    assert _tool_action_signature(item) == "img:/x/frame.png"
+    assert _tool_action_signature(_image("/x/frame.png")) == "img:/x/frame.png"
 
 
 def test_signature_for_mcp_and_dynamic_tool_calls() -> None:
-    mcp = _Item(_Root(type="mcpToolCall", server="s", tool="t", arguments={"b": 1}))
-    assert _tool_action_signature(mcp) == 'mcp:s:t:{"b": 1}'
-    dyn = _Item(_Root(type="dynamicToolCall", tool="t", arguments={"a": 2}))
-    assert _tool_action_signature(dyn) == 'dyn:t:{"a": 2}'
+    assert _tool_action_signature(_mcp("s", "t", {"b": 1})) == 'mcp:s:t:{"b": 1}'
+    assert _tool_action_signature(_dyn("t", {"a": 2})) == 'dyn:t:{"a": 2}'
 
 
 def test_signature_none_for_non_action_items() -> None:
     assert _tool_action_signature(_msg("hi")) is None
-    assert _tool_action_signature(_Item(_Root(type="reasoning"))) is None
+    assert _tool_action_signature(_reasoning()) is None
 
 
 def test_final_response_prefers_final_answer_phase() -> None:
     items = [
-        _msg("thinking", phase="commentary"),
-        _msg('{"proposal_id": 3}', phase="final_answer"),
-        _msg("trailing commentary", phase="commentary"),
+        _msg("thinking", phase=MessagePhase.commentary),
+        _msg('{"proposal_id": 3}', phase=MessagePhase.final_answer),
+        _msg("trailing commentary", phase=MessagePhase.commentary),
     ]
     assert _final_response_from_items(items) == '{"proposal_id": 3}'
 
@@ -339,15 +355,6 @@ def test_final_response_falls_back_to_phaseless_message() -> None:
 
 def test_final_response_none_when_no_message() -> None:
     assert _final_response_from_items([_cmd("ls")]) is None
-
-
-def test_unwrap_root_returns_inner_string() -> None:
-    @dataclass
-    class _Wrapped:
-        root: str
-
-    assert _unwrap_root(_Wrapped(root="/abs/path")) == "/abs/path"
-    assert _unwrap_root("plain") == "plain"
 
 
 # --------------------------------------------------------------------------- #
@@ -374,7 +381,7 @@ def test_interrupt_turn_is_one_shot() -> None:
 def test_fast_path_used_when_no_caps(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    thread = _Thread(results=[_RunResult(final_response='{"proposal_id": 1}')])
+    thread = _Thread(results=[_run_result('{"proposal_id": 1}')])
     runtime = _runtime(tmp_path, fake_codex_home, thread, monkeypatch)
     result = runtime.run_turn(_request())
     assert result.final_response == '{"proposal_id": 1}'
@@ -385,12 +392,11 @@ def test_fast_path_used_when_no_caps(
 def test_guarded_turn_under_budget_does_not_interrupt(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    usage = _Usage(last=_Breakdown(input_tokens=1000, cached_input_tokens=400))
     handle = _Handle(
         [
             _item_event(_cmd("python -m codex_agent.nr3d.tools inspect_proposal")),
-            _item_event(_msg('{"proposal_id": 5}', phase="final_answer")),
-            _usage_event(usage),
+            _item_event(_msg('{"proposal_id": 5}', phase=MessagePhase.final_answer)),
+            _usage_event(_usage(input_tokens=1000, cached_input_tokens=400)),
             _completed_event(),
         ]
     )
@@ -420,7 +426,7 @@ def test_repeated_cap_interrupts_then_finalizes_from_evidence(
     handle = _Handle(
         [_item_event(loop_cmd) for _ in range(4)]
         + [
-            _item_event(_msg('{"proposal_id": 2}', phase="final_answer")),
+            _item_event(_msg('{"proposal_id": 2}', phase=MessagePhase.final_answer)),
             _completed_event(),
         ]
     )
@@ -448,7 +454,7 @@ def test_total_cap_interrupt_triggers_finalization_reask(
     )
     finalizer = _Handle(
         [
-            _item_event(_msg('{"proposal_id": 8}', phase="final_answer")),
+            _item_event(_msg('{"proposal_id": 8}', phase=MessagePhase.final_answer)),
             _completed_event(),
         ]
     )
