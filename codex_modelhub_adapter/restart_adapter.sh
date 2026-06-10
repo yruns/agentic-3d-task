@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -uo pipefail
-cd /Users/bytedance/aispace/codex_modelhub_adapter
-export AIDP_MODELHUB_UPSTREAMS_TOML=/Users/bytedance/aispace/codex_modelhub_adapter/.modelhub_upstreams.toml
+# Resolve to this script's own directory so the adapter runs from wherever the
+# repo is checked out (no hardcoded absolute path).
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$HERE"
+export AIDP_MODELHUB_UPSTREAMS_TOML="$HERE/.modelhub_upstreams.toml"
 export AIDP_CODEX_PROXY_UPSTREAM_API=auto
 export AIDP_CODEX_PROXY_CHAT_COMPLETIONS_MODELS="gpt-5.4*,gpt-5.5*"
 export AIDP_LOG_PROMPT_CACHE=1
