@@ -1,0 +1,12 @@
+.env
+.modelhub_upstreams.toml
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.codex-home/auth.json
+.codex-home/log/
+.codex-home/sessions/
+.codex-home/archived_sessions/
+.codex-home/packages/
+.codex-home/worktrees/

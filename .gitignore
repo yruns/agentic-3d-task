@@ -96,3 +96,9 @@ conceptgraph/configs/slam_pipeline/*.yaml
 # LLM secrets: real endpoints + API keys must never be committed.
 # Keep configs/llm.example.toml (placeholders) tracked instead.
 configs/llm.toml
+
+# Codex ModelHub adapter secrets: real AKs live only in the gitignored upstream
+# TOML / .env. Keep the *.example.toml + .env.example placeholders tracked.
+# (Defense-in-depth; codex_modelhub_adapter/.gitignore already ignores these.)
+**/.modelhub_upstreams.toml
+codex_modelhub_adapter/.env
