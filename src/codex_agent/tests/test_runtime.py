@@ -223,6 +223,30 @@ def test_workspace_write_network_override(
     assert "sandbox_workspace_write.network_access=true" in fake.config_overrides
 
 
+def test_sandbox_mode_set_on_thread_not_overridden_per_turn(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The sandbox mode is set once on the thread; the per-turn call must NOT pass
+    # a sandbox, or the SDK sends a default WorkspaceWriteSandboxPolicy with
+    # network_access=False that overrides the config network grant (which would
+    # silently break tools that shell out to the network, e.g. keyframe_selector).
+    fake = _FakeCodexModule([_FakeResult(final_response='{"ok": 1}')])
+    config = CodexAgentConfig(
+        project_root=tmp_path,
+        codex_home=fake_codex_home,
+        sandbox="workspace_write",
+        sandbox_network_access=True,
+    )
+    runtime = CodexAgentRuntime(config)
+    monkeypatch.setattr(runtime, "_import_codex", lambda: fake)
+    runtime.run_turn(_request())
+    assert fake.client.thread_start_kwargs is not None
+    assert fake.client.thread_start_kwargs["sandbox"] == fake.Sandbox.workspace_write
+    assert fake.thread.calls and all(
+        call["sandbox"] is None for call in fake.thread.calls
+    )
+
+
 def test_restrict_skills_isolates_home_and_disables_system_skills(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

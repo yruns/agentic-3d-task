@@ -184,11 +184,18 @@ class CodexAgentRuntime:
             ) as client:
                 if self.config.restrict_skills_to_project:
                     self._disable_ambient_system_skills(client)
-                sandbox = self._sandbox(codex)
+                # The sandbox *mode* (read_only / workspace_write) is set once on
+                # the thread. We deliberately do NOT pass a per-turn ``sandbox``
+                # override below: the SDK builds that override from the enum with
+                # all fields defaulted (``network_access=False``), which silently
+                # overrides ``sandbox_workspace_write.network_access=true`` from
+                # config.toml. Omitting it lets the session config govern, so
+                # tool turns that shell out (e.g. keyframe_selector's parsing LLM
+                # call) actually reach the network. See _build_config_overrides.
                 thread = client.thread_start(
                     model=self.config.model,
                     model_provider=self.config.model_provider,
-                    sandbox=sandbox,
+                    sandbox=self._sandbox(codex),
                     cwd=str(self.config.project_root),
                 )
                 output_schema = dict(request.output_schema)
@@ -196,7 +203,6 @@ class CodexAgentRuntime:
                     thread,
                     self._build_turn_input(codex, request),
                     output_schema=output_schema,
-                    sandbox=sandbox,
                 )
                 attempts.append(result)
                 retries = 0
@@ -220,7 +226,6 @@ class CodexAgentRuntime:
                             )
                         ],
                         output_schema=output_schema,
-                        sandbox=sandbox,
                     )
                     attempts.append(result)
                     retries += 1
@@ -244,7 +249,6 @@ class CodexAgentRuntime:
         turn_input: list[Any],
         *,
         output_schema: Mapping[str, Any],
-        sandbox: Any,
     ) -> Any:
         """Run one turn, bounding it against runaway tool loops.
 
@@ -261,6 +265,12 @@ class CodexAgentRuntime:
         moment a bound is crossed. The (partial) result is returned; the
         caller's finalization re-ask then collects a usable answer from the
         evidence already gathered.
+
+        Neither call passes a per-turn ``sandbox``: doing so makes the SDK send a
+        ``WorkspaceWriteSandboxPolicy`` built from the enum with everything
+        defaulted (``network_access=False``), which overrides the session's
+        config-level network grant. The thread's sandbox mode (set in
+        :meth:`run_turn`) plus config.toml already define the policy.
         """
         cwd = str(self.config.project_root)
         schema = dict(output_schema)
@@ -270,10 +280,8 @@ class CodexAgentRuntime:
         )
         timeout = self.config.turn_timeout_s
         if not guard.active and timeout <= 0:
-            return thread.run(
-                turn_input, cwd=cwd, output_schema=schema, sandbox=sandbox
-            )
-        handle = thread.turn(turn_input, cwd=cwd, output_schema=schema, sandbox=sandbox)
+            return thread.run(turn_input, cwd=cwd, output_schema=schema)
+        handle = thread.turn(turn_input, cwd=cwd, output_schema=schema)
         return self._consume_guarded_turn(handle, guard=guard, timeout=timeout)
 
     def _consume_guarded_turn(
