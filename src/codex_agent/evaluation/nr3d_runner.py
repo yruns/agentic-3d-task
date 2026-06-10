@@ -57,6 +57,7 @@ class Nr3dSampleResult:
     confidence: float | None = None
     query: str | None = None
     summary: str = ""
+    reasoning_summary: str | None = None
     error: str | None = None
     turn_duration_ms: int | None = None
     turn_usage: dict[str, Any] | None = None
@@ -75,6 +76,7 @@ class Nr3dSampleResult:
             "confidence": self.confidence,
             "query": self.query,
             "summary": self.summary,
+            "reasoning_summary": self.reasoning_summary,
             "error": self.error,
             "turn_duration_ms": self.turn_duration_ms,
             "turn_usage": self.turn_usage,
@@ -95,6 +97,7 @@ class Nr3dSampleResult:
             confidence=payload.get("confidence"),
             query=payload.get("query"),
             summary=str(payload.get("summary", "")),
+            reasoning_summary=payload.get("reasoning_summary"),
             error=payload.get("error"),
             turn_duration_ms=payload.get("turn_duration_ms"),
             turn_usage=payload.get("turn_usage"),
@@ -162,6 +165,7 @@ def run_one_sample(
         confidence=outcome.confidence,
         query=sample.query,
         summary=outcome.summary,
+        reasoning_summary=result.turn.metadata.reasoning_summary,
         turn_duration_ms=result.turn.metadata.duration_ms,
         turn_usage=(
             dict(result.turn.metadata.usage)

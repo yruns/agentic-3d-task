@@ -21,7 +21,7 @@ def test_build_config_tools_enables_workspace_write_and_network() -> None:
     assert config.sandbox == "workspace_write"
     assert config.sandbox_network_access is True
     assert config.turn_timeout_s == 0.0
-    assert config.reasoning_effort == ""
+    assert config.reasoning_effort == "medium"
 
 
 def test_build_config_default_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -34,7 +34,7 @@ def test_build_config_default_is_read_only(monkeypatch: pytest.MonkeyPatch) -> N
     assert config.sandbox == "read_only"
     assert config.sandbox_network_access is False
     assert config.turn_timeout_s == 0.0
-    assert config.reasoning_effort == ""
+    assert config.reasoning_effort == "medium"
 
 
 def test_build_config_explicit_sandbox_with_tools_keeps_network() -> None:
@@ -65,6 +65,38 @@ def test_build_config_explicit_reasoning_effort_overrides() -> None:
         reasoning_effort="high",
     )
     assert config.reasoning_effort == "high"
+
+
+def test_build_config_reasoning_effort_env_overrides_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CODEX_AGENT_REASONING_EFFORT", "low")
+    config = _build_config(
+        model=None, sandbox=None, tools=True, turn_timeout=None, reasoning_effort=None
+    )
+    assert config.reasoning_effort == "low"
+
+
+def test_build_config_reasoning_summary_off_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CODEX_AGENT_REASONING_SUMMARY", raising=False)
+    config = _build_config(
+        model=None, sandbox=None, tools=True, turn_timeout=None, reasoning_effort=None
+    )
+    assert config.reasoning_summary == ""
+
+
+def test_build_config_explicit_reasoning_summary_overrides() -> None:
+    config = _build_config(
+        model=None,
+        sandbox=None,
+        tools=True,
+        turn_timeout=None,
+        reasoning_effort=None,
+        reasoning_summary="auto",
+    )
+    assert config.reasoning_summary == "auto"
 
 
 def test_build_config_tools_sets_loop_caps() -> None:

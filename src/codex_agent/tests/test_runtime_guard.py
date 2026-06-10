@@ -46,6 +46,7 @@ from codex_agent.models import CodexTurnRequest
 from codex_agent.runtime import (
     CodexAgentRuntime,
     _final_response_from_items,
+    _reasoning_summary_from_items,
     _tool_action_signature,
     _ToolCallLoopGuard,
     _TurnInterruptState,
@@ -100,8 +101,12 @@ def _dyn(tool: str, arguments: Any) -> ThreadItem:
     )
 
 
-def _reasoning() -> ThreadItem:
-    return ThreadItem(root=ReasoningThreadItem(id="reasoning", type="reasoning"))
+def _reasoning(*summary: str) -> ThreadItem:
+    return ThreadItem(
+        root=ReasoningThreadItem(
+            id="reasoning", type="reasoning", summary=list(summary)
+        )
+    )
 
 
 def _msg(text: str, *, phase: MessagePhase | None = None) -> ThreadItem:
@@ -357,6 +362,21 @@ def test_final_response_none_when_no_message() -> None:
     assert _final_response_from_items([_cmd("ls")]) is None
 
 
+def test_reasoning_summary_joins_fragments_and_skips_blanks() -> None:
+    items = [
+        _cmd("ls"),
+        _reasoning("Inspected frame 2.", "  ", "Target is the left lamp."),
+        _msg("answer"),
+    ]
+    assert _reasoning_summary_from_items(items) == (
+        "Inspected frame 2.\n\nTarget is the left lamp."
+    )
+
+
+def test_reasoning_summary_none_without_reasoning_items() -> None:
+    assert _reasoning_summary_from_items([_cmd("ls"), _msg("hi")]) is None
+
+
 # --------------------------------------------------------------------------- #
 # _interrupt_turn idempotency
 # --------------------------------------------------------------------------- #
@@ -415,6 +435,32 @@ def test_guarded_turn_under_budget_does_not_interrupt(
     assert thread.turn_calls == 1
     assert result.metadata.input_tokens == 1000
     assert result.metadata.cached_input_tokens == 400
+
+
+def test_guarded_turn_captures_reasoning_summary(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    handle = _Handle(
+        [
+            _item_event(_reasoning("Checked the BEV.", "Target is the right chair.")),
+            _item_event(_cmd("python -m codex_agent.nr3d.tools inspect_proposal")),
+            _item_event(_msg('{"proposal_id": 5}', phase=MessagePhase.final_answer)),
+            _completed_event(),
+        ]
+    )
+    thread = _Thread(handles=[handle])
+    runtime = _runtime(
+        tmp_path,
+        fake_codex_home,
+        thread,
+        monkeypatch,
+        max_tool_calls=30,
+        max_repeated_tool_calls=4,
+    )
+    result = runtime.run_turn(_request(), response_validator=_has_proposal)
+    assert result.metadata.reasoning_summary == (
+        "Checked the BEV.\n\nTarget is the right chair."
+    )
 
 
 def test_repeated_cap_interrupts_then_finalizes_from_evidence(

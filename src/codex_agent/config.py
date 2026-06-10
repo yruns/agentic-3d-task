@@ -20,12 +20,19 @@ from .errors import CodexConfigError
 
 SandboxMode = Literal["read_only", "workspace_write", "full_access"]
 ReasoningEffort = Literal["", "minimal", "low", "medium", "high"]
+#: Reasoning-summary verbosity. ``""`` means "do not request a summary" (the
+#: model/provider default governs); the others map to the Codex SDK's
+#: ``ReasoningSummary`` (``none`` explicitly disables summaries upstream).
+ReasoningSummary = Literal["", "auto", "concise", "detailed", "none"]
 
 _VALID_SANDBOX_MODES: frozenset[str] = frozenset(
     {"read_only", "workspace_write", "full_access"}
 )
 _VALID_REASONING_EFFORTS: frozenset[str] = frozenset(
     {"", "minimal", "low", "medium", "high"}
+)
+_VALID_REASONING_SUMMARIES: frozenset[str] = frozenset(
+    {"", "auto", "concise", "detailed", "none"}
 )
 
 #: Repository root, derived from this file's location (``src/codex_agent/config.py``).
@@ -34,6 +41,10 @@ DEFAULT_CODEX_HOME: Path = DEFAULT_PROJECT_ROOT / ".codex-home"
 DEFAULT_CODEX_MODEL = "gpt-5.4-2026-03-05"
 DEFAULT_CODEX_MODEL_PROVIDER = "modelhub_adapter"
 DEFAULT_PREFIX_CACHE_SESSION_ID = "codex_agent"
+#: Default reasoning effort when neither the CLI nor the environment overrides
+#: it. ``medium`` is a deliberate, reproducible default; an empty string would
+#: instead follow the model's own (possibly shifting) default.
+DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium"
 
 #: Characters allowed in a ModelHub prefix-cache session id (sent as an HTTP
 #: header value); anything else is replaced with ``_``.
@@ -74,6 +85,15 @@ class CodexAgentConfig:
         sandbox_network_access: When ``True`` and ``sandbox`` is
             ``workspace_write``, allow sandboxed commands to reach the network
             (needed by ``keyframe_selector``, which calls the parsing LLM).
+        reasoning_effort: Reasoning effort passed to the model per turn (via the
+            SDK ``effort`` argument, not a ``config.toml`` override). Defaults to
+            ``medium`` (:data:`DEFAULT_REASONING_EFFORT`); set ``""`` to instead
+            follow the model's own default.
+        reasoning_summary: Reasoning-summary verbosity passed to the model per
+            turn (via the SDK ``summary`` argument). ``""`` requests nothing
+            (provider default); ``auto`` / ``concise`` / ``detailed`` ask the
+            model to emit a human-readable summary of its reasoning, which the
+            runtime captures into the turn metadata for tracing/debugging.
         enable_prefix_cache: Send ModelHub prefix-cache + log-id headers so the
             adapter can reuse the prompt prefix across turns.
         prefix_cache_session_id: Stable session id used for prefix caching.
@@ -115,7 +135,8 @@ class CodexAgentConfig:
     model_provider: str = DEFAULT_CODEX_MODEL_PROVIDER
     sandbox: SandboxMode = "read_only"
     sandbox_network_access: bool = False
-    reasoning_effort: ReasoningEffort = ""
+    reasoning_effort: ReasoningEffort = DEFAULT_REASONING_EFFORT
+    reasoning_summary: ReasoningSummary = ""
     enable_prefix_cache: bool = True
     prefix_cache_session_id: str = DEFAULT_PREFIX_CACHE_SESSION_ID
     turn_timeout_s: float = 0.0
@@ -136,6 +157,11 @@ class CodexAgentConfig:
             raise CodexConfigError(
                 f"reasoning_effort={self.reasoning_effort!r} is invalid; expected "
                 f"one of {sorted(_VALID_REASONING_EFFORTS)}"
+            )
+        if self.reasoning_summary not in _VALID_REASONING_SUMMARIES:
+            raise CodexConfigError(
+                f"reasoning_summary={self.reasoning_summary!r} is invalid; expected "
+                f"one of {sorted(_VALID_REASONING_SUMMARIES)}"
             )
         if self.turn_timeout_s < 0:
             raise CodexConfigError(
@@ -198,7 +224,11 @@ class CodexAgentConfig:
                 os.environ.get("CODEX_AGENT_SANDBOX_NETWORK"), default=False
             ),
             reasoning_effort=_reasoning_effort_from_env(
-                os.environ.get("CODEX_AGENT_REASONING_EFFORT")
+                os.environ.get("CODEX_AGENT_REASONING_EFFORT"),
+                default=DEFAULT_REASONING_EFFORT,
+            ),
+            reasoning_summary=_reasoning_summary_from_env(
+                os.environ.get("CODEX_AGENT_REASONING_SUMMARY")
             ),
             enable_prefix_cache=_env_bool(
                 os.environ.get("CODEX_AGENT_ENABLE_PREFIX_CACHE"), default=True
@@ -248,14 +278,29 @@ def _sandbox_from_env(raw: str | None) -> SandboxMode:
     return aliases[normalized]
 
 
-def _reasoning_effort_from_env(raw: str | None) -> ReasoningEffort:
+def _reasoning_effort_from_env(
+    raw: str | None, *, default: ReasoningEffort = ""
+) -> ReasoningEffort:
     if raw is None or not raw.strip():
-        return ""
+        return default
     normalized = raw.strip().lower()
     if normalized not in _VALID_REASONING_EFFORTS:
         raise CodexConfigError(
             f"CODEX_AGENT_REASONING_EFFORT={raw!r} is invalid; expected one of "
             f"{sorted(_VALID_REASONING_EFFORTS - {''})}"
+        )
+    # normalized is one of the valid literals here.
+    return normalized  # type: ignore[return-value]
+
+
+def _reasoning_summary_from_env(raw: str | None) -> ReasoningSummary:
+    if raw is None or not raw.strip():
+        return ""
+    normalized = raw.strip().lower()
+    if normalized not in _VALID_REASONING_SUMMARIES:
+        raise CodexConfigError(
+            f"CODEX_AGENT_REASONING_SUMMARY={raw!r} is invalid; expected one of "
+            f"{sorted(_VALID_REASONING_SUMMARIES - {''})}"
         )
     # normalized is one of the valid literals here.
     return normalized  # type: ignore[return-value]
@@ -291,10 +336,12 @@ __all__ = [
     "CodexAgentConfig",
     "SandboxMode",
     "ReasoningEffort",
+    "ReasoningSummary",
     "sanitize_session_id",
     "DEFAULT_PROJECT_ROOT",
     "DEFAULT_CODEX_HOME",
     "DEFAULT_CODEX_MODEL",
     "DEFAULT_CODEX_MODEL_PROVIDER",
     "DEFAULT_PREFIX_CACHE_SESSION_ID",
+    "DEFAULT_REASONING_EFFORT",
 ]

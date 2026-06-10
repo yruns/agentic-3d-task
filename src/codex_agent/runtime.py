@@ -47,6 +47,9 @@ from openai_codex.generated.v2_all import (
     ItemCompletedNotification,
     McpToolCallThreadItem,
     MessagePhase,
+    ReasoningEffort,
+    ReasoningSummary,
+    ReasoningThreadItem,
     SkillsConfigWriteResponse,
     ThreadItem,
     ThreadTokenUsage,
@@ -174,6 +177,7 @@ class _GuardedTurnResult:
     error: TurnError | None = None
     duration_ms: int | None = None
     usage: ThreadTokenUsage | None = None
+    reasoning_summary: str | None = None
 
 
 class CodexAgentRuntime:
@@ -314,14 +318,31 @@ class CodexAgentRuntime:
         """
         cwd = str(self.config.project_root)
         schema = dict(output_schema)
+        # Reasoning effort / summary are passed as explicit SDK turn arguments
+        # (not config.toml overrides) so they are visible at the call site and
+        # scoped to this turn. ``None`` keeps the model/provider default.
+        effort = self._effort()
+        summary = self._summary()
         guard = _ToolCallLoopGuard(
             max_tool_calls=self.config.max_tool_calls,
             max_repeated_calls=self.config.max_repeated_tool_calls,
         )
         timeout = self.config.turn_timeout_s
         if not guard.active and timeout <= 0:
-            return thread.run(turn_input, cwd=cwd, output_schema=schema)
-        handle = thread.turn(turn_input, cwd=cwd, output_schema=schema)
+            return thread.run(
+                turn_input,
+                cwd=cwd,
+                output_schema=schema,
+                effort=effort,
+                summary=summary,
+            )
+        handle = thread.turn(
+            turn_input,
+            cwd=cwd,
+            output_schema=schema,
+            effort=effort,
+            summary=summary,
+        )
         return self._consume_guarded_turn(handle, guard=guard, timeout=timeout)
 
     def _consume_guarded_turn(
@@ -404,6 +425,7 @@ class CodexAgentRuntime:
             error=turn.error,
             duration_ms=turn.duration_ms,
             usage=usage,
+            reasoning_summary=_reasoning_summary_from_items(items),
         )
 
     def _interrupt_turn(
@@ -517,11 +539,26 @@ class CodexAgentRuntime:
             and self.config.sandbox_network_access
         ):
             overrides.append("sandbox_workspace_write.network_access=true")
-        if self.config.reasoning_effort:
-            overrides.append(f"model_reasoning_effort={self.config.reasoning_effort}")
         if self.config.model_context_window > 0:
             overrides.append(f"model_context_window={self.config.model_context_window}")
         return tuple(overrides)
+
+    def _effort(self) -> ReasoningEffort | None:
+        """Per-turn reasoning effort, or ``None`` to use the model's default."""
+        if not self.config.reasoning_effort:
+            return None
+        return ReasoningEffort(self.config.reasoning_effort)
+
+    def _summary(self) -> ReasoningSummary | None:
+        """Per-turn reasoning-summary request, or ``None`` for the default.
+
+        ``ReasoningSummary`` is a Pydantic ``RootModel`` over
+        ``auto | concise | detailed | none``; ``model_validate`` coerces the
+        config string literal into it.
+        """
+        if not self.config.reasoning_summary:
+            return None
+        return ReasoningSummary.model_validate(self.config.reasoning_summary)
 
     def _disable_ambient_system_skills(self, client: Codex) -> None:
         """Disable the bundled ``.system`` skills for this turn.
@@ -580,6 +617,7 @@ class CodexAgentRuntime:
             usage=_dump_usage(result.usage),
             input_tokens=input_tokens,
             cached_input_tokens=cached_input_tokens,
+            reasoning_summary=_result_reasoning_summary(result),
             run_home=str(run_home),
             attempts=tuple(
                 {
@@ -664,6 +702,41 @@ def _final_response_from_items(items: Sequence[ThreadItem]) -> str | None:
         if root.phase is None and last_unknown_phase is None:
             last_unknown_phase = root.text
     return last_unknown_phase
+
+
+def _reasoning_summary_from_items(items: Sequence[ThreadItem]) -> str | None:
+    """Join any reasoning-summary text emitted across a turn's items.
+
+    The model produces a summary only when the turn requested one (see
+    :meth:`CodexAgentRuntime._summary`); each ``ReasoningThreadItem`` then
+    carries a list of summary fragments. Fragments are concatenated in order so
+    callers get the full reasoning narrative. Returns ``None`` when no summary
+    was produced (the common case when summaries are not requested).
+    """
+    parts: list[str] = []
+    for item in items:
+        root = item.root
+        if not isinstance(root, ReasoningThreadItem):
+            continue
+        for fragment in root.summary or []:
+            text = fragment.strip()
+            if text:
+                parts.append(text)
+    if not parts:
+        return None
+    return "\n\n".join(parts)
+
+
+def _result_reasoning_summary(result: TurnResult | _GuardedTurnResult) -> str | None:
+    """Read the reasoning summary from either turn-result shape.
+
+    The guarded path computes it while streaming (stored on
+    :class:`_GuardedTurnResult`); the plain ``thread.run`` fast path exposes the
+    raw ``items`` on the SDK's ``TurnResult``.
+    """
+    if isinstance(result, _GuardedTurnResult):
+        return result.reasoning_summary
+    return _reasoning_summary_from_items(result.items)
 
 
 def _compact_json(value: object) -> str:

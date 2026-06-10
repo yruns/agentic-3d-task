@@ -68,6 +68,7 @@ class CodexTurnMetadata:
     usage: Mapping[str, Any] | None = None
     input_tokens: int | None = None
     cached_input_tokens: int | None = None
+    reasoning_summary: str | None = None
     run_home: str | None = None
     attempts: Sequence[Mapping[str, Any]] = field(default_factory=tuple)
 
@@ -87,6 +88,7 @@ class CodexTurnMetadata:
             "usage": dict(self.usage) if self.usage is not None else None,
             "input_tokens": self.input_tokens,
             "cached_input_tokens": self.cached_input_tokens,
+            "reasoning_summary": self.reasoning_summary,
             "run_home": self.run_home,
             "attempts": [dict(attempt) for attempt in self.attempts],
         }

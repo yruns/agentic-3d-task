@@ -15,6 +15,10 @@ from typing import Any
 import pytest
 from openai_codex import CodexConfig, Sandbox, TurnResult
 from openai_codex.generated.v2_all import (
+    ReasoningEffort,
+    ReasoningSummary,
+    ReasoningThreadItem,
+    ThreadItem,
     ThreadTokenUsage,
     TokenUsageBreakdown,
     TurnStatus,
@@ -44,6 +48,7 @@ def _turn_result(
     status: TurnStatus = TurnStatus.completed,
     duration_ms: int = 5,
     usage: ThreadTokenUsage | None = None,
+    items: list[ThreadItem] | None = None,
 ) -> TurnResult:
     return TurnResult(
         id="turn-1",
@@ -53,8 +58,14 @@ def _turn_result(
         completed_at=None,
         duration_ms=duration_ms,
         final_response=final_response,
-        items=[],
+        items=items if items is not None else [],
         usage=usage,
+    )
+
+
+def _reasoning_item(*summary: str) -> ThreadItem:
+    return ThreadItem(
+        root=ReasoningThreadItem(id="r", type="reasoning", summary=list(summary))
     )
 
 
@@ -70,8 +81,18 @@ class _FakeThread:
         cwd: str | None = None,
         output_schema: dict[str, Any] | None = None,
         sandbox: Any = None,
+        effort: Any = None,
+        summary: Any = None,
     ) -> TurnResult:
-        self.calls.append({"items": items, "cwd": cwd, "sandbox": sandbox})
+        self.calls.append(
+            {
+                "items": items,
+                "cwd": cwd,
+                "sandbox": sandbox,
+                "effort": effort,
+                "summary": summary,
+            }
+        )
         if not self._results:
             raise AssertionError("fake thread ran out of results")
         return self._results.pop(0)
@@ -393,6 +414,85 @@ def test_cache_ratio_none_without_usage(
     result = fake.runtime.run_turn(_request())
     assert result.metadata.cached_input_tokens is None
     assert result.metadata.cache_ratio is None
+
+
+def test_default_effort_is_medium_summary_not_requested(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The default config requests medium effort (sent as the SDK ``effort`` arg,
+    # not a config.toml override) and no summary.
+    fake = _install(tmp_path, fake_codex_home, [_turn_result('{"ok": 1}')], monkeypatch)
+    fake.runtime.run_turn(_request())
+    call = fake.client.thread.calls[0]
+    assert call["effort"] == ReasoningEffort.medium
+    assert call["summary"] is None
+    assert not any("model_reasoning" in o for o in fake.client.config_overrides)
+
+
+def test_empty_effort_follows_model_default(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # An explicit empty string means "follow the model's own default": no effort
+    # is sent to the SDK.
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
+        reasoning_effort="",
+    )
+    fake.runtime.run_turn(_request())
+    assert fake.client.thread.calls[0]["effort"] is None
+
+
+def test_effort_and_summary_passed_at_call_site(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Configured effort/summary travel as SDK turn arguments, NOT as a
+    # model_reasoning_effort config.toml override.
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
+        reasoning_effort="high",
+        reasoning_summary="auto",
+    )
+    fake.runtime.run_turn(_request())
+    call = fake.client.thread.calls[0]
+    assert call["effort"] == ReasoningEffort.high
+    assert call["summary"] == ReasoningSummary.model_validate("auto")
+    assert not any("model_reasoning_effort" in o for o in fake.client.config_overrides)
+
+
+def test_reasoning_summary_captured_into_metadata(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [
+            _turn_result(
+                '{"ok": 1}',
+                items=[_reasoning_item("Looked at frame 3.", "Chair is on the left.")],
+            )
+        ],
+        monkeypatch,
+        reasoning_summary="auto",
+    )
+    result = fake.runtime.run_turn(_request())
+    assert result.metadata.reasoning_summary == (
+        "Looked at frame 3.\n\nChair is on the left."
+    )
+
+
+def test_reasoning_summary_none_when_absent(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = _install(tmp_path, fake_codex_home, [_turn_result('{"ok": 1}')], monkeypatch)
+    result = fake.runtime.run_turn(_request())
+    assert result.metadata.reasoning_summary is None
+    assert result.metadata.as_dict()["reasoning_summary"] is None
 
 
 def test_remove_tree_best_effort_deletes_dir(tmp_path: Path) -> None:

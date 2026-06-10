@@ -25,6 +25,7 @@ from ..config import (
     DEFAULT_PROJECT_ROOT,
     CodexAgentConfig,
     ReasoningEffort,
+    ReasoningSummary,
     SandboxMode,
 )
 from ..evaluation.nr3d_runner import run_samples
@@ -115,9 +116,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--reasoning-effort",
         default=None,
         choices=["minimal", "low", "medium", "high"],
-        help="Model reasoning effort. Default: the model's own default (reasoning "
-        "ON) — it is a real accuracy win for spatial grounding. Lower is faster "
-        "per call but hurts accuracy.",
+        help="Model reasoning effort. Default: medium (a real accuracy win for "
+        "spatial grounding). Lower is faster per call but hurts accuracy; "
+        "overridable here or via CODEX_AGENT_REASONING_EFFORT.",
+    )
+    parser.add_argument(
+        "--reasoning-summary",
+        default=None,
+        choices=["auto", "concise", "detailed", "none"],
+        help="Ask the model to emit a human-readable reasoning summary, captured "
+        "into per-sample metadata for tracing/debugging. Default: off (no "
+        "summary requested). 'none' explicitly disables it upstream.",
     )
     return parser
 
@@ -141,6 +150,7 @@ def main(argv: list[str] | None = None) -> int:
             tools=args.tools,
             turn_timeout=args.turn_timeout,
             reasoning_effort=args.reasoning_effort,
+            reasoning_summary=args.reasoning_summary,
             max_tool_calls=args.max_tool_calls,
             max_repeated_tool_calls=args.max_repeated_tool_calls,
         )
@@ -190,11 +200,6 @@ _DEFAULT_TOOLS_MAX_TOOL_CALLS = 30
 _DEFAULT_TOOLS_MAX_REPEATED_TOOL_CALLS = 4
 
 
-# The model default effort is used for tools (empty string). Low effort was
-# observed to hurt spatial-grounding accuracy without a clear latency win.
-_DEFAULT_TOOLS_REASONING_EFFORT: ReasoningEffort = ""
-
-
 def _build_config(
     *,
     model: str | None,
@@ -202,6 +207,7 @@ def _build_config(
     tools: bool,
     turn_timeout: float | None,
     reasoning_effort: str | None,
+    reasoning_summary: str | None = None,
     max_tool_calls: int | None = None,
     max_repeated_tool_calls: int | None = None,
 ) -> CodexAgentConfig:
@@ -227,9 +233,8 @@ def _build_config(
     return dataclasses.replace(
         config,
         turn_timeout_s=_resolve_turn_timeout(turn_timeout, tools=tools, config=config),
-        reasoning_effort=_resolve_reasoning_effort(
-            reasoning_effort, tools=tools, config=config
-        ),
+        reasoning_effort=_resolve_reasoning_effort(reasoning_effort, config=config),
+        reasoning_summary=_resolve_reasoning_summary(reasoning_summary, config=config),
         max_tool_calls=_resolve_cap(
             max_tool_calls,
             tools=tools,
@@ -258,13 +263,13 @@ def _resolve_cap(
 
 
 def _resolve_reasoning_effort(
-    reasoning_effort: str | None, *, tools: bool, config: CodexAgentConfig
+    reasoning_effort: str | None, *, config: CodexAgentConfig
 ) -> ReasoningEffort:
+    # CLI flag wins; otherwise keep the env/config value (defaults to "medium",
+    # see config.DEFAULT_REASONING_EFFORT).
     if reasoning_effort is not None:
         return _as_reasoning_effort(reasoning_effort)
-    if config.reasoning_effort:
-        return config.reasoning_effort
-    return _DEFAULT_TOOLS_REASONING_EFFORT if tools else ""
+    return config.reasoning_effort
 
 
 def _as_reasoning_effort(value: str) -> ReasoningEffort:
@@ -277,6 +282,27 @@ def _as_reasoning_effort(value: str) -> ReasoningEffort:
     if value not in efforts:
         raise ValueError(f"unexpected reasoning effort: {value!r}")
     return efforts[value]
+
+
+def _resolve_reasoning_summary(
+    reasoning_summary: str | None, *, config: CodexAgentConfig
+) -> ReasoningSummary:
+    # CLI flag wins; otherwise keep the env/config value (default "" = off).
+    if reasoning_summary is not None:
+        return _as_reasoning_summary(reasoning_summary)
+    return config.reasoning_summary
+
+
+def _as_reasoning_summary(value: str) -> ReasoningSummary:
+    summaries: dict[str, ReasoningSummary] = {
+        "auto": "auto",
+        "concise": "concise",
+        "detailed": "detailed",
+        "none": "none",
+    }
+    if value not in summaries:
+        raise ValueError(f"unexpected reasoning summary: {value!r}")
+    return summaries[value]
 
 
 def _resolve_turn_timeout(
