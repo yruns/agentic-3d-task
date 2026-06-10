@@ -68,7 +68,12 @@ artifact) as **separate** fields — the summary is not the raw thoughts.
 Override precedence for effort: `--reasoning-effort` > `CODEX_AGENT_REASONING_EFFORT`
 > default `medium`.
 
-### B. ModelHub adapter (`/Users/bytedance/aispace/codex_modelhub_adapter`, NOT git-tracked)
+### B. ModelHub adapter (vendored at `codex_modelhub_adapter/`)
+
+The adapter previously lived only in an untracked external directory
+(`/Users/bytedance/aispace/codex_modelhub_adapter`); it is now **vendored into
+this repo at `codex_modelhub_adapter/`** (commit "Vendor the Codex ModelHub
+adapter…"), with secrets excluded (only `*.example` placeholders tracked).
 
 Because the chat upstream cannot produce summaries, the adapter now **routes a
 turn to `/responses` whenever it requests a reasoning summary**, keeping every
@@ -116,5 +121,8 @@ chain-of-thought.
 - Summaries depend on the `/responses` upstream; if the adapter is reconfigured
   to force `upstream_api=chat_completions`, summaries silently disappear (no
   fallback — the field is simply `null`).
-- The adapter repo is not under git; the only record of its change is this doc +
-  the `*.bak` backup beside the edited file.
+- The adapter is now vendored at `codex_modelhub_adapter/` (its real AKs stay in
+  the gitignored `.modelhub_upstreams.toml`, never committed). It is a standalone
+  project kept outside `src/`, so the repo's `ruff/black/mypy/pytest src` gate
+  does not cover it. The live instance and `restart_adapter.sh` still reference
+  the original external path.
