@@ -9,8 +9,10 @@ the rendered PNG.
 from __future__ import annotations
 
 from keyframe.bev.builder import (
+    BevBuilder,
     BEVScenePaths,
     Nr3dSceneBEVBuilder,
+    OpenEqaSceneBEVBuilder,
     SceneBEVBuilder,
 )
 from keyframe.bev.config import SceneBEVConfig
@@ -20,6 +22,12 @@ from keyframe.bev.render import (
     CameraView,
     RenderedBEV,
     render_scene_bev,
+)
+from keyframe.bev.schematic import (
+    DEFAULT_SCHEMATIC_BEV_CONFIG,
+    OrthoBevView,
+    SchematicBevConfig,
+    render_schematic_bev,
 )
 
 __all__ = [
@@ -31,6 +39,12 @@ __all__ = [
     "RenderedBEV",
     "render_scene_bev",
     "BEVScenePaths",
+    "BevBuilder",
     "SceneBEVBuilder",
     "Nr3dSceneBEVBuilder",
+    "OpenEqaSceneBEVBuilder",
+    "SchematicBevConfig",
+    "DEFAULT_SCHEMATIC_BEV_CONFIG",
+    "OrthoBevView",
+    "render_schematic_bev",
 ]

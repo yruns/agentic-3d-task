@@ -57,7 +57,7 @@ from keyframe.query_executor import QueryExecutor
 from keyframe.spatial.checker import SpatialRelationChecker
 
 if TYPE_CHECKING:
-    from keyframe.bev import BEVMarker, SceneBEVBuilder, SceneBEVConfig
+    from keyframe.bev import BevBuilder, BEVMarker, SceneBEVConfig
 
 #: Whether CLIP (torch + open_clip) is importable for semantic fallback.
 HAS_CLIP: bool = (
@@ -163,7 +163,7 @@ class KeyframeSelector:
         self.ensure_lightweight_pcd = ensure_lightweight_pcd
         self.dataset = dataset
         self._bev_config = bev_config
-        self._bev_builder: SceneBEVBuilder | None = None
+        self._bev_builder: BevBuilder | None = None
 
         self.objects: list[SceneObject] = []
         self.object_features: NDArray[np.float32] | None = None
@@ -853,18 +853,24 @@ class KeyframeSelector:
             return self.scene_path.parent
         return self.scene_path
 
-    def _get_bev_builder(self) -> SceneBEVBuilder:
+    def _get_bev_builder(self) -> BevBuilder:
         if self._bev_builder is None:
-            from keyframe.bev import Nr3dSceneBEVBuilder, SceneBEVConfig
+            if self.dataset == "openeqa":
+                # OpenEQA clips ship no mesh; use the mesh-free schematic builder.
+                from keyframe.bev import OpenEqaSceneBEVBuilder
 
-            if self.dataset != "nr3d":
+                self._bev_builder = OpenEqaSceneBEVBuilder()
+            elif self.dataset == "nr3d":
+                from keyframe.bev import Nr3dSceneBEVBuilder, SceneBEVConfig
+
+                self._bev_builder = Nr3dSceneBEVBuilder(
+                    self._bev_config or SceneBEVConfig()
+                )
+            else:
                 raise ValueError(
                     f"No BEV builder for dataset {self.dataset!r}; "
-                    "only 'nr3d' is supported"
+                    "supported: 'nr3d', 'openeqa'"
                 )
-            self._bev_builder = Nr3dSceneBEVBuilder(
-                self._bev_config or SceneBEVConfig()
-            )
         return self._bev_builder
 
     def _bev_markers(self) -> list[BEVMarker]:
@@ -884,24 +890,56 @@ class KeyframeSelector:
                         float(obj.centroid[1]),
                         float(obj.centroid[2]),
                     ),
+                    extent=self._object_extent(obj),
                 )
             )
         return markers
 
-    def generate_scene_bev(self, *, use_cache: bool = True) -> Path:
+    @staticmethod
+    def _object_extent(obj: SceneObject) -> tuple[float, float, float] | None:
+        """Axis-aligned ``(dx, dy, dz)`` extent from the object's 3D bbox, if any."""
+        bbox = obj.bbox_np
+        if bbox is None:
+            return None
+        array = np.asarray(bbox, dtype=np.float64)
+        if array.ndim != 2 or array.shape[0] < 2 or array.shape[1] < 3:
+            return None
+        spans = array[:, :3].max(axis=0) - array[:, :3].min(axis=0)
+        return (float(spans[0]), float(spans[1]), float(spans[2]))
+
+    def generate_scene_bev(
+        self,
+        *,
+        output_path: Path | None = None,
+        use_cache: bool = True,
+        highlight_ids: frozenset[int] = frozenset(),
+    ) -> Path:
         """Render (or load) the top-down scene BEV used as parser visual context.
 
-        Requires the ``vision`` extra (opencv + pillow + plyfile) and the
-        ScanNet mesh / trajectory / intrinsic assets for the scene.
+        For ``dataset='nr3d'`` this rasterizes the colored ScanNet mesh (requires
+        the ``vision`` extra plus the mesh / trajectory / intrinsic assets). For
+        ``dataset='openeqa'`` (no mesh) it draws the mesh-free schematic floor
+        plan from object footprints + the camera trajectory. ``highlight_ids``
+        are drawn in the highlight color.
+
+        Args:
+            output_path: Where to write the render. Defaults to
+                ``<scene_dir>/bev_cache/keyframe_bev.png``. Pass an explicit
+                scratch path (with ``use_cache=False``) to avoid writing into a
+                read-mostly prepared data directory.
+            use_cache: Reuse / write a content-addressed cache next to the
+                prepared scene.
+            highlight_ids: Object ids drawn in the highlight color.
         """
         builder = self._get_bev_builder()
         scene_dir = self._scene_dir()
-        output_path = scene_dir / "bev_cache" / "keyframe_bev.png"
+        out = output_path or (scene_dir / "bev_cache" / "keyframe_bev.png")
         return builder.build(
             scene_id=scene_dir.name,
             data_root=scene_dir.parent,
             markers=self._bev_markers(),
-            output_path=output_path,
+            output_path=out,
+            highlight_ids=highlight_ids,
             use_cache=use_cache,
         )
 

@@ -1,0 +1,438 @@
+{
+  "n": 10,
+  "n_judged": 10,
+  "MNAS": 67.5,
+  "per_category_MNAS": {
+    "attribute recognition": 87.5,
+    "functional reasoning": 75.0,
+    "object localization": 50.0,
+    "object recognition": 75.0,
+    "object state recognition": 100.0,
+    "spatial understanding": 0.0,
+    "world knowledge": 75.0
+  },
+  "completion_rate": 1.0,
+  "cache_hit_rate": 0.5,
+  "mean_cache_ratio": 0.3352041408035825,
+  "per_sample": [
+    {
+      "question_id": "00371545-9660-4dfd-94a8-4cae5f07bc14",
+      "clip_id": "189-scannet-scene0500_00",
+      "scene_id": "scene0500_00",
+      "category": "attribute recognition",
+      "status": "completed",
+      "question": "Which material is the furniture of the scene?",
+      "gt_answer": "Wood",
+      "prediction": "wood",
+      "judge_score": 5,
+      "mnas": 100.0,
+      "confidence": 0.97,
+      "supporting_claims": [
+        "Multiple chairs in the room have a brown wood finish with visible wood grain on the seats, backs, and arms.",
+        "The large table at the right also shows the same brown wooden surface.",
+        "The built-in shelving/cabinet on the left appears to be made of matching wood.",
+        "Across frames, the furniture has rigid slatted wooden construction rather than metal or plastic."
+      ],
+      "num_frames": 8,
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 11887,
+      "turn_usage": {
+        "last": {
+          "cached_input_tokens": 0,
+          "input_tokens": 14119,
+          "output_tokens": 203,
+          "reasoning_output_tokens": 97,
+          "total_tokens": 14322
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cached_input_tokens": 0,
+          "input_tokens": 14119,
+          "output_tokens": 203,
+          "reasoning_output_tokens": 97,
+          "total_tokens": 14322
+        }
+      },
+      "input_tokens": 14119,
+      "cached_input_tokens": 0
+    },
+    {
+      "question_id": "0175891c-e182-478d-be8b-de1a10ff8540",
+      "clip_id": "158-scannet-scene0356_00",
+      "scene_id": "scene0356_00",
+      "category": "functional reasoning",
+      "status": "completed",
+      "question": "How can I see myself?",
+      "gt_answer": "using the mirror on the door",
+      "prediction": "in the mirror on the door",
+      "judge_score": 5,
+      "mnas": 100.0,
+      "confidence": 0.96,
+      "supporting_claims": [
+        "Frame 6 shows a full-length mirror mounted on the door.",
+        "Frame 6 includes the camera holder's body visible in that mirror.",
+        "Frame 7 again shows the person's legs reflected in the door mirror.",
+        "The other visible surfaces are desk, bed, dresser, and walls, not reflective enough to see yourself clearly."
+      ],
+      "num_frames": 8,
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 8616,
+      "turn_usage": {
+        "last": {
+          "cached_input_tokens": 0,
+          "input_tokens": 14114,
+          "output_tokens": 203,
+          "reasoning_output_tokens": 101,
+          "total_tokens": 14317
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cached_input_tokens": 0,
+          "input_tokens": 14114,
+          "output_tokens": 203,
+          "reasoning_output_tokens": 101,
+          "total_tokens": 14317
+        }
+      },
+      "input_tokens": 14114,
+      "cached_input_tokens": 0
+    },
+    {
+      "question_id": "024300a0-100f-427d-b643-d05b7768f894",
+      "clip_id": "144-scannet-scene0700_01",
+      "scene_id": "scene0700_01",
+      "category": "object localization",
+      "status": "completed",
+      "question": "Where did I leave my water bottle?",
+      "gt_answer": "on the floor",
+      "prediction": "on the floor beside the office chair",
+      "judge_score": 5,
+      "mnas": 100.0,
+      "confidence": 0.92,
+      "supporting_claims": [
+        "Frame #6 shows a blue water bottle lying on the floor next to the black office chair.",
+        "The bottle is near the desk area, tucked by the chair base and wall.",
+        "None of the desk-surface views (#1, #2, #8) show a water bottle on top of the desk.",
+        "The chair-and-window area in frames #6 and #7 places the bottle in the corner seating area rather than on furniture."
+      ],
+      "num_frames": 8,
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 11882,
+      "turn_usage": {
+        "last": {
+          "cached_input_tokens": 0,
+          "input_tokens": 14118,
+          "output_tokens": 286,
+          "reasoning_output_tokens": 160,
+          "total_tokens": 14404
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cached_input_tokens": 0,
+          "input_tokens": 14118,
+          "output_tokens": 286,
+          "reasoning_output_tokens": 160,
+          "total_tokens": 14404
+        }
+      },
+      "input_tokens": 14118,
+      "cached_input_tokens": 0
+    },
+    {
+      "question_id": "02a02496-904f-456a-9032-d88af21fc6fa",
+      "clip_id": "135-scannet-scene0131_00",
+      "scene_id": "scene0131_00",
+      "category": "object recognition",
+      "status": "completed",
+      "question": "What leans on the wall on the right?",
+      "gt_answer": "a poster",
+      "prediction": "a rolled-up poster",
+      "judge_score": 4,
+      "mnas": 75.0,
+      "confidence": 0.75,
+      "supporting_claims": [
+        "Frame 1 shows a white cylindrical sheet-like object propped against the wall on the right.",
+        "The object has printed graphics/text on it, consistent with a poster or display sheet.",
+        "It is leaning below the whiteboard along the right wall rather than lying on the desk or floor."
+      ],
+      "num_frames": 8,
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 11667,
+      "turn_usage": {
+        "last": {
+          "cached_input_tokens": 0,
+          "input_tokens": 14117,
+          "output_tokens": 432,
+          "reasoning_output_tokens": 339,
+          "total_tokens": 14549
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cached_input_tokens": 0,
+          "input_tokens": 14117,
+          "output_tokens": 432,
+          "reasoning_output_tokens": 339,
+          "total_tokens": 14549
+        }
+      },
+      "input_tokens": 14117,
+      "cached_input_tokens": 0
+    },
+    {
+      "question_id": "016fb5d2-3c6f-4aa3-8493-7768aa3762a9",
+      "clip_id": "002-scannet-scene0709_00",
+      "scene_id": "scene0709_00",
+      "category": "object state recognition",
+      "status": "completed",
+      "question": "Is the countertop clean?",
+      "gt_answer": "No",
+      "prediction": "No, it looks cluttered rather than clean",
+      "judge_score": 5,
+      "mnas": 100.0,
+      "confidence": 0.9,
+      "supporting_claims": [
+        "Frames 7 and 8 show the sink-side countertop covered with a dish rack, bowls, a cereal box, soap, a cutting board, and a blender.",
+        "Frame 8 shows dishes and utensils left out on the counter next to the sink.",
+        "Frames 1 and 2 show additional items left on the stove-side counter, including a microwave, paper towel roll, and a bag/container.",
+        "No frame shows the full countertop cleared off or wiped clean."
+      ],
+      "num_frames": 8,
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 11105,
+      "turn_usage": {
+        "last": {
+          "cached_input_tokens": 0,
+          "input_tokens": 14116,
+          "output_tokens": 316,
+          "reasoning_output_tokens": 183,
+          "total_tokens": 14432
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cached_input_tokens": 0,
+          "input_tokens": 14116,
+          "output_tokens": 316,
+          "reasoning_output_tokens": 183,
+          "total_tokens": 14432
+        }
+      },
+      "input_tokens": 14116,
+      "cached_input_tokens": 0
+    },
+    {
+      "question_id": "00e8e77b-6d1d-45da-bedb-ca2b0868b9ed",
+      "clip_id": "109-scannet-scene0648_01",
+      "scene_id": "scene0648_01",
+      "category": "spatial understanding",
+      "status": "completed",
+      "question": "What is on top of the calculator?",
+      "gt_answer": "red notebook",
+      "prediction": "a comb",
+      "judge_score": 1,
+      "mnas": 0.0,
+      "confidence": 0.58,
+      "supporting_claims": [
+        "In the desk-side frames, a green calculator is visible next to the red notebook.",
+        "A narrow light-colored grooming item lies diagonally across the top surface of the calculator.",
+        "The same object appears on the calculator in multiple nearby views, so it is not just background clutter.",
+        "No other item is visibly stacked directly on the calculator in the clearest desk views."
+      ],
+      "num_frames": 8,
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 77626,
+      "turn_usage": {
+        "last": {
+          "cached_input_tokens": 13312,
+          "input_tokens": 18591,
+          "output_tokens": 422,
+          "reasoning_output_tokens": 315,
+          "total_tokens": 19013
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cached_input_tokens": 72576,
+          "input_tokens": 124814,
+          "output_tokens": 1528,
+          "reasoning_output_tokens": 782,
+          "total_tokens": 126342
+        }
+      },
+      "input_tokens": 18591,
+      "cached_input_tokens": 13312
+    },
+    {
+      "question_id": "0479de12-7feb-4c56-bb87-33849036a032",
+      "clip_id": "173-scannet-scene0278_01",
+      "scene_id": "scene0278_01",
+      "category": "world knowledge",
+      "status": "completed",
+      "question": "What can I use to the trim the edges of a document that I printed out?",
+      "gt_answer": "Use the paper cutter on the black counter.",
+      "prediction": "a paper cutter",
+      "judge_score": 4,
+      "mnas": 75.0,
+      "confidence": 0.9,
+      "supporting_claims": [
+        "Frame #7 shows a green paper cutter with a long handle on the counter.",
+        "Frame #7 places the cutter right beside loose sheets of paper.",
+        "Frames #5 and #6 show a copier/printer and printed pages in the same work area.",
+        "The visible tool most suited to trimming document edges is the paper cutter in frame #7."
+      ],
+      "num_frames": 8,
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 9705,
+      "turn_usage": {
+        "last": {
+          "cached_input_tokens": 7040,
+          "input_tokens": 14122,
+          "output_tokens": 291,
+          "reasoning_output_tokens": 188,
+          "total_tokens": 14413
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cached_input_tokens": 7040,
+          "input_tokens": 14122,
+          "output_tokens": 291,
+          "reasoning_output_tokens": 188,
+          "total_tokens": 14413
+        }
+      },
+      "input_tokens": 14122,
+      "cached_input_tokens": 7040
+    },
+    {
+      "question_id": "007b3e02-d944-4c04-9bce-f037adcf34bf",
+      "clip_id": "186-scannet-scene0549_01",
+      "scene_id": "scene0549_01",
+      "category": "attribute recognition",
+      "status": "completed",
+      "question": "Which material are the side and center tables?",
+      "gt_answer": "Wood",
+      "prediction": "light-colored wood",
+      "judge_score": 4,
+      "mnas": 75.0,
+      "confidence": 0.88,
+      "supporting_claims": [
+        "Frames 2, 3, 4, 6, and 8 show the round side tables with a pale tan tabletop and wooden-looking finish.",
+        "Frames 3, 4, 6, and 8 show the center rectangular table with the same light tan surface and visible wood-like grain/wear.",
+        "The side tables and center table share a matching natural tan appearance rather than glass, metal, or stone.",
+        "Frame 8 gives the clearest top view of both a side table and the center table, and both appear to be light wood."
+      ],
+      "num_frames": 8,
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 67968,
+      "turn_usage": {
+        "last": {
+          "cached_input_tokens": 13184,
+          "input_tokens": 17474,
+          "output_tokens": 262,
+          "reasoning_output_tokens": 115,
+          "total_tokens": 17736
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cached_input_tokens": 79360,
+          "input_tokens": 120873,
+          "output_tokens": 955,
+          "reasoning_output_tokens": 397,
+          "total_tokens": 121828
+        }
+      },
+      "input_tokens": 17474,
+      "cached_input_tokens": 13184
+    },
+    {
+      "question_id": "020f8677-ed5e-40cd-9406-56b33622d5c9",
+      "clip_id": "138-scannet-scene0500_01",
+      "scene_id": "scene0500_01",
+      "category": "functional reasoning",
+      "status": "completed",
+      "question": "How I can share the presentation materials?",
+      "gt_answer": "using the remote and the projector",
+      "prediction": "Use the ceiling-mounted projector",
+      "judge_score": 3,
+      "mnas": 50.0,
+      "confidence": 0.83,
+      "supporting_claims": [
+        "The room is arranged like a conference/presentation space with a long meeting table and many chairs.",
+        "A ceiling-mounted projector is visible above the table in the extra viewed frame.",
+        "A presentation board/easel is also visible near the wall in the same frame.",
+        "The attached frames show a large chalkboard at the front of the room, supporting presentation use."
+      ],
+      "num_frames": 8,
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 49427,
+      "turn_usage": {
+        "last": {
+          "cached_input_tokens": 13184,
+          "input_tokens": 21256,
+          "output_tokens": 285,
+          "reasoning_output_tokens": 178,
+          "total_tokens": 21541
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cached_input_tokens": 53504,
+          "input_tokens": 90747,
+          "output_tokens": 1127,
+          "reasoning_output_tokens": 619,
+          "total_tokens": 91874
+        }
+      },
+      "input_tokens": 21256,
+      "cached_input_tokens": 13184
+    },
+    {
+      "question_id": "056ce5a4-f054-4e72-a4ce-4966fdd79571",
+      "clip_id": "148-scannet-scene0203_01",
+      "scene_id": "scene0203_01",
+      "category": "object localization",
+      "status": "completed",
+      "question": "Where is the book on sailing located?",
+      "gt_answer": "On the coffee table",
+      "prediction": "On the bookshelf beside the window",
+      "judge_score": 1,
+      "mnas": 0.0,
+      "confidence": 0.74,
+      "supporting_claims": [
+        "Attached frames #2 and #6 show a large bookshelf full of books along the wall by the window.",
+        "Keyframe 490 gives a close view of the same bookshelf, confirming many books are stored there.",
+        "Keyframe 520 shows the bookshelf next to the window and chair, reinforcing that this is the book storage area.",
+        "No other visible surface in the viewed frames shows a distinct book placed elsewhere."
+      ],
+      "num_frames": 8,
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 60849,
+      "turn_usage": {
+        "last": {
+          "cached_input_tokens": 13184,
+          "input_tokens": 17285,
+          "output_tokens": 529,
+          "reasoning_output_tokens": 411,
+          "total_tokens": 17814
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cached_input_tokens": 72192,
+          "input_tokens": 91266,
+          "output_tokens": 1427,
+          "reasoning_output_tokens": 856,
+          "total_tokens": 92693
+        }
+      },
+      "input_tokens": 17285,
+      "cached_input_tokens": 13184
+    }
+  ]
+}

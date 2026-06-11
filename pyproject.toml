@@ -45,6 +45,11 @@ vision = [
     "opencv-python>=4.8.0",
     "pillow>=10.0.0",
     "plyfile>=1.0.0",
+    # Prepared ConceptGraph object pickles embed omegaconf config objects, so
+    # unpickling a real scene (keyframe selection / BEV / OpenEQA agent tools)
+    # needs omegaconf available. Imported transitively by pickle.load, not at
+    # ``import keyframe`` time.
+    "omegaconf>=2.3.0",
 ]
 clip = [
     "torch>=2.0.0",

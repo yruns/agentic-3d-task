@@ -26,6 +26,8 @@ from .errors import (
     CodexResponseError,
     CodexTurnError,
     Nr3dDataError,
+    OpenEqaDataError,
+    OpenEqaJudgeError,
 )
 from .models import (
     CodexSkill,
@@ -58,4 +60,6 @@ __all__ = [
     "CodexTurnError",
     "CodexResponseError",
     "Nr3dDataError",
+    "OpenEqaDataError",
+    "OpenEqaJudgeError",
 ]
