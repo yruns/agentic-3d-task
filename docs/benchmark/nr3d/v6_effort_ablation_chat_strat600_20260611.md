@@ -108,15 +108,21 @@ everywhere and is the only piece that clears the variance bands on its own.
 ### Why the path matters more than the param
 
 The chat (`/v2/crawl`) path is **stateless across turns**: each agentic turn
-re-sends the transcript but the model's prior *reasoning* is gone (chat completions
-returns no reasoning content; `mapping.py` drops empty reasoning items). The
-`/responses` path can carry **encrypted reasoning state** across turns, so this
-multi-turn evidence-seeking agent (inspect frames → rank proposals → decide) keeps
-its chain-of-thought between tool calls. That compounding matters most on
-**View-Dep** cases that need sustained spatial reasoning — exactly where the path
-delta is largest (+8.53). The `reasoning_effort=medium` param *is* forwarded to
-chat (`mapping.py:119-123`), and it does help a little (+2 pp), but it cannot
-substitute for cross-turn reasoning continuity.
+re-sends the transcript but the model's prior *reasoning* is gone. This happens
+**structurally** — the Responses→chat converter (`_responses_input_to_chat_messages`)
+has no branch for `type:"reasoning"` items so they fall through and are dropped, and
+the chat upstream returns no reasoning content to begin with. The `/responses` path
+can carry **encrypted reasoning state** across turns, so this multi-turn
+evidence-seeking agent (inspect frames → rank proposals → decide) keeps its
+chain-of-thought between tool calls. That compounding matters most on **View-Dep**
+cases that need sustained spatial reasoning — exactly where the path delta is
+largest (+8.53). The `reasoning_effort=medium` param *is* forwarded to chat
+(`mapping.py:119-123`), and it does help a little (+2 pp), but it cannot substitute
+for cross-turn reasoning continuity.
+
+> Full mechanism (including the prompt-caching interaction and the AK-routing
+> reasons the carryover stays stable within a chain):
+> [`docs/codex_agent/reasoning_carryover_caching_ak_routing_20260611.md`](../../codex_agent/reasoning_carryover_caching_ak_routing_20260611.md).
 
 > **Residual confound (honest):** v6 = v4 + medium effort gives +2 pp on chat, but
 > we cannot fully rule out that `/v2/crawl` only *partially* honours
