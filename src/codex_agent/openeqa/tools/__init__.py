@@ -2,9 +2,11 @@
 
 Each tool is a small, deterministic function over a prepared OpenEQA clip
 (:class:`~codex_agent.openeqa.tools.scene_context.OpenEqaToolScene`). ``list_objects``
-prints compact JSON; ``view_frame`` / ``keyframe_selector`` / ``view_bev`` also
-write an image into a writable scratch dir and return its path so the agent can
-``view_image`` the pixels.
+prints compact JSON; ``view_frame`` / ``keyframe_selector`` / ``view_crop`` /
+``view_bev`` also write an image into a writable scratch dir and return its path
+so the agent can ``view_image`` the pixels. ``keyframe_selector`` returns
+spatially-diverse frames plus a one-image contact sheet; ``view_crop`` returns a
+high-resolution zoom of a region or a detected object.
 
 The single dispatcher entry point is::
 

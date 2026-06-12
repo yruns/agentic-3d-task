@@ -47,11 +47,13 @@ from ..runtime import CodexAgentRuntime
 
 # Wall-clock budget is OFF by default (per-turn latency scales with adapter
 # contention under concurrency); the tool-call cap is the primary, timing-
-# independent loop backstop. A legitimate OpenEQA tool run resolves in a handful
-# of actions, so 24 gives headroom while bounding the degenerate re-read loop;
-# repeating one identical action 4x is already a rut with no recovery value.
+# independent loop backstop. The v4 trace analysis found ~8% of questions hit the
+# old cap of 24 because each retrieval batch spends one view_image per returned
+# frame; 32 gives the diverse-retrieval + contact-sheet + view_crop tools room to
+# gather enough evidence before the backstop fires. Repeating one identical
+# action 4x is already a rut with no recovery value.
 _DEFAULT_TOOLS_TURN_TIMEOUT_S = 0.0
-_DEFAULT_TOOLS_MAX_TOOL_CALLS = 24
+_DEFAULT_TOOLS_MAX_TOOL_CALLS = 32
 _DEFAULT_TOOLS_MAX_REPEATED_TOOL_CALLS = 4
 
 

@@ -18,6 +18,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..scene import DEFAULT_MAX_IMAGE_SIZE, downsize_rgb_for_view
+from .imaging import compose_contact_sheet
 from .models import ToolInputError
 from .scene_context import OpenEqaToolScene
 
@@ -54,14 +55,19 @@ class ViewFrameResult:
     total_frames: int
     frame_id_range: tuple[int, int]
     note: str
+    contact_sheet_path: Path | None = None
 
     def to_payload(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "frames": [frame.to_payload() for frame in self.frames],
             "total_frames": self.total_frames,
             "frame_id_range": list(self.frame_id_range),
             "note": self.note,
         }
+        if self.contact_sheet_path is not None:
+            payload["contact_sheet"] = str(self.contact_sheet_path)
+            payload["tip"] = "view_image the contact_sheet to see all frames at once"
+        return payload
 
 
 def view_frame(
@@ -98,12 +104,27 @@ def view_frame(
         )
         for frame_id in capped
     )
+    contact_sheet = _contact_sheet(tool_scene, frames, out_dir)
     return ViewFrameResult(
         frames=frames,
         total_frames=scene.total_frames,
         frame_id_range=(scene.rgb_frame_ids[0], scene.rgb_frame_ids[-1]),
         note=note,
+        contact_sheet_path=contact_sheet,
     )
+
+
+def _contact_sheet(
+    tool_scene: OpenEqaToolScene, frames: tuple[ViewFrame, ...], out_dir: Path
+) -> Path | None:
+    if len(frames) < 2:
+        return None
+    tiles = [(f"frame {frame.frame_id}", frame.image_path) for frame in frames]
+    destination = out_dir / f"{tool_scene.clip_id}_frame_sheet.jpg"
+    try:
+        return compose_contact_sheet(tiles, destination)
+    except Exception:  # a sheet is a convenience; never fail the tool over it
+        return None
 
 
 def _requested_ids(args: ViewFrameArgs) -> list[int]:

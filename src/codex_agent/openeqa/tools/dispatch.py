@@ -17,11 +17,12 @@ from pydantic import BaseModel, ValidationError
 from .models import ToolInputError, ToolPayload
 from .scene_context import OpenEqaToolScene
 
-#: Frame-switching/keyframe/BEV tools write images; ``list_objects`` is text-only.
+#: Frame-switching/keyframe/BEV/crop tools write images; ``list_objects`` is text-only.
 TOOL_NAMES: tuple[str, ...] = (
     "list_objects",
     "keyframe_selector",
     "view_frame",
+    "view_crop",
     "view_bev",
 )
 
@@ -48,6 +49,10 @@ def run_tool(
         from .frame_tools import ViewFrameArgs, view_frame
 
         return view_frame(tool_scene, _parse(ViewFrameArgs, raw_args), out_dir=out_dir)
+    if name == "view_crop":
+        from .crop_tools import ViewCropArgs, view_crop
+
+        return view_crop(tool_scene, _parse(ViewCropArgs, raw_args), out_dir=out_dir)
     if name == "keyframe_selector":
         from .keyframe_retrieval import KeyframeSelectorArgs, keyframe_selector
 

@@ -325,5 +325,6 @@ def test_tool_names_are_stable() -> None:
         "list_objects",
         "keyframe_selector",
         "view_frame",
+        "view_crop",
         "view_bev",
     }
