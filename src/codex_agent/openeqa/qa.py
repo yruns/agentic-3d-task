@@ -1,16 +1,18 @@
 """OpenEQA question-answering task for the Codex Agent SDK runtime.
 
-The task presents one open-ended question plus a small set of first-person frames
-sampled from the scene, and asks Codex for a concise grounded answer as a strict
-JSON object. The ground-truth answer is never placed in the prompt — only the
-question text, its category, and the attached frames — so the model answers from
-visual evidence alone.
+The task presents one open-ended question about a 3D indoor scene and attaches
+**no images**: the agent has no visual information until it fetches it through the
+OpenEQA CLI tools (``keyframe_selector`` / ``view_frame`` / ``view_bev`` /
+``list_objects``) and views the returned images. The guide prompt tells the model
+exactly how to call those tools, so retrieval is driven by the question instead of
+a fixed uniform frame sample. The ground-truth answer is never placed in the
+prompt — only the question text, its category, and the scene id — so the model
+answers from the visual evidence it gathers.
 """
 
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -19,10 +21,9 @@ from pydantic import BaseModel, Field, ValidationError
 
 from ..errors import CodexResponseError
 from ..json_extraction import extract_json_object
-from ..models import CodexSkill, CodexTurnRequest
+from ..models import CodexTurnRequest
 from .playbook import OPENEQA_TOOLS_PLAYBOOK
 from .question import OpenEqaQuestion
-from .scene import OpenEqaFrame
 
 TASK_NAME = "openeqa_question_answering"
 _DEFAULT_MAX_CLAIMS = 6
@@ -65,25 +66,25 @@ class OpenEqaAnswerOutcome:
 
 
 class OpenEqaQuestionAnsweringTask:
-    """A :class:`codex_agent.tasks.base.CodexTask` for one OpenEQA question."""
+    """A :class:`codex_agent.tasks.base.CodexTask` for one OpenEQA question.
+
+    The turn carries no attached images; the agent gathers visual evidence by
+    running the OpenEQA CLI tools under ``scene_dir``. ``scene_dir`` is therefore
+    required and the tool playbook is always inlined into the prompt (no on-disk
+    skill is advertised, which avoids the context-window re-read loop).
+    """
 
     def __init__(
         self,
         *,
         question: OpenEqaQuestion,
-        frames: Sequence[OpenEqaFrame],
-        skill: CodexSkill | None = None,
+        scene_dir: Path,
         max_supporting_claims: int = _DEFAULT_MAX_CLAIMS,
-        tools_enabled: bool = False,
-        scene_dir: Path | None = None,
         tool_cli_module: str = DEFAULT_TOOL_CLI_MODULE,
     ) -> None:
         self.question = question
-        self.frames = tuple(frames)
-        self.skill = skill
-        self.max_supporting_claims = max_supporting_claims
-        self.tools_enabled = tools_enabled and scene_dir is not None
         self.scene_dir = scene_dir
+        self.max_supporting_claims = max_supporting_claims
         self.tool_cli_module = tool_cli_module
 
     @property
@@ -91,20 +92,11 @@ class OpenEqaQuestionAnsweringTask:
         return TASK_NAME
 
     def build_turn_request(self) -> CodexTurnRequest:
-        # Tool mode inlines the playbook into the prompt (see
-        # codex_agent.openeqa.playbook) and never attaches an on-disk skill:
-        # advertising a SKILL.md path re-introduces the unbounded re-read loop
-        # once Codex windows the context. Prompt-only mode may still attach a
-        # lightweight reasoning skill.
-        if self.tools_enabled:
-            skills: tuple[CodexSkill, ...] = ()
-        else:
-            skills = (self.skill,) if self.skill is not None else ()
         return CodexTurnRequest(
             prompt=self._build_prompt(),
             output_schema=OpenEqaAnswerDecision.model_json_schema(),
-            skills=skills,
-            image_paths=tuple(frame.image_path for frame in self.frames),
+            skills=(),
+            image_paths=(),
         )
 
     def is_valid_response(self, response_text: str) -> bool:
@@ -140,47 +132,33 @@ class OpenEqaQuestionAnsweringTask:
             f"- question: {self.question.question}\n"
             f"- category: {self.question.category}\n"
             f"- scene_id: {self.question.scene_id}\n"
-            f"- attached_frames (in order): {self._frame_listing()}\n"
             + self._tools_section()
             + "\nOutput JSON schema:\n"
             + json.dumps(schema, ensure_ascii=False)
         )
 
     def _rules(self) -> list[str]:
-        rules = [
+        return [
+            "- NO images are attached to this message. You start with zero visual "
+            "information about the scene.",
+            "- You MUST gather the visual evidence yourself by running the OpenEQA "
+            "CLI tools described below (start with keyframe_selector for a named "
+            "object, or view_bev / list_objects for layout), then open each "
+            "returned image_path with the view_image tool. An image you have not "
+            "viewed is not evidence.",
             "- Answer concisely and factually as a short phrase, grounded ONLY in "
-            "the visual evidence (attached frames plus anything you fetch).",
-            f"- {len(self.frames)} first-person RGB frames from the scene are "
-            "attached, in the order listed below.",
+            "the tool images you fetched and viewed.",
             "- If the answer is not fully determinable, give your single best "
             "guess; do not refuse and do not answer with a question.",
             f"- Put at most {self.max_supporting_claims} brief evidence statements "
             "in supporting_claims.",
             "- Do not use benchmark ground-truth fields; none are provided.",
+            "- When finished, your FINAL message must be exactly one JSON object "
+            "matching the schema with all keys present: answer, supporting_claims, "
+            "confidence. Do not reply with prose or a tool command.",
         ]
-        if self.tools_enabled:
-            rules.append(
-                "- You may run the OpenEQA CLI tools (below) to fetch more frames, "
-                "language-grounded keyframes, a top-down BEV, and the object list. "
-                "Always open any returned image_path with the view_image tool "
-                "before citing what it shows."
-            )
-            rules.append(
-                "- When finished, your FINAL message must be exactly one JSON "
-                "object matching the schema with all keys present: answer, "
-                "supporting_claims, confidence. Do not reply with prose or a tool "
-                "command."
-            )
-        else:
-            rules.append(
-                "- Return only one JSON object matching the schema. Do not write "
-                "files or run tools."
-            )
-        return rules
 
     def _tools_section(self) -> str:
-        if not self.tools_enabled or self.scene_dir is None:
-            return ""
         return (
             "\nHow to run a tool (in the shell):\n"
             f"- scene_dir: {self.scene_dir}\n"
@@ -201,14 +179,6 @@ class OpenEqaQuestionAnsweringTask:
             "image you have already seen; if a result is empty or errors, change "
             "approach instead of retrying.\n"
             "\n" + OPENEQA_TOOLS_PLAYBOOK + "\n"
-        )
-
-    def _frame_listing(self) -> str:
-        if not self.frames:
-            return "[]"
-        return ", ".join(
-            f"#{position} frame {frame.frame_id}"
-            for position, frame in enumerate(self.frames, start=1)
         )
 
 

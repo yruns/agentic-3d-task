@@ -12,8 +12,8 @@ playbook keeps the guidance inside the always-present, cached prompt prefix and
 removes the re-readable on-disk bait entirely.
 
 Keep this in sync with ``.agents/skills/openeqa-codex-tools/SKILL.md`` (kept for
-manual/legacy ``--skill-path`` use); the inline constant is the source of truth
-for the default tool-mode run.
+documentation / manual use); the inline constant is the source of truth for the
+OpenEQA QA run.
 """
 
 from __future__ import annotations
@@ -31,9 +31,10 @@ OPENEQA_TOOLS_PLAYBOOK = """\
 Playbook (everything you need is here — do NOT look for a skill or any other \
 file):
 
-You already have a uniform sample of first-person frames attached. The tools \
-below let you fetch MORE targeted evidence when the attached frames do not \
-settle the answer.
+NO images are attached to this question — you have zero visual evidence until \
+you fetch it. Use the tools below to gather ALL the visual evidence you need: \
+name an object to keyframe_selector, read the layout with view_bev / \
+list_objects, or grab a specific first-person frame with view_frame.
 
 Tool catalog
 - list_objects — the scene's detected objects (ids, category, 3D center/size, \
@@ -55,20 +56,18 @@ path with the view_image tool before you trust what it shows — a frame or BEV 
 you have not viewed is not evidence.
 
 Recommended loop
-1. Read the question and the attached frames. If they already answer it, skip to \
-the final JSON.
+1. Decide what evidence the question needs (you have none yet), then fetch it.
 2. If you need scene context (layout, counts, "what/where" questions), call \
 view_bev and/or list_objects.
 3. If the answer is about a specific object, call keyframe_selector with a short \
 description, then view_image the returned frame(s).
 4. If you just need another viewpoint, call view_frame for a specific frame id \
-(use list_objects / the BEV / the attached frames to pick one), then view_image \
-it.
+(use list_objects / the BEV to pick one), then view_image it.
 5. Answer concisely and factually, grounded only in frames/BEV you have viewed.
 
 Tool budget — be decisive
-- Aim to decide within about 4-8 tool calls; many questions need zero or one \
-extra image beyond what is attached. View at most a few images, then commit.
+- Aim to decide within about 4-8 tool calls; most questions need only one or two \
+targeted images. View at most a few images, then commit.
 - Never repeat a tool with identical arguments and never re-view an image you \
 have already seen. If a result is empty or errors, change approach (e.g. switch \
 keyframe_selector -> view_frame) instead of retrying identically.

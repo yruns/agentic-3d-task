@@ -4,13 +4,19 @@ This entry point only parses arguments, wires dependencies, and prints the
 headline metrics. All evaluation logic lives in
 :mod:`codex_agent.evaluation.openeqa_runner`.
 
+OpenEQA QA is **tool-based**: no frames are attached to a turn, and the agent
+fetches all visual evidence through the OpenEQA CLI tools (``keyframe_selector``
+/ ``view_frame`` / ``view_bev`` / ``list_objects``). The run therefore always
+uses a ``workspace_write`` + network sandbox (the tools shell out and
+``keyframe_selector`` calls the parsing LLM) with the tool-call loop caps.
+
 Example::
 
     python -m codex_agent.cli.run_openeqa \\
         --questions data/open-eqa-v0.json \\
         --data-root data/OpenEQA/scannet \\
         --output-dir tmp/openeqa_run \\
-        --limit 10 --num-frames 8 --workers 4
+        --limit 10 --workers 4
 """
 
 from __future__ import annotations
@@ -30,18 +36,13 @@ from ..config import (
 )
 from ..evaluation.openeqa_runner import run_questions
 from ..evaluation.question_ids import load_question_ids
-from ..models import CodexSkill
 from ..openeqa.judge import JudgeScorer, LlmJudge
 from ..openeqa.question import (
     OpenEqaQuestion,
     load_questions,
     select_questions,
 )
-from ..openeqa.scene import (
-    DEFAULT_MAX_IMAGE_SIZE,
-    DEFAULT_NUM_FRAMES,
-    filter_questions_with_local_scenes,
-)
+from ..openeqa.scene import filter_questions_with_local_scenes
 from ..runtime import CodexAgentRuntime
 
 # Wall-clock budget is OFF by default (per-turn latency scales with adapter
@@ -81,8 +82,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Run only the first N selected questions (e.g. 10 for a smoke run).",
     )
-    parser.add_argument("--num-frames", type=int, default=DEFAULT_NUM_FRAMES)
-    parser.add_argument("--max-image-size", type=int, default=DEFAULT_MAX_IMAGE_SIZE)
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--sample-retries", type=int, default=2)
     parser.add_argument(
@@ -107,25 +106,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Skip LLM-as-judge scoring; only produce and checkpoint predictions.",
     )
     parser.add_argument(
-        "--skill-path",
-        type=Path,
-        default=None,
-        help="Optional SKILL.md attached to each QA turn (default: none; tool "
-        "mode inlines the playbook and attaches no skill).",
-    )
-    parser.add_argument(
-        "--tools",
-        action="store_true",
-        help="Enable agent CLI tools (more frames, keyframe retrieval, BEV, "
-        "object list). Implies workspace_write sandbox + network access and the "
-        "tool-call loop caps unless overridden.",
-    )
-    parser.add_argument(
         "--sandbox",
         default=None,
         choices=["read_only", "workspace_write", "full_access"],
-        help="Override the Codex sandbox mode (default read_only; --tools implies "
-        "workspace_write).",
+        help="Override the Codex sandbox mode (default workspace_write + network, "
+        "required for the agent CLI tools).",
     )
     parser.add_argument(
         "--turn-timeout",
@@ -139,16 +124,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Interrupt a turn after this many tool actions (the reliable loop "
-        f"backstop). 0 disables. Default {_DEFAULT_TOOLS_MAX_TOOL_CALLS} when "
-        "--tools, else 0.",
+        f"backstop). 0 disables. Default {_DEFAULT_TOOLS_MAX_TOOL_CALLS}.",
     )
     parser.add_argument(
         "--max-repeated-tool-calls",
         type=int,
         default=None,
         help="Interrupt a turn once the same tool action repeats this many times. "
-        f"0 disables. Default {_DEFAULT_TOOLS_MAX_REPEATED_TOOL_CALLS} when "
-        "--tools, else 0.",
+        f"0 disables. Default {_DEFAULT_TOOLS_MAX_REPEATED_TOOL_CALLS}.",
     )
     parser.add_argument(
         "--reasoning-effort",
@@ -184,30 +167,25 @@ def main(argv: list[str] | None = None) -> int:
     if not questions:
         parser.error("no questions selected to run")
 
-    runtime = CodexAgentRuntime(
-        _build_config(
-            model=args.model,
-            sandbox=args.sandbox,
-            tools=args.tools,
-            turn_timeout=args.turn_timeout,
-            reasoning_effort=args.reasoning_effort,
-            reasoning_summary=args.reasoning_summary,
-            max_tool_calls=args.max_tool_calls,
-            max_repeated_tool_calls=args.max_repeated_tool_calls,
-        )
+    config = _build_config(
+        model=args.model,
+        sandbox=args.sandbox,
+        turn_timeout=args.turn_timeout,
+        reasoning_effort=args.reasoning_effort,
+        reasoning_summary=args.reasoning_summary,
+        max_tool_calls=args.max_tool_calls,
+        max_repeated_tool_calls=args.max_repeated_tool_calls,
     )
+    runtime = CodexAgentRuntime(config)
     judge = _build_judge(
         no_judge=args.no_judge, llm_config=args.llm_config, judge_model=args.judge_model
     )
-    skill = _resolve_skill(args.skill_path, tools=args.tools)
 
     logger.info(
-        "running {} OpenEQA questions (num_frames={}, judge={}, skill={}, tools={})",
+        "running {} OpenEQA questions (tools, judge={}, sandbox={})",
         len(questions),
-        args.num_frames,
         "off" if judge is None else (args.judge_model or "default"),
-        skill.name if skill is not None else "none",
-        args.tools,
+        config.sandbox,
     )
     summary = run_questions(
         questions=questions,
@@ -215,12 +193,8 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=args.output_dir,
         runtime=runtime,
         judge=judge,
-        num_frames=args.num_frames,
-        max_image_size=args.max_image_size,
-        skill=skill,
         workers=args.workers,
         sample_retries=args.sample_retries,
-        tools_enabled=args.tools,
     )
     print(
         json.dumps(
@@ -249,73 +223,64 @@ def _build_config(
     *,
     model: str | None,
     sandbox: str | None,
-    tools: bool,
     turn_timeout: float | None,
     reasoning_effort: str | None,
     reasoning_summary: str | None,
     max_tool_calls: int | None,
     max_repeated_tool_calls: int | None,
 ) -> CodexAgentConfig:
-    # Prompt-only QA (frames + question, no tools) keeps the default read_only
-    # sandbox. Tool turns shell out, write images, and keyframe_selector needs
-    # the network for query parsing, so --tools implies workspace_write + net.
+    # OpenEQA QA is always tool-based: the agent shells out to fetch frames and
+    # keyframe_selector needs the network for query parsing, so the run defaults
+    # to workspace_write + network unless the sandbox is explicitly overridden.
     config = CodexAgentConfig.from_env()
     if model:
         config = dataclasses.replace(config, model=model)
-    if tools and sandbox is None:
-        config = dataclasses.replace(
-            config, sandbox="workspace_write", sandbox_network_access=True
-        )
-    if sandbox:
-        resolved = _as_sandbox_mode(sandbox)
-        config = dataclasses.replace(
-            config,
-            sandbox=resolved,
-            sandbox_network_access=(
-                config.sandbox_network_access
-                or (tools and resolved == "workspace_write")
-            ),
-        )
+    resolved_sandbox: SandboxMode = (
+        _as_sandbox_mode(sandbox) if sandbox else "workspace_write"
+    )
+    network = config.sandbox_network_access or resolved_sandbox in (
+        "workspace_write",
+        "full_access",
+    )
+    config = dataclasses.replace(
+        config, sandbox=resolved_sandbox, sandbox_network_access=network
+    )
     return dataclasses.replace(
         config,
-        turn_timeout_s=_resolve_turn_timeout(turn_timeout, tools=tools, config=config),
+        turn_timeout_s=_resolve_turn_timeout(turn_timeout, config=config),
         reasoning_effort=_resolve_reasoning_effort(reasoning_effort, config=config),
         reasoning_summary=_resolve_reasoning_summary(reasoning_summary, config=config),
         max_tool_calls=_resolve_cap(
             max_tool_calls,
-            tools=tools,
             current=config.max_tool_calls,
-            tools_default=_DEFAULT_TOOLS_MAX_TOOL_CALLS,
+            default=_DEFAULT_TOOLS_MAX_TOOL_CALLS,
         ),
         max_repeated_tool_calls=_resolve_cap(
             max_repeated_tool_calls,
-            tools=tools,
             current=config.max_repeated_tool_calls,
-            tools_default=_DEFAULT_TOOLS_MAX_REPEATED_TOOL_CALLS,
+            default=_DEFAULT_TOOLS_MAX_REPEATED_TOOL_CALLS,
         ),
     )
 
 
-def _resolve_cap(
-    override: int | None, *, tools: bool, current: int, tools_default: int
-) -> int:
+def _resolve_cap(override: int | None, *, current: int, default: int) -> int:
     if override is not None:
         if override < 0:
             raise ValueError(f"cap must be non-negative, got {override}")
         return override
     if current > 0:
         return current
-    return tools_default if tools else 0
+    return default
 
 
 def _resolve_turn_timeout(
-    turn_timeout: float | None, *, tools: bool, config: CodexAgentConfig
+    turn_timeout: float | None, *, config: CodexAgentConfig
 ) -> float:
     if turn_timeout is not None:
         return turn_timeout
     if config.turn_timeout_s > 0:
         return config.turn_timeout_s
-    return _DEFAULT_TOOLS_TURN_TIMEOUT_S if tools else 0.0
+    return _DEFAULT_TOOLS_TURN_TIMEOUT_S
 
 
 def _as_sandbox_mode(value: str) -> SandboxMode:
@@ -335,23 +300,6 @@ def _build_judge(
     if no_judge:
         return None
     return LlmJudge.from_toml(llm_config, model=judge_model)
-
-
-def _resolve_skill(skill_path: Path | None, *, tools: bool) -> CodexSkill | None:
-    # Tool mode inlines the playbook into the prompt and attaches no skill by
-    # default: an advertised SKILL.md path is the bait for the unbounded re-read
-    # loop. ``--skill-path`` still forces a skill for manual/legacy comparison.
-    if tools and skill_path is None:
-        return None
-    if skill_path is None:
-        return None
-    if not skill_path.exists():
-        logger.warning(
-            "skill file not found at {}; running without a skill", skill_path
-        )
-        return None
-    skill_name = "openeqa-codex-tools" if tools else "openeqa-qa"
-    return CodexSkill(name=skill_name, path=skill_path)
 
 
 def _resolve_reasoning_effort(

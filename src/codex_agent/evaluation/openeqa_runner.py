@@ -19,16 +19,10 @@ from typing import Any
 
 from loguru import logger
 
-from ..models import CodexSkill
 from ..openeqa.judge import NO_PREDICTION_SCORE, JudgeScorer, score_to_mnas
 from ..openeqa.qa import OpenEqaQuestionAnsweringTask
 from ..openeqa.question import OpenEqaQuestion
-from ..openeqa.scene import (
-    DEFAULT_MAX_IMAGE_SIZE,
-    DEFAULT_NUM_FRAMES,
-    OpenEqaScene,
-    scene_dir_for,
-)
+from ..openeqa.scene import scene_dir_for
 from ..tasks.base import CodexExecutor
 
 #: Substrings that mark a transient error worth retrying the whole sample for.
@@ -43,7 +37,6 @@ _RETRYABLE_TOKENS: tuple[str, ...] = (
     "server busy",
     "overloaded",
 )
-_FRAME_CACHE_DIRNAME = "frame_cache"
 
 
 @dataclass(frozen=True)
@@ -158,27 +151,14 @@ def run_one_question(
     data_root: Path,
     runtime: CodexExecutor,
     judge: JudgeScorer | None,
-    frame_cache_dir: Path,
-    num_frames: int = DEFAULT_NUM_FRAMES,
-    max_image_size: int = DEFAULT_MAX_IMAGE_SIZE,
-    skill: CodexSkill | None = None,
-    tools_enabled: bool = False,
 ) -> OpenEqaQuestionResult:
-    """Execute, answer, and (optionally) judge a single OpenEQA question."""
+    """Execute, answer, and (optionally) judge a single OpenEQA question.
+
+    No frames are attached to the turn; the agent fetches all visual evidence
+    via the OpenEQA CLI tools under the clip's ``scene_dir``.
+    """
     scene_dir = scene_dir_for(data_root, question.clip_id)
-    scene = OpenEqaScene.load(scene_dir)
-    frames = scene.prepare_frames(
-        cache_dir=frame_cache_dir,
-        num_frames=num_frames,
-        max_image_size=max_image_size,
-    )
-    task = OpenEqaQuestionAnsweringTask(
-        question=question,
-        frames=frames,
-        skill=skill,
-        tools_enabled=tools_enabled,
-        scene_dir=scene_dir,
-    )
+    task = OpenEqaQuestionAnsweringTask(question=question, scene_dir=scene_dir)
     result = runtime.execute(task)
     outcome = result.outcome
     metadata = result.turn.metadata
@@ -199,7 +179,7 @@ def run_one_question(
         mnas=score_to_mnas(judge_score) if judge_score is not None else None,
         confidence=outcome.confidence,
         supporting_claims=outcome.supporting_claims,
-        num_frames=len(frames),
+        num_frames=0,
         reasoning_summary=metadata.reasoning_summary,
         error=judge_error,
         turn_duration_ms=metadata.duration_ms,
@@ -216,12 +196,8 @@ def run_questions(
     output_dir: Path,
     runtime: CodexExecutor,
     judge: JudgeScorer | None = None,
-    num_frames: int = DEFAULT_NUM_FRAMES,
-    max_image_size: int = DEFAULT_MAX_IMAGE_SIZE,
-    skill: CodexSkill | None = None,
     workers: int = 1,
     sample_retries: int = 2,
-    tools_enabled: bool = False,
 ) -> OpenEqaRunSummary:
     """Run a question set with per-question checkpointing and aggregate MNAS."""
     if workers <= 0:
@@ -230,7 +206,6 @@ def run_questions(
         raise ValueError("sample_retries must be non-negative")
     _validate_unique(questions)
     output_dir.mkdir(parents=True, exist_ok=True)
-    frame_cache_dir = output_dir / _FRAME_CACHE_DIRNAME
 
     pending = [
         question
@@ -252,12 +227,7 @@ def run_questions(
             data_root=data_root,
             runtime=runtime,
             judge=judge,
-            frame_cache_dir=frame_cache_dir,
-            num_frames=num_frames,
-            max_image_size=max_image_size,
-            skill=skill,
             sample_retries=sample_retries,
-            tools_enabled=tools_enabled,
         )
         _write_checkpoint(output_dir, result)
 
@@ -320,12 +290,7 @@ def _run_with_retries(
     data_root: Path,
     runtime: CodexExecutor,
     judge: JudgeScorer | None,
-    frame_cache_dir: Path,
-    num_frames: int,
-    max_image_size: int,
-    skill: CodexSkill | None,
     sample_retries: int,
-    tools_enabled: bool,
 ) -> OpenEqaQuestionResult:
     last_error: Exception | None = None
     for attempt in range(sample_retries + 1):
@@ -335,11 +300,6 @@ def _run_with_retries(
                 data_root=data_root,
                 runtime=runtime,
                 judge=judge,
-                frame_cache_dir=frame_cache_dir,
-                num_frames=num_frames,
-                max_image_size=max_image_size,
-                skill=skill,
-                tools_enabled=tools_enabled,
             )
         except Exception as exc:  # noqa: BLE001 - sentinel result built below
             last_error = exc

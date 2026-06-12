@@ -21,9 +21,20 @@ MNAS = mean over questions of  100 * (clip(judge_score, 1, 5) - 1) / 4
   does the agent's answer match the reference answer? Metric: MNAS (per-category
   MNAS as breakdown). Judge: `gemini-2.5-pro` via `configs/llm.toml` (note: the
   OpenEQA paper baseline uses GPT-4 — judge mismatch caveat applies, see below).
-  From v2 the agent is **evidence-seeking**: it can call CLI tools
-  (`keyframe_selector`, `view_frame`, `view_bev`, `list_objects`) to fetch more
-  visual evidence than the attached frame sample.
+  From v2 the agent is **evidence-seeking**: it calls CLI tools
+  (`keyframe_selector`, `view_frame`, `view_bev`, `list_objects`) to fetch
+  visual evidence.
+
+> **Pipeline change (2026-06-12, post-v3).** The QA turn now attaches **no
+> default frames at all**. Earlier versions (v1–v3) attached a uniform sample of
+> 8 first-person frames as a starting point; that uniform-sampling approach has
+> been removed. The agent now starts blind and **fetches every piece of visual
+> evidence itself via the keyframe CLI** (the guide prompt instructs it to start
+> with `keyframe_selector` / `view_bev` / `list_objects`). The run is therefore
+> always tool-based (`workspace_write` + network); `--tools` / `--num-frames`
+> were removed from `run_openeqa`. **v1–v3 numbers below were produced with the
+> old uniform-frame input** and are not directly comparable to runs on the new
+> no-frames pipeline (a v4 no-frames full run is the next planned baseline).
 
 ## Version timeline
 

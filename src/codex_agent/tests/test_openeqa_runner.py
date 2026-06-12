@@ -115,17 +115,17 @@ def test_correct_answer_scores_mnas_100(
     assert result.status == "completed"
     assert result.prediction == "Fire extinguisher"
     assert result.judge_score == 5
-    assert result.num_frames == openeqa_fixture.num_raw_frames
+    # No frames are attached; the agent fetches its own via the CLI tools.
+    assert result.num_frames == 0
 
 
-def test_tools_enabled_threads_to_task(
+def test_scene_dir_threads_to_task(
     openeqa_fixture: OpenEqaFixture, tmp_path: Path
 ) -> None:
     captured: dict[str, Any] = {}
 
     class _CapturingRuntime(_FakeRuntime):
         def execute(self, task: CodexTask[Any]) -> CodexTaskResult[Any]:
-            captured["tools_enabled"] = getattr(task, "tools_enabled", None)
             captured["scene_dir"] = getattr(task, "scene_dir", None)
             return super().execute(task)
 
@@ -135,9 +135,7 @@ def test_tools_enabled_threads_to_task(
         output_dir=tmp_path / "out",
         runtime=_CapturingRuntime(),
         judge=None,
-        tools_enabled=True,
     )
-    assert captured["tools_enabled"] is True
     assert captured["scene_dir"] == (
         openeqa_fixture.data_root / openeqa_fixture.clip_id
     )

@@ -1,21 +1,19 @@
 ---
 name: openeqa-codex-tools
-description: Answer one OpenEQA open-ended question about a prepared 3D indoor scene using attached first-person frames plus CLI tools for keyframe retrieval, frame switching, a top-down BEV, and the object list.
+description: Answer one OpenEQA open-ended question about a prepared 3D indoor scene by fetching your own visual evidence with CLI tools for keyframe retrieval, frame switching, a top-down BEV, and the object list (no frames are attached).
 ---
 
 # OpenEQA Codex SDK Question Answering (tool-using)
 
 You answer exactly one OpenEQA question about a prepared ScanNet clip. The prompt
-gives you the question, its category, and a uniform sample of first-person RGB
-frames already attached to the turn. You also have CLI tools that fetch more
-targeted visual evidence so you can verify the answer instead of guessing from
-the attached frames alone.
+gives you the question, its category, and the scene id — but **no images are
+attached**. You start with zero visual information and must fetch every piece of
+visual evidence yourself with the CLI tools below.
 
 ## Output contract
 
 - Answer concisely and factually as a short phrase, grounded ONLY in visual
-  evidence you have actually viewed (the attached frames plus anything you
-  fetch).
+  evidence you have actually fetched and viewed.
 - If the answer is not fully determinable, give your single best guess; do not
   refuse and do not answer with a question.
 - Your FINAL message must be a single JSON object matching the requested schema
@@ -48,10 +46,9 @@ Fetch first-person frames (image):
 - `keyframe_selector` — language → up to 4 frames most likely to show what you
   describe; best when the answer is about a nameable object.
   `{"query": "the fire extinguisher under the window", "k": 3}`
-- `view_frame` — fetch any raw frame id (or a few) when you need a different or
-  closer view than the attached frames. The result reports `total_frames` and
-  the valid `frame_id_range`. `{"frame_id": 420}` or
-  `{"frame_ids": [100, 300, 540]}`
+- `view_frame` — fetch any raw frame id (or a few) when you need a specific or
+  closer viewpoint. The result reports `total_frames` and the valid
+  `frame_id_range`. `{"frame_id": 420}` or `{"frame_ids": [100, 300, 540]}`
 
 Read scene layout (image):
 - `view_bev` — top-down schematic map (object footprints + camera path) to read
@@ -60,21 +57,19 @@ Read scene layout (image):
 
 ## Recommended loop
 
-1. Read the question and the attached frames. If they already answer it, jump to
-   the final JSON.
+1. Decide what evidence the question needs (you have none yet), then fetch it.
 2. For "what / where / how many / layout" questions, call `view_bev` and/or
    `list_objects` for scene context.
 3. If the answer is about a specific object, call `keyframe_selector` with a
    short description, then `view_image` the returned frame(s).
 4. If you just need another viewpoint, call `view_frame` for a chosen frame id
-   (use the BEV / `list_objects` / the attached frames to pick one), then
-   `view_image` it.
+   (use the BEV / `list_objects` to pick one), then `view_image` it.
 5. Answer concisely, grounded only in frames/BEV you have viewed.
 
 ## Tool budget — be decisive
 
-- Aim to decide within about 4–8 tool calls; many questions need zero or one
-  extra image beyond what is attached. View at most a few images, then commit.
+- Aim to decide within about 4–8 tool calls; most questions need only one or two
+  targeted images. View at most a few images, then commit.
 - Never repeat a tool with identical arguments and never re-view an image you
   have already seen. If a result is empty or errors, change approach (e.g.
   `keyframe_selector` → `view_frame`) instead of retrying identically.

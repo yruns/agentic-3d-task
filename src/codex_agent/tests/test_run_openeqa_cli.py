@@ -48,11 +48,10 @@ def test_select_questions_limit_only(openeqa_fixture: OpenEqaFixture) -> None:
 
 
 def _build_config(**overrides: Any) -> CodexAgentConfig:
-    """Call ``_build_config`` with prompt-only defaults plus any overrides."""
+    """Call ``_build_config`` with tool-mode defaults plus any overrides."""
     kwargs: dict[str, Any] = {
         "model": None,
         "sandbox": None,
-        "tools": False,
         "turn_timeout": None,
         "reasoning_effort": None,
         "reasoning_summary": None,
@@ -71,19 +70,12 @@ def test_build_config_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.reasoning_effort == "high"
 
 
-def test_build_config_prompt_only_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("CODEX_AGENT_SANDBOX", raising=False)
-    config = _build_config()
-    assert config.sandbox == "read_only"
-    assert config.max_tool_calls == 0
-
-
-def test_build_config_tools_enables_workspace_write(
+def test_build_config_defaults_to_tool_sandbox(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("CODEX_AGENT_SANDBOX", raising=False)
     monkeypatch.delenv("CODEX_AGENT_MAX_TOOL_CALLS", raising=False)
-    config = _build_config(tools=True)
+    config = _build_config()
     assert config.sandbox == "workspace_write"
     assert config.sandbox_network_access is True
     assert config.max_tool_calls == run_openeqa._DEFAULT_TOOLS_MAX_TOOL_CALLS
@@ -97,33 +89,8 @@ def test_build_config_explicit_sandbox_override(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("CODEX_AGENT_SANDBOX", raising=False)
-    config = _build_config(tools=True, sandbox="read_only")
+    config = _build_config(sandbox="read_only")
     assert config.sandbox == "read_only"
-
-
-def test_resolve_skill_missing_path_returns_none(tmp_path: Path) -> None:
-    assert run_openeqa._resolve_skill(tmp_path / "missing.md", tools=False) is None
-
-
-def test_resolve_skill_existing_path(tmp_path: Path) -> None:
-    skill_path = tmp_path / "SKILL.md"
-    skill_path.write_text("# skill", encoding="utf-8")
-    skill = run_openeqa._resolve_skill(skill_path, tools=False)
-    assert skill is not None
-    assert skill.name == "openeqa-qa"
-
-
-def test_resolve_skill_tools_default_none(tmp_path: Path) -> None:
-    # Tool mode inlines the playbook and attaches no skill by default.
-    assert run_openeqa._resolve_skill(None, tools=True) is None
-
-
-def test_resolve_skill_tools_with_explicit_path(tmp_path: Path) -> None:
-    skill_path = tmp_path / "SKILL.md"
-    skill_path.write_text("# skill", encoding="utf-8")
-    skill = run_openeqa._resolve_skill(skill_path, tools=True)
-    assert skill is not None
-    assert skill.name == "openeqa-codex-tools"
 
 
 def test_as_reasoning_effort_invalid_raises() -> None:
@@ -180,44 +147,10 @@ def test_main_runs_selected_questions(
     )
     assert exit_code == 0
     assert captured["judge"] is None
-    assert captured["tools_enabled"] is False
+    assert "tools_enabled" not in captured  # run is always tool-based now
     assert [q.question_id for q in captured["questions"]] == ["q-scannet-1"]
     printed = json.loads(capsys.readouterr().out)
     assert printed["n"] == 1
-
-
-def test_main_tools_flag_threads_tools_enabled(
-    openeqa_fixture: OpenEqaFixture,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    monkeypatch.delenv("CODEX_AGENT_SANDBOX", raising=False)
-    captured: dict[str, Any] = {}
-
-    def _fake_run_questions(**kwargs: Any) -> OpenEqaRunSummary:
-        captured.update(kwargs)
-        return OpenEqaRunSummary(n=1, n_judged=0, mnas=0.0)
-
-    monkeypatch.setattr(run_openeqa, "run_questions", _fake_run_questions)
-
-    exit_code = run_openeqa.main(
-        [
-            "--questions",
-            str(openeqa_fixture.questions_path),
-            "--data-root",
-            str(openeqa_fixture.data_root),
-            "--output-dir",
-            str(tmp_path / "out"),
-            "--limit",
-            "1",
-            "--no-judge",
-            "--tools",
-        ]
-    )
-    assert exit_code == 0
-    assert captured["tools_enabled"] is True
-    capsys.readouterr()
 
 
 def test_main_errors_when_no_local_scenes(

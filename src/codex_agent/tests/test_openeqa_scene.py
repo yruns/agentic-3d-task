@@ -1,9 +1,12 @@
-"""Unit tests for OpenEQA scene loading and first-person frame sampling."""
+"""Unit tests for OpenEQA scene loading and frame discovery.
+
+The QA turn attaches no default frames; the agent fetches frames via the CLI
+tools, so this module only covers scene discovery + the local-scene filter.
+"""
 
 from __future__ import annotations
 
 import pytest
-from PIL import Image
 
 from codex_agent.errors import OpenEqaDataError
 from codex_agent.openeqa.question import OpenEqaQuestion
@@ -12,7 +15,6 @@ from codex_agent.openeqa.scene import (
     filter_questions_with_local_scenes,
     has_local_scene,
     scene_dir_for,
-    uniform_frame_ids,
 )
 from codex_agent.tests.conftest import OpenEqaFixture
 
@@ -47,91 +49,11 @@ def test_load_no_frames_raises(tmp_path) -> None:
         OpenEqaScene.load(scene_dir)
 
 
-def test_uniform_frame_ids_returns_all_when_fewer() -> None:
-    assert uniform_frame_ids([0, 1, 2], 8) == (0, 1, 2)
-
-
-def test_uniform_frame_ids_subsamples_evenly() -> None:
-    ids = list(range(100))
-    selected = uniform_frame_ids(ids, 5)
-    assert selected == (0, 20, 40, 60, 80)
-    assert len(selected) == 5
-
-
-def test_uniform_frame_ids_rejects_non_positive() -> None:
-    with pytest.raises(OpenEqaDataError):
-        uniform_frame_ids([0, 1], 0)
-
-
-def test_select_frame_ids_uses_uniform_sampling(
-    openeqa_fixture: OpenEqaFixture,
-) -> None:
-    scene = _scene(openeqa_fixture)
-    assert scene.select_frame_ids(2) == (0, 2)
-    assert scene.select_frame_ids(10) == (0, 1, 2, 3, 4)
-
-
-def test_select_frame_ids_rejects_non_positive(
-    openeqa_fixture: OpenEqaFixture,
-) -> None:
-    scene = _scene(openeqa_fixture)
-    with pytest.raises(OpenEqaDataError):
-        scene.select_frame_ids(0)
-
-
 def test_raw_rgb_path_uses_six_digit_frame_id(
     openeqa_fixture: OpenEqaFixture,
 ) -> None:
     scene = _scene(openeqa_fixture)
     assert scene.raw_rgb_path(3) == scene.raw_dir / "000003-rgb.png"
-
-
-def test_prepare_frames_missing_raw_frame_raises(
-    openeqa_fixture: OpenEqaFixture, tmp_path
-) -> None:
-    scene = _scene(openeqa_fixture)
-    # A scene that claims a frame id whose PNG was removed from disk.
-    broken = OpenEqaScene(
-        clip_id=scene.clip_id, scene_dir=scene.scene_dir, rgb_frame_ids=(999,)
-    )
-    with pytest.raises(OpenEqaDataError):
-        broken.prepare_frames(cache_dir=tmp_path / "cache", num_frames=1)
-
-
-def test_prepare_frames_downsizes_and_caches(
-    openeqa_fixture: OpenEqaFixture, tmp_path
-) -> None:
-    scene = _scene(openeqa_fixture)
-    cache_dir = tmp_path / "cache"
-    frames = scene.prepare_frames(cache_dir=cache_dir, num_frames=3, max_image_size=32)
-    assert len(frames) == 3
-    for frame in frames:
-        assert frame.image_path.exists()
-        assert frame.image_path.suffix == ".jpg"
-        with Image.open(frame.image_path) as image:
-            assert max(image.size) <= 32
-            assert image.mode == "RGB"
-
-
-def test_prepare_frames_is_idempotent(
-    openeqa_fixture: OpenEqaFixture, tmp_path
-) -> None:
-    scene = _scene(openeqa_fixture)
-    cache_dir = tmp_path / "cache"
-    first = scene.prepare_frames(cache_dir=cache_dir, num_frames=2, max_image_size=32)
-    mtime = first[0].image_path.stat().st_mtime_ns
-    second = scene.prepare_frames(cache_dir=cache_dir, num_frames=2, max_image_size=32)
-    # Cached file is reused, not re-encoded.
-    assert second[0].image_path == first[0].image_path
-    assert second[0].image_path.stat().st_mtime_ns == mtime
-
-
-def test_prepare_frames_rejects_bad_max_size(
-    openeqa_fixture: OpenEqaFixture, tmp_path
-) -> None:
-    scene = _scene(openeqa_fixture)
-    with pytest.raises(OpenEqaDataError):
-        scene.prepare_frames(cache_dir=tmp_path, num_frames=1, max_image_size=0)
 
 
 def test_has_local_scene(openeqa_fixture: OpenEqaFixture) -> None:
@@ -162,3 +84,29 @@ def test_filter_questions_with_local_scenes(openeqa_fixture: OpenEqaFixture) -> 
         [present, absent], openeqa_fixture.data_root
     )
     assert [q.question_id for q in kept] == ["a"]
+
+
+def test_downsize_rgb_for_view_writes_jpeg(
+    openeqa_fixture: OpenEqaFixture, tmp_path
+) -> None:
+    from PIL import Image
+
+    from codex_agent.openeqa.scene import downsize_rgb_for_view
+
+    scene = _scene(openeqa_fixture)
+    destination = tmp_path / "out.jpg"
+    result = downsize_rgb_for_view(scene.raw_rgb_path(0), destination, max_size=32)
+    assert result == destination
+    with Image.open(destination) as image:
+        assert max(image.size) <= 32
+        assert image.mode == "RGB"
+
+
+def test_downsize_rgb_for_view_rejects_bad_max_size(
+    openeqa_fixture: OpenEqaFixture, tmp_path
+) -> None:
+    from codex_agent.openeqa.scene import downsize_rgb_for_view
+
+    scene = _scene(openeqa_fixture)
+    with pytest.raises(OpenEqaDataError):
+        downsize_rgb_for_view(scene.raw_rgb_path(0), tmp_path / "o.jpg", max_size=0)

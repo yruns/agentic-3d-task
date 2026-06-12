@@ -1,8 +1,10 @@
 """OpenEQA question-answering task built on the Codex Agent SDK runtime.
 
 This task family answers open-ended OpenEQA questions over prepared ScanNet
-clips: it samples first-person frames, asks Codex for a grounded answer, and
-scores the answer with the official 1-5 ``mmbench`` LLM-as-judge mapped to MNAS.
+clips. No frames are attached to a turn: the agent fetches its own visual
+evidence through the OpenEQA CLI tools (``keyframe_selector`` / ``view_frame`` /
+``view_bev`` / ``list_objects``), then the answer is scored with the official
+1-5 ``mmbench`` LLM-as-judge mapped to MNAS.
 """
 
 from __future__ import annotations
@@ -29,13 +31,11 @@ from .question import (
     select_questions,
 )
 from .scene import (
-    OpenEqaFrame,
     OpenEqaScene,
     downsize_rgb_for_view,
     filter_questions_with_local_scenes,
     has_local_scene,
     scene_dir_for,
-    uniform_frame_ids,
 )
 
 __all__ = [
@@ -46,11 +46,9 @@ __all__ = [
     "select_questions",
     # Scene / frames
     "OpenEqaScene",
-    "OpenEqaFrame",
     "scene_dir_for",
     "has_local_scene",
     "filter_questions_with_local_scenes",
-    "uniform_frame_ids",
     "downsize_rgb_for_view",
     # Task
     "OpenEqaQuestionAnsweringTask",
