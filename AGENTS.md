@@ -100,5 +100,13 @@ Follow the guide's §12 workflow:
 - **Long-running tasks** (training, evaluation, batch processing, large test
   suites, data prep) must run inside `tmux` — see `CLAUDE.md` §Long-Running
   Tasks.
+- **Documentation organization:** project documentation under `docs/` is managed
+  as a MkDocs Material site (`mkdocs.yml`) while keeping Markdown as the single
+  source of truth. Agents should continue reading/editing the source `.md` files
+  directly; humans can browse the rendered site. When adding or reorganizing
+  `docs/` content, update the relevant chapter index page and `mkdocs.yml`
+  navigation in the same change. Top-level `README.md`, `AGENTS.md`, and
+  `CLAUDE.md` are operational entrypoints and are intentionally not part of the
+  MkDocs navigation.
 - **Benchmark runs** must leave a durable process record under
   `docs/benchmark/<name>/` — see `CLAUDE.md` §Benchmark Process Documentation.
