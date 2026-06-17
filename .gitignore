@@ -52,6 +52,9 @@ ENV/
 htmlcov/
 .mypy_cache/
 
+# Documentation build output
+site/
+
 # Logs
 *.log
 logs/

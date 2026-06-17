@@ -1,0 +1,66 @@
+site_name: Agentic 3D Task Docs
+site_description: Project documentation for agentic 3D scene understanding tasks.
+docs_dir: docs
+site_dir: site
+strict: false
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+
+plugins:
+  - search
+
+exclude_docs: |
+  superpowers/**
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Development Standards:
+      - Python Code Agent Quality Guide: python_code_agent_quality_guide.md
+  - Codex Agent:
+      - Overview: codex_agent/index.md
+      - NR3D Tools Plan: codex_agent/nr3d_tools_plan_20260609.md
+      - View Image Adapter Fix: codex_agent/view_image_adapter_fix_20260609.md
+      - Prompt Caching: codex_agent/prompt_caching_20260608.md
+      - Reasoning Summary And Effort: codex_agent/reasoning_summary_and_effort_20260610.md
+      - Reasoning Carryover, Caching, And AK Routing: codex_agent/reasoning_carryover_caching_ak_routing_20260611.md
+      - Skill Loop And Reasoning Dropped: codex_agent/skill_loop_and_reasoning_dropped_20260609.md
+  - Benchmarks:
+      - Overview: benchmark/index.md
+      - NR3D:
+          - Timeline: benchmark/nr3d/README.md
+          - v1 Keyframe Target ID Coverage: benchmark/nr3d/v1_keyframe_targetid_coverage_strat600_20260608.md
+          - v1 Runtime Grounding Smoke: benchmark/nr3d/v1_codex_runtime_grounding_smoke_20260608.md
+          - v1 Runtime Grounding Strat600: benchmark/nr3d/v1_codex_runtime_grounding_strat600_20260608.md
+          - v2 Tools Grounding Strat600: benchmark/nr3d/v2_codex_tools_grounding_strat600_20260609.md
+          - v3 Tools Loop Fix Strat600: benchmark/nr3d/v3_codex_tools_loopfix_strat600_20260609.md
+          - v4 Network Fix Strat600: benchmark/nr3d/v4_network_fix_strat600_20260610.md
+          - v5 Summary Responses Strat600: benchmark/nr3d/v5_summary_responses_strat600_20260611.md
+          - v6 Effort Ablation Chat Strat600: benchmark/nr3d/v6_effort_ablation_chat_strat600_20260611.md
+      - OpenEQA:
+          - Timeline: benchmark/openeqa/README.md
+          - v1 SDK Migration Smoke: benchmark/openeqa/v1_codex_sdk_migration_smoke10_20260611.md
+          - v2 Tools BEV Smoke: benchmark/openeqa/v2_tools_bev_smoke10_20260612.md
+          - v3 Tools Full1079: benchmark/openeqa/v3_tools_full1079_20260612.md
+          - v4 No Frames Full1079: benchmark/openeqa/v4_noframes_full1079_20260612.md
+          - v4 Failure Trace Analysis: benchmark/openeqa/v4_failure_trace_analysis_20260612.md
