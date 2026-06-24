@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import gzip
 import json
+import pickle
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 # A 1x1 transparent PNG; the loaders only check existence, but a real file keeps
@@ -222,3 +225,193 @@ def fake_codex_home(tmp_path: Path) -> Path:
     (home / "config.toml").write_text('model = "test"\n', encoding="utf-8")
     (home / "installation_id").write_text("test-install\n", encoding="utf-8")
     return home
+
+
+OPENEQA_CLIP_ID = "002-scannet-scene0709_00"
+OPENEQA_SCENE_ID = "scene0709_00"
+OPENEQA_QUESTION_ID = "q-scannet-1"
+
+
+@dataclass(frozen=True)
+class OpenEqaFixture:
+    """Paths describing a tiny on-disk OpenEQA ScanNet fixture.
+
+    Layout::
+
+        <data_root>/<clip_id>/raw/  000000-rgb.png ... 000004-rgb.png
+        <tmp>/data/open-eqa-v0.json  (2 ScanNet questions + 1 HM3D, filtered out)
+    """
+
+    data_root: Path
+    questions_path: Path
+    clip_id: str = OPENEQA_CLIP_ID
+    scene_id: str = OPENEQA_SCENE_ID
+    question_id: str = OPENEQA_QUESTION_ID
+    num_raw_frames: int = 5
+
+
+@pytest.fixture
+def openeqa_fixture(tmp_path: Path) -> OpenEqaFixture:
+    data_root = tmp_path / "data" / "OpenEQA" / "scannet"
+    raw_dir = data_root / OPENEQA_CLIP_ID / "raw"
+    raw_dir.mkdir(parents=True)
+    num_raw_frames = 5
+    for frame_id in range(num_raw_frames):
+        _solid_png(raw_dir / f"{frame_id:06d}-rgb.png", size=64)
+
+    questions = [
+        {
+            "question": "What red object is below the windows?",
+            "answer": "Fire extinguisher",
+            "category": "object recognition",
+            "question_id": OPENEQA_QUESTION_ID,
+            "episode_history": f"scannet-v0/{OPENEQA_CLIP_ID}",
+        },
+        {
+            "question": "What is to the left of the desk?",
+            "answer": "Chair",
+            "category": "spatial understanding",
+            "question_id": "q-scannet-2",
+            "episode_history": f"scannet-v0/{OPENEQA_CLIP_ID}",
+        },
+        {
+            # HM3D question: present in the file, filtered out by the loader.
+            "question": "Ignored question?",
+            "answer": "n/a",
+            "category": "world knowledge",
+            "question_id": "q-hm3d-1",
+            "episode_history": "hm3d-v0/000-hm3d-BFRyYbPCCPE",
+        },
+    ]
+    questions_path = tmp_path / "data" / "open-eqa-v0.json"
+    questions_path.write_text(json.dumps(questions), encoding="utf-8")
+    return OpenEqaFixture(
+        data_root=data_root,
+        questions_path=questions_path,
+        num_raw_frames=num_raw_frames,
+    )
+
+
+OPENEQA_TOOLS_CLIP_ID = "010-scannet-scene0011_00"
+
+
+@dataclass(frozen=True)
+class OpenEqaToolsFixture:
+    """A tiny but real OpenEQA clip with both ``raw/`` frames and a ConceptGraph pack.
+
+    The ConceptGraph object pickle holds plain dicts (no omegaconf objects), so a
+    real :class:`keyframe.keyframe_selector.KeyframeSelector` loads it without the
+    heavy optional dependency — exercising ``list_objects`` / ``view_bev`` (and
+    the schematic BEV) against the production loader.
+
+    Layout::
+
+        <data_root>/<clip_id>/raw/                       000000-rgb.png ... 000009-rgb.png
+        <data_root>/<clip_id>/conceptgraph/              enriched_objects.json, traj.txt
+        <data_root>/<clip_id>/conceptgraph/pcd_saves/    full_scene_post.pkl.gz
+        <data_root>/<clip_id>/conceptgraph/indices/      visibility_index.pkl
+    """
+
+    data_root: Path
+    scene_dir: Path
+    clip_id: str = OPENEQA_TOOLS_CLIP_ID
+    object_ids: tuple[int, ...] = (0, 1, 2)
+    num_raw_frames: int = 10
+
+
+def _cube(center: tuple[float, float, float], half: float) -> np.ndarray:
+    cx, cy, cz = center
+    return np.array(
+        [
+            [cx + dx, cy + dy, cz + dz]
+            for dx in (-half, half)
+            for dy in (-half, half)
+            for dz in (-half, half)
+        ],
+        dtype=np.float64,
+    )
+
+
+@pytest.fixture
+def openeqa_tools_fixture(tmp_path: Path) -> OpenEqaToolsFixture:
+    data_root = tmp_path / "data" / "OpenEQA" / "scannet"
+    scene_dir = data_root / OPENEQA_TOOLS_CLIP_ID
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    num_raw_frames = 10
+    for frame_id in range(num_raw_frames):
+        _solid_png(raw_dir / f"{frame_id:06d}-rgb.png", size=48)
+
+    conceptgraph = scene_dir / "conceptgraph"
+    (conceptgraph / "pcd_saves").mkdir(parents=True)
+    (conceptgraph / "indices").mkdir(parents=True)
+
+    objects = [
+        {
+            "class_name": ["desk"] * 3,
+            "pcd_np": _cube((0.0, 0.0, 0.4), 0.6),
+            "bbox_np": _cube((0.0, 0.0, 0.4), 0.6),
+            "image_idx": [0, 1],
+            "xyxy": np.array([[10, 10, 40, 40], [10, 10, 40, 40]], dtype=float),
+            "num_detections": 2,
+        },
+        {
+            "class_name": ["chair"] * 3,
+            "pcd_np": _cube((1.5, 0.5, 0.3), 0.25),
+            "bbox_np": _cube((1.5, 0.5, 0.3), 0.25),
+            "image_idx": [0, 1],
+            "xyxy": np.array([[20, 20, 35, 45], [20, 20, 35, 45]], dtype=float),
+            "num_detections": 2,
+        },
+        {
+            "class_name": ["door"] * 2,
+            "pcd_np": _cube((3.0, 2.0, 1.0), 0.4),
+            "bbox_np": _cube((3.0, 2.0, 1.0), 0.4),
+            "image_idx": [1],
+            "xyxy": np.array([[5, 5, 20, 44]], dtype=float),
+            "num_detections": 1,
+        },
+    ]
+    with gzip.open(
+        conceptgraph / "pcd_saves" / "full_scene_post.pkl.gz", "wb"
+    ) as handle:
+        pickle.dump({"objects": objects}, handle)
+
+    enrichment = {
+        "objects": [
+            {
+                "obj_id": 0,
+                "status": "success",
+                "enrichment": {"category": "desk", "description": "a wooden desk"},
+            },
+            {
+                "obj_id": 1,
+                "status": "success",
+                "enrichment": {"category": "chair", "description": "an office chair"},
+            },
+            {
+                "obj_id": 2,
+                "status": "success",
+                "enrichment": {"category": "door", "description": "a white door"},
+            },
+        ]
+    }
+    (conceptgraph / "enriched_objects.json").write_text(
+        json.dumps(enrichment), encoding="utf-8"
+    )
+
+    pose_lines = []
+    for index in range(num_raw_frames):
+        pose = np.eye(4)
+        pose[:3, 3] = [0.3 * index, -1.5, 1.0]
+        pose_lines.append(" ".join(str(v) for v in pose.flatten()))
+    (conceptgraph / "traj.txt").write_text("\n".join(pose_lines), encoding="utf-8")
+
+    visibility = {
+        "object_to_views": {0: [[0, 0.9]], 1: [[0, 0.8], [1, 0.7]], 2: [[1, 0.9]]},
+        "view_to_objects": {0: [[0, 0.9], [1, 0.8]], 1: [[2, 0.9], [1, 0.7]]},
+    }
+    with (conceptgraph / "indices" / "visibility_index.pkl").open("wb") as handle:
+        pickle.dump(visibility, handle)
+
+    return OpenEqaToolsFixture(data_root=data_root, scene_dir=scene_dir)

@@ -21,13 +21,20 @@ from keyframe.bev.mesh import TriangleMesh
 
 
 class BEVMarker(BaseModel):
-    """A scene object to mark on the BEV, positioned in the render frame."""
+    """A scene object to mark on the BEV, positioned in the render frame.
+
+    ``extent`` is the optional axis-aligned ``(dx, dy, dz)`` size of the object,
+    used by the mesh-free schematic renderer (``keyframe.bev.schematic``) to draw
+    a top-down footprint. The mesh renderer ignores it and only uses
+    ``position``.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     obj_id: int
     category: str
     position: tuple[float, float, float]
+    extent: tuple[float, float, float] | None = None
 
 
 class CameraView(BaseModel):

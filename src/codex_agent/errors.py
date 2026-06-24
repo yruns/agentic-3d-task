@@ -32,10 +32,20 @@ class Nr3dDataError(CodexAgentError):
     """Raised when prepared NR3D scene/sample artifacts are missing or malformed."""
 
 
+class OpenEqaDataError(CodexAgentError):
+    """Raised when OpenEQA question or scene assets are missing or malformed."""
+
+
+class OpenEqaJudgeError(CodexAgentError):
+    """Raised when the OpenEQA LLM-as-judge cannot produce a usable score."""
+
+
 __all__ = [
     "CodexAgentError",
     "CodexConfigError",
     "CodexTurnError",
     "CodexResponseError",
     "Nr3dDataError",
+    "OpenEqaDataError",
+    "OpenEqaJudgeError",
 ]

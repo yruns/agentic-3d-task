@@ -9,9 +9,11 @@ path. :class:`Nr3dSceneBEVBuilder` implements the NR3D / ScanNet data layout.
 from __future__ import annotations
 
 import hashlib
+import json
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 import cv2
 import numpy as np
@@ -26,6 +28,34 @@ from keyframe.bev.config import (
 )
 from keyframe.bev.mesh import load_ply_mesh
 from keyframe.bev.render import BEVMarker, render_scene_bev
+from keyframe.bev.schematic import (
+    DEFAULT_SCHEMATIC_BEV_CONFIG,
+    SchematicBevConfig,
+    render_schematic_bev,
+)
+
+
+@runtime_checkable
+class BevBuilder(Protocol):
+    """Anything that renders + caches a scene BEV and returns its image path.
+
+    Both the mesh-based :class:`SceneBEVBuilder` and the mesh-free
+    :class:`OpenEqaSceneBEVBuilder` satisfy this, so the keyframe selector can
+    hold either behind one interface.
+    """
+
+    def build(
+        self,
+        *,
+        scene_id: str,
+        data_root: Path,
+        markers: Sequence[BEVMarker],
+        output_path: Path,
+        highlight_ids: frozenset[int] = frozenset(),
+        use_cache: bool = True,
+    ) -> Path:
+        """Render (or load cached) the scene BEV and return ``output_path``."""
+        ...
 
 
 class BEVScenePaths(BaseModel):
@@ -229,3 +259,94 @@ def _load_intrinsic(intrinsic_path: Path) -> NDArray[np.float64]:
     raise ValueError(
         f"intrinsic {intrinsic_path} must be 3x3 or 4x4, got {matrix.shape}"
     )
+
+
+class OpenEqaSceneBEVBuilder:
+    """Mesh-free schematic BEV builder for prepared OpenEQA ConceptGraph clips.
+
+    OpenEQA ScanNet clips have a ConceptGraph pack (objects + ``traj.txt``) but
+    no ``mesh.ply``, so this builder draws the top-down *schematic* floor plan
+    (:func:`keyframe.bev.schematic.render_schematic_bev`) from the object
+    footprints passed in ``markers`` plus the camera trajectory, caches the PNG,
+    and writes the orthographic transform to a ``.view.json`` sidecar next to the
+    output so a later tool call can project further points onto the same image.
+    """
+
+    benchmark = "openeqa"
+
+    def __init__(
+        self, config: SchematicBevConfig = DEFAULT_SCHEMATIC_BEV_CONFIG
+    ) -> None:
+        self.config = config
+
+    def build(
+        self,
+        *,
+        scene_id: str,
+        data_root: Path,
+        markers: Sequence[BEVMarker],
+        output_path: Path,
+        highlight_ids: frozenset[int] = frozenset(),
+        use_cache: bool = True,
+    ) -> Path:
+        """Render (or load cached) the schematic BEV and return ``output_path``."""
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path = self._cache_path(scene_id, data_root, markers, highlight_ids)
+        if use_cache and cache_path.exists():
+            if cache_path.resolve() != output_path.resolve():
+                output_path.write_bytes(cache_path.read_bytes())
+            logger.info(f"[bev] schematic cache hit {scene_id}: {cache_path.name}")
+            return output_path
+
+        camera_xy = _load_trajectory_xy(_resolve_trajectory(data_root / scene_id))
+        image, view = render_schematic_bev(
+            markers, camera_xy, highlight_ids=highlight_ids, config=self.config
+        )
+        bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(str(output_path), bgr)
+        output_path.with_suffix(".view.json").write_text(
+            json.dumps(view.to_payload()), encoding="utf-8"
+        )
+        if use_cache:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(cache_path), bgr)
+        logger.success(f"[bev] schematic rendered {scene_id} -> {output_path}")
+        return output_path
+
+    def _cache_path(
+        self,
+        scene_id: str,
+        data_root: Path,
+        markers: Sequence[BEVMarker],
+        highlight_ids: frozenset[int],
+    ) -> Path:
+        digest = self._render_hash(markers, highlight_ids)
+        return data_root / scene_id / "bev_cache" / f"schematic_bev_{digest}.png"
+
+    def _render_hash(
+        self, markers: Sequence[BEVMarker], highlight_ids: frozenset[int]
+    ) -> str:
+        marker_sig = sorted(
+            (
+                m.obj_id,
+                m.category,
+                tuple(round(v, 4) for v in m.position),
+                tuple(round(v, 4) for v in m.extent) if m.extent is not None else None,
+            )
+            for m in markers
+        )
+        payload = "|".join(
+            [
+                self.benchmark,
+                self.config.model_dump_json(),
+                repr(marker_sig),
+                repr(sorted(highlight_ids)),
+            ]
+        )
+        return hashlib.md5(payload.encode("utf-8")).hexdigest()[:12]
+
+
+def _load_trajectory_xy(trajectory_path: Path) -> NDArray[np.float64]:
+    """Load camera XY positions ``(N, 2)`` from a ``traj.txt`` of 4x4 poses."""
+    poses = _load_poses(trajectory_path)
+    return np.asarray(poses[:, :2, 3], dtype=np.float64)

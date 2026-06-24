@@ -1,0 +1,18 @@
+captured rollouts: 7
+
+qid        cat                     cnt abrt  kf uqry frmA frmD poll score gt/pred
+---------------------------------------------------------------------------------
+0b172e4a   spatial understanding    11    -   3    3    5    5    1     1 mobile phone / a black-and-white photo
+           queries: ['pencil and red notebook on top of another notebook', 'red notebook on top of another notebook', 'notebook on desk']
+199fc658   spatial understanding    10    -   4    4    4    2   12     1 paper recycling tr / a desk
+           queries: ['large white printer', 'door near the large white printer', 'floor standing multifunction printer near the doorway', 'paper recycling bin by the door']
+2f7ae8d8   object recognition       10    -   3    3    0    0   12     1 charger / hair straightener
+           queries: ['box fan', 'box fan and wall heater', 'wall heater']
+52ee7f3e   world knowledge          25  YES   7    7   23   13   25     1 dove / Herbal Essences
+           queries: ['shampoo bottle', 'shampoo bottle near mouthwash bottle and hand soap bottle', 'dresser top with shampoo bottle and mouthwash', 'mouthwash bottle', 'chest of drawers', 'wall shelf', 'white shampoo bottle on desk shelf']
+5fa829d4   object localization      17    -   3    3   12    9    9     1 in the basket on t / in a bin on the rolling 
+           queries: ['pillows', 'the pillow in the basket', 'off-white pillow']
+6ad7b496   attribute recognition    25  YES   5    5   19   16   20     1 red / white
+           queries: ['books on the desk shelf', 'desk shelf', 'shelf decor', 'Buddha head statue', 'book on the shelf']
+962b8661   object recognition        6    -   1    1    2    2    4     1 lamp / a black desk chair
+           queries: ['office desk']

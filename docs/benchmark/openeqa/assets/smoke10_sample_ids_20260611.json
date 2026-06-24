@@ -1,0 +1,82 @@
+[
+  {
+    "question_id": "00371545-9660-4dfd-94a8-4cae5f07bc14",
+    "category": "attribute recognition",
+    "clip_id": "189-scannet-scene0500_00",
+    "scene_id": "scene0500_00",
+    "question": "Which material is the furniture of the scene?",
+    "answer": "Wood"
+  },
+  {
+    "question_id": "0175891c-e182-478d-be8b-de1a10ff8540",
+    "category": "functional reasoning",
+    "clip_id": "158-scannet-scene0356_00",
+    "scene_id": "scene0356_00",
+    "question": "How can I see myself?",
+    "answer": "using the mirror on the door"
+  },
+  {
+    "question_id": "024300a0-100f-427d-b643-d05b7768f894",
+    "category": "object localization",
+    "clip_id": "144-scannet-scene0700_01",
+    "scene_id": "scene0700_01",
+    "question": "Where did I leave my water bottle?",
+    "answer": "on the floor"
+  },
+  {
+    "question_id": "02a02496-904f-456a-9032-d88af21fc6fa",
+    "category": "object recognition",
+    "clip_id": "135-scannet-scene0131_00",
+    "scene_id": "scene0131_00",
+    "question": "What leans on the wall on the right?",
+    "answer": "a poster"
+  },
+  {
+    "question_id": "016fb5d2-3c6f-4aa3-8493-7768aa3762a9",
+    "category": "object state recognition",
+    "clip_id": "002-scannet-scene0709_00",
+    "scene_id": "scene0709_00",
+    "question": "Is the countertop clean?",
+    "answer": "No"
+  },
+  {
+    "question_id": "00e8e77b-6d1d-45da-bedb-ca2b0868b9ed",
+    "category": "spatial understanding",
+    "clip_id": "109-scannet-scene0648_01",
+    "scene_id": "scene0648_01",
+    "question": "What is on top of the calculator?",
+    "answer": "red notebook"
+  },
+  {
+    "question_id": "0479de12-7feb-4c56-bb87-33849036a032",
+    "category": "world knowledge",
+    "clip_id": "173-scannet-scene0278_01",
+    "scene_id": "scene0278_01",
+    "question": "What can I use to the trim the edges of a document that I printed out?",
+    "answer": "Use the paper cutter on the black counter."
+  },
+  {
+    "question_id": "007b3e02-d944-4c04-9bce-f037adcf34bf",
+    "category": "attribute recognition",
+    "clip_id": "186-scannet-scene0549_01",
+    "scene_id": "scene0549_01",
+    "question": "Which material are the side and center tables?",
+    "answer": "Wood"
+  },
+  {
+    "question_id": "020f8677-ed5e-40cd-9406-56b33622d5c9",
+    "category": "functional reasoning",
+    "clip_id": "138-scannet-scene0500_01",
+    "scene_id": "scene0500_01",
+    "question": "How I can share the presentation materials?",
+    "answer": "using the remote and the projector"
+  },
+  {
+    "question_id": "056ce5a4-f054-4e72-a4ce-4966fdd79571",
+    "category": "object localization",
+    "clip_id": "148-scannet-scene0203_01",
+    "scene_id": "scene0203_01",
+    "question": "Where is the book on sailing located?",
+    "answer": "On the coffee table"
+  }
+]
