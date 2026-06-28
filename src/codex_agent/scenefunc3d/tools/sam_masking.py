@@ -6,7 +6,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, StringConstraints
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FilePath,
+    StrictStr,
+    StringConstraints,
+)
 
 from ...errors import SceneFunc3dDataError
 from .models import ToolInputError
@@ -76,7 +83,7 @@ class SamMaskArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     frame_id: NonEmptyText
-    image_path: Path
+    image_path: FilePath
     points: tuple[SamPointInput, ...] = Field(min_length=1)
 
     def to_payload(self) -> SamMaskArgsPayload:
@@ -95,6 +102,11 @@ class SamBackendConfig:
     model_name: str
     checkpoint_path: Path
 
+    def __post_init__(self) -> None:
+        """Validate backend identity before any heavy loading attempt."""
+        if not self.model_name.strip():
+            raise ToolInputError("SAM backend model_name must not be empty")
+
 
 def run_sam_backend(config: SamBackendConfig) -> None:
     """Validate configured SAM backend before heavy model loading."""
@@ -102,6 +114,10 @@ def run_sam_backend(config: SamBackendConfig) -> None:
         raise ToolInputError(
             f"SAM backend unavailable: {config.model_name} at {config.checkpoint_path}"
         )
+    raise ToolInputError(
+        "SAM backend execution is not configured: "
+        f"{config.model_name} at {config.checkpoint_path}"
+    )
 
 
 @dataclass(frozen=True)

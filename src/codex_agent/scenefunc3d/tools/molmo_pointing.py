@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, FilePath, StringConstraints
 
 from ...errors import SceneFunc3dDataError
 from .models import ToolInputError
@@ -81,7 +81,7 @@ class MolmoPointArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     frame_id: NonEmptyText
-    image_path: Path
+    image_path: FilePath
     prompt: NonEmptyText
     image_width: int = Field(gt=0, strict=True)
     image_height: int = Field(gt=0, strict=True)
@@ -93,6 +93,11 @@ class MolmoBackendConfig:
 
     model_name: str
     model_path: Path
+
+    def __post_init__(self) -> None:
+        """Validate backend identity before any heavy loading attempt."""
+        if not self.model_name.strip():
+            raise ToolInputError("Molmo backend model_name must not be empty")
 
 
 @dataclass(frozen=True)
@@ -122,6 +127,10 @@ def run_molmo_backend(config: MolmoBackendConfig) -> None:
         raise ToolInputError(
             f"Molmo backend unavailable: {config.model_name} at {config.model_path}"
         )
+    raise ToolInputError(
+        "Molmo backend execution is not configured: "
+        f"{config.model_name} at {config.model_path}"
+    )
 
 
 def parse_molmo_points(
