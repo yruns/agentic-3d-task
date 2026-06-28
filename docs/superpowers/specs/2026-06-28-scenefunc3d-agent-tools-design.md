@@ -1,104 +1,116 @@
-# SceneFunc3D Agent Tools Design
+# SceneFunc3D Agent 工具设计
 
-Date: 2026-06-28
+日期：2026-06-28
 
-## Goal
+## 目标
 
-Add a SceneFunc3D agent workflow for the prepared ConceptGraph dataset at:
+为已经准备好的 ConceptGraph 数据集增加一个 SceneFunc3D agent 工作流：
 
 ```text
 /mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG
 ```
 
-The workflow should let an agent solve language-conditioned functional-part
-segmentation tasks by finding visual evidence, asking Molmo for task-constrained
-2D points, asking SAM for 2D mask candidates, lifting accepted masks into 3D,
-and optionally expanding from the first accepted 3D seed mask to additional
-views.
+这个工作流用于解决语言条件下的功能部位 3D 分割任务。Agent 先通过
+keyframe、切换帧、crop、BEV 等工具找到视觉证据；然后调用 Molmo 生成
+任务约束下的 2D point；再调用 SAM 生成 2D mask candidates；经 agent 审核
+通过后，把选中的 2D mask 通过 depth、intrinsics、pose lift 到 3D；最后可
+以根据第一个通过审核的 3D seed mask 判断是否需要从其他视角补充更多 3D
+points，得到更完整的功能部位 mask。
 
-This is a distinct task from NR3D. NR3D selects one existing bbox/proposal id.
-SceneFunc3D must generate and return a 3D mask artifact.
+SceneFunc3D 和 NR3D 是两个不同任务：
 
-## Current Project Context
+- NR3D：从已有候选中选一个 bbox/proposal id。
+- SceneFunc3D：生成一个新的 3D mask artifact。
 
-The repository already has separate Codex Agent task packages for NR3D and
-OpenEQA:
+因此 SceneFunc3D 必须有单独的 task entrypoint、prompt/playbook、final answer
+schema、tool contract 和 evaluation 逻辑，不能复用 NR3D 的 bbox id 输出语义。
+
+## 当前项目上下文
+
+仓库中已经有两个 Codex Agent 任务包：
 
 - `src/codex_agent/nr3d/`
 - `src/codex_agent/openeqa/`
 
-Those packages provide useful patterns for task-specific samples, playbooks,
-runners, tool dispatchers, keyframe retrieval, frame rendering, crop rendering,
-BEV rendering, and tests.
+它们提供了可复用的工程模式：
 
-SceneFuncVal-CG currently contains two complete ConceptGraph-style scenes:
+- task-specific sample loader
+- playbook
+- runner
+- tool dispatcher
+- keyframe retrieval
+- frame rendering
+- crop rendering
+- BEV rendering
+- tests
+
+SceneFuncVal-CG 当前包含两个完整的 ConceptGraph 形式场景：
 
 - `421254`
 - `421393`
 
-Each scene has:
+每个场景包含：
 
 - `<visit_id>_descriptions.json`
 - `<visit_id>_annotations.json`
 - `<visit_id>_motions.json`
-- `conceptgraph/` assets
+- `conceptgraph/` artifacts
 
-Existing benchmark records under `docs/benchmark/scenefunc_molmo_sam3d/`
-confirm that Molmo plus SAM plus depth/pose lifting is feasible, but also show
-that naive SAM highest-score selection can over-segment large surfaces.
+现有 `docs/benchmark/scenefunc_molmo_sam3d/` 记录说明 Molmo + SAM + 3D
+lifting 是可行的，但也暴露了一个关键问题：SAM 最高分 candidate 可能会把
+大面积表面分出来，而不是小的 handle、knob、switch、dial 等目标部位。
 
-## Decision
+## 决策
 
-Use a separate SceneFunc3D package and runner:
+新增独立的 SceneFunc3D task package：
 
 ```text
 src/codex_agent/scenefunc3d/
 ```
 
-This package can reuse low-level evidence-gathering patterns from NR3D/OpenEQA,
-but it must not reuse the NR3D task entrypoint, final-answer schema, or
-proposal-id semantics.
+这个 package 可以复用 NR3D/OpenEQA 的底层证据获取思路，但不能复用 NR3D
+的 task entrypoint、final answer schema 或 proposal id 语义。
 
-The first implementation should target a practical end-to-end version:
+首版实现目标是一个实际可落地的 end-to-end workflow：
 
-1. Load SceneFuncVal-CG samples.
-2. Let the agent gather and view evidence.
-3. Require agent approval after Molmo point overlays.
-4. Require agent approval after SAM candidate overlays.
-5. Lift only agent-approved masks into 3D.
-6. Use the first accepted 3D mask as a seed for optional multi-view expansion.
-7. Save auditable mask artifacts and structured run metadata.
-8. Add scoring hooks against hidden ground-truth annotation indices.
+1. 加载 SceneFuncVal-CG sample。
+2. 让 agent 搜索并查看视觉证据。
+3. Molmo point 生成后，必须让 agent 看 overlay 并审核。
+4. SAM mask candidates 生成后，必须让 agent 看同图 contact sheet 并审核。
+5. 只有 agent 审核通过的 mask 才能 lift 到 3D。
+6. 第一个审核通过的 3D mask 作为 seed。
+7. Agent 根据 seed 的遮挡、相机视角、点云稀疏度和几何覆盖判断是否需要
+   多视角补充。
+8. 保存可审计的 mask artifact 和结构化运行 metadata。
+9. 增加对隐藏 GT annotation indices 的 scoring hook。
 
-## Scope
+## 范围
 
-In scope:
+首版包含：
 
-- A new SceneFunc3D task namespace, runner, playbook, sample loader, tool
-  dispatcher, artifact schema, and scoring skeleton.
-- Evidence tools equivalent to the current OpenEQA/NR3D style: scene summary,
-  keyframe selection, frame viewing, crop viewing, BEV viewing, and visible
-  object listing.
-- Molmo point tool with raw text capture, parsed points, and overlay output.
-- SAM mask tool with all candidate masks shown in one contact sheet.
-- 3D lifting tool using frame depth, intrinsics, and camera pose.
-- Agent approval gates between Molmo, SAM, first lift, and optional multi-view
-  expansion.
-- Durable artifacts for debugging and evaluation.
-- Tests that do not require GPUs for schema, parsing, state transitions,
-  sample loading, and scoring math.
+- 新的 SceneFunc3D task namespace、runner、playbook、sample loader、tool
+  dispatcher、artifact schema 和 scoring skeleton。
+- 类似 OpenEQA/NR3D 的证据工具：scene summary、keyframe selection、
+  frame viewing、crop viewing、BEV viewing、visible object listing。
+- Molmo point tool：保存 raw text、parsed points 和 point overlay。
+- SAM mask tool：保存所有 candidate masks，并在同一张 contact sheet 上展示。
+- 3D lifting tool：使用 frame depth、intrinsics、camera pose 生成 3D points。
+- Molmo、SAM、first lift、多视角扩展之间的 agent approval gates。
+- 用于调试和评估的 durable artifacts。
+- 不依赖 GPU 的单元测试：schema、parsing、state transition、sample loading、
+  scoring math。
 
-Out of scope for the first implementation:
+首版不包含：
 
-- Training or fine-tuning Molmo, SAM, or a 3D refinement model.
-- Fully automatic blind top-K multi-view fusion without agent approval.
-- Replacing the existing NR3D/OpenEQA runners.
-- Committing model weights, private credentials, or generated large artifacts.
-- Making the benchmark smoke script the production interface as-is.
+- 训练或微调 Molmo、SAM 或 3D refinement 模型。
+- 不经 agent 审核的全自动盲目 top-K multi-view fusion。
+- 替换已有 NR3D/OpenEQA runners。
+- 提交模型权重、私有凭证或大型生成 artifacts。
+- 直接把 benchmark smoke script 当作生产接口使用。
 
 ## Package Layout
 
-Use a task-specific package with small typed modules:
+使用独立、强类型、小模块的 package：
 
 ```text
 src/codex_agent/scenefunc3d/
@@ -126,7 +138,7 @@ src/codex_agent/scenefunc3d/
     scorer.py
 ```
 
-The CLI entrypoint should be separate:
+SceneFunc3D tool CLI 必须独立：
 
 ```bash
 python -m codex_agent.scenefunc3d.tools <tool> \
@@ -134,7 +146,7 @@ python -m codex_agent.scenefunc3d.tools <tool> \
   --json '<validated-json-payload>'
 ```
 
-A batch or single-case runner should also be task-specific:
+单 case 或 batch runner 也必须是 SceneFunc3D 专用入口：
 
 ```bash
 python -m codex_agent.scenefunc3d.runner \
@@ -146,7 +158,7 @@ python -m codex_agent.scenefunc3d.runner \
 
 ## Sample Model
 
-The sample loader should produce a typed sample for each description:
+Sample loader 为每条 description 生成强类型 sample：
 
 ```text
 SceneFunc3dSample
@@ -158,18 +170,16 @@ SceneFunc3dSample
   motion_hints: [...]
 ```
 
-Ground-truth annotation indices from `<visit_id>_annotations.json` must not be
-placed in the agent prompt or exposed through prediction tools. They are for
-scoring only.
+`<visit_id>_annotations.json` 中的 GT annotation indices 不能进入 agent prompt，
+也不能通过 prediction tools 暴露给 agent。它们只用于 scorer。
 
-Motion metadata may be exposed as task context when it helps the agent
-understand the functional affordance. For example, rotation or translation
-metadata can help distinguish a knob, dial, handle, switch, drawer face, or
-button.
+Motion metadata 可以作为 task context 暴露给 agent，前提是它用于理解任务本身，
+而不是泄露 GT mask。例如 `rot`、`trans`、motion direction 可以帮助 agent 区
+分 knob、dial、handle、switch、drawer face、button 等功能部位。
 
-## Agent State Machine
+## Agent 状态机
 
-The runner should enforce a stage-based state machine:
+Runner 必须强制执行阶段状态机：
 
 ```text
 evidence_selected
@@ -184,45 +194,42 @@ evidence_selected
 -> final_answer
 ```
 
-The transitions are strict:
+状态转移规则：
 
-- The agent must inspect Molmo raw output and point overlay before SAM runs.
-- SAM must not run until the agent accepts a point or requests a retry.
-- The agent must inspect all SAM candidates in one contact sheet before any 3D
-  lift runs.
-- 3D lifting must not run until the agent accepts one SAM candidate.
-- The first accepted 3D lift becomes the seed mask.
-- Additional views are considered only after the agent inspects and accepts the
-  first 3D seed mask.
-- No mask fragment can enter the final fused artifact unless the agent approved
-  its point, 2D mask candidate, and 3D lift artifact.
+- Agent 必须查看 Molmo raw output 和 point overlay 后，才能进入 SAM。
+- 如果 agent 没有接受 point，SAM 不能运行。
+- Agent 必须查看所有 SAM candidates 的同图 contact sheet 后，才能进入 3D lift。
+- 如果 agent 没有接受某个 SAM candidate，3D lift 不能运行。
+- 第一个通过 agent 审核的 3D lift 结果成为 seed mask。
+- 只有 agent 查看并接受 first 3D seed mask 后，才能考虑额外视角。
+- 任何 mask fragment 进入最终 fused artifact 前，都必须经过 point、2D mask、
+  3D lift 三个审核点。
 
-The state machine should be validated in code so a prompt mistake cannot skip
-an approval gate.
+这些 gate 不能只写在 prompt 里。代码层也要验证状态转移，避免 prompt 错误或
+tool misuse 跳过审核。
 
 ## Tool Contracts
 
 ### Evidence Tools
 
-Evidence tools should let the agent find and inspect visual evidence before
-calling Molmo:
+Evidence tools 让 agent 在调用 Molmo 前先找到并查看视觉证据：
 
-| Tool | Purpose |
+| Tool | 目的 |
 | --- | --- |
-| `scene_summary` | Return available frames, object counts, and indexed assets. |
-| `keyframe_selector` | Retrieve candidate frames for the task description or target concept. |
-| `view_frame` | Render one RGB frame for `view_image`. |
-| `view_crop` | Render a zoomed crop around a visible object, bbox, or image region. |
-| `view_bev` | Render top-down scene context with optional highlights. |
-| `frame_objects` | List ConceptGraph objects visible in one frame. |
+| `scene_summary` | 返回可用 frames、object counts 和 indexed assets。 |
+| `keyframe_selector` | 根据 task description 或 target concept 找候选关键帧。 |
+| `view_frame` | 渲染一张 RGB frame，供 `view_image` 查看。 |
+| `view_crop` | 围绕 visible object、bbox 或 image region 渲染 zoomed crop。 |
+| `view_bev` | 渲染 top-down scene context，可选 highlights。 |
+| `frame_objects` | 列出某个 frame 中可见的 ConceptGraph objects。 |
 
-The playbook must tell the agent that a frame or crop only counts as evidence
-after it has viewed the returned image.
+Playbook 必须明确要求：只有 agent 真正看过返回图片后，该 frame 或 crop 才能
+被当作视觉证据引用。
 
 ### Molmo Point Tool
 
-`molmo_point` should run a configured Molmo-family model on one viewed frame or
-crop and return raw and parsed outputs:
+`molmo_point` 在一张已查看的 frame 或 crop 上运行配置好的 Molmo-family 模型，
+返回 raw output 和 parsed points：
 
 ```json
 {
@@ -241,26 +248,23 @@ crop and return raw and parsed outputs:
 }
 ```
 
-After this tool runs, the agent must view the overlay and choose one of:
+工具运行后，agent 必须查看 overlay，并做出以下决策之一：
 
 - `accept_point`
 - `retry_with_crop`
 - `retry_with_new_prompt`
 - `try_another_frame`
 
-For small targets such as knobs, handles, switches, dials, and buttons, the
-playbook should instruct the agent to first reason about the affordance concept,
-then use a full task-constrained point prompt.
+对于 knobs、handles、switches、dials、buttons 这类小目标，playbook 应要求
+agent 先抽取 affordance concept，再使用完整 task 约束生成 Molmo point prompt。
 
-The model backend must be injected through configuration. A first
-implementation can wrap the existing local Molmo smoke path; production config
-should also support a stronger point-specialized backend such as MolmoPoint-8B
-when it is installed in the runtime environment.
+Molmo backend 必须通过配置注入。首版可以包装现有本地 Molmo smoke 路径；生产
+配置要允许使用更适合 point 的 backend，例如运行环境中可用的 MolmoPoint-8B。
+如果请求的模型不可用，工具必须显式失败，不能默默切换到更弱模型。
 
 ### SAM Mask Tool
 
-`sam_mask` should take one or more accepted Molmo points and return every
-meaningful candidate mask:
+`sam_mask` 接收 agent 已接受的 Molmo point，返回所有有意义的 mask candidates：
 
 ```json
 {
@@ -279,7 +283,7 @@ meaningful candidate mask:
 }
 ```
 
-The agent must view the contact sheet and choose one of:
+Agent 必须查看 contact sheet，并做出以下决策之一：
 
 - `accept_candidate`
 - `retry_with_different_point`
@@ -287,9 +291,7 @@ The agent must view the contact sheet and choose one of:
 - `try_another_frame`
 - `reject_case`
 
-SAM must not silently return only the highest-score candidate. Candidate
-selection policy must be explicit and recorded. Supported policies should
-include:
+SAM 不能只返回最高分 candidate。候选选择策略必须显式记录。支持策略包括：
 
 - `highest_score`
 - `smallest_non_empty`
@@ -297,13 +299,13 @@ include:
 - `crop_local`
 - `agent_selected`
 
-Prefer SAM2.1-Hiera-L when it is installed and validated. Original SAM ViT-H can
-remain a reproducible baseline, but it should not be used as a hidden fallback.
+如果环境里安装并验证了 SAM2.1-Hiera-L，优先使用它。原始 SAM ViT-H 可以作为
+可复现实验 baseline，但不能作为隐藏 fallback。
 
 ### 3D Lifting Tool
 
-`lift_mask_to_3d` should project an accepted 2D mask through depth, intrinsics,
-and camera pose into scene coordinates:
+`lift_mask_to_3d` 把 agent 接受的 2D mask 通过 depth、intrinsics 和 camera pose
+投影到 scene coordinates：
 
 ```json
 {
@@ -316,33 +318,31 @@ and camera pose into scene coordinates:
 }
 ```
 
-The agent must inspect the selected-mask overlay and lifted artifact summary
-before the mask becomes an accepted seed.
+Agent 必须查看 selected-mask overlay 和 lifted artifact summary，才能把该 mask
+作为 accepted seed。
 
-The long-term preferred artifact is a mask aligned to the scene point cloud or
-ConceptGraph point index space. The first implementation may save lifted
-coordinates and nearest scene-point ids together so visualization and scoring
-can evolve independently.
+长期更理想的 artifact 是和 scene point cloud 或 ConceptGraph point index space
+对齐的 mask。首版可以同时保存 lifted coordinates 和 nearest scene-point ids，
+这样 visualization 和 scoring 可以分开演进。
 
 ### Multi-View Expansion Tool
 
-After the first accepted 3D seed, a `suggest_additional_views` tool should find
-other likely useful frames by projecting the seed into frames and checking:
+第一个 3D seed 被接受后，`suggest_additional_views` 根据 seed 找其他可能有用的
+frames。判断信号包括：
 
-- camera coverage of the seed region
-- expected occlusion
+- seed region 的 camera coverage
+- 预计遮挡情况
 - depth availability
 - view angle diversity
-- whether the initial lift is sparse or partial
-- whether the functional part likely has unseen sides
+- first lift 是否稀疏或只覆盖局部
+- 功能部位是否可能存在未看到的背面或侧面
 
-The agent decides whether expansion is needed:
+是否扩展由 agent 决定：
 
-- Stop if the first lift already covers the target part well enough.
-- Continue if occlusion, missing depth, sparse points, or incomplete geometry is
-  visible.
+- 如果 first lift 已经足够覆盖目标部位，则停止。
+- 如果存在遮挡、depth 缺失、点云稀疏、几何不完整，则继续补充视角。
 
-Every additional frame must repeat the same approval path:
+每个新增视角必须重复同一条 approval path：
 
 ```text
 Molmo point -> agent approval -> SAM candidates -> agent approval -> 3D lift -> agent approval
@@ -350,7 +350,7 @@ Molmo point -> agent approval -> SAM candidates -> agent approval -> 3D lift -> 
 
 ### Mask Fusion Tool
 
-`fuse_accepted_masks` should merge only accepted 3D fragments. It may use:
+`fuse_accepted_masks` 只能融合已经被 agent 接受的 3D fragments。可用信号包括：
 
 - nearest scene-point ids
 - connected components
@@ -358,25 +358,25 @@ Molmo point -> agent approval -> SAM candidates -> agent approval -> 3D lift -> 
 - ConceptGraph object membership
 - per-view confidence and coverage metadata
 
-The fused artifact must keep all per-view fragments so failures can be traced
-back to the responsible point, SAM candidate, or lift.
+Fused artifact 必须保留所有 per-view fragments，保证失败时能回溯到具体 point、
+SAM candidate 或 lift 阶段。
 
 ### Inspection Tool
 
-`inspect_mask_artifact` should summarize any intermediate or final artifact and
-return image paths suitable for `view_image`:
+`inspect_mask_artifact` 汇总任意中间或最终 artifact，并返回可供 `view_image`
+查看的图片路径：
 
 - Molmo point overlay
 - SAM all-candidate contact sheet
 - selected-mask overlay
 - lifted-mask stats
-- optional BEV or point-cloud projection preview
+- optional BEV 或 point-cloud projection preview
 
-This is the main tool the agent uses to approve, reject, or retry.
+这是 agent 用于 approve、reject、retry 的主要检查工具。
 
 ## Artifact Layout
 
-Each sample run should write a durable artifact directory:
+每个 sample run 写入一个 durable artifact directory：
 
 ```text
 <output_dir>/<visit_id>/<desc_id>/
@@ -401,24 +401,24 @@ Each sample run should write a durable artifact directory:
     summary.json
 ```
 
-`summary.json` should record:
+`summary.json` 记录：
 
-- sample id, visit id, desc id, and task description
-- model backends and checkpoints
-- selected frames and crops
-- Molmo prompts, raw output paths, parsed points, and approval decisions
-- SAM candidate metadata and approval decisions
-- lift stats and approval decisions
+- sample id、visit id、desc id、task description
+- model backends 和 checkpoints
+- selected frames 和 crops
+- Molmo prompts、raw output paths、parsed points、approval decisions
+- SAM candidate metadata 和 approval decisions
+- lift stats 和 approval decisions
 - multi-view expansion decisions
-- fusion inputs and output paths
-- final status and failure type when unsuccessful
+- fusion inputs 和 output paths
+- final status；如果失败，则记录 failure type
 
-If a case has multiple Molmo points or multiple SAM candidates, the artifact
-must display all of them together in a single image for agent inspection.
+如果一个 case 有多个 Molmo points 或多个 SAM candidates，artifact 必须把它们
+放在同一张图中展示，方便 agent 和人类复盘。
 
 ## Final Answer Contract
 
-The agent final answer should be compact JSON:
+Agent final answer 使用紧凑 JSON：
 
 ```json
 {
@@ -434,12 +434,12 @@ The agent final answer should be compact JSON:
 }
 ```
 
-For failures, the answer should include a standardized failure type and the
-latest artifact path so the run remains inspectable.
+失败时，final answer 要包含标准化 failure type 和最新 artifact path，保证失败
+run 仍然可检查。
 
-## Error Handling And Retry Policy
+## 错误处理和重试策略
 
-Standard failure types:
+标准 failure types：
 
 - `no_relevant_frame`
 - `molmo_point_off_target`
@@ -452,66 +452,63 @@ Standard failure types:
 - `multiview_fusion_failed`
 - `artifact_invalid`
 
-Standard run stop reasons separate from model-stage failure types:
+标准 run stop reasons，和模型阶段 failure type 分开记录：
 
 - `single_view_complete`
 - `multiview_not_needed`
 - `max_retry_budget_reached_with_partial_mask`
 
-Retry rules:
+重试规则：
 
-- Do not repeat the same expensive Molmo or SAM call with identical arguments
-  unless the previous call failed at the process level.
-- Prefer crop or prompt refinement before switching scenes or abandoning a
-  case.
-- Limit retries per stage through typed runner configuration.
-- Record rejected points, masks, and lift fragments instead of overwriting them.
-- Keep process failures distinct from model-quality failures.
+- 不要用完全相同参数重复昂贵的 Molmo 或 SAM 调用，除非上一次是进程级失败。
+- 放弃 case 前，优先尝试 crop refinement 或 prompt refinement。
+- 每个阶段的 retry 上限由强类型 runner config 控制。
+- Rejected points、masks、lift fragments 不能覆盖，必须记录下来。
+- 进程失败和模型质量失败要分开记录。
 
 ## Evaluation
 
-Evaluation should stay separate from generation.
+Evaluation 和 generation 分离。
 
-Process evaluation:
+Process evaluation：
 
-- Did the agent view evidence before citing it?
-- Did the agent approve Molmo points before SAM?
-- Did the agent approve SAM candidates before lifting?
-- Did the agent approve the first lift before multi-view expansion?
-- How many retries happened at each stage?
-- Which stage caused failure?
+- Agent 是否在引用证据前查看了图片。
+- Agent 是否在 SAM 前审核了 Molmo points。
+- Agent 是否在 lift 前审核了 SAM candidates。
+- Agent 是否在 multi-view expansion 前审核了 first lift。
+- 每个阶段发生了多少次 retry。
+- 失败发生在哪个阶段。
 
-Mask evaluation:
+Mask evaluation：
 
-- Load predicted point ids or nearest scene points from the final artifact.
-- Load hidden GT annotation indices for the sample's annotation ids.
-- Report IoU, precision, recall, F1, predicted point count, GT point count, and
-  failure type.
+- 从最终 artifact 读取 predicted point ids 或 nearest scene points。
+- 根据 sample 的 annotation ids 读取隐藏 GT annotation indices。
+- 报告 IoU、precision、recall、F1、predicted point count、GT point count、
+  failure type。
 
-The scorer should support single-fragment and fused multi-fragment artifacts.
+Scorer 必须同时支持 single-fragment artifact 和 fused multi-fragment artifact。
 
-## Testing Strategy
+## 测试策略
 
-GPU-free tests:
+不依赖 GPU 的 tests：
 
-- sample loading for `descriptions`, `motions`, and `annotations`
+- `descriptions`、`motions`、`annotations` 的 sample loading
 - task id construction
-- hidden-GT separation from agent-visible sample context
+- hidden-GT 和 agent-visible sample context 分离
 - Molmo raw text parsing
 - SAM candidate metadata parsing
 - state transition validation
 - artifact schema validation
-- retry and failure-type handling
+- retry 和 failure-type handling
 - scorer metric math
 
-Optional integration tests:
+可选 integration tests：
 
-- run wrappers against saved smoke artifacts
-- run Molmo/SAM/lift on a manually selected small case in a worker tmux
-  session
-- compare single-view and multi-view artifacts on one or two descriptions
+- 基于已保存 smoke artifacts 测试 wrappers
+- 在 worker tmux session 中对一个手动选择的小 case 跑 Molmo/SAM/lift
+- 对一两个 descriptions 比较 single-view 和 multi-view artifacts
 
-The repository quality gate from `AGENTS.md` applies to any Python code changes:
+任何 Python 代码变更都必须运行 `AGENTS.md` 中的质量门：
 
 ```bash
 ruff check src/
@@ -520,78 +517,73 @@ mypy src/
 PYTHONPATH=src pytest src/keyframe/tests -q
 ```
 
-If heavy vision dependencies or GPUs are required for optional tests, the run
-record must say so explicitly.
+如果 optional tests 需要 heavy vision dependencies 或 GPU，run record 必须明确
+说明。
 
-## Implementation Standards
+## 实现标准
 
-All production code must comply with
-`docs/python_code_agent_quality_guide.md`.
+所有生产代码必须遵循 `docs/python_code_agent_quality_guide.md`。
 
-Design requirements:
+设计要求：
 
-- Use `dataclass(frozen=True)` or Pydantic v2 models for samples, tool inputs,
-  tool outputs, artifact metadata, state transitions, and scoring records.
-- Do not use `Any` or untyped dictionaries except at deserialization
-  boundaries, and convert to typed models immediately.
-- Validate every CLI JSON payload before running a tool.
-- Keep CLI dispatch thin; business logic belongs in typed modules.
-- Lazy-import heavy optional dependencies inside Molmo, SAM, image, and point
-  cloud functions.
-- Inject model paths and backend names through typed configuration.
-- Do not scatter `os.environ` reads through business logic.
-- Do not log secrets, tokens, private keys, or full private data.
-- Do not silently fall back from a requested best model to a baseline model.
-  Backend fallback must be explicit in configuration or returned as a failure.
+- samples、tool inputs、tool outputs、artifact metadata、state transitions、
+  scoring records 使用 `dataclass(frozen=True)` 或 Pydantic v2 models。
+- 除反序列化边界外，不使用 `Any` 或 untyped dictionaries；外部输入进入边界后
+  立即转换为强类型模型。
+- 每个 CLI JSON payload 必须先验证，再执行工具。
+- CLI dispatch 保持薄；业务逻辑放到强类型模块中。
+- Molmo、SAM、image、point cloud 相关 heavy optional dependencies 必须 lazy
+  import。
+- model paths 和 backend names 通过强类型配置注入。
+- 不在业务逻辑里散落读取 `os.environ`。
+- 不记录 secrets、tokens、private keys 或完整私有数据。
+- 请求 best model 时不能默默 fallback 到 baseline model。Fallback 必须在配置中
+  显式指定，或者作为失败返回。
 
 ## Milestones
 
-P0: loaders and schemas.
+P0：loaders 和 schemas。
 
-- Add typed sample loader and task models.
-- Add artifact and state-machine models.
-- Add tests for sample loading and hidden-GT separation.
+- 增加 typed sample loader 和 task models。
+- 增加 artifact 和 state-machine models。
+- 增加 sample loading 和 hidden-GT separation tests。
 
-P1: evidence tools.
+P1：evidence tools。
 
-- Add SceneFunc3D `scene_summary`, `keyframe_selector`, `view_frame`,
-  `view_crop`, `view_bev`, and `frame_objects`.
-- Reuse OpenEQA/NR3D patterns while keeping the SceneFunc3D entrypoint
-  separate.
+- 增加 SceneFunc3D `scene_summary`、`keyframe_selector`、`view_frame`、
+  `view_crop`、`view_bev`、`frame_objects`。
+- 复用 OpenEQA/NR3D 模式，但保持 SceneFunc3D entrypoint 独立。
 
-P2: Molmo, SAM, and lift tools.
+P2：Molmo、SAM、lift tools。
 
-- Refactor benchmark smoke logic into typed production modules.
-- Add point, mask, lift, inspection, and artifact-writing tools.
-- Preserve raw outputs and all candidates.
+- 把 benchmark smoke 逻辑重构成强类型生产模块。
+- 增加 point、mask、lift、inspection、artifact-writing tools。
+- 保留 raw outputs 和所有 candidates。
 
-P3: agent runner and approval gates.
+P3：agent runner 和 approval gates。
 
-- Add SceneFunc3D playbook.
-- Enforce state transitions in code.
-- Run a small single-view smoke over prepared scenes.
+- 增加 SceneFunc3D playbook。
+- 在代码层强制 state transitions。
+- 在准备好的两个 scenes 上跑小规模 single-view smoke。
 
-P4: multi-view expansion and fusion.
+P4：multi-view expansion 和 fusion。
 
-- Use first accepted 3D seed to suggest additional frames.
-- Require per-view approval gates.
-- Fuse accepted fragments into a final mask artifact.
+- 用 first accepted 3D seed 推荐额外 frames。
+- 每个 view 都要求 approval gates。
+- 融合 accepted fragments，生成最终 mask artifact。
 
-P5: scoring and benchmark record.
+P5：scoring 和 benchmark record。
 
-- Score predictions against hidden annotation indices.
-- Write durable benchmark records under `docs/benchmark/scenefunc_molmo_sam3d/`
-  for meaningful runs.
+- 对隐藏 annotation indices 计算分数。
+- 对有意义的 runs，在 `docs/benchmark/scenefunc_molmo_sam3d/` 写 durable
+  benchmark records。
 
 ## Open Risks
 
-- Molmo may point to the wrong part when the task needs functional reasoning
-  rather than object naming.
-- SAM may return multiple plausible masks, including large surface masks that
-  score well but are wrong for small handles, knobs, or switches.
-- Single-view depth lifting can miss hidden geometry or fail on missing depth.
-- Multi-view fusion can add noise if the seed projection selects visually
-  similar but wrong parts.
-- Best-model backend availability may differ between macOS and Linux workers.
-  The implementation should detect and report unavailable configured backends
-  rather than silently changing models.
+- 当任务需要功能推理而不是简单 object naming 时，Molmo 可能 point 到错误部位。
+- SAM 可能返回多个看起来合理的 masks，其中高分 mask 可能是错误的大面积表面，
+  尤其是 handles、knobs、switches 等小部位。
+- Single-view depth lifting 可能因为遮挡或 depth 缺失漏掉隐藏几何。
+- Multi-view fusion 如果 seed projection 找到相似但错误的部件，可能引入噪声。
+- macOS 和 Linux worker 上 best-model backend 可用性可能不同。实现必须检测并
+  报告配置 backend 不可用，不能静默切换模型。
