@@ -11,7 +11,7 @@ from pydantic import BaseModel, ValidationError
 from .models import ToolInputError, ToolPayload
 from .scene_context import SceneFunc3dToolScene
 
-TOOL_NAMES: tuple[str, ...] = ("scene_summary",)
+TOOL_NAMES: tuple[str, ...] = ("scene_summary", "view_frame", "keyframe_selector")
 
 _ArgsT = TypeVar("_ArgsT", bound=BaseModel)
 
@@ -24,11 +24,20 @@ def run_tool(
     out_dir: Path,
 ) -> ToolPayload:
     """Validate ``raw_args`` for ``name`` and return the typed tool result."""
-    _ = out_dir
     if name == "scene_summary":
         from .frame_views import SceneSummaryArgs, scene_summary
 
         return scene_summary(tool_scene, _parse(SceneSummaryArgs, raw_args))
+    if name == "view_frame":
+        from .frame_views import ViewFrameArgs, view_frame
+
+        return view_frame(tool_scene, _parse(ViewFrameArgs, raw_args), out_dir=out_dir)
+    if name == "keyframe_selector":
+        from .keyframe_retrieval import KeyframeSelectorArgs, keyframe_selector
+
+        return keyframe_selector(
+            tool_scene, _parse(KeyframeSelectorArgs, raw_args), out_dir=out_dir
+        )
     raise ToolInputError(f"unknown tool {name!r}; available: {', '.join(TOOL_NAMES)}")
 
 

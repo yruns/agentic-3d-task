@@ -147,3 +147,103 @@ def test_cli_missing_scene_root_exits_nonzero(tmp_path: Path) -> None:
             ["scene_summary", "--scene-root", str(tmp_path / "missing"), "--args", "{}"]
         )
     assert excinfo.value.code == 1
+
+
+def test_cli_view_frame_returns_image_path(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    Image.new("RGB", (12, 10), color=(10, 20, 30)).save(
+        scene_dir / "raw" / "000000-rgb.png"
+    )
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_ids": ["000000"]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["frames"][0]["frame_id"] == "000000"
+    assert Path(payload["frames"][0]["image_path"]).exists()
+
+
+def test_cli_view_frame_uses_conceptgraph_visualization_dir(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = _write_source_frame_scene(tmp_path, _source_frame_records())
+    vis_dir = scene_dir / "conceptgraph" / "gsa_vis_ram_withbg_allclasses"
+    Image.new("RGB", (16, 12), color=(30, 40, 50)).save(vis_dir / "000000-rgb.jpg")
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_ids": ["000000"]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["frames"][0]["frame_id"] == "000000"
+    assert Path(payload["frames"][0]["image_path"]).exists()
+
+
+def test_cli_view_frame_missing_image_is_recoverable(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_source_frame_scene(tmp_path, _source_frame_records())
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_ids": ["000000"]}),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "no RGB image found" in payload["error"]
+
+
+def test_cli_keyframe_selector_returns_first_k_frames(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": "drawer handle", "k": 1}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["query"] == "drawer handle"
+    assert payload["frames"] == [{"frame_id": "000000", "rank": 1}]
