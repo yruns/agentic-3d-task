@@ -36,6 +36,10 @@ class OpenEqaDataError(CodexAgentError):
     """Raised when OpenEQA question or scene assets are missing or malformed."""
 
 
+class SceneFunc3dDataError(CodexAgentError):
+    """Raised when SceneFunc3D scene/sample assets are missing or malformed."""
+
+
 class OpenEqaJudgeError(CodexAgentError):
     """Raised when the OpenEQA LLM-as-judge cannot produce a usable score."""
 
@@ -47,5 +51,6 @@ __all__ = [
     "CodexResponseError",
     "Nr3dDataError",
     "OpenEqaDataError",
+    "SceneFunc3dDataError",
     "OpenEqaJudgeError",
 ]
