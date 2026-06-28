@@ -1,0 +1,10 @@
+# Safe local placeholder configuration for SceneFunc3D sidecar backends.
+# Copy to configs/scenefunc3d_backends.toml and adjust paths for local runs.
+
+molmo_url = "http://127.0.0.1:8711"
+sam_url = "http://127.0.0.1:8712"
+request_timeout_seconds = 30.0
+
+artifact_staging_root = "/tmp/scenefunc3d/artifacts"
+allowed_image_roots = ["/tmp/scenefunc3d/images"]
+allowed_output_roots = ["/tmp/scenefunc3d/artifacts"]
