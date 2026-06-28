@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, TypedDict
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, FilePath, StringConstraints
 
 from ...errors import SceneFunc3dDataError
 
@@ -31,10 +31,10 @@ class LiftMaskArgs(BaseModel):
 
     frame_id: NonEmptyText
     candidate_id: NonEmptyText
-    mask_path: Path
-    depth_path: Path
-    intrinsics_path: Path
-    pose_path: Path
+    mask_path: FilePath
+    depth_path: FilePath
+    intrinsics_path: FilePath
+    pose_path: FilePath
 
 
 @dataclass(frozen=True)

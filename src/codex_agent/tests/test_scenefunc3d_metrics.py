@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+
 from codex_agent.scenefunc3d.evaluation.metrics import (
     MaskMetrics,
     compute_mask_metrics,
 )
 from codex_agent.scenefunc3d.evaluation.scorer import score_point_ids
+from codex_agent.scenefunc3d.tools.mask_lifting import LiftMaskArgs, LiftMaskResult
 
 
 def test_compute_mask_metrics() -> None:
@@ -71,3 +78,82 @@ def test_score_point_ids_wraps_metrics_and_failure_type() -> None:
         predicted_count=2,
         gt_count=3,
     )
+
+
+def test_lift_mask_args_accepts_existing_input_files(tmp_path: Path) -> None:
+    payload = _lift_mask_args_payload(tmp_path)
+
+    args = LiftMaskArgs.model_validate(payload)
+
+    assert args.frame_id == "000050"
+    assert args.candidate_id == "mask_00"
+    assert args.mask_path == payload["mask_path"]
+
+
+def test_lift_mask_args_rejects_nonexistent_input_file(tmp_path: Path) -> None:
+    payload = _lift_mask_args_payload(tmp_path)
+    payload["mask_path"] = tmp_path / "missing-mask.npz"
+
+    with pytest.raises(ValidationError):
+        LiftMaskArgs.model_validate(payload)
+
+
+def test_lift_mask_args_rejects_empty_path_string(tmp_path: Path) -> None:
+    payload = _lift_mask_args_payload(tmp_path)
+    payload["mask_path"] = ""
+
+    with pytest.raises(ValidationError):
+        LiftMaskArgs.model_validate(payload)
+
+
+def test_lift_mask_args_rejects_extra_fields(tmp_path: Path) -> None:
+    payload = _lift_mask_args_payload(tmp_path)
+    payload["unexpected"] = "value"
+
+    with pytest.raises(ValidationError):
+        LiftMaskArgs.model_validate(payload)
+
+
+@pytest.mark.parametrize("field_name", ["frame_id", "candidate_id"])
+def test_lift_mask_args_rejects_blank_ids(tmp_path: Path, field_name: str) -> None:
+    payload = _lift_mask_args_payload(tmp_path)
+    payload[field_name] = "   "
+
+    with pytest.raises(ValidationError):
+        LiftMaskArgs.model_validate(payload)
+
+
+def test_lift_mask_result_payload_is_json_serializable() -> None:
+    result = LiftMaskResult(
+        frame_id="000050",
+        candidate_id="mask_00",
+        lifted_point_count=12,
+        mask_npz_path=Path("/tmp/mask_00.npz"),
+        mask_ply_path=Path("/tmp/mask_00.ply"),
+        overlay_path=Path("/tmp/mask_00_overlay.png"),
+    )
+
+    payload = result.to_payload()
+
+    assert isinstance(payload["mask_npz_path"], str)
+    assert isinstance(payload["mask_ply_path"], str)
+    assert isinstance(payload["overlay_path"], str)
+    assert json.loads(json.dumps(payload)) == payload
+
+
+def _lift_mask_args_payload(tmp_path: Path) -> dict[str, object]:
+    mask_path = tmp_path / "mask_00.npz"
+    depth_path = tmp_path / "000050.depth.png"
+    intrinsics_path = tmp_path / "intrinsics.txt"
+    pose_path = tmp_path / "pose.txt"
+    for input_path in (mask_path, depth_path, intrinsics_path, pose_path):
+        input_path.write_text("placeholder\n", encoding="utf-8")
+
+    return {
+        "frame_id": "000050",
+        "candidate_id": "mask_00",
+        "mask_path": mask_path,
+        "depth_path": depth_path,
+        "intrinsics_path": intrinsics_path,
+        "pose_path": pose_path,
+    }
