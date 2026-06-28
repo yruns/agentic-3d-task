@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
@@ -13,7 +14,14 @@ from codex_agent.scenefunc3d.evaluation.metrics import (
     MaskMetrics,
     compute_mask_metrics,
 )
-from codex_agent.scenefunc3d.evaluation.scorer import score_point_ids
+from codex_agent.scenefunc3d.evaluation.scorer import (
+    load_gt_point_ids,
+    load_predicted_point_ids,
+    score_mask_artifact,
+    score_mask_npz,
+    score_point_ids,
+)
+from codex_agent.scenefunc3d.task import FRAGMENT_APPROVAL_ACTIONS
 from codex_agent.scenefunc3d.tools.mask_lifting import LiftMaskArgs, LiftMaskResult
 
 
@@ -78,6 +86,90 @@ def test_score_point_ids_wraps_metrics_and_failure_type() -> None:
         f1=0.4,
         predicted_count=2,
         gt_count=3,
+    )
+
+
+def test_load_gt_point_ids_reads_hidden_annotation_indices(tmp_path: Path) -> None:
+    _write_scoring_scene(tmp_path)
+
+    gt_ids = load_gt_point_ids(tmp_path, "421254::desc-a")
+
+    assert gt_ids == frozenset({3, 5, 8, 13, 21})
+
+
+def test_load_predicted_point_ids_accepts_point_indices_npz(tmp_path: Path) -> None:
+    mask_npz_path = tmp_path / "mask_data.npz"
+    np.savez_compressed(mask_npz_path, point_indices=np.array([3, 8, 99]))
+
+    predicted_ids = load_predicted_point_ids(mask_npz_path)
+
+    assert predicted_ids == frozenset({3, 8, 99})
+
+
+def test_load_predicted_point_ids_accepts_point_ids_npz(tmp_path: Path) -> None:
+    mask_npz_path = tmp_path / "mask_data.npz"
+    np.savez_compressed(mask_npz_path, point_ids=np.array([5, 21]))
+
+    predicted_ids = load_predicted_point_ids(mask_npz_path)
+
+    assert predicted_ids == frozenset({5, 21})
+
+
+def test_load_predicted_point_ids_rejects_points_world_only_npz(
+    tmp_path: Path,
+) -> None:
+    mask_npz_path = tmp_path / "mask_data.npz"
+    points_world = np.array([[1.0, 2.0, 3.0]], dtype=np.float64)
+    np.savez_compressed(mask_npz_path, points_world=points_world)
+
+    with pytest.raises(SceneFunc3dDataError, match="point ids"):
+        load_predicted_point_ids(mask_npz_path)
+
+
+def test_score_mask_npz_loads_prediction_and_hidden_gt(tmp_path: Path) -> None:
+    _write_scoring_scene(tmp_path)
+    mask_npz_path = tmp_path / "mask_data.npz"
+    np.savez_compressed(mask_npz_path, point_indices=np.array([3, 8, 99]))
+
+    score = score_mask_npz(
+        data_root=tmp_path,
+        sample_id="421254::desc-a",
+        mask_npz_path=mask_npz_path,
+        failure_type="partial_lift",
+    )
+
+    assert score.sample_id == "421254::desc-a"
+    assert score.failure_type == "partial_lift"
+    assert score.metrics == MaskMetrics(
+        iou=2 / 6,
+        precision=2 / 3,
+        recall=2 / 5,
+        f1=0.5,
+        predicted_count=3,
+        gt_count=5,
+    )
+
+
+def test_score_mask_artifact_uses_final_artifact_npz_path(tmp_path: Path) -> None:
+    _write_scoring_scene(tmp_path)
+    mask_npz_path = tmp_path / "mask_data.npz"
+    np.savez_compressed(mask_npz_path, point_indices=np.array([3, 5, 8, 13, 21]))
+    artifact_path = tmp_path / "mask_artifact.json"
+    _write_scoring_mask_artifact(artifact_path, mask_npz_path=mask_npz_path)
+
+    score = score_mask_artifact(
+        data_root=tmp_path,
+        sample_id="421254::desc-a",
+        mask_artifact_path=artifact_path,
+    )
+
+    assert score.metrics == MaskMetrics(
+        iou=1.0,
+        precision=1.0,
+        recall=1.0,
+        f1=1.0,
+        predicted_count=5,
+        gt_count=5,
     )
 
 
@@ -179,3 +271,90 @@ def _lift_mask_args_payload(tmp_path: Path) -> dict[str, object]:
         "intrinsics_path": intrinsics_path,
         "pose_path": pose_path,
     }
+
+
+def _write_scoring_scene(root: Path) -> None:
+    scene_dir = root / "421254"
+    scene_dir.mkdir(parents=True)
+    (scene_dir / "conceptgraph").mkdir()
+    (scene_dir / "421254_descriptions.json").write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "descriptions": [
+                    {
+                        "desc_id": "desc-a",
+                        "annot_id": ["annot-a", "annot-b"],
+                        "description": "Open the lower drawer.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (scene_dir / "421254_motions.json").write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "motions": [
+                    {
+                        "motion_id": "motion-a",
+                        "annot_id": "annot-a",
+                        "motion_type": "trans",
+                        "motion_dir": [1.0, 0.0, 0.0],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (scene_dir / "421254_annotations.json").write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "annotations": [
+                    {
+                        "annot_id": "annot-a",
+                        "label": "pinch_pull",
+                        "indices": [3, 5, 8],
+                    },
+                    {
+                        "annot_id": "annot-b",
+                        "label": "pinch_pull",
+                        "indices": [8, 13, 21],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_scoring_mask_artifact(artifact_path: Path, *, mask_npz_path: Path) -> None:
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "accepted_frame_ids": ["000010"],
+                "accepted_fragments": [
+                    {
+                        "fragment_id": "frag-a",
+                        "frame_id": "000010",
+                        "point_count": 5,
+                        "approval_actions": [
+                            action.value for action in FRAGMENT_APPROVAL_ACTIONS
+                        ],
+                        "review_artifacts": {
+                            "molmo_raw_text_path": "/tmp/molmo_raw.txt",
+                            "molmo_overlay_path": "/tmp/molmo_overlay.jpg",
+                            "sam_contact_sheet_path": "/tmp/sam_contact.jpg",
+                            "sam_candidate_overlay_path": "/tmp/sam_candidate.jpg",
+                            "lift_overlay_path": "/tmp/lift_overlay.jpg",
+                        },
+                    }
+                ],
+                "mask_npz_path": str(mask_npz_path),
+                "mask_ply_path": "/tmp/lifted_points.ply",
+            }
+        ),
+        encoding="utf-8",
+    )
