@@ -193,6 +193,57 @@ def test_cli_molmo_point_uses_configured_fake_backend(
     assert Path(payload["overlay_path"]).exists()
 
 
+def test_cli_molmo_point_rejects_raw_output_without_point_tags(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    server = _start_json_server(
+        {
+            "/v1/point": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "MolmoPoint-8B",
+                "raw_text": "I see a drawer handle, but no structured point.",
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url=f"http://127.0.0.1:{server.server_port}",
+        sam_url="http://127.0.0.1:8712",
+    )
+    try:
+        code = main(
+            [
+                "molmo_point",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(image_path),
+                        "prompt": "drawer handle",
+                        "image_width": 100,
+                        "image_height": 80,
+                    }
+                ),
+                "--out-dir",
+                str(tmp_path / "out"),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "no <point> tags" in payload["error"]
+    assert "raw_text_path" in payload["error"]
+
+
 def test_cli_molmo_point_rejects_unsafe_frame_id(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

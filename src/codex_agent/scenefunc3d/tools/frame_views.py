@@ -127,10 +127,23 @@ class ViewFrame:
 
     frame_id: str
     image_path: Path
+    depth_path: Path | None = None
+    intrinsics_path: Path | None = None
+    pose_path: Path | None = None
 
     def to_payload(self) -> dict[str, object]:
         """Return this frame as a JSON-ready mapping."""
-        return {"frame_id": self.frame_id, "image_path": str(self.image_path)}
+        payload: dict[str, object] = {
+            "frame_id": self.frame_id,
+            "image_path": str(self.image_path),
+        }
+        if self.depth_path is not None:
+            payload["depth_path"] = str(self.depth_path)
+        if self.intrinsics_path is not None:
+            payload["intrinsics_path"] = str(self.intrinsics_path)
+        if self.pose_path is not None:
+            payload["pose_path"] = str(self.pose_path)
+        return payload
 
 
 @dataclass(frozen=True)
@@ -152,17 +165,22 @@ def view_frame(
 ) -> ViewFrameResult:
     """Copy requested RGB frames to the writable evidence-image directory."""
     _validate_frame_ids(tool_scene, args.frame_ids)
-    frames = tuple(
-        ViewFrame(
-            frame_id=frame_id,
-            image_path=_write_jpeg_copy(
-                _resolve_rgb_source(tool_scene, frame_id),
-                out_dir / tool_scene.visit_id / f"{frame_id}.jpg",
-            ),
+    frames: list[ViewFrame] = []
+    for frame_id in args.frame_ids:
+        geometry_paths = _resolve_frame_geometry_paths(tool_scene, frame_id)
+        frames.append(
+            ViewFrame(
+                frame_id=frame_id,
+                image_path=_write_jpeg_copy(
+                    _resolve_rgb_source(tool_scene, frame_id),
+                    out_dir / tool_scene.visit_id / f"{frame_id}.jpg",
+                ),
+                depth_path=geometry_paths.depth_path,
+                intrinsics_path=geometry_paths.intrinsics_path,
+                pose_path=geometry_paths.pose_path,
+            )
         )
-        for frame_id in args.frame_ids
-    )
-    return ViewFrameResult(frames=frames)
+    return ViewFrameResult(frames=tuple(frames))
 
 
 def frame_objects(
@@ -243,6 +261,49 @@ def _resolve_rgb_source(tool_scene: SceneFunc3dToolScene, frame_id: str) -> Path
         f"{conceptgraph_rgb_path}{source_frame_message} and raw RGB files under "
         f"{tool_scene.raw_dir}"
     )
+
+
+@dataclass(frozen=True)
+class _FrameGeometryPaths:
+    """Optional geometry paths surfaced with view_frame payloads."""
+
+    depth_path: Path | None
+    intrinsics_path: Path | None
+    pose_path: Path | None
+
+
+def _resolve_frame_geometry_paths(
+    tool_scene: SceneFunc3dToolScene, frame_id: str
+) -> _FrameGeometryPaths:
+    from codex_agent.scenefunc3d.backends.frame_assets import (
+        resolve_available_frame_geometry_assets,
+    )
+
+    raw_assets = resolve_available_frame_geometry_assets(tool_scene, frame_id)
+    return _FrameGeometryPaths(
+        depth_path=_prefer_existing_file(
+            raw_assets.depth_path,
+            tool_scene.source_frame_depth_path(frame_id),
+        ),
+        intrinsics_path=_prefer_existing_file(
+            raw_assets.intrinsics_path,
+            tool_scene.source_frame_intrinsics_path(frame_id),
+        ),
+        pose_path=_prefer_existing_file(
+            raw_assets.pose_path,
+            tool_scene.source_frame_pose_path(frame_id),
+        ),
+    )
+
+
+def _prefer_existing_file(
+    primary_path: Path | None, fallback_path: Path | None
+) -> Path | None:
+    if primary_path is not None and primary_path.is_file():
+        return primary_path
+    if fallback_path is not None and fallback_path.is_file():
+        return fallback_path
+    return None
 
 
 def _write_jpeg_copy(source_path: Path, destination_path: Path) -> Path:

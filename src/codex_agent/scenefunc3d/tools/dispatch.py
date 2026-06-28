@@ -85,13 +85,24 @@ def run_tool(
 
         return lift_mask_to_3d(_parse(LiftMaskArgs, raw_args), out_dir=out_dir)
     if name == "inspect_mask_artifact":
-        raise ToolInputError("inspect_mask_artifact requires an existing artifact path")
+        from .mask_inspection import InspectMaskArtifactArgs, inspect_mask_artifact
+
+        return inspect_mask_artifact(_parse(InspectMaskArtifactArgs, raw_args))
     if name == "suggest_additional_views":
-        raise ToolInputError(
-            "suggest_additional_views requires an accepted seed fragment"
+        from .mask_inspection import (
+            SuggestAdditionalViewsArgs,
+            suggest_additional_views,
+        )
+
+        return suggest_additional_views(
+            tool_scene, _parse(SuggestAdditionalViewsArgs, raw_args)
         )
     if name == "fuse_accepted_masks":
-        raise ToolInputError("fuse_accepted_masks requires accepted fragment paths")
+        from .mask_inspection import FuseAcceptedMasksArgs, fuse_accepted_masks
+
+        return fuse_accepted_masks(
+            _parse(FuseAcceptedMasksArgs, raw_args), out_dir=out_dir
+        )
     raise ToolInputError(f"unknown tool {name!r}; available: {', '.join(TOOL_NAMES)}")
 
 

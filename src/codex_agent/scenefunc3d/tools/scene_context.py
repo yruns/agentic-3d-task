@@ -34,6 +34,22 @@ _SOURCE_FRAME_ID_FIELDS: tuple[str, ...] = (
     "image_path",
 )
 _SOURCE_FRAME_RGB_PATH_FIELDS: tuple[str, ...] = ("rgb", "image", "image_path", "path")
+_SOURCE_FRAME_DEPTH_PATH_FIELDS: tuple[str, ...] = ("depth", "depth_path")
+_SOURCE_FRAME_INTRINSICS_PATH_FIELDS: tuple[str, ...] = (
+    "intrinsic",
+    "intrinsics",
+    "intrinsic_path",
+    "intrinsics_path",
+)
+_SOURCE_FRAME_POSE_PATH_FIELDS: tuple[str, ...] = (
+    "pose",
+    "pose_path",
+    "camera_pose",
+    "extrinsic",
+    "extrinsics",
+    "extrinsic_path",
+    "extrinsics_path",
+)
 _SOURCE_FRAME_RGB_SUFFIXES: tuple[str, ...] = (".png", ".jpg", ".jpeg")
 
 
@@ -43,6 +59,9 @@ class SourceFrameRecord:
 
     frame_id: str
     raw_rgb_path: Path | None = None
+    depth_path: Path | None = None
+    intrinsics_path: Path | None = None
+    pose_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -58,9 +77,37 @@ class SourceFrameIndex:
 
     def raw_rgb_path_for(self, frame_id: str) -> Path | None:
         """Return the indexed raw RGB path for ``frame_id``, if one exists."""
+        record = self.record_for(frame_id)
+        if record is None:
+            return None
+        return record.raw_rgb_path
+
+    def depth_path_for(self, frame_id: str) -> Path | None:
+        """Return the indexed depth path for ``frame_id``, if one exists."""
+        record = self.record_for(frame_id)
+        if record is None:
+            return None
+        return record.depth_path
+
+    def intrinsics_path_for(self, frame_id: str) -> Path | None:
+        """Return the indexed intrinsics path for ``frame_id``, if one exists."""
+        record = self.record_for(frame_id)
+        if record is None:
+            return None
+        return record.intrinsics_path
+
+    def pose_path_for(self, frame_id: str) -> Path | None:
+        """Return the indexed pose path for ``frame_id``, if one exists."""
+        record = self.record_for(frame_id)
+        if record is None:
+            return None
+        return record.pose_path
+
+    def record_for(self, frame_id: str) -> SourceFrameRecord | None:
+        """Return the indexed source-frame record for ``frame_id``, if present."""
         for record in self.records:
             if record.frame_id == frame_id:
-                return record.raw_rgb_path
+                return record
         return None
 
 
@@ -96,6 +143,18 @@ class SceneFunc3dToolScene:
     def source_frame_raw_rgb_path(self, frame_id: str) -> Path | None:
         """Return the source-frame raw RGB path for ``frame_id``, if indexed."""
         return self.source_frame_index.raw_rgb_path_for(frame_id)
+
+    def source_frame_depth_path(self, frame_id: str) -> Path | None:
+        """Return the source-frame depth path for ``frame_id``, if indexed."""
+        return self.source_frame_index.depth_path_for(frame_id)
+
+    def source_frame_intrinsics_path(self, frame_id: str) -> Path | None:
+        """Return the source-frame intrinsics path for ``frame_id``, if indexed."""
+        return self.source_frame_index.intrinsics_path_for(frame_id)
+
+    def source_frame_pose_path(self, frame_id: str) -> Path | None:
+        """Return the source-frame pose path for ``frame_id``, if indexed."""
+        return self.source_frame_index.pose_path_for(frame_id)
 
     @classmethod
     def load(cls, scene_root: Path) -> SceneFunc3dToolScene:
@@ -187,6 +246,13 @@ def _source_frame_index_from_sequence(
                 raw_rgb_path=_source_rgb_path_from_record(
                     raw_record, source_frames_dir
                 ),
+                depth_path=_source_depth_path_from_record(
+                    raw_record, source_frames_dir
+                ),
+                intrinsics_path=_source_intrinsics_path_from_record(
+                    raw_record, source_frames_dir
+                ),
+                pose_path=_source_pose_path_from_record(raw_record, source_frames_dir),
             )
         )
     return SourceFrameIndex(records=_deduplicate_source_frame_records(source_records))
@@ -211,6 +277,13 @@ def _source_frame_index_from_mapping(
                 raw_rgb_path=_source_rgb_path_from_record(
                     raw_record, source_frames_dir
                 ),
+                depth_path=_source_depth_path_from_record(
+                    raw_record, source_frames_dir
+                ),
+                intrinsics_path=_source_intrinsics_path_from_record(
+                    raw_record, source_frames_dir
+                ),
+                pose_path=_source_pose_path_from_record(raw_record, source_frames_dir),
             )
         )
     return SourceFrameIndex(records=_deduplicate_source_frame_records(source_records))
@@ -265,6 +338,57 @@ def _source_rgb_path_from_mapping(
     return None
 
 
+def _source_depth_path_from_record(
+    record: object, source_frames_dir: Path
+) -> Path | None:
+    if isinstance(record, Mapping):
+        return _source_path_from_mapping(
+            cast(Mapping[object, object], record),
+            source_frames_dir,
+            field_names=_SOURCE_FRAME_DEPTH_PATH_FIELDS,
+        )
+    return None
+
+
+def _source_intrinsics_path_from_record(
+    record: object, source_frames_dir: Path
+) -> Path | None:
+    if isinstance(record, Mapping):
+        return _source_path_from_mapping(
+            cast(Mapping[object, object], record),
+            source_frames_dir,
+            field_names=_SOURCE_FRAME_INTRINSICS_PATH_FIELDS,
+        )
+    return None
+
+
+def _source_pose_path_from_record(
+    record: object, source_frames_dir: Path
+) -> Path | None:
+    if isinstance(record, Mapping):
+        return _source_path_from_mapping(
+            cast(Mapping[object, object], record),
+            source_frames_dir,
+            field_names=_SOURCE_FRAME_POSE_PATH_FIELDS,
+        )
+    return None
+
+
+def _source_path_from_mapping(
+    record: Mapping[object, object],
+    source_frames_dir: Path,
+    *,
+    field_names: tuple[str, ...],
+) -> Path | None:
+    for field_name in field_names:
+        if field_name not in record:
+            continue
+        source_path = _coerce_source_path(record[field_name], source_frames_dir)
+        if source_path is not None:
+            return source_path
+    return None
+
+
 def _coerce_source_rgb_path(raw_value: object, source_frames_dir: Path) -> Path | None:
     if not isinstance(raw_value, str):
         return None
@@ -274,6 +398,18 @@ def _coerce_source_rgb_path(raw_value: object, source_frames_dir: Path) -> Path 
     source_path = Path(stripped_value)
     if source_path.suffix.lower() not in _SOURCE_FRAME_RGB_SUFFIXES:
         return None
+    if source_path.is_absolute():
+        return source_path
+    return source_frames_dir / source_path
+
+
+def _coerce_source_path(raw_value: object, source_frames_dir: Path) -> Path | None:
+    if not isinstance(raw_value, str):
+        return None
+    stripped_value = raw_value.strip()
+    if not stripped_value:
+        return None
+    source_path = Path(stripped_value)
     if source_path.is_absolute():
         return source_path
     return source_frames_dir / source_path

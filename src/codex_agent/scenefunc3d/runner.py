@@ -16,14 +16,16 @@ from urllib.request import Request, urlopen
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic.types import StringConstraints
 
-from ..errors import CodexResponseError
+from ..errors import CodexResponseError, SceneFunc3dDataError
 from ..json_extraction import extract_json_object
 from ..models import CodexTurnMetadata, CodexTurnRequest
 from ..tasks.base import CodexExecutor
 from .backends.config import load_backend_settings
+from .final_mask_artifacts import validate_final_mask_artifact
 from .playbook import SCENEFUNC3D_TOOLS_PLAYBOOK
 from .sample import SceneFunc3dSample, load_sample, safe_sample_id, scene_dir_for
 from .servers.schemas import HealthResponse
+from .tools.scene_context import SceneFunc3dToolScene
 
 TASK_NAME = "scenefunc3d_mask_generation"
 DEFAULT_TOOL_CLI_MODULE = "codex_agent.scenefunc3d.tools"
@@ -203,15 +205,30 @@ class SceneFunc3dMaskTask:
             field_name="mask_ply_path",
             suffix=".ply",
         )
+        selected_frame_ids = tuple(decision.selected_frame_ids)
+        accepted_fragment_ids = tuple(decision.accepted_fragment_ids)
+        self._validate_selected_frame_ids(selected_frame_ids)
+        validate_final_mask_artifact(
+            artifact_path=mask_artifact_path,
+            mask_npz_path=mask_npz_path,
+            mask_ply_path=mask_ply_path,
+            accepted_fragment_ids=accepted_fragment_ids,
+        )
         return SceneFunc3dMaskOutcome(
             mask_artifact_path=mask_artifact_path,
             mask_npz_path=mask_npz_path,
             mask_ply_path=mask_ply_path,
-            selected_frame_ids=tuple(decision.selected_frame_ids),
-            accepted_fragment_ids=tuple(decision.accepted_fragment_ids),
+            selected_frame_ids=selected_frame_ids,
+            accepted_fragment_ids=accepted_fragment_ids,
             confidence=decision.confidence,
             uncertainties=tuple(decision.uncertainties),
         )
+
+    def validate_outcome(
+        self, outcome: SceneFunc3dMaskOutcome
+    ) -> SceneFunc3dMaskOutcome:
+        """Revalidate a runtime outcome before writing durable result metadata."""
+        return self.parse_response(json.dumps(outcome.to_payload(), ensure_ascii=False))
 
     def _parse_decision(self, response_text: str) -> SceneFunc3dMaskDecision:
         payload = extract_json_object(response_text)
@@ -245,6 +262,26 @@ class SceneFunc3dMaskTask:
         if not artifact_path.is_file():
             raise CodexResponseError(f"{field_name} does not exist: {artifact_path}")
         return artifact_path
+
+    def _validate_selected_frame_ids(self, selected_frame_ids: tuple[str, ...]) -> None:
+        try:
+            tool_scene = SceneFunc3dToolScene.load(self.scene_root)
+        except SceneFunc3dDataError as exc:
+            raise CodexResponseError(
+                f"could not validate selected_frame_ids against scene_root: "
+                f"{self.scene_root}"
+            ) from exc
+        available_frame_ids = set(tool_scene.rgb_frame_ids)
+        missing_frame_ids = tuple(
+            frame_id
+            for frame_id in selected_frame_ids
+            if frame_id not in available_frame_ids
+        )
+        if missing_frame_ids:
+            raise CodexResponseError(
+                "selected_frame_ids must exist in the SceneFunc3D scene: "
+                f"missing={missing_frame_ids}; scene_root={self.scene_root}"
+            )
 
     def _build_prompt(self) -> str:
         schema = SceneFunc3dMaskDecision.model_json_schema()
@@ -327,11 +364,12 @@ def run_single_sample(
         backend_config_path=config.backend_config_path,
     )
     result = executor.execute(task)
+    validated_outcome = task.validate_outcome(result.outcome)
     result_path = sample_output_dir / "result.json"
     result_payload: SceneFunc3dRunResultPayload = {
         "task_name": result.task_name,
         "sample_id": sample_id,
-        "outcome": result.outcome.to_payload(),
+        "outcome": validated_outcome.to_payload(),
         "turn": _metadata_payload(result.turn.metadata),
     }
     result_path.write_text(

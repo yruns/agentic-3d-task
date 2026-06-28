@@ -181,6 +181,11 @@ def molmo_point(
             f"frame_id={args.frame_id!r}; raw_text_path={raw_text_path}; "
             f"error_type={exc.__class__.__name__}"
         ) from exc
+    if not points:
+        raise ToolInputError(
+            "Molmo point response contained no <point> tags: "
+            f"frame_id={args.frame_id!r}; raw_text_path={raw_text_path}"
+        )
     overlay_path = _write_point_overlay(
         args.image_path,
         artifact_out_dir,

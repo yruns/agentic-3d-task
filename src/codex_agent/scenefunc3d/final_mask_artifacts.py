@@ -1,0 +1,316 @@
+"""Validation for final SceneFunc3D 3D mask artifacts."""
+
+from __future__ import annotations
+
+import json
+import math
+from dataclasses import dataclass
+from json import JSONDecodeError
+from pathlib import Path
+from typing import TYPE_CHECKING, Annotated, TypeAlias, cast
+from zipfile import BadZipFile
+
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic.types import StringConstraints
+
+from ..errors import CodexResponseError
+
+if TYPE_CHECKING:
+    from codex_agent.scenefunc3d.backends.lift_3d import FloatArray
+
+NonEmptyString: TypeAlias = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1)
+]
+
+
+class FinalMaskAcceptedFragment(BaseModel):
+    """One accepted 3D fragment recorded in the final mask artifact."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fragment_id: NonEmptyString
+    point_count: int = Field(gt=0, strict=True)
+
+
+class FinalMaskArtifactDocument(BaseModel):
+    """Strict JSON contract for one fused SceneFunc3D mask artifact."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    accepted_fragments: tuple[FinalMaskAcceptedFragment, ...] = Field(min_length=1)
+    mask_npz_path: NonEmptyString
+    mask_ply_path: NonEmptyString
+
+
+@dataclass(frozen=True)
+class ValidatedFinalMaskArtifact:
+    """Validated final mask artifact summary."""
+
+    artifact_path: Path
+    mask_npz_path: Path
+    mask_ply_path: Path
+    accepted_fragment_ids: tuple[str, ...]
+    point_count: int
+
+
+def validate_final_mask_artifact(
+    *,
+    artifact_path: Path,
+    mask_npz_path: Path,
+    mask_ply_path: Path,
+    accepted_fragment_ids: tuple[str, ...],
+) -> ValidatedFinalMaskArtifact:
+    """Validate final artifact JSON, NPZ points, and PLY vertex consistency."""
+    artifact_document = _load_final_mask_artifact_document(artifact_path)
+    _require_matching_artifact_path(
+        artifact_document.mask_npz_path,
+        expected_path=mask_npz_path,
+        field_name="mask_npz_path",
+    )
+    _require_matching_artifact_path(
+        artifact_document.mask_ply_path,
+        expected_path=mask_ply_path,
+        field_name="mask_ply_path",
+    )
+    artifact_fragment_ids = tuple(
+        fragment.fragment_id for fragment in artifact_document.accepted_fragments
+    )
+    if artifact_fragment_ids != accepted_fragment_ids:
+        raise CodexResponseError(
+            "accepted_fragment_ids must match final artifact accepted_fragments: "
+            f"response={accepted_fragment_ids}; artifact={artifact_fragment_ids}"
+        )
+
+    npz_point_count = validate_points_world_npz(mask_npz_path)
+    ply_vertex_count = validate_ascii_points_ply(mask_ply_path)
+    if ply_vertex_count != npz_point_count:
+        raise CodexResponseError(
+            "mask_ply_path vertex count must match mask_npz_path point count: "
+            f"mask_ply_path={mask_ply_path}; vertices={ply_vertex_count}; "
+            f"mask_npz_path={mask_npz_path}; points={npz_point_count}"
+        )
+    for fragment in artifact_document.accepted_fragments:
+        if fragment.point_count > npz_point_count:
+            raise CodexResponseError(
+                "accepted fragment point_count cannot exceed fused mask point count: "
+                f"fragment_id={fragment.fragment_id}; "
+                f"fragment_points={fragment.point_count}; "
+                f"fused_points={npz_point_count}"
+            )
+    fragment_point_count_sum = sum(
+        fragment.point_count for fragment in artifact_document.accepted_fragments
+    )
+    if fragment_point_count_sum != npz_point_count:
+        raise CodexResponseError(
+            "accepted fragment point_count sum must match fused mask point count: "
+            f"fragment_points={fragment_point_count_sum}; "
+            f"fused_points={npz_point_count}"
+        )
+
+    return ValidatedFinalMaskArtifact(
+        artifact_path=artifact_path,
+        mask_npz_path=mask_npz_path,
+        mask_ply_path=mask_ply_path,
+        accepted_fragment_ids=accepted_fragment_ids,
+        point_count=npz_point_count,
+    )
+
+
+def validate_points_world_npz(mask_npz_path: Path) -> int:
+    """Validate a lifted/fused mask NPZ and return its world-point count."""
+    points_world = load_points_world_npz(mask_npz_path)
+    return int(points_world.shape[0])
+
+
+def load_points_world_npz(mask_npz_path: Path) -> FloatArray:
+    """Load and validate a lifted/fused mask NPZ world-point array."""
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise CodexResponseError(
+            "mask_npz_path validation requires numpy: " f"mask_npz_path={mask_npz_path}"
+        ) from exc
+
+    try:
+        with np.load(mask_npz_path) as archive:
+            if "points_world" not in archive.files:
+                raise CodexResponseError(
+                    "mask_npz_path is missing required key 'points_world': "
+                    f"mask_npz_path={mask_npz_path}"
+                )
+            points_world = cast(
+                "FloatArray",
+                np.asarray(archive["points_world"], dtype=np.float64),
+            )
+    except CodexResponseError:
+        raise
+    except (BadZipFile, OSError, ValueError) as exc:
+        raise CodexResponseError(
+            "could not read mask_npz_path as a points_world NPZ: "
+            f"mask_npz_path={mask_npz_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+
+    if points_world.ndim != 2 or points_world.shape[1] != 3:
+        raise CodexResponseError(
+            "mask_npz_path points_world must have shape (N, 3): "
+            f"mask_npz_path={mask_npz_path}; shape={points_world.shape}"
+        )
+    if points_world.shape[0] <= 0:
+        raise CodexResponseError(
+            "mask_npz_path points_world must contain at least one point: "
+            f"mask_npz_path={mask_npz_path}"
+        )
+    if not bool(np.all(np.isfinite(points_world))):
+        raise CodexResponseError(
+            "mask_npz_path points_world must contain only finite values: "
+            f"mask_npz_path={mask_npz_path}"
+        )
+    return points_world
+
+
+def validate_ascii_points_ply(mask_ply_path: Path) -> int:
+    """Validate an ASCII point-cloud PLY and return its vertex count."""
+    try:
+        lines = mask_ply_path.read_text(encoding="ascii").splitlines()
+    except UnicodeDecodeError as exc:
+        raise CodexResponseError(
+            "mask_ply_path must be ASCII PLY: " f"mask_ply_path={mask_ply_path}"
+        ) from exc
+    except OSError as exc:
+        raise CodexResponseError(
+            "could not read mask_ply_path: "
+            f"mask_ply_path={mask_ply_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+
+    if len(lines) < 4 or lines[0].strip() != "ply":
+        raise CodexResponseError(
+            "mask_ply_path must start with a PLY header: "
+            f"mask_ply_path={mask_ply_path}"
+        )
+    if not any(line.strip() == "format ascii 1.0" for line in lines[:4]):
+        raise CodexResponseError(
+            "mask_ply_path must declare 'format ascii 1.0': "
+            f"mask_ply_path={mask_ply_path}"
+        )
+    vertex_count = _parse_ply_vertex_count(lines, mask_ply_path)
+    end_header_index = _find_ply_end_header(lines, mask_ply_path)
+    vertex_lines = lines[end_header_index + 1 : end_header_index + 1 + vertex_count]
+    if len(vertex_lines) != vertex_count:
+        raise CodexResponseError(
+            "mask_ply_path does not contain the declared number of vertex rows: "
+            f"mask_ply_path={mask_ply_path}; declared={vertex_count}; "
+            f"actual={len(vertex_lines)}"
+        )
+    for row_index, vertex_line in enumerate(vertex_lines):
+        _validate_ply_vertex_line(
+            vertex_line, mask_ply_path=mask_ply_path, row_index=row_index
+        )
+    return vertex_count
+
+
+def _load_final_mask_artifact_document(
+    artifact_path: Path,
+) -> FinalMaskArtifactDocument:
+    try:
+        payload: object = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise CodexResponseError(
+            f"could not read mask_artifact_path: {artifact_path}"
+        ) from exc
+    except JSONDecodeError as exc:
+        raise CodexResponseError(
+            f"mask_artifact_path is not valid JSON: {artifact_path}"
+        ) from exc
+    try:
+        return FinalMaskArtifactDocument.model_validate(payload)
+    except ValidationError as exc:
+        raise CodexResponseError(
+            "mask_artifact_path does not match final mask artifact schema: "
+            f"mask_artifact_path={artifact_path}; error={exc}"
+        ) from exc
+
+
+def _require_matching_artifact_path(
+    raw_path: str,
+    *,
+    expected_path: Path,
+    field_name: str,
+) -> None:
+    actual_path = Path(raw_path).expanduser().resolve()
+    resolved_expected_path = expected_path.expanduser().resolve()
+    if actual_path != resolved_expected_path:
+        raise CodexResponseError(
+            f"mask_artifact_path {field_name} must match final response: "
+            f"artifact={actual_path}; response={resolved_expected_path}"
+        )
+
+
+def _parse_ply_vertex_count(lines: list[str], mask_ply_path: Path) -> int:
+    for line in lines:
+        tokens = line.strip().split()
+        if len(tokens) == 3 and tokens[0] == "element" and tokens[1] == "vertex":
+            try:
+                vertex_count = int(tokens[2])
+            except ValueError as exc:
+                raise CodexResponseError(
+                    "mask_ply_path has an invalid vertex count: "
+                    f"mask_ply_path={mask_ply_path}; raw_count={tokens[2]!r}"
+                ) from exc
+            if vertex_count <= 0:
+                raise CodexResponseError(
+                    "mask_ply_path vertex count must be positive: "
+                    f"mask_ply_path={mask_ply_path}; vertex_count={vertex_count}"
+                )
+            return vertex_count
+    raise CodexResponseError(
+        "mask_ply_path is missing an element vertex header: "
+        f"mask_ply_path={mask_ply_path}"
+    )
+
+
+def _find_ply_end_header(lines: list[str], mask_ply_path: Path) -> int:
+    for index, line in enumerate(lines):
+        if line.strip() == "end_header":
+            return index
+    raise CodexResponseError(
+        "mask_ply_path is missing end_header: " f"mask_ply_path={mask_ply_path}"
+    )
+
+
+def _validate_ply_vertex_line(
+    vertex_line: str,
+    *,
+    mask_ply_path: Path,
+    row_index: int,
+) -> None:
+    tokens = vertex_line.strip().split()
+    if len(tokens) < 3:
+        raise CodexResponseError(
+            "mask_ply_path vertex row must contain at least XYZ columns: "
+            f"mask_ply_path={mask_ply_path}; row_index={row_index}"
+        )
+    try:
+        coordinates = (float(tokens[0]), float(tokens[1]), float(tokens[2]))
+    except ValueError as exc:
+        raise CodexResponseError(
+            "mask_ply_path vertex row contains non-numeric XYZ values: "
+            f"mask_ply_path={mask_ply_path}; row_index={row_index}"
+        ) from exc
+    if not all(math.isfinite(coordinate) for coordinate in coordinates):
+        raise CodexResponseError(
+            "mask_ply_path vertex row contains non-finite XYZ values: "
+            f"mask_ply_path={mask_ply_path}; row_index={row_index}"
+        )
+
+
+__all__ = [
+    "FinalMaskAcceptedFragment",
+    "FinalMaskArtifactDocument",
+    "ValidatedFinalMaskArtifact",
+    "load_points_world_npz",
+    "validate_ascii_points_ply",
+    "validate_final_mask_artifact",
+    "validate_points_world_npz",
+]

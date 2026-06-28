@@ -30,11 +30,59 @@ class FrameGeometryAssets:
             )
 
 
+@dataclass(frozen=True)
+class AvailableFrameGeometryAssets:
+    """Available raw geometry paths for one source frame."""
+
+    frame_id: str
+    depth_path: Path | None
+    intrinsics_path: Path | None
+    pose_path: Path | None
+
+    def __post_init__(self) -> None:
+        """Validate directly constructed frame-geometry asset records."""
+        if not _SAFE_FRAME_ID_RE.fullmatch(self.frame_id):
+            raise ToolInputError(
+                "frame_geometry_asset_invalid_frame_id: " f"frame_id={self.frame_id!r}"
+            )
+
+
 def resolve_frame_geometry_assets(
     tool_scene: SceneFunc3dToolScene,
     frame_id: str,
 ) -> FrameGeometryAssets:
     """Resolve narrow raw-layout geometry assets for ``frame_id``."""
+    available_assets = resolve_available_frame_geometry_assets(tool_scene, frame_id)
+    if (
+        available_assets.depth_path is None
+        or available_assets.intrinsics_path is None
+        or available_assets.pose_path is None
+    ):
+        missing_fields: list[str] = []
+        if available_assets.depth_path is None:
+            missing_fields.append("depth")
+        if available_assets.intrinsics_path is None:
+            missing_fields.append("intrinsics")
+        if available_assets.pose_path is None:
+            missing_fields.append("pose")
+        raise ToolInputError(
+            "frame_geometry_asset_missing: "
+            f"frame_id={frame_id!r}; raw_dir={tool_scene.raw_dir}; "
+            f"missing={','.join(missing_fields)}"
+        )
+    return FrameGeometryAssets(
+        frame_id=frame_id,
+        depth_path=available_assets.depth_path,
+        intrinsics_path=available_assets.intrinsics_path,
+        pose_path=available_assets.pose_path,
+    )
+
+
+def resolve_available_frame_geometry_assets(
+    tool_scene: SceneFunc3dToolScene,
+    frame_id: str,
+) -> AvailableFrameGeometryAssets:
+    """Resolve whichever raw-layout geometry assets exist for ``frame_id``."""
     if not _SAFE_FRAME_ID_RE.fullmatch(frame_id):
         raise ToolInputError(
             "frame_geometry_asset_invalid_frame_id: " f"frame_id={frame_id!r}"
@@ -45,20 +93,7 @@ def resolve_frame_geometry_assets(
         _intrinsics_candidates(tool_scene.raw_dir, frame_id)
     )
     pose_path = _first_existing_path(_pose_candidates(tool_scene.raw_dir, frame_id))
-    if depth_path is None or intrinsics_path is None or pose_path is None:
-        missing_fields: list[str] = []
-        if depth_path is None:
-            missing_fields.append("depth")
-        if intrinsics_path is None:
-            missing_fields.append("intrinsics")
-        if pose_path is None:
-            missing_fields.append("pose")
-        raise ToolInputError(
-            "frame_geometry_asset_missing: "
-            f"frame_id={frame_id!r}; raw_dir={tool_scene.raw_dir}; "
-            f"missing={','.join(missing_fields)}"
-        )
-    return FrameGeometryAssets(
+    return AvailableFrameGeometryAssets(
         frame_id=frame_id,
         depth_path=depth_path,
         intrinsics_path=intrinsics_path,
@@ -106,4 +141,9 @@ def _first_existing_path(candidates: tuple[Path, ...]) -> Path | None:
     return None
 
 
-__all__ = ["FrameGeometryAssets", "resolve_frame_geometry_assets"]
+__all__ = [
+    "AvailableFrameGeometryAssets",
+    "FrameGeometryAssets",
+    "resolve_available_frame_geometry_assets",
+    "resolve_frame_geometry_assets",
+]

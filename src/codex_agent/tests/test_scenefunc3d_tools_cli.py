@@ -178,6 +178,143 @@ def test_cli_view_frame_returns_image_path(
     assert Path(payload["frames"][0]["image_path"]).exists()
 
 
+def test_cli_view_frame_exposes_raw_geometry_paths(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    raw_dir = scene_dir / "raw"
+    Image.new("RGB", (12, 10), color=(10, 20, 30)).save(raw_dir / "000000-rgb.png")
+    depth_path = raw_dir / "000000-depth.png"
+    intrinsics_path = raw_dir / "intrinsics.txt"
+    pose_path = raw_dir / "pose" / "000000.txt"
+    depth_path.write_bytes(b"depth")
+    intrinsics_path.write_text("1 0 0\n0 1 0\n0 0 1\n", encoding="utf-8")
+    pose_path.parent.mkdir()
+    pose_path.write_text("1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_ids": ["000000"]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    frame_payload = payload["frames"][0]
+    assert frame_payload["depth_path"] == str(depth_path)
+    assert frame_payload["intrinsics_path"] == str(intrinsics_path)
+    assert frame_payload["pose_path"] == str(pose_path)
+
+
+def test_cli_view_frame_exposes_source_frame_geometry_paths(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    source_root = tmp_path / "source"
+    source_rgb_path = source_root / "frame.jpg"
+    depth_path = source_root / "frame_depth.png"
+    intrinsics_path = source_root / "frame_intrinsics.txt"
+    pose_path = source_root / "frame_pose.txt"
+    source_root.mkdir()
+    Image.new("RGB", (18, 14), color=(90, 80, 70)).save(source_rgb_path)
+    depth_path.write_bytes(b"depth")
+    intrinsics_path.write_text("1 0 0\n0 1 0\n0 0 1\n", encoding="utf-8")
+    pose_path.write_text("1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+    scene_dir = _write_source_frame_scene(
+        tmp_path,
+        [
+            {
+                "frame_id": "000000",
+                "rgb": str(source_rgb_path),
+                "depth": str(depth_path),
+                "intrinsics": str(intrinsics_path),
+                "pose": str(pose_path),
+            }
+        ],
+    )
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_ids": ["000000"]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    frame_payload = payload["frames"][0]
+    assert frame_payload["depth_path"] == str(depth_path)
+    assert frame_payload["intrinsics_path"] == str(intrinsics_path)
+    assert frame_payload["pose_path"] == str(pose_path)
+
+
+def test_cli_view_frame_exposes_mixed_raw_and_source_geometry_paths(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    source_root = tmp_path / "source"
+    source_rgb_path = source_root / "frame.jpg"
+    source_intrinsics_path = source_root / "frame_intrinsics.txt"
+    source_pose_path = source_root / "frame_pose.txt"
+    source_root.mkdir()
+    Image.new("RGB", (18, 14), color=(90, 80, 70)).save(source_rgb_path)
+    source_intrinsics_path.write_text("1 0 0\n0 1 0\n0 0 1\n", encoding="utf-8")
+    source_pose_path.write_text(
+        "1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n",
+        encoding="utf-8",
+    )
+    scene_dir = _write_source_frame_scene(
+        tmp_path,
+        [
+            {
+                "frame_id": "000000",
+                "rgb": str(source_rgb_path),
+                "intrinsics": str(source_intrinsics_path),
+                "pose": str(source_pose_path),
+            }
+        ],
+    )
+    raw_depth_path = scene_dir / "raw" / "000000-depth.png"
+    raw_depth_path.write_bytes(b"depth")
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_ids": ["000000"]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    frame_payload = payload["frames"][0]
+    assert frame_payload["depth_path"] == str(raw_depth_path)
+    assert frame_payload["intrinsics_path"] == str(source_intrinsics_path)
+    assert frame_payload["pose_path"] == str(source_pose_path)
+
+
 def test_cli_view_frame_uses_conceptgraph_visualization_dir(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -397,7 +534,38 @@ def test_cli_view_bev_reports_unavailable_without_bev_asset(
     assert "BEV asset is not available" in payload["error"]
 
 
-def test_cli_keyframe_selector_returns_first_k_frames(
+def test_cli_keyframe_selector_prioritizes_query_frame_id(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": "drawer handle in frame 000010", "k": 1}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["query"] == "drawer handle in frame 000010"
+    assert payload["strategy"] == "frame_id_match"
+    assert payload["frames"] == [
+        {
+            "frame_id": "000010",
+            "rank": 1,
+            "score": 100.0,
+            "reason": "query_mentions_frame_id",
+        }
+    ]
+
+
+def test_cli_keyframe_selector_uses_coverage_fallback_without_query_match(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     scene_dir = _write_raw_rgb_scene(tmp_path)
@@ -416,8 +584,43 @@ def test_cli_keyframe_selector_returns_first_k_frames(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert payload["query"] == "drawer handle"
-    assert payload["frames"] == [{"frame_id": "000000", "rank": 1}]
+    assert payload["strategy"] == "coverage_fallback_no_query_match"
+    assert payload["frames"] == [
+        {
+            "frame_id": "000010",
+            "rank": 1,
+            "score": 0.0,
+            "reason": "coverage_fallback_no_query_match",
+        }
+    ]
+
+
+def test_cli_keyframe_selector_does_not_treat_counts_as_frame_ids(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    for frame_id in ("000000", "000003", "000010"):
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    (scene_dir / "conceptgraph").mkdir()
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": "open 3 drawers", "k": 1}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["strategy"] == "coverage_fallback_no_query_match"
+    assert payload["frames"][0]["score"] == 0.0
 
 
 def test_cli_keyframe_selector_rejects_blank_query(
@@ -458,3 +661,124 @@ def test_cli_keyframe_selector_rejects_string_k(
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
     assert "k" in payload["error"]
+
+
+def test_cli_inspect_mask_artifact_validates_npz_ply(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "fragment-a")
+
+    code = main(
+        [
+            "inspect_mask_artifact",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "mask_npz_path": str(mask_npz_path),
+                    "mask_ply_path": str(mask_ply_path),
+                }
+            ),
+            "--out-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["status"] == "valid"
+    assert payload["lifted_point_count"] == 2
+
+
+def test_cli_fuse_accepted_masks_writes_final_artifact(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    first_npz_path, first_ply_path = _write_points_artifact(tmp_path / "frag-a")
+    second_npz_path, second_ply_path = _write_points_artifact(tmp_path / "frag-b")
+
+    code = main(
+        [
+            "fuse_accepted_masks",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "fragments": [
+                        {
+                            "fragment_id": "frag-a",
+                            "mask_npz_path": str(first_npz_path),
+                            "mask_ply_path": str(first_ply_path),
+                        },
+                        {
+                            "fragment_id": "frag-b",
+                            "mask_npz_path": str(second_npz_path),
+                            "mask_ply_path": str(second_ply_path),
+                        },
+                    ]
+                }
+            ),
+            "--out-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert Path(payload["mask_artifact_path"]).exists()
+    assert Path(payload["mask_npz_path"]).exists()
+    assert Path(payload["mask_ply_path"]).exists()
+    assert [fragment["fragment_id"] for fragment in payload["accepted_fragments"]] == [
+        "frag-a",
+        "frag-b",
+    ]
+
+
+def test_cli_suggest_additional_views_returns_scene_neighbors(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+
+    code = main(
+        [
+            "suggest_additional_views",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "seed_fragment_id": "frag-a",
+                    "accepted_frame_id": "000000",
+                    "k": 1,
+                }
+            ),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["seed_fragment_id"] == "frag-a"
+    assert payload["views"] == [
+        {
+            "frame_id": "000010",
+            "reason": "nearest temporal neighbor to accepted_frame_id=000000",
+            "rank": 1,
+        }
+    ]
+
+
+def _write_points_artifact(root: Path) -> tuple[Path, Path]:
+    import numpy as np
+
+    from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
+
+    points_world = np.array(
+        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+        dtype=np.float64,
+    )
+    mask_npz_path = write_lift_npz(root / "mask_data.npz", points_world)
+    mask_ply_path = write_lift_ply(root / "lifted_points.ply", points_world)
+    return mask_npz_path, mask_ply_path
