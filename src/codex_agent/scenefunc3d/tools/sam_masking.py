@@ -6,12 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, StringConstraints
 
 from ...errors import SceneFunc3dDataError
-from .molmo_pointing import MolmoPoint, MolmoPointPayload
 
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+StrictPixelCoordinate = Annotated[float, Field(ge=0.0, strict=True)]
 
 
 class SamCandidatePayload(TypedDict):
@@ -37,7 +37,36 @@ class SamMaskArgsPayload(TypedDict):
 
     frame_id: str
     image_path: str
-    points: list[MolmoPointPayload]
+    points: list[SamPointInputPayload]
+
+
+class SamPointInputPayload(TypedDict):
+    """JSON-ready payload for one SAM point prompt."""
+
+    x_px: float
+    y_px: float
+    source: str
+    label: str
+
+
+class SamPointInput(BaseModel):
+    """Strict JSON-boundary point input for future SAM mask generation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    x_px: StrictPixelCoordinate
+    y_px: StrictPixelCoordinate
+    source: StrictStr = ""
+    label: StrictStr = ""
+
+    def to_payload(self) -> SamPointInputPayload:
+        """Return this point prompt as a JSON-ready mapping."""
+        return {
+            "x_px": self.x_px,
+            "y_px": self.y_px,
+            "source": self.source,
+            "label": self.label,
+        }
 
 
 class SamMaskArgs(BaseModel):
@@ -47,7 +76,7 @@ class SamMaskArgs(BaseModel):
 
     frame_id: NonEmptyText
     image_path: Path
-    points: tuple[MolmoPoint, ...] = Field(min_length=1)
+    points: tuple[SamPointInput, ...] = Field(min_length=1)
 
     def to_payload(self) -> SamMaskArgsPayload:
         """Return this request as a JSON-ready mapping."""
@@ -121,4 +150,6 @@ __all__ = [
     "SamMaskArgsPayload",
     "SamMaskResult",
     "SamMaskResultPayload",
+    "SamPointInput",
+    "SamPointInputPayload",
 ]

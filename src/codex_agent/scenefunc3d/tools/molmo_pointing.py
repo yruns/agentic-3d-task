@@ -20,6 +20,7 @@ _POINT_TAG_RE = re.compile(
     r"<point\b(?P<attributes>[^>]*)>(?P<label_text>.*?)</point>",
     flags=re.IGNORECASE | re.DOTALL,
 )
+_POINT_START_RE = re.compile(r"<point\b", flags=re.IGNORECASE)
 _POINT_ATTR_RE = re.compile(
     r"(?P<name>[A-Za-z_:][\w:.-]*)\s*=\s*(?P<quote>['\"])(?P<value>.*?)(?P=quote)",
     flags=re.DOTALL,
@@ -118,8 +119,11 @@ def parse_molmo_points(
     """
     _validate_image_dimensions(image_width=image_width, image_height=image_height)
 
+    point_matches = tuple(_POINT_TAG_RE.finditer(raw_text))
+    _validate_complete_point_tags(raw_text, point_matches)
+
     points: list[MolmoPoint] = []
-    for match in _POINT_TAG_RE.finditer(raw_text):
+    for match in point_matches:
         attributes = _parse_point_attributes(match.group("attributes"))
         x_percent = _parse_percent_attribute(attributes, "x")
         y_percent = _parse_percent_attribute(attributes, "y")
@@ -133,6 +137,23 @@ def parse_molmo_points(
             )
         )
     return tuple(points)
+
+
+def _validate_complete_point_tags(
+    raw_text: str, point_matches: tuple[re.Match[str], ...]
+) -> None:
+    point_start_offsets = tuple(
+        match.start() for match in _POINT_START_RE.finditer(raw_text)
+    )
+    complete_tag_offsets = {match.start() for match in point_matches}
+    malformed_offsets = tuple(
+        offset for offset in point_start_offsets if offset not in complete_tag_offsets
+    )
+    if malformed_offsets:
+        raise SceneFunc3dDataError(
+            "malformed Molmo point tag: every '<point' fragment must have a "
+            f"matching '</point>' tag; malformed offsets={malformed_offsets}"
+        )
 
 
 def _validate_image_dimensions(*, image_width: int, image_height: int) -> None:
