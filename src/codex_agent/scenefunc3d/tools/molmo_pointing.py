@@ -13,6 +13,7 @@ from typing import Annotated, TypedDict
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from ...errors import SceneFunc3dDataError
+from .models import ToolInputError
 
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
@@ -87,6 +88,14 @@ class MolmoPointArgs(BaseModel):
 
 
 @dataclass(frozen=True)
+class MolmoBackendConfig:
+    """Explicit Molmo backend selection."""
+
+    model_name: str
+    model_path: Path
+
+
+@dataclass(frozen=True)
 class MolmoPointResult:
     """Molmo pointing result metadata for one SceneFunc3D frame."""
 
@@ -105,6 +114,14 @@ class MolmoPointResult:
             "raw_text_path": str(self.raw_text_path),
             "overlay_path": str(self.overlay_path),
         }
+
+
+def run_molmo_backend(config: MolmoBackendConfig) -> None:
+    """Validate configured Molmo backend before heavy model loading."""
+    if not config.model_path.exists():
+        raise ToolInputError(
+            f"Molmo backend unavailable: {config.model_name} at {config.model_path}"
+        )
 
 
 def parse_molmo_points(
@@ -203,10 +220,12 @@ def _point_label(attributes: Mapping[str, str], label_text: str) -> str:
 
 
 __all__ = [
+    "MolmoBackendConfig",
     "MolmoPoint",
     "MolmoPointArgs",
     "MolmoPointPayload",
     "MolmoPointResult",
     "MolmoPointResultPayload",
     "parse_molmo_points",
+    "run_molmo_backend",
 ]

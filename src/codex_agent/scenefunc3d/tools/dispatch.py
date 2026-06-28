@@ -11,7 +11,14 @@ from pydantic import BaseModel, ValidationError
 from .models import ToolInputError, ToolPayload
 from .scene_context import SceneFunc3dToolScene
 
-TOOL_NAMES: tuple[str, ...] = ("scene_summary", "view_frame", "keyframe_selector")
+TOOL_NAMES: tuple[str, ...] = (
+    "scene_summary",
+    "view_frame",
+    "keyframe_selector",
+    "molmo_point",
+    "sam_mask",
+    "lift_mask_to_3d",
+)
 
 _ArgsT = TypeVar("_ArgsT", bound=BaseModel)
 
@@ -38,6 +45,21 @@ def run_tool(
         return keyframe_selector(
             tool_scene, _parse(KeyframeSelectorArgs, raw_args), out_dir=out_dir
         )
+    if name == "molmo_point":
+        from .molmo_pointing import MolmoPointArgs
+
+        _parse(MolmoPointArgs, raw_args)
+        raise ToolInputError("molmo_point backend execution is not configured")
+    if name == "sam_mask":
+        from .sam_masking import SamMaskArgs
+
+        _parse(SamMaskArgs, raw_args)
+        raise ToolInputError("sam_mask backend execution is not configured")
+    if name == "lift_mask_to_3d":
+        from .mask_lifting import LiftMaskArgs
+
+        _parse(LiftMaskArgs, raw_args)
+        raise ToolInputError("lift_mask_to_3d backend execution is not configured")
     raise ToolInputError(f"unknown tool {name!r}; available: {', '.join(TOOL_NAMES)}")
 
 

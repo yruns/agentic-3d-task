@@ -2,17 +2,26 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from codex_agent.errors import SceneFunc3dDataError
-from codex_agent.scenefunc3d.tools.molmo_pointing import parse_molmo_points
+from codex_agent.scenefunc3d.tools.__main__ import main
+from codex_agent.scenefunc3d.tools.models import ToolInputError
+from codex_agent.scenefunc3d.tools.molmo_pointing import (
+    MolmoBackendConfig,
+    parse_molmo_points,
+    run_molmo_backend,
+)
 from codex_agent.scenefunc3d.tools.sam_masking import (
+    SamBackendConfig,
     SamCandidate,
     SamMaskArgs,
     SamMaskResult,
+    run_sam_backend,
 )
 
 
@@ -26,6 +35,55 @@ def test_parse_molmo_percent_point() -> None:
     assert points[0].x_px == 1166.4
     assert points[0].y_px == 1188.48
     assert points[0].label == "drawer knob"
+
+
+def test_molmo_backend_missing_path_fails(tmp_path: Path) -> None:
+    config = MolmoBackendConfig(
+        model_name="MolmoPoint-8B", model_path=tmp_path / "missing"
+    )
+
+    with pytest.raises(ToolInputError, match="Molmo backend unavailable"):
+        run_molmo_backend(config)
+
+
+def test_sam_backend_missing_path_fails(tmp_path: Path) -> None:
+    config = SamBackendConfig(
+        model_name="SAM2.1-Hiera-L", checkpoint_path=tmp_path / "missing.pt"
+    )
+
+    with pytest.raises(ToolInputError, match="SAM backend unavailable"):
+        run_sam_backend(config)
+
+
+def test_cli_molmo_point_returns_recoverable_backend_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    image_path = raw_dir / "000000-rgb.png"
+    image_path.write_bytes(b"not-a-real-image")
+    args_payload: dict[str, object] = {
+        "frame_id": "000000",
+        "image_path": str(image_path),
+        "prompt": "drawer handle",
+        "image_width": 640,
+        "image_height": 480,
+    }
+
+    code = main(
+        [
+            "molmo_point",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(args_payload),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "molmo_point backend execution is not configured" in payload["error"]
 
 
 def test_parse_molmo_points_preserves_tag_order() -> None:

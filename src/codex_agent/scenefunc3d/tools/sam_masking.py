@@ -9,6 +9,7 @@ from typing import Annotated, TypedDict
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, StringConstraints
 
 from ...errors import SceneFunc3dDataError
+from .models import ToolInputError
 
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 StrictPixelCoordinate = Annotated[float, Field(ge=0.0, strict=True)]
@@ -88,6 +89,22 @@ class SamMaskArgs(BaseModel):
 
 
 @dataclass(frozen=True)
+class SamBackendConfig:
+    """Explicit SAM backend selection."""
+
+    model_name: str
+    checkpoint_path: Path
+
+
+def run_sam_backend(config: SamBackendConfig) -> None:
+    """Validate configured SAM backend before heavy model loading."""
+    if not config.checkpoint_path.exists():
+        raise ToolInputError(
+            f"SAM backend unavailable: {config.model_name} at {config.checkpoint_path}"
+        )
+
+
+@dataclass(frozen=True)
 class SamCandidate:
     """One SAM mask candidate proposed from a Molmo point prompt."""
 
@@ -144,6 +161,7 @@ class SamMaskResult:
 
 
 __all__ = [
+    "SamBackendConfig",
     "SamCandidate",
     "SamCandidatePayload",
     "SamMaskArgs",
@@ -152,4 +170,5 @@ __all__ = [
     "SamMaskResultPayload",
     "SamPointInput",
     "SamPointInputPayload",
+    "run_sam_backend",
 ]
