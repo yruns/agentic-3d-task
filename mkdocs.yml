@@ -64,3 +64,7 @@ nav:
           - v3 Tools Full1079: benchmark/openeqa/v3_tools_full1079_20260612.md
           - v4 No Frames Full1079: benchmark/openeqa/v4_noframes_full1079_20260612.md
           - v4 Failure Trace Analysis: benchmark/openeqa/v4_failure_trace_analysis_20260612.md
+      - SceneFunc Molmo SAM3D:
+          - Timeline: benchmark/scenefunc_molmo_sam3d/README.md
+          - v1 Smoke: benchmark/scenefunc_molmo_sam3d/v1_smoke_20260627.md
+          - v2 Full Molmo: benchmark/scenefunc_molmo_sam3d/v2_full_molmo_20260627.md
