@@ -3,16 +3,39 @@
 from __future__ import annotations
 
 import json
+import math
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeVar
+from typing import TypedDict, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ..errors import SceneFunc3dDataError
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
+_VISIT_ID_PATTERN = re.compile(r"^[0-9]+$")
+_MOTION_DIR_DOF = 3
+
+
+class SceneFuncMotionHintPayload(TypedDict):
+    """Agent-visible JSON payload for one motion hint."""
+
+    motion_id: str
+    annotation_id: str
+    motion_type: str
+    motion_dir: list[float]
+
+
+class SceneFuncAgentContext(TypedDict):
+    """Agent-visible SceneFunc3D task context without hidden GT fields."""
+
+    visit_id: str
+    desc_id: str
+    task_description: str
+    annotation_ids: list[str]
+    motion_hints: list[SceneFuncMotionHintPayload]
 
 
 class _RawDescription(BaseModel):
@@ -90,7 +113,11 @@ class SceneFunc3dSampleId:
                 f"sample_id must have 2 '::'-separated parts, got {sample_id!r}"
             )
         visit_id, desc_id = parts
-        if not visit_id or not desc_id:
+        if not _VISIT_ID_PATTERN.fullmatch(visit_id):
+            raise SceneFunc3dDataError(
+                f"visit_id must contain only digits, got {visit_id!r}"
+            )
+        if not desc_id:
             raise SceneFunc3dDataError(f"invalid SceneFunc3D sample_id: {sample_id!r}")
         return cls(raw=sample_id, visit_id=visit_id, desc_id=desc_id)
 
@@ -104,7 +131,7 @@ class SceneFuncMotionHint:
     motion_type: str
     motion_dir: tuple[float, ...]
 
-    def to_agent_payload(self) -> dict[str, object]:
+    def to_agent_payload(self) -> SceneFuncMotionHintPayload:
         """Return the JSON-serializable motion hint shown to the agent."""
         return {
             "motion_id": self.motion_id,
@@ -126,7 +153,7 @@ class SceneFunc3dSample:
     motion_hints: tuple[SceneFuncMotionHint, ...]
 
     @property
-    def agent_context(self) -> dict[str, object]:
+    def agent_context(self) -> SceneFuncAgentContext:
         """Return the agent-visible task context without hidden GT indices."""
         return {
             "visit_id": self.visit_id,
@@ -166,6 +193,7 @@ def load_sample(data_root: Path, sample_id: str) -> SceneFunc3dSample:
 
     description = _find_description(descriptions, parsed.desc_id)
     annotation_ids = _coerce_string_tuple(description.annot_id, "annot_id")
+    _validate_selected_annotations(annotations, annotation_ids)
     return SceneFunc3dSample(
         sample_id=sample_id,
         visit_id=parsed.visit_id,
@@ -203,6 +231,24 @@ def _find_description(payload: _RawDescriptionsFile, desc_id: str) -> _RawDescri
         if item.desc_id == desc_id:
             return item
     raise SceneFunc3dDataError(f"description id not found: {desc_id}")
+
+
+def _validate_selected_annotations(
+    payload: _RawAnnotationsFile, annotation_ids: tuple[str, ...]
+) -> None:
+    annotation_counts: dict[str, int] = {}
+    for annotation in payload.annotations:
+        annotation_counts[annotation.annot_id] = (
+            annotation_counts.get(annotation.annot_id, 0) + 1
+        )
+    for annotation_id in annotation_ids:
+        count = annotation_counts.get(annotation_id, 0)
+        if count == 0:
+            raise SceneFunc3dDataError(f"annotation id not found: {annotation_id!r}")
+        if count > 1:
+            raise SceneFunc3dDataError(
+                f"duplicate annotation id in annotations: {annotation_id!r}"
+            )
 
 
 def _motion_hints_for(
@@ -244,12 +290,22 @@ def _coerce_non_empty_string(raw: str, field_name: str) -> str:
 
 def _coerce_float_tuple(raw: Sequence[float], field_name: str) -> tuple[float, ...]:
     try:
-        return tuple(float(value) for value in raw)
+        values = tuple(float(value) for value in raw)
     except (TypeError, ValueError) as exc:
         raise SceneFunc3dDataError(f"{field_name} must contain floats") from exc
+    if len(values) != _MOTION_DIR_DOF:
+        raise SceneFunc3dDataError(
+            f"{field_name} must contain exactly {_MOTION_DIR_DOF} floats, "
+            f"got {len(values)}"
+        )
+    if not all(math.isfinite(value) for value in values):
+        raise SceneFunc3dDataError(f"{field_name} must contain only finite floats")
+    return values
 
 
 __all__ = [
+    "SceneFuncMotionHintPayload",
+    "SceneFuncAgentContext",
     "SceneFunc3dSampleId",
     "SceneFuncMotionHint",
     "SceneFunc3dSample",

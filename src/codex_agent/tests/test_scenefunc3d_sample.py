@@ -80,6 +80,21 @@ def test_sample_id_rejects_bad_form() -> None:
         SceneFunc3dSampleId.parse("421254")
 
 
+@pytest.mark.parametrize(
+    "sample_id",
+    [
+        "../421254::desc-a",
+        "/421254::desc-a",
+        "421254/x::desc-a",
+        "421 254::desc-a",
+        "not-numeric::desc-a",
+    ],
+)
+def test_sample_id_rejects_unsafe_visit_id(sample_id: str) -> None:
+    with pytest.raises(SceneFunc3dDataError, match="visit_id"):
+        SceneFunc3dSampleId.parse(sample_id)
+
+
 def test_scene_dir_for() -> None:
     assert scene_dir_for(Path("/data"), "421254") == Path("/data/421254")
 
@@ -123,4 +138,106 @@ def test_load_sample_requires_matching_visit(tmp_path: Path) -> None:
     )
 
     with pytest.raises(SceneFunc3dDataError, match="visit_id"):
+        load_sample(tmp_path, "421254::desc-a")
+
+
+def test_load_sample_requires_annotation_linkage(tmp_path: Path) -> None:
+    _write_scene(tmp_path)
+    path = tmp_path / "421254" / "421254_annotations.json"
+    path.write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "annotations": [
+                    {
+                        "annot_id": "unrelated",
+                        "label": "pinch_pull",
+                        "indices": [3, 5, 8],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SceneFunc3dDataError, match="annotation id"):
+        load_sample(tmp_path, "421254::desc-a")
+
+
+def test_load_sample_rejects_duplicate_annotation_linkage(tmp_path: Path) -> None:
+    _write_scene(tmp_path)
+    path = tmp_path / "421254" / "421254_annotations.json"
+    path.write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "annotations": [
+                    {
+                        "annot_id": "annot-a",
+                        "label": "pinch_pull",
+                        "indices": [3, 5, 8],
+                    },
+                    {
+                        "annot_id": "annot-a",
+                        "label": "pinch_pull",
+                        "indices": [13, 21],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SceneFunc3dDataError, match="duplicate annotation id"):
+        load_sample(tmp_path, "421254::desc-a")
+
+
+def test_load_sample_rejects_motion_dir_wrong_length(tmp_path: Path) -> None:
+    _write_scene(tmp_path)
+    path = tmp_path / "421254" / "421254_motions.json"
+    path.write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "motions": [
+                    {
+                        "motion_id": "motion-a",
+                        "annot_id": "annot-a",
+                        "motion_type": "trans",
+                        "motion_dir": [1.0, 0.0],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SceneFunc3dDataError, match="motion_dir"):
+        load_sample(tmp_path, "421254::desc-a")
+
+
+@pytest.mark.parametrize("bad_value", [float("inf"), float("nan")])
+def test_load_sample_rejects_motion_dir_non_finite(
+    tmp_path: Path, bad_value: float
+) -> None:
+    _write_scene(tmp_path)
+    path = tmp_path / "421254" / "421254_motions.json"
+    path.write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "motions": [
+                    {
+                        "motion_id": "motion-a",
+                        "annot_id": "annot-a",
+                        "motion_type": "trans",
+                        "motion_dir": [1.0, bad_value, 0.0],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SceneFunc3dDataError, match="motion_dir"):
         load_sample(tmp_path, "421254::desc-a")
