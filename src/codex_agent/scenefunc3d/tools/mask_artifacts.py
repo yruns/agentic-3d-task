@@ -8,6 +8,8 @@ from enum import Enum
 from pathlib import Path
 from typing import TypedDict
 
+from ...errors import SceneFunc3dDataError
+
 
 class ArtifactStatus(str, Enum):
     """Status stored in SceneFunc3D run summaries."""
@@ -80,11 +82,30 @@ class SceneFunc3dRunSummary:
         }
 
 
+def _validate_artifact_path_component(component_name: str, component_value: str) -> str:
+    """Return a safe single path component or raise a data error."""
+    is_empty_or_whitespace = component_value.strip() == ""
+    is_current_or_parent_reference = component_value in {".", ".."}
+    has_path_separator = "/" in component_value or "\\" in component_value
+    if (
+        is_empty_or_whitespace
+        or is_current_or_parent_reference
+        or has_path_separator
+        or Path(component_value).is_absolute()
+    ):
+        raise SceneFunc3dDataError(
+            f"invalid artifact path component {component_name}={component_value!r}"
+        )
+    return component_value
+
+
 def artifact_paths_for(
     output_dir: Path, visit_id: str, desc_id: str
 ) -> MaskArtifactPaths:
     """Return canonical artifact paths for one visit-description pair."""
-    root = output_dir / visit_id / desc_id
+    safe_visit_id = _validate_artifact_path_component("visit_id", visit_id)
+    safe_desc_id = _validate_artifact_path_component("desc_id", desc_id)
+    root = output_dir / safe_visit_id / safe_desc_id
     return MaskArtifactPaths(
         root=root,
         summary_json=root / "summary.json",
