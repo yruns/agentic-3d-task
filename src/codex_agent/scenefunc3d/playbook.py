@@ -60,6 +60,11 @@ model-quality failure. Change crop, prompt, or frame.
 Final answer must be compact JSON with mask_artifact_path, mask_npz_path,
 mask_ply_path, selected_frame_ids, accepted_fragment_ids, confidence, and
 uncertainties.
+When passing each fragment into fuse_accepted_masks, include approval_actions in
+this exact order: select_evidence, propose_molmo_point, approve_molmo_point,
+propose_sam_candidates, approve_sam_candidate, create_first_lift,
+approve_first_lift. These actions are written into the final artifact and
+validated with the SceneFunc3D approval state machine.
 Set selected_frame_ids to the accepted_frame_ids returned by fuse_accepted_masks.
 """
 

@@ -9,12 +9,13 @@ from typing import TYPE_CHECKING, Annotated, TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict, Field, FilePath, StringConstraints
 
-from ...errors import CodexResponseError
+from ...errors import CodexResponseError, SceneFunc3dDataError
 from ..final_mask_artifacts import (
     load_points_world_npz,
     validate_ascii_points_ply,
     validate_points_world_npz,
 )
+from ..task import ApprovalAction, validate_fragment_approval_actions
 from .models import ToolInputError
 from .scene_context import SceneFunc3dToolScene
 
@@ -61,6 +62,7 @@ class AcceptedFragmentPayload(TypedDict):
     fragment_id: str
     frame_id: str
     point_count: int
+    approval_actions: list[str]
 
 
 class FusedMaskPayload(TypedDict):
@@ -113,6 +115,7 @@ class AcceptedFragmentInput(BaseModel):
     frame_id: SafePathComponentText
     mask_npz_path: FilePath
     mask_ply_path: FilePath
+    approval_actions: tuple[ApprovalAction, ...] = Field(min_length=1)
 
 
 class FuseAcceptedMasksArgs(BaseModel):
@@ -194,12 +197,22 @@ class AcceptedFragment:
     fragment_id: str
     frame_id: str
     point_count: int
+    approval_actions: tuple[ApprovalAction, ...]
 
     def __post_init__(self) -> None:
         """Validate domain invariants for one accepted fragment."""
         _validate_non_empty_text("fragment_id", self.fragment_id)
         _validate_non_empty_text("frame_id", self.frame_id)
         _validate_positive_int("point_count", self.point_count)
+        if not self.approval_actions:
+            raise ValueError("approval_actions must be non-empty")
+        try:
+            validate_fragment_approval_actions(self.fragment_id, self.approval_actions)
+        except SceneFunc3dDataError as exc:
+            raise ValueError(
+                "approval_actions must replay the SceneFunc3D approval gates: "
+                f"fragment_id={self.fragment_id}; error={exc}"
+            ) from exc
 
     def to_payload(self) -> AcceptedFragmentPayload:
         """Return the JSON-ready accepted fragment."""
@@ -207,6 +220,7 @@ class AcceptedFragment:
             "fragment_id": self.fragment_id,
             "frame_id": self.frame_id,
             "point_count": self.point_count,
+            "approval_actions": [action.value for action in self.approval_actions],
         }
 
 
@@ -303,6 +317,9 @@ def fuse_accepted_masks(
     accepted_fragments: list[AcceptedFragment] = []
     fragment_points: list[FloatArray] = []
     for fragment in args.fragments:
+        _validate_accepted_fragment_approval_actions(
+            fragment.fragment_id, fragment.approval_actions
+        )
         point_count = _validate_mask_pair(
             mask_npz_path=fragment.mask_npz_path,
             mask_ply_path=fragment.mask_ply_path,
@@ -313,6 +330,7 @@ def fuse_accepted_masks(
                 fragment_id=fragment.fragment_id,
                 frame_id=fragment.frame_id,
                 point_count=point_count,
+                approval_actions=fragment.approval_actions,
             )
         )
 
@@ -359,6 +377,18 @@ def _validate_unique_fragment_ids(
                 f"duplicate accepted fragment_id={fragment.fragment_id!r}"
             )
         seen_fragment_ids.add(fragment.fragment_id)
+
+
+def _validate_accepted_fragment_approval_actions(
+    fragment_id: str, approval_actions: tuple[ApprovalAction, ...]
+) -> None:
+    try:
+        validate_fragment_approval_actions(fragment_id, approval_actions)
+    except SceneFunc3dDataError as exc:
+        raise ToolInputError(
+            "accepted fragment approval_actions failed SceneFunc3D approval gate "
+            f"replay: fragment_id={fragment_id}; error={exc}"
+        ) from exc
 
 
 def _write_fused_mask_artifact(

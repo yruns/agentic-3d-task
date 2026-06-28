@@ -9,6 +9,7 @@ from typing import cast
 import pytest
 
 from codex_agent.errors import SceneFunc3dDataError
+from codex_agent.scenefunc3d.task import ApprovalAction
 from codex_agent.scenefunc3d.tools.mask_artifacts import (
     ArtifactStatus,
     SceneFunc3dRunSummary,
@@ -33,6 +34,16 @@ from codex_agent.scenefunc3d.tools.mask_inspection import (
     suggest_additional_views,
 )
 from codex_agent.scenefunc3d.tools.scene_context import SceneFunc3dToolScene
+
+_APPROVED_FRAGMENT_ACTIONS: tuple[ApprovalAction, ...] = (
+    ApprovalAction.SELECT_EVIDENCE,
+    ApprovalAction.PROPOSE_MOLMO_POINT,
+    ApprovalAction.APPROVE_MOLMO_POINT,
+    ApprovalAction.PROPOSE_SAM_CANDIDATES,
+    ApprovalAction.APPROVE_SAM_CANDIDATE,
+    ApprovalAction.CREATE_FIRST_LIFT,
+    ApprovalAction.APPROVE_FIRST_LIFT,
+)
 
 
 def test_artifact_paths_for(tmp_path: Path) -> None:
@@ -177,6 +188,7 @@ def test_fused_mask_payload() -> None:
                 fragment_id="000050_mask_00",
                 frame_id="000050",
                 point_count=1119,
+                approval_actions=_APPROVED_FRAGMENT_ACTIONS,
             ),
         ),
         mask_artifact_path=Path("/tmp/fused/mask_artifact.json"),
@@ -188,8 +200,24 @@ def test_fused_mask_payload() -> None:
 
     assert payload["accepted_fragments"][0]["fragment_id"] == "000050_mask_00"
     assert payload["accepted_fragments"][0]["frame_id"] == "000050"
+    assert payload["accepted_fragments"][0]["approval_actions"] == _action_values(
+        _APPROVED_FRAGMENT_ACTIONS
+    )
     assert payload["accepted_frame_ids"] == ["000050"]
     assert payload["mask_artifact_path"] == "/tmp/fused/mask_artifact.json"
+
+
+def test_accepted_fragment_rejects_invalid_approval_actions() -> None:
+    with pytest.raises(ValueError, match="approval_actions"):
+        AcceptedFragment(
+            fragment_id="000050_mask_00",
+            frame_id="000050",
+            point_count=1119,
+            approval_actions=(
+                ApprovalAction.SELECT_EVIDENCE,
+                ApprovalAction.PROPOSE_SAM_CANDIDATES,
+            ),
+        )
 
 
 def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None:
@@ -202,12 +230,14 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
                 frame_id="000010",
                 mask_npz_path=first_npz_path,
                 mask_ply_path=first_ply_path,
+                approval_actions=_APPROVED_FRAGMENT_ACTIONS,
             ),
             AcceptedFragmentInput(
                 fragment_id="frag-b",
                 frame_id="000020",
                 mask_npz_path=second_npz_path,
                 mask_ply_path=second_ply_path,
+                approval_actions=_APPROVED_FRAGMENT_ACTIONS,
             ),
         )
     )
@@ -217,8 +247,18 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
     payload = json.loads(result.mask_artifact_path.read_text(encoding="utf-8"))
     assert payload["accepted_frame_ids"] == ["000010", "000020"]
     assert payload["accepted_fragments"] == [
-        {"fragment_id": "frag-a", "frame_id": "000010", "point_count": 2},
-        {"fragment_id": "frag-b", "frame_id": "000020", "point_count": 2},
+        {
+            "fragment_id": "frag-a",
+            "frame_id": "000010",
+            "point_count": 2,
+            "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+        },
+        {
+            "fragment_id": "frag-b",
+            "frame_id": "000020",
+            "point_count": 2,
+            "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+        },
     ]
     assert result.to_payload()["accepted_frame_ids"] == ["000010", "000020"]
     assert Path(payload["mask_npz_path"]) == result.mask_npz_path
@@ -239,12 +279,14 @@ def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
                 frame_id="000010",
                 mask_npz_path=first_npz_path,
                 mask_ply_path=first_ply_path,
+                approval_actions=_APPROVED_FRAGMENT_ACTIONS,
             ),
             AcceptedFragmentInput(
                 fragment_id="frag-b",
                 frame_id="000010",
                 mask_npz_path=second_npz_path,
                 mask_ply_path=second_ply_path,
+                approval_actions=_APPROVED_FRAGMENT_ACTIONS,
             ),
         )
     )
@@ -258,6 +300,16 @@ def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
         "000010",
         "000010",
     ]
+    assert [
+        fragment["approval_actions"] for fragment in payload["accepted_fragments"]
+    ] == [
+        _action_values(_APPROVED_FRAGMENT_ACTIONS),
+        _action_values(_APPROVED_FRAGMENT_ACTIONS),
+    ]
+
+
+def _action_values(actions: tuple[ApprovalAction, ...]) -> list[str]:
+    return [action.value for action in actions]
 
 
 def _write_points_artifact(root: Path) -> tuple[Path, Path]:

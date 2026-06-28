@@ -29,9 +29,20 @@ from codex_agent.scenefunc3d.servers.http_json import (
     JsonObject,
     make_json_handler,
 )
+from codex_agent.scenefunc3d.task import ApprovalAction
 from codex_agent.tasks.base import CodexTask
 
 ResultT = TypeVar("ResultT")
+
+_APPROVED_FRAGMENT_ACTIONS = (
+    ApprovalAction.SELECT_EVIDENCE.value,
+    ApprovalAction.PROPOSE_MOLMO_POINT.value,
+    ApprovalAction.APPROVE_MOLMO_POINT.value,
+    ApprovalAction.PROPOSE_SAM_CANDIDATES.value,
+    ApprovalAction.APPROVE_SAM_CANDIDATE.value,
+    ApprovalAction.CREATE_FIRST_LIFT.value,
+    ApprovalAction.APPROVE_FIRST_LIFT.value,
+)
 
 
 def test_build_arg_parser_accepts_single_case_runtime_options(
@@ -237,7 +248,12 @@ def test_mask_task_rejects_fragment_point_count_sum_mismatch(
         (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
     )
     artifact_payload["accepted_fragments"] = [
-        {"fragment_id": "frag-a", "frame_id": "000010", "point_count": 1}
+        {
+            "fragment_id": "frag-a",
+            "frame_id": "000010",
+            "point_count": 1,
+            "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
+        }
     ]
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
@@ -312,6 +328,57 @@ def test_mask_task_rejects_artifact_accepted_frame_mismatch_with_fragments(
 
     with pytest.raises(CodexResponseError, match="accepted_frame_ids"):
         task.parse_response(json.dumps(payload))
+
+
+def test_mask_task_rejects_fragment_without_approval_actions(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir)
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0].pop("approval_actions")
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="approval_actions"):
+        task.parse_response(json.dumps(_outcome_payload(output_dir)))
+
+
+def test_mask_task_rejects_fragment_approval_actions_out_of_order(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir)
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["approval_actions"] = [
+        ApprovalAction.SELECT_EVIDENCE.value,
+        ApprovalAction.PROPOSE_SAM_CANDIDATES.value,
+    ]
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="approval_actions"):
+        task.parse_response(json.dumps(_outcome_payload(output_dir)))
 
 
 def test_check_sidecar_health_passes_for_healthy_fake_servers(
@@ -582,6 +649,7 @@ def _write_outcome_artifacts(
             "fragment_id": fragment_id,
             "frame_id": frame_id,
             "point_count": int(points_world.shape[0]),
+            "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
         }
         for fragment_id, frame_id in zip(
             accepted_fragment_ids, accepted_frame_ids, strict=True

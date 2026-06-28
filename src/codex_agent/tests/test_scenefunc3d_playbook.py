@@ -68,6 +68,12 @@ def test_playbook_tells_agent_selected_frames_must_match_fused_artifact() -> Non
     assert "fuse_accepted_masks" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_tells_agent_to_record_fragment_approval_actions() -> None:
+    assert "approval_actions" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "select_evidence" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "approve_first_lift" in SCENEFUNC3D_TOOLS_PLAYBOOK
+
+
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,

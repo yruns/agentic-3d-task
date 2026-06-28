@@ -13,7 +13,8 @@ from zipfile import BadZipFile
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic.types import StringConstraints
 
-from ..errors import CodexResponseError
+from ..errors import CodexResponseError, SceneFunc3dDataError
+from .task import ApprovalAction, validate_fragment_approval_actions
 
 if TYPE_CHECKING:
     from codex_agent.scenefunc3d.backends.lift_3d import FloatArray
@@ -31,6 +32,7 @@ class FinalMaskAcceptedFragment(BaseModel):
     fragment_id: NonEmptyString
     frame_id: NonEmptyString
     point_count: int = Field(gt=0, strict=True)
+    approval_actions: tuple[ApprovalAction, ...] = Field(min_length=1)
 
 
 class FinalMaskArtifactDocument(BaseModel):
@@ -99,6 +101,17 @@ def validate_final_mask_artifact(
             f"response={selected_frame_ids}; "
             f"artifact={artifact_document.accepted_frame_ids}"
         )
+    for fragment in artifact_document.accepted_fragments:
+        try:
+            validate_fragment_approval_actions(
+                fragment.fragment_id, fragment.approval_actions
+            )
+        except SceneFunc3dDataError as exc:
+            raise CodexResponseError(
+                "accepted fragment approval_actions failed SceneFunc3D approval "
+                f"gate replay: fragment_id={fragment.fragment_id}; "
+                f"frame_id={fragment.frame_id}; error={exc}"
+            ) from exc
 
     npz_point_count = validate_points_world_npz(mask_npz_path)
     ply_vertex_count = validate_ascii_points_ply(mask_ply_path)

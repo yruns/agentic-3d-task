@@ -7,7 +7,18 @@ from pathlib import Path
 
 import pytest
 
+from codex_agent.scenefunc3d.task import ApprovalAction
 from codex_agent.scenefunc3d.tools.__main__ import main
+
+_APPROVED_FRAGMENT_ACTIONS = (
+    ApprovalAction.SELECT_EVIDENCE.value,
+    ApprovalAction.PROPOSE_MOLMO_POINT.value,
+    ApprovalAction.APPROVE_MOLMO_POINT.value,
+    ApprovalAction.PROPOSE_SAM_CANDIDATES.value,
+    ApprovalAction.APPROVE_SAM_CANDIDATE.value,
+    ApprovalAction.CREATE_FIRST_LIFT.value,
+    ApprovalAction.APPROVE_FIRST_LIFT.value,
+)
 
 
 def _write_raw_rgb_scene(root: Path) -> Path:
@@ -1066,12 +1077,14 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
                             "frame_id": "000000",
                             "mask_npz_path": str(first_npz_path),
                             "mask_ply_path": str(first_ply_path),
+                            "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
                         },
                         {
                             "fragment_id": "frag-b",
                             "frame_id": "000010",
                             "mask_npz_path": str(second_npz_path),
                             "mask_ply_path": str(second_ply_path),
+                            "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
                         },
                     ]
                 }
@@ -1095,6 +1108,46 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
         "000000",
         "000010",
     ]
+    assert [
+        fragment["approval_actions"] for fragment in payload["accepted_fragments"]
+    ] == [
+        list(_APPROVED_FRAGMENT_ACTIONS),
+        list(_APPROVED_FRAGMENT_ACTIONS),
+    ]
+
+
+def test_cli_fuse_accepted_masks_requires_fragment_approval_actions(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "frag-a")
+
+    code = main(
+        [
+            "fuse_accepted_masks",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "fragments": [
+                        {
+                            "fragment_id": "frag-a",
+                            "frame_id": "000000",
+                            "mask_npz_path": str(mask_npz_path),
+                            "mask_ply_path": str(mask_ply_path),
+                        },
+                    ]
+                }
+            ),
+            "--out-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "approval_actions" in payload["error"]
 
 
 def test_cli_suggest_additional_views_returns_scene_neighbors(
