@@ -83,6 +83,11 @@ def test_build_prompt_includes_playbook_and_sample_context() -> None:
     assert prompt.startswith(SCENEFUNC3D_TOOLS_PLAYBOOK)
     assert "Open the lower drawer." in prompt
     assert "Generate a SceneFunc3D 3D mask artifact for this task." in prompt
+    context_text = prompt.split("Task context:\n", maxsplit=1)[1].split(
+        "\n\nGenerate", maxsplit=1
+    )[0]
+    context_payload = json.loads(context_text)
+    assert context_payload["annotation_ids"] == ["annot-a"]
 
 
 def test_load_runner_sample_uses_config_dataset_root(tmp_path: Path) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,10 +20,11 @@ class SceneFunc3dRunnerConfig:
 
 def build_prompt(sample: SceneFunc3dSample) -> str:
     """Build the prompt prefix for one SceneFunc3D sample."""
+    context_json = json.dumps(sample.agent_context, ensure_ascii=False, indent=2)
     return (
         f"{SCENEFUNC3D_TOOLS_PLAYBOOK}\n\n"
         "Task context:\n"
-        f"{sample.agent_context}\n\n"
+        f"{context_json}\n\n"
         "Generate a SceneFunc3D 3D mask artifact for this task."
     )
 
