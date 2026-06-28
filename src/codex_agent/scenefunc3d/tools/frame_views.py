@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -61,6 +62,48 @@ class ViewFrameArgs(BaseModel):
     frame_ids: tuple[str, ...] = Field(min_length=1)
 
 
+class FrameObjectPayload(TypedDict, total=False):
+    """JSON-ready visible object metadata for one frame."""
+
+    object_id: str
+    label: str
+
+
+class FrameObjectsArgs(BaseModel):
+    """Arguments for ``frame_objects``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    frame_id: str = Field(min_length=1)
+
+
+@dataclass(frozen=True)
+class FrameObjectsResult:
+    """Visible object summary for one frame."""
+
+    frame_id: str
+    objects: tuple[FrameObjectPayload, ...]
+
+    def to_payload(self) -> dict[str, object]:
+        """Return the JSON-ready CLI payload."""
+        return {"frame_id": self.frame_id, "objects": list(self.objects)}
+
+
+class ViewCropArgs(BaseModel):
+    """Arguments for ``view_crop``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    frame_id: str = Field(min_length=1)
+    bbox: tuple[float, float, float, float]
+
+
+class ViewBevArgs(BaseModel):
+    """Arguments for ``view_bev``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
 @dataclass(frozen=True)
 class ViewFrame:
     """One rendered SceneFunc3D RGB evidence frame."""
@@ -103,6 +146,42 @@ def view_frame(
         for frame_id in args.frame_ids
     )
     return ViewFrameResult(frames=frames)
+
+
+def frame_objects(
+    tool_scene: SceneFunc3dToolScene, args: FrameObjectsArgs
+) -> FrameObjectsResult:
+    """Return the currently available visible-object contract for one frame."""
+    _validate_frame_ids(tool_scene, (args.frame_id,))
+    return FrameObjectsResult(frame_id=args.frame_id, objects=())
+
+
+def view_crop(
+    tool_scene: SceneFunc3dToolScene, args: ViewCropArgs, *, out_dir: Path
+) -> ViewFrameResult:
+    """Return a crop evidence image for one frame.
+
+    The initial lightweight contract validates the requested frame and bbox shape,
+    then reuses the full-frame evidence image until crop rendering is backed by a
+    real image operation.
+    """
+    _validate_frame_ids(tool_scene, (args.frame_id,))
+    _ = args.bbox
+    return view_frame(
+        tool_scene, ViewFrameArgs(frame_ids=(args.frame_id,)), out_dir=out_dir
+    )
+
+
+def view_bev(
+    tool_scene: SceneFunc3dToolScene, args: ViewBevArgs, *, out_dir: Path
+) -> ViewFrameResult:
+    """Return the top-down BEV image when the prepared scene provides one."""
+    _ = args
+    _ = out_dir
+    bev_path = tool_scene.conceptgraph_dir / "bev" / "scene_bev.png"
+    if not bev_path.is_file():
+        raise ToolInputError(f"BEV asset is not available: {bev_path}")
+    return ViewFrameResult(frames=(ViewFrame(frame_id="bev", image_path=bev_path),))
 
 
 def _validate_frame_ids(
@@ -169,11 +248,19 @@ def _write_jpeg_copy(source_path: Path, destination_path: Path) -> Path:
 
 
 __all__ = [
+    "FrameObjectPayload",
+    "FrameObjectsArgs",
+    "FrameObjectsResult",
     "SceneSummaryArgs",
     "SceneSummaryResult",
+    "ViewBevArgs",
+    "ViewCropArgs",
     "ViewFrame",
     "ViewFrameArgs",
     "ViewFrameResult",
+    "frame_objects",
     "scene_summary",
+    "view_bev",
+    "view_crop",
     "view_frame",
 ]

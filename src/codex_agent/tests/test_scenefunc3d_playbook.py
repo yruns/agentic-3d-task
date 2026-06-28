@@ -18,6 +18,7 @@ from codex_agent.scenefunc3d.runner import (
     load_runner_sample,
 )
 from codex_agent.scenefunc3d.sample import SceneFunc3dSample, SceneFuncMotionHint
+from codex_agent.scenefunc3d.tools.dispatch import TOOL_NAMES
 
 EXPECTED_TOOL_NAMES: tuple[str, ...] = (
     "scene_summary",
@@ -37,6 +38,10 @@ EXPECTED_TOOL_NAMES: tuple[str, ...] = (
 
 def test_tool_names_are_current_task7_contract() -> None:
     assert SCENEFUNC3D_TOOL_NAMES == EXPECTED_TOOL_NAMES
+
+
+def test_dispatcher_registers_every_playbook_tool() -> None:
+    assert TOOL_NAMES == SCENEFUNC3D_TOOL_NAMES
 
 
 def test_playbook_mentions_every_tool() -> None:

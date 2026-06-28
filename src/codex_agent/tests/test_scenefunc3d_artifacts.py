@@ -14,6 +14,13 @@ from codex_agent.scenefunc3d.tools.mask_artifacts import (
     artifact_paths_for,
     write_run_summary,
 )
+from codex_agent.scenefunc3d.tools.mask_inspection import (
+    AcceptedFragment,
+    FusedMaskResult,
+    MaskInspectionResult,
+    SuggestedView,
+    SuggestedViewsResult,
+)
 
 
 def test_artifact_paths_for(tmp_path: Path) -> None:
@@ -84,3 +91,44 @@ def test_write_run_summary(tmp_path: Path) -> None:
     assert payload["sample_id"] == "421254::desc-a"
     assert payload["selected_frame_ids"] == ["000050"]
     assert payload["status"] == "in_progress"
+
+
+def test_mask_inspection_payload() -> None:
+    result = MaskInspectionResult(
+        artifact_path=Path("/tmp/summary.json"),
+        overlay_paths=(Path("/tmp/overlay.jpg"),),
+        lifted_point_count=42,
+        status="success",
+    )
+
+    payload = result.to_payload()
+
+    assert payload["artifact_path"] == "/tmp/summary.json"
+    assert payload["overlay_paths"] == ["/tmp/overlay.jpg"]
+
+
+def test_suggested_views_payload() -> None:
+    result = SuggestedViewsResult(
+        seed_fragment_id="000050_mask_00",
+        views=(
+            SuggestedView(frame_id="000060", reason="different view angle", rank=1),
+        ),
+    )
+
+    payload = result.to_payload()
+
+    assert payload["views"][0]["reason"] == "different view angle"
+
+
+def test_fused_mask_payload() -> None:
+    result = FusedMaskResult(
+        accepted_fragments=(
+            AcceptedFragment(fragment_id="000050_mask_00", point_count=1119),
+        ),
+        mask_npz_path=Path("/tmp/fused/mask_data.npz"),
+        mask_ply_path=Path("/tmp/fused/lifted_points.ply"),
+    )
+
+    payload = result.to_payload()
+
+    assert payload["accepted_fragments"][0]["fragment_id"] == "000050_mask_00"

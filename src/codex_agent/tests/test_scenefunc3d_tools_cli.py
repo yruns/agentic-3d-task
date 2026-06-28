@@ -305,6 +305,58 @@ def test_cli_view_frame_missing_image_is_recoverable(
     assert "no RGB image found" in payload["error"]
 
 
+def test_cli_frame_objects_returns_empty_visible_list(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+
+    code = main(
+        [
+            "frame_objects",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000"}),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload == {"frame_id": "000000", "objects": []}
+
+
+def test_cli_view_crop_requires_frame_id(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+
+    code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"bbox": [0.1, 0.1, 0.5, 0.5]}),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "frame_id" in payload["error"]
+
+
+def test_cli_view_bev_reports_unavailable_without_bev_asset(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+
+    code = main(["view_bev", "--scene-root", str(scene_dir), "--args", "{}"])
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "BEV asset is not available" in payload["error"]
+
+
 def test_cli_keyframe_selector_returns_first_k_frames(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

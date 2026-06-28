@@ -13,11 +13,17 @@ from .scene_context import SceneFunc3dToolScene
 
 TOOL_NAMES: tuple[str, ...] = (
     "scene_summary",
-    "view_frame",
     "keyframe_selector",
+    "view_frame",
+    "view_crop",
+    "view_bev",
+    "frame_objects",
     "molmo_point",
     "sam_mask",
     "lift_mask_to_3d",
+    "inspect_mask_artifact",
+    "suggest_additional_views",
+    "fuse_accepted_masks",
 )
 
 _ArgsT = TypeVar("_ArgsT", bound=BaseModel)
@@ -39,6 +45,18 @@ def run_tool(
         from .frame_views import ViewFrameArgs, view_frame
 
         return view_frame(tool_scene, _parse(ViewFrameArgs, raw_args), out_dir=out_dir)
+    if name == "view_crop":
+        from .frame_views import ViewCropArgs, view_crop
+
+        return view_crop(tool_scene, _parse(ViewCropArgs, raw_args), out_dir=out_dir)
+    if name == "view_bev":
+        from .frame_views import ViewBevArgs, view_bev
+
+        return view_bev(tool_scene, _parse(ViewBevArgs, raw_args), out_dir=out_dir)
+    if name == "frame_objects":
+        from .frame_views import FrameObjectsArgs, frame_objects
+
+        return frame_objects(tool_scene, _parse(FrameObjectsArgs, raw_args))
     if name == "keyframe_selector":
         from .keyframe_retrieval import KeyframeSelectorArgs, keyframe_selector
 
@@ -60,6 +78,14 @@ def run_tool(
 
         _parse(LiftMaskArgs, raw_args)
         raise ToolInputError("lift_mask_to_3d backend execution is not configured")
+    if name == "inspect_mask_artifact":
+        raise ToolInputError("inspect_mask_artifact requires an existing artifact path")
+    if name == "suggest_additional_views":
+        raise ToolInputError(
+            "suggest_additional_views requires an accepted seed fragment"
+        )
+    if name == "fuse_accepted_masks":
+        raise ToolInputError("fuse_accepted_masks requires accepted fragment paths")
     raise ToolInputError(f"unknown tool {name!r}; available: {', '.join(TOOL_NAMES)}")
 
 
