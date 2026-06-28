@@ -5,12 +5,12 @@ from __future__ import annotations
 import argparse
 import importlib
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from types import ModuleType
-from typing import Protocol, TypedDict, cast
+from typing import Literal, Protocol, TypedDict, cast, runtime_checkable
 
 from pydantic import ValidationError
 
@@ -31,7 +31,11 @@ DEFAULT_PORT = 8711
 DEFAULT_MODEL_NAME = "MolmoPoint-8B"
 DEFAULT_DEVICE = "cuda:0"
 MAX_NEW_TOKENS = 200
-MOLMO_STOP_STRING = "<|endoftext|>"
+MOLMOPOINT_TOKEN_POOLING_KEY = "image_token_pooling_np"
+MOLMOPOINT_SUBPATCH_MAPPING_KEY = "subpatch_mapping"
+MOLMOPOINT_IMAGE_SIZES_KEY = "image_sizes"
+MOLMOPOINT_LEGACY_METADATA_KEY = "metadata"
+MOLMOPOINT_LEGACY_TOKEN_POOLING_KEY = "token_pooling"
 
 _CUDA_OOM_MARKERS = (
     "cuda out of memory",
@@ -58,68 +62,90 @@ class _FromPretrainedLoader(Protocol):
         """Load an object from a local path or model name."""
 
 
-class _GenerationConfigBuilder(Protocol):
-    def __call__(
-        self,
-        *,
-        max_new_tokens: int,
-        stop_strings: str,
-        use_cache: bool,
-    ) -> object:
-        """Build a Transformers generation config."""
-
-
-class _TokenizerProtocol(Protocol):
-    def decode(self, token_ids: object, *, skip_special_tokens: bool) -> str:
-        """Decode generated token ids into text."""
-
-
-class _TensorLike(Protocol):
-    def to(self, device: object) -> _TensorLike:
+@runtime_checkable
+class _DeviceMovable(Protocol):
+    def to(self, device: object) -> object:
         """Move a tensor-like value to the target device."""
 
-    def unsqueeze(self, dim: int) -> _TensorLike:
-        """Add a batch dimension."""
 
+@runtime_checkable
+class _TokenIdsLike(Protocol):
     def size(self, dim: int) -> int:
         """Return the tensor size for a dimension."""
 
 
-class _GeneratedBatch(Protocol):
+class _GeneratedTokens(Protocol):
     def __getitem__(self, key: object) -> object:
         """Return generated tokens by tensor-style indexing."""
 
 
-class _MolmoProcessor(Protocol):
-    tokenizer: _TokenizerProtocol
+class _MolmoPointTextContent(TypedDict):
+    type: Literal["text"]
+    text: str
 
-    def process(
+
+class _MolmoPointImageContent(TypedDict):
+    type: Literal["image"]
+    image: object
+
+
+class _MolmoPointMessage(TypedDict):
+    role: Literal["user"]
+    content: list[_MolmoPointTextContent | _MolmoPointImageContent]
+
+
+class _MolmoPointProcessor(Protocol):
+    def apply_chat_template(
         self,
+        messages: Sequence[_MolmoPointMessage],
         *,
-        images: Sequence[object],
-        text: str,
-    ) -> Mapping[str, _TensorLike]:
-        """Build model inputs for Molmo generation."""
+        tokenize: bool,
+        add_generation_prompt: bool,
+        return_tensors: str,
+        return_dict: bool,
+        padding: bool,
+        return_pointing_metadata: bool,
+    ) -> MutableMapping[str, object]:
+        """Build MolmoPoint model inputs and pointing metadata."""
+
+    def post_process_image_text_to_text(
+        self,
+        generated_tokens: object,
+        *,
+        skip_special_tokens: bool,
+        clean_up_tokenization_spaces: bool,
+    ) -> Sequence[str]:
+        """Decode generated token ids into generated text."""
 
 
-class _MolmoModel(Protocol):
-    device: object
-    _supports_default_dynamic_cache: Callable[[], bool]
-
-    def to(self, device: object) -> object:
-        """Move this model to a device."""
-
+class _MolmoPointModel(Protocol):
     def eval(self) -> object:
         """Switch the model to inference mode."""
 
-    def generate_from_batch(
+    def build_logit_processor_from_inputs(
         self,
-        inputs: Mapping[str, _TensorLike],
-        generation_config: object,
-        *,
-        tokenizer: _TokenizerProtocol,
-    ) -> _GeneratedBatch:
-        """Generate output tokens from prepared Molmo inputs."""
+        model_inputs: Mapping[str, object],
+    ) -> object:
+        """Build MolmoPoint constrained decoding processors."""
+
+    def generate(self, **kwargs: object) -> _GeneratedTokens:
+        """Generate output tokens from prepared MolmoPoint inputs."""
+
+    def extract_image_points(
+        self,
+        generated_text: str,
+        token_pooling: object,
+        subpatch_mapping: object,
+        image_sizes: object,
+    ) -> object:
+        """Validate generated pointing text against MolmoPoint image metadata."""
+
+
+class _LegacyMolmoModel(Protocol):
+    _supports_default_dynamic_cache: object
+
+    def to(self, device: object) -> object:
+        """Move this model to a device."""
 
 
 class _TorchCuda(Protocol):
@@ -184,6 +210,23 @@ class MolmoPatchReport:
     operations: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class MolmoPointMetadata:
+    """MolmoPoint pointing metadata needed for image-point sanity checking."""
+
+    token_pooling: object
+    subpatch_mapping: object
+    image_sizes: object
+
+
+@dataclass(frozen=True)
+class MolmoPointGenerationInputs:
+    """Separated model inputs and non-model pointing metadata."""
+
+    model_inputs: dict[str, object]
+    metadata: MolmoPointMetadata
+
+
 class ValidationIssuePayload(TypedDict):
     """JSON-ready details for one request validation issue."""
 
@@ -225,73 +268,79 @@ class TransformersMolmoRunner:
         )
         auto_model = cast(
             _FromPretrainedLoader,
-            _require_module_attribute(transformers_module, "AutoModelForCausalLM"),
-        )
-        generation_config_type = cast(
-            _GenerationConfigBuilder,
-            _require_module_attribute(transformers_module, "GenerationConfig"),
+            _require_module_attribute(
+                transformers_module,
+                "AutoModelForImageTextToText",
+            ),
         )
         self._torch = torch_module
-        self._patch_reports = patch_molmo_remote_code(model_dir)
+        self._device_value = torch_module.device(device)
 
         self._processor = cast(
-            _MolmoProcessor,
+            _MolmoPointProcessor,
             auto_processor.from_pretrained(
                 str(model_dir),
                 trust_remote_code=True,
+                padding_side="left",
                 local_files_only=True,
             ),
         )
         self._model = cast(
-            _MolmoModel,
+            _MolmoPointModel,
             auto_model.from_pretrained(
                 str(model_dir),
                 trust_remote_code=True,
                 torch_dtype=torch_module.bfloat16,
-                low_cpu_mem_usage=True,
+                device_map="auto",
                 local_files_only=True,
             ),
         )
-        self._model.to(torch_module.device(device))
-        force_legacy_generation_cache(self._model)
         self._model.eval()
-        self._generation_config = generation_config_type(
-            max_new_tokens=MAX_NEW_TOKENS,
-            stop_strings=MOLMO_STOP_STRING,
-            use_cache=True,
-        )
 
     def point(self, request: MolmoPointRequest) -> str:
         image_module = cast(_ImageModule, importlib.import_module("PIL.Image"))
         with image_module.open(request.image_path) as image:
             rgb_image = image.convert("RGB")
-            raw_inputs = self._processor.process(
-                images=[rgb_image],
-                text=request.prompt,
+            raw_inputs = self._processor.apply_chat_template(
+                _build_molmopoint_messages(rgb_image, request.prompt),
+                tokenize=True,
+                add_generation_prompt=True,
+                return_tensors="pt",
+                return_dict=True,
+                padding=True,
+                return_pointing_metadata=True,
             )
-            model_inputs = _prepare_model_inputs(
+            generation_inputs = _prepare_molmopoint_generation_inputs(
                 raw_inputs,
-                device=self._model.device,
+                device=self._device_value,
             )
             with (
                 self._torch.inference_mode(),
                 self._torch.autocast("cuda", dtype=self._torch.bfloat16),
             ):
-                generated_batch = self._model.generate_from_batch(
-                    model_inputs,
-                    self._generation_config,
-                    tokenizer=self._processor.tokenizer,
+                output = self._model.generate(
+                    **generation_inputs.model_inputs,
+                    logits_processor=self._model.build_logit_processor_from_inputs(
+                        generation_inputs.model_inputs
+                    ),
+                    max_new_tokens=MAX_NEW_TOKENS,
                 )
 
-        prompt_token_count = model_inputs["input_ids"].size(1)
-        generated_tokens = generated_batch[0, prompt_token_count:]
-        decoded = self._processor.tokenizer.decode(
+        input_ids = _require_token_ids(generation_inputs.model_inputs)
+        prompt_token_count = input_ids.size(1)
+        generated_tokens = output[:, prompt_token_count:]
+        generated_texts = self._processor.post_process_image_text_to_text(
             generated_tokens,
-            skip_special_tokens=True,
+            skip_special_tokens=False,
+            clean_up_tokenization_spaces=False,
         )
-        if not isinstance(decoded, str):
-            raise TypeError("Molmo tokenizer.decode returned a non-string result")
-        return decoded
+        generated_text = _first_generated_text(generated_texts)
+        _validate_generated_points(
+            self._model,
+            generated_text,
+            generation_inputs.metadata,
+        )
+        return generated_text
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -382,12 +431,122 @@ def _require_module_attribute(module: ModuleType, attribute_name: str) -> object
     return getattr(module, attribute_name)
 
 
-def _prepare_model_inputs(
-    raw_inputs: Mapping[str, _TensorLike],
+def _build_molmopoint_messages(
+    image: object,
+    prompt: str,
+) -> list[_MolmoPointMessage]:
+    message: _MolmoPointMessage = {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": prompt},
+            {"type": "image", "image": image},
+        ],
+    }
+    return [message]
+
+
+def _prepare_molmopoint_generation_inputs(
+    raw_inputs: MutableMapping[str, object],
     *,
     device: object,
-) -> dict[str, _TensorLike]:
-    return {name: tensor.to(device).unsqueeze(0) for name, tensor in raw_inputs.items()}
+) -> MolmoPointGenerationInputs:
+    metadata = _extract_molmopoint_metadata(raw_inputs)
+    model_inputs = {
+        name: _move_input_to_device(value, device) for name, value in raw_inputs.items()
+    }
+    return MolmoPointGenerationInputs(model_inputs=model_inputs, metadata=metadata)
+
+
+def _extract_molmopoint_metadata(
+    raw_inputs: MutableMapping[str, object],
+) -> MolmoPointMetadata:
+    legacy_metadata = raw_inputs.pop(MOLMOPOINT_LEGACY_METADATA_KEY, None)
+    if MOLMOPOINT_TOKEN_POOLING_KEY in raw_inputs:
+        return MolmoPointMetadata(
+            token_pooling=_pop_required_value(raw_inputs, MOLMOPOINT_TOKEN_POOLING_KEY),
+            subpatch_mapping=_pop_required_value(
+                raw_inputs,
+                MOLMOPOINT_SUBPATCH_MAPPING_KEY,
+            ),
+            image_sizes=_pop_required_value(raw_inputs, MOLMOPOINT_IMAGE_SIZES_KEY),
+        )
+
+    if legacy_metadata is None:
+        raise RuntimeError(
+            "MolmoPoint processor metadata missing field: "
+            f"{MOLMOPOINT_TOKEN_POOLING_KEY}"
+        )
+    if not isinstance(legacy_metadata, Mapping):
+        raise TypeError("MolmoPoint processor metadata must be a mapping")
+    return MolmoPointMetadata(
+        token_pooling=_require_mapping_value(
+            legacy_metadata,
+            MOLMOPOINT_LEGACY_TOKEN_POOLING_KEY,
+        ),
+        subpatch_mapping=_require_mapping_value(
+            legacy_metadata,
+            MOLMOPOINT_SUBPATCH_MAPPING_KEY,
+        ),
+        image_sizes=_require_mapping_value(legacy_metadata, MOLMOPOINT_IMAGE_SIZES_KEY),
+    )
+
+
+def _pop_required_value(raw_inputs: MutableMapping[str, object], key: str) -> object:
+    if key not in raw_inputs:
+        raise RuntimeError(f"MolmoPoint processor metadata missing field: {key}")
+    value = raw_inputs.pop(key)
+    if value is None:
+        raise TypeError(f"MolmoPoint processor metadata field cannot be None: {key}")
+    return value
+
+
+def _require_mapping_value(metadata: Mapping[object, object], key: str) -> object:
+    if key not in metadata:
+        raise RuntimeError(f"MolmoPoint processor metadata missing field: {key}")
+    value = metadata[key]
+    if value is None:
+        raise TypeError(f"MolmoPoint processor metadata field cannot be None: {key}")
+    return value
+
+
+def _move_input_to_device(value: object, device: object) -> object:
+    if isinstance(value, _DeviceMovable):
+        return value.to(device)
+    return value
+
+
+def _require_token_ids(model_inputs: Mapping[str, object]) -> _TokenIdsLike:
+    input_ids = model_inputs.get("input_ids")
+    if not isinstance(input_ids, _TokenIdsLike):
+        raise TypeError("MolmoPoint processor did not return sized input_ids")
+    return input_ids
+
+
+def _first_generated_text(generated_texts: Sequence[str]) -> str:
+    if len(generated_texts) == 0:
+        raise RuntimeError("MolmoPoint processor returned no generated text")
+    generated_text = generated_texts[0]
+    if not isinstance(generated_text, str):
+        raise TypeError("MolmoPoint processor returned a non-string generated text")
+    return generated_text
+
+
+def _validate_generated_points(
+    model: _MolmoPointModel,
+    generated_text: str,
+    metadata: MolmoPointMetadata,
+) -> None:
+    try:
+        model.extract_image_points(
+            generated_text,
+            metadata.token_pooling,
+            metadata.subpatch_mapping,
+            metadata.image_sizes,
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            "MolmoPoint generated text failed image-point extraction sanity check"
+        ) from exc
 
 
 def patch_molmo_remote_code(model_dir: Path) -> tuple[MolmoPatchReport, ...]:
@@ -403,7 +562,7 @@ def patch_molmo_remote_code(model_dir: Path) -> tuple[MolmoPatchReport, ...]:
     return tuple(reports)
 
 
-def force_legacy_generation_cache(model: _MolmoModel) -> None:
+def force_legacy_generation_cache(model: _LegacyMolmoModel) -> None:
     """Keep Molmo remote code on tuple-style KV cache with newer transformers."""
 
     def uses_default_dynamic_cache() -> bool:

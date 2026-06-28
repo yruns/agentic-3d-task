@@ -130,6 +130,17 @@ python -m codex_agent.scenefunc3d.servers.molmo_point_server \
 
 `scripts/scenefunc3d/serve_molmo_point.sh` 包装上述命令，便于 tmux 中启动。
 
+实现必须对齐真实 `MolmoPoint-8B` Hugging Face API，而不是旧
+`Molmo-7B-D` 的 `generate_from_batch` 路径。`MolmoPoint-8B` 的本地
+snapshot 使用 `AutoModelForImageTextToText` 和 `AutoProcessor`：
+
+- `processor.apply_chat_template(..., return_pointing_metadata=True)` 构造输入。
+- `model.generate(..., logits_processor=model.build_logit_processor_from_inputs(...))`
+  生成 raw text。
+- `processor.post_process_image_text_to_text(...)` 得到文本。
+- `model.extract_image_points(...)` 只作为运行期 sanity check；server 仍返回
+  raw text，point 解析和 overlay 继续由 tool 层负责。
+
 ### Endpoints
 
 ```text
@@ -191,10 +202,22 @@ python -m codex_agent.scenefunc3d.servers.sam2_mask_server \
   --model-name SAM2.1-Hiera-L \
   --checkpoint-path /path/to/sam2.1_hiera_large.pt \
   --config-path /path/to/sam2.1_hiera_l.yaml \
+  --staging-root /path/to/scenefunc3d_runs \
   --device cuda:0
 ```
 
 `scripts/scenefunc3d/serve_sam2.sh` 包装上述命令。
+
+SAM2 sidecar 支持两种 backend：
+
+- `official`：使用 `facebookresearch/sam2` 的 checkpoint + config
+  (`build_sam2` + `SAM2ImagePredictor`)。
+- `transformers`：使用 Hugging Face `Sam2Model` + `Sam2Processor`，用于本机
+  已有的 `facebook/sam2.1-hiera-large` cache/snapshot。该路径接受
+  `--model-path` 指向本地 snapshot，或 `--model-id` 指向模型名。
+
+两种 backend 都必须复用同一套 request schema、staging-root containment、
+mask/scores 验证和 candidate NPZ 写入逻辑。
 
 ### Endpoints
 

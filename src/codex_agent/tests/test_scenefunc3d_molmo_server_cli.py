@@ -85,33 +85,13 @@ def test_module_import_does_not_import_heavy_dependencies() -> None:
         _restore_modules(preserved_modules)
 
 
-def test_transformers_runner_uses_local_molmo_runtime_compatibility(
+def test_transformers_runner_uses_molmopoint_image_text_to_text_api(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from codex_agent.scenefunc3d.servers import molmo_point_server
 
     model_path = tmp_path / "molmo"
     model_path.mkdir()
-    image_processor_path = model_path / "image_preprocessing_molmo.py"
-    image_processor_path.write_text(
-        "\nimport tensorflow as tf\n"
-        "def resize(resize_method):\n"
-        '    if resize_method == "tensorflow":\n'
-        "        return tf\n",
-        encoding="utf-8",
-    )
-    modeling_path = model_path / "modeling_molmo.py"
-    modeling_path.write_text(
-        "class MolmoForCausalLM:\n"
-        '    _no_split_modules = ["MolmoBlock"]\n'
-        "    def tie_weights(self):\n"
-        "        pass\n"
-        "    def prepare_inputs_for_generation(self, model_kwargs, num_new_tokens):\n"
-        '        if "cache_position" in model_kwargs:\n'
-        '            model_kwargs["cache_position"] = '
-        'model_kwargs["cache_position"][-1:] + num_new_tokens\n',
-        encoding="utf-8",
-    )
     fake_torch = _FakeTorchModule()
     fake_transformers = _FakeTransformersModule()
     fake_pil_image = _FakeImageModule()
@@ -146,22 +126,42 @@ def test_transformers_runner_uses_local_molmo_runtime_compatibility(
     )
 
     assert raw_text == '<point x="50" y="50">handle</point>'
+    assert fake_transformers.model_loader.last_source == str(model_path)
     assert fake_transformers.model_loader.last_kwargs["local_files_only"] is True
-    assert fake_transformers.model_loader.last_kwargs["low_cpu_mem_usage"] is True
+    assert fake_transformers.model_loader.last_kwargs["device_map"] == "auto"
     assert (
         fake_transformers.model_loader.last_kwargs["torch_dtype"] is fake_torch.bfloat16
     )
     assert fake_transformers.processor_loader.last_source == str(model_path)
-    assert fake_transformers.model.to_device == "device:cuda:0"
+    assert fake_transformers.processor_loader.last_kwargs["padding_side"] == "left"
+    assert fake_transformers.model.to_device == ""
     assert fake_transformers.model.eval_called is True
-    assert fake_transformers.model._supports_default_dynamic_cache() is False
+    assert fake_transformers.processor.prompt_text == "drawer handle"
+    assert fake_transformers.processor.return_pointing_metadata is True
+    assert fake_transformers.model.generated_input_ids is fake_transformers.input_ids
+    assert (
+        fake_transformers.model.generated_pixel_values is fake_transformers.pixel_values
+    )
+    assert (
+        fake_transformers.model.logit_processor_input_ids is fake_transformers.input_ids
+    )
+    assert fake_transformers.model.generated_max_new_tokens == 200
+    assert fake_transformers.model.generated_metadata_keys == ()
+    assert fake_transformers.model.extract_called is True
+    assert fake_transformers.model.extracted_text == raw_text
+    assert (
+        fake_transformers.model.extracted_token_pooling
+        is fake_transformers.image_token_pooling
+    )
+    assert (
+        fake_transformers.model.extracted_subpatch_mapping
+        is fake_transformers.subpatch_mapping
+    )
+    assert (
+        fake_transformers.model.extracted_image_sizes is fake_transformers.image_sizes
+    )
     assert fake_torch.inference_mode_entered is True
     assert fake_torch.autocast_device_type == "cuda"
-    assert fake_transformers.generation_config_kwargs["use_cache"] is True
-    assert "\nimport tensorflow as tf\n" not in image_processor_path.read_text(
-        encoding="utf-8"
-    )
-    assert "all_tied_weights_keys = {}" in modeling_path.read_text(encoding="utf-8")
 
 
 def test_patch_molmo_remote_code_requires_tensorflow_resize_branch(
@@ -430,30 +430,59 @@ class _FakeTensor:
         return self._token_count
 
 
-class _FakeGeneratedBatch:
-    def __getitem__(self, key: object) -> list[int]:
-        return [1, 2, 3]
-
-
-class _FakeTokenizer:
-    def decode(self, token_ids: object, *, skip_special_tokens: bool) -> str:
-        return '<point x="50" y="50">handle</point>'
+class _FakeGeneratedTokens:
+    def __getitem__(self, key: object) -> object:
+        return object()
 
 
 class _FakeProcessor:
-    tokenizer = _FakeTokenizer()
+    def __init__(self, model_inputs: dict[str, object]) -> None:
+        self._model_inputs = model_inputs
+        self.prompt_text = ""
+        self.return_pointing_metadata = False
 
-    def process(self, *, images: object, text: str) -> dict[str, _FakeTensor]:
-        return {"input_ids": _FakeTensor(3), "images": _FakeTensor(0)}
+    def apply_chat_template(
+        self,
+        messages: object,
+        *,
+        tokenize: bool,
+        add_generation_prompt: bool,
+        return_tensors: str,
+        return_dict: bool,
+        padding: bool,
+        return_pointing_metadata: bool,
+    ) -> dict[str, object]:
+        self.prompt_text = _extract_prompt_text(messages)
+        self.return_pointing_metadata = return_pointing_metadata
+        return dict(self._model_inputs)
+
+    def post_process_image_text_to_text(
+        self,
+        generated_tokens: object,
+        *,
+        skip_special_tokens: bool,
+        clean_up_tokenization_spaces: bool,
+    ) -> list[str]:
+        return ['<point x="50" y="50">handle</point>']
 
 
 class _FakeModel:
     device = "cuda:0"
+    _metadata_keys = ("image_token_pooling_np", "subpatch_mapping", "image_sizes")
 
     def __init__(self) -> None:
         self.to_device = ""
         self.eval_called = False
-        self._supports_default_dynamic_cache = lambda: True
+        self.logit_processor_input_ids: object = None
+        self.generated_input_ids: object = None
+        self.generated_pixel_values: object = None
+        self.generated_max_new_tokens = 0
+        self.generated_metadata_keys: tuple[str, ...] = ()
+        self.extract_called = False
+        self.extracted_text = ""
+        self.extracted_token_pooling: object = None
+        self.extracted_subpatch_mapping: object = None
+        self.extracted_image_sizes: object = None
 
     def to(self, device: object) -> _FakeModel:
         self.to_device = str(device)
@@ -463,31 +492,65 @@ class _FakeModel:
         self.eval_called = True
         return self
 
-    def generate_from_batch(
+    def build_logit_processor_from_inputs(self, model_inputs: object) -> object:
+        if not isinstance(model_inputs, dict):
+            raise AssertionError("expected model input mapping")
+        self.logit_processor_input_ids = model_inputs["input_ids"]
+        return "fake-logit-processor"
+
+    def generate(
         self,
-        inputs: object,
-        generation_config: object,
-        *,
-        tokenizer: object,
-    ) -> _FakeGeneratedBatch:
-        return _FakeGeneratedBatch()
+        **kwargs: object,
+    ) -> _FakeGeneratedTokens:
+        self.generated_input_ids = kwargs["input_ids"]
+        self.generated_pixel_values = kwargs["pixel_values"]
+        self.generated_metadata_keys = tuple(
+            key for key in kwargs if key in self._metadata_keys
+        )
+        if self.generated_metadata_keys:
+            raise AssertionError("MolmoPoint metadata must not be passed to generate")
+        max_new_tokens = kwargs["max_new_tokens"]
+        if not isinstance(max_new_tokens, int):
+            raise AssertionError("expected integer max_new_tokens")
+        self.generated_max_new_tokens = max_new_tokens
+        return _FakeGeneratedTokens()
+
+    def extract_image_points(
+        self,
+        generated_text: str,
+        token_pooling: object,
+        subpatch_mapping: object,
+        image_sizes: object,
+    ) -> object:
+        self.extract_called = True
+        self.extracted_text = generated_text
+        self.extracted_token_pooling = token_pooling
+        self.extracted_subpatch_mapping = subpatch_mapping
+        self.extracted_image_sizes = image_sizes
+        return object()
 
 
 class _FakeTransformersModule(ModuleType):
     def __init__(self) -> None:
         super().__init__("transformers")
-        self.processor = _FakeProcessor()
+        self.input_ids = _FakeTensor(3)
+        self.pixel_values = _FakeTensor(0)
+        self.image_token_pooling = object()
+        self.subpatch_mapping = object()
+        self.image_sizes = object()
+        self.model_inputs: dict[str, object] = {
+            "input_ids": self.input_ids,
+            "pixel_values": self.pixel_values,
+            "image_token_pooling_np": self.image_token_pooling,
+            "subpatch_mapping": self.subpatch_mapping,
+            "image_sizes": self.image_sizes,
+        }
+        self.processor = _FakeProcessor(self.model_inputs)
         self.model = _FakeModel()
         self.processor_loader = _FakeFromPretrainedLoader(self.processor)
         self.model_loader = _FakeFromPretrainedLoader(self.model)
         self.AutoProcessor = self.processor_loader
-        self.AutoModelForCausalLM = self.model_loader
-        self.generation_config_kwargs: dict[str, object] = {}
-        self.GenerationConfig = self._build_generation_config
-
-    def _build_generation_config(self, **kwargs: object) -> dict[str, object]:
-        self.generation_config_kwargs = dict(kwargs)
-        return dict(kwargs)
+        self.AutoModelForImageTextToText = self.model_loader
 
 
 class _FakeImageObject:
@@ -512,3 +575,21 @@ class _FakeImageModule(ModuleType):
 
     def open(self, fp: Path) -> _FakeImageObject:
         return _FakeImageObject()
+
+
+def _extract_prompt_text(messages: object) -> str:
+    if not isinstance(messages, list):
+        raise AssertionError("expected chat messages list")
+    first_message = messages[0]
+    if not isinstance(first_message, dict):
+        raise AssertionError("expected chat message object")
+    content = first_message["content"]
+    if not isinstance(content, list):
+        raise AssertionError("expected chat content list")
+    first_content = content[0]
+    if not isinstance(first_content, dict):
+        raise AssertionError("expected chat content object")
+    text = first_content["text"]
+    if not isinstance(text, str):
+        raise AssertionError("expected prompt text")
+    return text

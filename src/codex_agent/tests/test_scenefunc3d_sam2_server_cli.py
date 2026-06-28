@@ -15,7 +15,7 @@ from typing import Literal, cast
 
 import numpy as np
 import pytest
-from numpy.typing import NDArray
+from numpy.typing import DTypeLike, NDArray
 
 from codex_agent.scenefunc3d.servers.http_json import JsonRoute, make_json_handler
 from codex_agent.scenefunc3d.servers.schemas import (
@@ -56,6 +56,8 @@ def test_build_arg_parser_accepts_runtime_options() -> None:
     parser = build_arg_parser()
     args = parser.parse_args(
         [
+            "--backend",
+            "official",
             "--host",
             "127.0.0.1",
             "--port",
@@ -73,11 +75,37 @@ def test_build_arg_parser_accepts_runtime_options() -> None:
         ]
     )
 
+    assert args.backend == "official"
     assert args.host == "127.0.0.1"
     assert args.port == 8712
     assert args.model_name == "SAM2.1-Hiera-L"
     assert args.checkpoint_path == Path("/models/sam2.pt")
     assert args.config_path == Path("/models/sam2.yaml")
+    assert args.staging_root == Path("/runs/scenefunc3d")
+    assert args.device == "cuda:0"
+
+
+def test_build_arg_parser_accepts_transformers_model_path() -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import build_arg_parser
+
+    args = build_arg_parser().parse_args(
+        [
+            "--backend",
+            "transformers",
+            "--model-path",
+            "/hf/models--facebook--sam2.1-hiera-large/snapshots/665f8",
+            "--staging-root",
+            "/runs/scenefunc3d",
+            "--device",
+            "cuda:0",
+        ]
+    )
+
+    assert args.backend == "transformers"
+    assert args.model_path == Path(
+        "/hf/models--facebook--sam2.1-hiera-large/snapshots/665f8"
+    )
+    assert args.model_id == ""
     assert args.staging_root == Path("/runs/scenefunc3d")
     assert args.device == "cuda:0"
 
@@ -96,6 +124,50 @@ def test_build_arg_parser_requires_staging_root() -> None:
         )
 
 
+def test_build_arg_parser_requires_official_checkpoint_and_config() -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import build_arg_parser
+
+    with pytest.raises(SystemExit):
+        build_arg_parser().parse_args(
+            [
+                "--backend",
+                "official",
+                "--staging-root",
+                "/runs/scenefunc3d",
+            ]
+        )
+
+
+def test_build_arg_parser_requires_transformers_model_reference() -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import build_arg_parser
+
+    with pytest.raises(SystemExit):
+        build_arg_parser().parse_args(
+            [
+                "--backend",
+                "transformers",
+                "--staging-root",
+                "/runs/scenefunc3d",
+            ]
+        )
+
+
+def test_build_arg_parser_rejects_blank_transformers_model_id() -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import build_arg_parser
+
+    with pytest.raises(SystemExit):
+        build_arg_parser().parse_args(
+            [
+                "--backend",
+                "transformers",
+                "--model-id",
+                "   ",
+                "--staging-root",
+                "/runs/scenefunc3d",
+            ]
+        )
+
+
 def test_module_import_does_not_import_heavy_dependencies() -> None:
     module_name = "codex_agent.scenefunc3d.servers.sam2_mask_server"
     heavy_modules = (
@@ -105,6 +177,7 @@ def test_module_import_does_not_import_heavy_dependencies() -> None:
         "sam2.build_sam",
         "sam2.sam2_image_predictor",
         "torch",
+        "transformers",
     )
     preserved_modules = {
         dependency_name: sys.modules.pop(dependency_name)
@@ -396,6 +469,161 @@ def test_official_runner_rejects_unparseable_predictor_scores(
         )
 
 
+def test_transformers_runner_writes_valid_candidate_masks_with_fake_runtime(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from codex_agent.scenefunc3d.servers import sam2_mask_server
+
+    model_path = tmp_path / "hf_snapshot"
+    image_path = tmp_path / "frame.jpg"
+    staging_dir = tmp_path / "out" / "sam" / "000050" / "candidates"
+    model_path.mkdir()
+    image_path.write_bytes(b"image")
+    fake_torch_module = _FakeTorchModule()
+    fake_image_module = _FakeImageModule()
+    fake_transformers_module = _FakeTransformersModule(torch_module=fake_torch_module)
+
+    def fake_import_module(module_name: str) -> ModuleType:
+        modules_by_name: dict[str, ModuleType] = {
+            "PIL.Image": fake_image_module,
+            "torch": fake_torch_module,
+            "transformers": fake_transformers_module,
+        }
+        return modules_by_name[module_name]
+
+    monkeypatch.setattr(sam2_mask_server.importlib, "import_module", fake_import_module)
+
+    runner = sam2_mask_server.TransformersSam2Runner(
+        model_name="SAM2.1-Hiera-L",
+        model_reference=str(model_path),
+        staging_root=tmp_path / "out",
+        device="cuda:0",
+    )
+    request = _sam_request(image_path=image_path, staging_dir=staging_dir)
+    candidates = runner.masks(request)
+
+    assert fake_transformers_module.model_loader.model_reference == str(model_path)
+    assert fake_transformers_module.model_loader.torch_dtype == "fake-bfloat16"
+    assert fake_transformers_module.model.device == "cuda:0"
+    assert fake_transformers_module.model.eval_called is True
+    assert fake_transformers_module.processor_loader.model_reference == str(model_path)
+    assert fake_image_module.last_path == image_path
+    assert len(candidates) == 2
+    assert candidates[0].candidate_id == "mask_00"
+    assert candidates[0].score == pytest.approx(0.8)
+    assert candidates[0].pixel_count == 3
+    assert candidates[0].coverage_percent == 50.0
+    assert candidates[1].candidate_id == "mask_01"
+    assert candidates[1].score == pytest.approx(0.25)
+    assert candidates[1].pixel_count == 2
+    assert candidates[1].coverage_percent == pytest.approx(33.33333333333333)
+    assert _load_saved_mask(candidates[0].mask_npz_path).tolist() == [
+        [True, False, True],
+        [False, False, True],
+    ]
+    assert fake_transformers_module.processor.image_shape == (2, 3, 3)
+    assert fake_transformers_module.processor.input_points == [[[[1.0, 0.5]]]]
+    assert fake_transformers_module.processor.input_labels == [[[1]]]
+    assert fake_transformers_module.processor.device == "cuda:0"
+    assert fake_transformers_module.model.input_devices == {
+        "pixel_values": "cuda:0",
+        "input_points": "cuda:0",
+        "input_labels": "cuda:0",
+    }
+    assert fake_transformers_module.model.received_keys == (
+        "input_labels",
+        "input_points",
+        "pixel_values",
+    )
+    assert fake_torch_module.inference_mode_enter_count == 1
+
+
+def test_transformers_runner_rejects_non_binary_masks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from codex_agent.scenefunc3d.servers import sam2_mask_server
+
+    model_path = tmp_path / "hf_snapshot"
+    image_path = tmp_path / "frame.jpg"
+    model_path.mkdir()
+    image_path.write_bytes(b"image")
+    fake_torch_module = _FakeTorchModule()
+    fake_transformers_module = _FakeTransformersModule(
+        torch_module=fake_torch_module,
+        post_processed_masks=np.array(
+            [[[[0.1, 0.0, 0.8], [0.0, 0.2, 0.0]]]],
+            dtype=np.float32,
+        ),
+    )
+
+    def fake_import_module(module_name: str) -> ModuleType:
+        modules_by_name: dict[str, ModuleType] = {
+            "PIL.Image": _FakeImageModule(),
+            "torch": fake_torch_module,
+            "transformers": fake_transformers_module,
+        }
+        return modules_by_name[module_name]
+
+    monkeypatch.setattr(sam2_mask_server.importlib, "import_module", fake_import_module)
+    runner = sam2_mask_server.TransformersSam2Runner(
+        model_name="SAM2.1-Hiera-L",
+        model_reference=str(model_path),
+        staging_root=tmp_path / "out",
+        device="cuda:0",
+    )
+
+    with pytest.raises(RuntimeError, match="binary"):
+        runner.masks(
+            _sam_request(
+                image_path=image_path,
+                staging_dir=tmp_path / "out" / "sam" / "000050" / "candidates",
+            )
+        )
+
+
+def test_transformers_runner_rejects_non_tensor_original_sizes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from codex_agent.scenefunc3d.servers import sam2_mask_server
+
+    model_path = tmp_path / "hf_snapshot"
+    image_path = tmp_path / "frame.jpg"
+    model_path.mkdir()
+    image_path.write_bytes(b"image")
+    fake_torch_module = _FakeTorchModule()
+    fake_transformers_module = _FakeTransformersModule(
+        torch_module=fake_torch_module,
+        original_sizes_value="not-a-tensor",
+    )
+
+    def fake_import_module(module_name: str) -> ModuleType:
+        modules_by_name: dict[str, ModuleType] = {
+            "PIL.Image": _FakeImageModule(),
+            "torch": fake_torch_module,
+            "transformers": fake_transformers_module,
+        }
+        return modules_by_name[module_name]
+
+    monkeypatch.setattr(sam2_mask_server.importlib, "import_module", fake_import_module)
+    runner = sam2_mask_server.TransformersSam2Runner(
+        model_name="SAM2.1-Hiera-L",
+        model_reference=str(model_path),
+        staging_root=tmp_path / "out",
+        device="cuda:0",
+    )
+
+    with pytest.raises(RuntimeError, match="original_sizes"):
+        runner.masks(
+            _sam_request(
+                image_path=image_path,
+                staging_dir=tmp_path / "out" / "sam" / "000050" / "candidates",
+            )
+        )
+
+
 def test_handler_supports_health_and_masks_routes(tmp_path: Path) -> None:
     from codex_agent.scenefunc3d.servers.sam2_mask_server import _build_routes
 
@@ -646,6 +874,30 @@ class _FakeTorchModule(ModuleType):
     def __init__(self) -> None:
         super().__init__("torch")
         self.cuda = _FakeTorchCuda()
+        self.bfloat16 = "fake-bfloat16"
+        self.inference_mode_depth = 0
+        self.inference_mode_enter_count = 0
+
+    def inference_mode(self) -> _FakeInferenceMode:
+        return _FakeInferenceMode(torch_module=self)
+
+
+class _FakeInferenceMode:
+    def __init__(self, *, torch_module: _FakeTorchModule) -> None:
+        self._torch_module = torch_module
+
+    def __enter__(self) -> None:
+        self._torch_module.inference_mode_depth += 1
+        self._torch_module.inference_mode_enter_count += 1
+
+    def __exit__(
+        self,
+        exc_type: object,
+        exc_value: object,
+        traceback: object,
+    ) -> Literal[False]:
+        self._torch_module.inference_mode_depth -= 1
+        return False
 
 
 class _FakeSam2BuildModule(ModuleType):
@@ -699,6 +951,200 @@ class _BadScorePredictorModule(ModuleType):
     def _build_predictor(self, model: object) -> _BadScorePredictor:
         self.predictor = _BadScorePredictor(model=model)
         return self.predictor
+
+
+class _FakeTransformersModule(ModuleType):
+    def __init__(
+        self,
+        *,
+        torch_module: _FakeTorchModule,
+        post_processed_masks: NDArray[np.bool_] | NDArray[np.float32] | None = None,
+        original_sizes_value: object = None,
+    ) -> None:
+        super().__init__("transformers")
+        self.model = _FakeSam2TransformersModel(torch_module=torch_module)
+        self.processor = _FakeSam2Processor(
+            post_processed_masks=post_processed_masks,
+            original_sizes_value=original_sizes_value,
+        )
+        self.model_loader = _FakeSam2ModelLoader(self.model)
+        self.processor_loader = _FakeSam2ProcessorLoader(self.processor)
+        self.Sam2Model = self.model_loader
+        self.Sam2Processor = self.processor_loader
+
+
+class _FakeSam2ModelLoader:
+    def __init__(self, model: _FakeSam2TransformersModel) -> None:
+        self._model = model
+        self.model_reference = ""
+        self.torch_dtype: object = None
+
+    def from_pretrained(
+        self,
+        model_reference: str,
+        *,
+        torch_dtype: object,
+    ) -> _FakeSam2TransformersModel:
+        self.model_reference = model_reference
+        self.torch_dtype = torch_dtype
+        return self._model
+
+
+class _FakeSam2ProcessorLoader:
+    def __init__(self, processor: _FakeSam2Processor) -> None:
+        self._processor = processor
+        self.model_reference = ""
+
+    def from_pretrained(self, model_reference: str) -> _FakeSam2Processor:
+        self.model_reference = model_reference
+        return self._processor
+
+
+class _FakeSam2TransformersModel:
+    def __init__(self, *, torch_module: _FakeTorchModule) -> None:
+        self._torch_module = torch_module
+        self.device = ""
+        self.eval_called = False
+        self.input_devices: dict[str, str] = {}
+        self.received_keys: tuple[str, ...] = ()
+
+    def to(self, device: str) -> _FakeSam2TransformersModel:
+        self.device = device
+        return self
+
+    def eval(self) -> _FakeSam2TransformersModel:
+        self.eval_called = True
+        return self
+
+    def __call__(self, **model_inputs: object) -> _FakeSam2Output:
+        expected_keys = ("input_labels", "input_points", "pixel_values")
+        self.received_keys = tuple(sorted(model_inputs))
+        if self.received_keys != expected_keys:
+            raise AssertionError(f"unexpected model input keys: {self.received_keys}")
+        if self._torch_module.inference_mode_depth <= 0:
+            raise AssertionError("expected torch.inference_mode around model call")
+        input_devices: dict[str, str] = {}
+        for key in expected_keys:
+            value = model_inputs[key]
+            if not isinstance(value, _FakeTensor):
+                raise AssertionError(f"expected fake tensor for {key}")
+            input_devices[key] = value.device
+        self.input_devices = input_devices
+        return _FakeSam2Output(
+            pred_masks=_FakeTensor(np.zeros((1, 1, 2, 2, 3), dtype=np.float32)),
+            iou_scores=_FakeTensor(np.array([[[0.8, 0.25]]], dtype=np.float32)),
+        )
+
+
+class _FakeSam2Output:
+    def __init__(self, *, pred_masks: _FakeTensor, iou_scores: _FakeTensor) -> None:
+        self.pred_masks = pred_masks
+        self.iou_scores = iou_scores
+
+
+class _FakeSam2Processor:
+    def __init__(
+        self,
+        *,
+        post_processed_masks: NDArray[np.bool_] | NDArray[np.float32] | None,
+        original_sizes_value: object,
+    ) -> None:
+        self._post_processed_masks: NDArray[np.bool_] | NDArray[np.float32]
+        if post_processed_masks is None:
+            self._post_processed_masks = np.array(
+                [
+                    [
+                        [[True, False, True], [False, False, True]],
+                        [[False, True, False], [True, False, False]],
+                    ]
+                ],
+                dtype=np.bool_,
+            )
+        else:
+            self._post_processed_masks = post_processed_masks
+        self.image_shape: tuple[int, ...] = ()
+        self.input_points: list[list[list[list[float]]]] = []
+        self.input_labels: list[list[list[int]]] = []
+        self.device = ""
+        self.original_sizes_value = original_sizes_value
+
+    def __call__(
+        self,
+        *,
+        images: _FakeImage,
+        input_points: list[list[list[list[float]]]],
+        input_labels: list[list[list[int]]],
+        return_tensors: str,
+    ) -> _FakeProcessorInputs:
+        if return_tensors != "pt":
+            raise AssertionError(f"unexpected return_tensors: {return_tensors}")
+        self.image_shape = np.asarray(images, dtype=np.uint8).shape
+        self.input_points = input_points
+        self.input_labels = input_labels
+        return _FakeProcessorInputs(processor=self)
+
+    def post_process_masks(
+        self,
+        pred_masks: object,
+        original_sizes: object,
+    ) -> tuple[NDArray[np.bool_] | NDArray[np.float32], ...]:
+        if not isinstance(pred_masks, _FakeTensor):
+            raise AssertionError("expected fake pred_masks tensor")
+        if not isinstance(original_sizes, _FakeTensor):
+            raise AssertionError("expected fake original_sizes tensor")
+        return (self._post_processed_masks,)
+
+
+class _FakeProcessorInputs(dict[str, object]):
+    def __init__(self, *, processor: _FakeSam2Processor) -> None:
+        original_sizes: object = processor.original_sizes_value
+        if original_sizes is None:
+            original_sizes = _FakeTensor(np.array([[2, 3]], dtype=np.int64))
+        super().__init__(
+            {
+                "pixel_values": _FakeTensor(np.zeros((1, 3, 2, 3), dtype=np.float32)),
+                "input_points": _FakeTensor(
+                    np.array([[[[1.0, 0.5]]]], dtype=np.float32)
+                ),
+                "input_labels": _FakeTensor(np.array([[[1]]], dtype=np.int64)),
+                "original_sizes": original_sizes,
+                "reshaped_input_sizes": _FakeTensor(
+                    np.array([[1024, 1024]], dtype=np.int64)
+                ),
+            }
+        )
+        self._processor = processor
+
+    def to(self, device: str) -> _FakeProcessorInputs:
+        self._processor.device = device
+        for value in self.values():
+            if isinstance(value, _FakeTensor):
+                value.to(device)
+        return self
+
+
+class _FakeTensor:
+    def __init__(self, value: NDArray[np.generic]) -> None:
+        self._value = value
+        self.device = ""
+
+    def to(self, device: str) -> _FakeTensor:
+        self.device = device
+        return self
+
+    def detach(self) -> _FakeTensor:
+        return self
+
+    def cpu(self) -> _FakeTensor:
+        return self
+
+    def __getitem__(self, key: int) -> _FakeTensor:
+        return _FakeTensor(np.asarray(self._value[key]))
+
+    def __array__(self, dtype: DTypeLike | None = None) -> NDArray[np.generic]:
+        if dtype is None:
+            return self._value
+        return np.asarray(self._value, dtype=dtype)
 
 
 class _FakeImageModule(ModuleType):

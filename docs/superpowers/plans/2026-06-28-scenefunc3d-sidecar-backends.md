@@ -3039,13 +3039,14 @@ scripts/scenefunc3d/serve_sam2.sh \
   --model-name SAM2.1-Hiera-L \
   --checkpoint-path /path/to/sam2.1_hiera_large.pt \
   --config-path /path/to/sam2.1_hiera_l.yaml \
+  --staging-root /path/to/scenefunc3d_runs \
   --device cuda:0
 ```
 
 Then:
 
 ```bash
-scripts/scenefunc3d/check_sidecars.sh http://127.0.0.1:8711 http://127.0.0.1:8712
+scripts/scenefunc3d/check_sidecars.sh configs/scenefunc3d_backends.toml
 ```
 
 Create `docs/benchmark/scenefunc_molmo_sam3d/sidecar_e2e_20260628.md` and record whether heavy smoke was run. If model paths are not available in the environment, write the exact missing paths/config keys.
@@ -3079,7 +3080,89 @@ Ask the reviewer to prioritize:
 
 Fix Critical/Important findings before finishing.
 
+## Task 10: Real MolmoPoint And SAM2.1 API Alignment
+
+**Files:**
+- Modify: `src/codex_agent/scenefunc3d/servers/molmo_point_server.py`
+- Modify: `src/codex_agent/tests/test_scenefunc3d_molmo_server_cli.py`
+- Modify: `src/codex_agent/scenefunc3d/servers/sam2_mask_server.py`
+- Modify: `src/codex_agent/tests/test_scenefunc3d_sam2_server_cli.py`
+- Modify if needed: `scripts/scenefunc3d/serve_sam2.sh`
+
+- [ ] **Step 1: Add MolmoPoint-8B API regression test**
+
+Add a fake Transformers module test proving `TransformersMolmoRunner` loads
+`AutoModelForImageTextToText`, calls `processor.apply_chat_template(...,
+return_pointing_metadata=True)`, calls `model.generate(...)`, post-processes raw
+text, and does not require the old `generate_from_batch` API.
+
+Run:
+
+```bash
+PYTHONPATH=src pytest src/codex_agent/tests/test_scenefunc3d_molmo_server_cli.py -q
+```
+
+Expected before implementation: fail because the current runner still requires
+`AutoModelForCausalLM` / `generate_from_batch`.
+
+- [ ] **Step 2: Implement true MolmoPoint runner path**
+
+Update `TransformersMolmoRunner` so the real path follows the successful
+`MolmoPoint-8B` batch script:
+
+```text
+AutoModelForImageTextToText.from_pretrained(local_model_path, trust_remote_code=True)
+AutoProcessor.from_pretrained(local_model_path, trust_remote_code=True, padding_side="left")
+processor.apply_chat_template(..., return_pointing_metadata=True)
+model.generate(..., logits_processor=model.build_logit_processor_from_inputs(...))
+processor.post_process_image_text_to_text(...)
+model.extract_image_points(...) as a non-artifact sanity check
+```
+
+Keep heavy imports lazy, CUDA fail-fast, raw-text-only response, and no server
+artifact writes.
+
+- [ ] **Step 3: Add transformers SAM2 backend regression test**
+
+Add a fake Transformers test proving the SAM server CLI can select a
+`transformers` backend and that the runner uses `Sam2Model` + `Sam2Processor`
+to produce masks from point prompts.
+
+Run:
+
+```bash
+PYTHONPATH=src pytest src/codex_agent/tests/test_scenefunc3d_sam2_server_cli.py -q
+```
+
+Expected before implementation: fail because the CLI only supports official
+`--checkpoint-path` / `--config-path`.
+
+- [ ] **Step 4: Implement SAM2 backend selection**
+
+Add explicit `--backend official|transformers`. Keep the official backend
+unchanged. For `transformers`, accept `--model-path` for local HF snapshots or
+`--model-id` for model names, require `--staging-root`, run CUDA fail-fast, and
+reuse the existing mask/scores validation and candidate NPZ writing helpers.
+
+- [ ] **Step 5: Verify and commit**
+
+Run:
+
+```bash
+PYTHONPATH=src pytest src/codex_agent/tests/test_scenefunc3d_molmo_server_cli.py src/codex_agent/tests/test_scenefunc3d_sam2_server_cli.py -q
+ruff check src/codex_agent/scenefunc3d/servers/molmo_point_server.py src/codex_agent/scenefunc3d/servers/sam2_mask_server.py src/codex_agent/tests/test_scenefunc3d_molmo_server_cli.py src/codex_agent/tests/test_scenefunc3d_sam2_server_cli.py
+black --check src/codex_agent/scenefunc3d/servers/molmo_point_server.py src/codex_agent/scenefunc3d/servers/sam2_mask_server.py src/codex_agent/tests/test_scenefunc3d_molmo_server_cli.py src/codex_agent/tests/test_scenefunc3d_sam2_server_cli.py
+mypy src/codex_agent/scenefunc3d/servers/molmo_point_server.py src/codex_agent/scenefunc3d/servers/sam2_mask_server.py src/codex_agent/tests/test_scenefunc3d_molmo_server_cli.py src/codex_agent/tests/test_scenefunc3d_sam2_server_cli.py
+```
+
+Expected: all focused checks pass without loading real model weights.
+
 ## External API References
 
-- Molmo server implementation should follow Ai2 Molmo documentation for Hugging Face `AutoModelForCausalLM` and `AutoProcessor` usage.
-- SAM2 server implementation should follow the official `facebookresearch/sam2` image prediction API using `build_sam2` and `SAM2ImagePredictor`.
+- MolmoPoint server implementation should follow the actual
+  `MolmoPoint-8B` Hugging Face API: `AutoModelForImageTextToText`,
+  `AutoProcessor`, `apply_chat_template`, `generate`, and
+  `extract_image_points`.
+- SAM2 server implementation should support both the official
+  `facebookresearch/sam2` image prediction API and the Hugging Face
+  `Sam2Model` / `Sam2Processor` API used by `facebook/sam2.1-hiera-large`.
