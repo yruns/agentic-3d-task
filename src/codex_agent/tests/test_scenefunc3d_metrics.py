@@ -20,6 +20,7 @@ from codex_agent.scenefunc3d.evaluation.scorer import (
     score_mask_artifact,
     score_mask_npz,
     score_point_ids,
+    score_result_file,
 )
 from codex_agent.scenefunc3d.task import FRAGMENT_APPROVAL_ACTIONS
 from codex_agent.scenefunc3d.tools.mask_lifting import LiftMaskArgs, LiftMaskResult
@@ -163,6 +164,48 @@ def test_score_mask_artifact_uses_final_artifact_npz_path(tmp_path: Path) -> Non
         mask_artifact_path=artifact_path,
     )
 
+    assert score.metrics == MaskMetrics(
+        iou=1.0,
+        precision=1.0,
+        recall=1.0,
+        f1=1.0,
+        predicted_count=5,
+        gt_count=5,
+    )
+
+
+def test_score_result_file_uses_runner_result_artifact_path(tmp_path: Path) -> None:
+    _write_scoring_scene(tmp_path)
+    mask_npz_path = tmp_path / "mask_data.npz"
+    np.savez_compressed(mask_npz_path, point_indices=np.array([3, 5, 8, 13, 21]))
+    result_dir = tmp_path / "result"
+    result_dir.mkdir()
+    artifact_path = result_dir / "mask_artifact.json"
+    _write_scoring_mask_artifact(artifact_path, mask_npz_path=mask_npz_path)
+    result_path = result_dir / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "task_name": "scenefunc3d_mask_generation",
+                "sample_id": "421254::desc-a",
+                "outcome": {
+                    "mask_artifact_path": "mask_artifact.json",
+                    "mask_npz_path": str(tmp_path / "wrong_prediction.npz"),
+                    "mask_ply_path": "/tmp/lifted_points.ply",
+                    "selected_frame_ids": ["000010"],
+                    "accepted_fragment_ids": ["frag-a"],
+                    "confidence": 0.9,
+                    "uncertainties": [],
+                },
+                "turn": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    score = score_result_file(data_root=tmp_path, result_path=result_path)
+
+    assert score.sample_id == "421254::desc-a"
     assert score.metrics == MaskMetrics(
         iou=1.0,
         precision=1.0,

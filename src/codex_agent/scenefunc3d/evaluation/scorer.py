@@ -24,6 +24,7 @@ NonEmptyString: TypeAlias = Annotated[
 ]
 PointId: TypeAlias = Annotated[int, Field(ge=0, strict=True)]
 _PREDICTION_POINT_ID_KEYS = ("point_indices", "point_ids")
+_SCENEFUNC3D_TASK_NAME = "scenefunc3d_mask_generation"
 
 
 class _ScoringAnnotation(BaseModel):
@@ -42,6 +43,24 @@ class _ScoringAnnotationsFile(BaseModel):
 
     visit_id: NonEmptyString
     annotations: tuple[_ScoringAnnotation, ...]
+
+
+class _ScoringResultOutcome(BaseModel):
+    """Subset of the runner outcome needed by the scorer."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    mask_artifact_path: NonEmptyString
+
+
+class _ScoringResultFile(BaseModel):
+    """Subset of a SceneFunc3D runner result file needed by the scorer."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    task_name: NonEmptyString
+    sample_id: NonEmptyString
+    outcome: _ScoringResultOutcome
 
 
 @dataclass(frozen=True)
@@ -205,6 +224,30 @@ def score_mask_artifact(
     )
 
 
+def score_result_file(
+    *,
+    data_root: Path,
+    result_path: Path,
+    failure_type: str = "",
+) -> SceneFunc3dScore:
+    """Score a SceneFunc3D runner result JSON against hidden GT."""
+    result_file = _load_result_file_for_scoring(result_path)
+    if result_file.task_name != _SCENEFUNC3D_TASK_NAME:
+        raise SceneFunc3dDataError(
+            "runner result task_name is not a SceneFunc3D mask task: "
+            f"task_name={result_file.task_name!r}; result_path={result_path}"
+        )
+    return score_mask_artifact(
+        data_root=data_root,
+        sample_id=result_file.sample_id,
+        mask_artifact_path=_resolve_artifact_member_path(
+            artifact_path=result_path,
+            raw_member_path=result_file.outcome.mask_artifact_path,
+        ),
+        failure_type=failure_type,
+    )
+
+
 def _load_scoring_annotations(
     path: Path, *, expected_visit_id: str
 ) -> _ScoringAnnotationsFile:
@@ -239,6 +282,24 @@ def _annotations_by_id(
             )
         annotations_by_id[annotation.annot_id] = annotation
     return annotations_by_id
+
+
+def _load_result_file_for_scoring(result_path: Path) -> _ScoringResultFile:
+    if not result_path.is_file():
+        raise SceneFunc3dDataError(f"runner result JSON is missing: {result_path}")
+    try:
+        payload: object = json.loads(result_path.read_text(encoding="utf-8"))
+    except JSONDecodeError as exc:
+        raise SceneFunc3dDataError(
+            f"runner result is not valid JSON: {result_path}"
+        ) from exc
+    try:
+        return _ScoringResultFile.model_validate(payload)
+    except ValidationError as exc:
+        raise SceneFunc3dDataError(
+            "runner result failed scorer validation: "
+            f"result_path={result_path}; error={exc}"
+        ) from exc
 
 
 def _load_final_mask_artifact_document(
@@ -277,4 +338,5 @@ __all__ = [
     "score_mask_artifact",
     "score_mask_npz",
     "score_point_ids",
+    "score_result_file",
 ]
