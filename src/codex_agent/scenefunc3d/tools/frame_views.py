@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from dataclasses import dataclass
+from json import JSONDecodeError
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from .models import ToolInputError
 from .scene_context import SceneFunc3dToolScene
@@ -15,6 +25,9 @@ from .scene_context import SceneFunc3dToolScene
 _RAW_RGB_SUFFIXES: tuple[str, ...] = (".png", ".jpg", ".jpeg")
 _ERROR_FRAME_ID_PREVIEW = 8
 _JPEG_QUALITY = 90
+_CROP_HASH_LENGTH = 12
+
+BboxFormat = Literal["normalized", "pixel_xyxy"]
 
 
 class SceneSummaryArgs(BaseModel):
@@ -68,6 +81,10 @@ class FrameObjectPayload(TypedDict, total=False):
 
     object_id: str
     label: str
+    score: float
+    bbox_xyxy: list[float]
+    bbox_format: BboxFormat
+    source: str
 
 
 class FrameObjectsArgs(BaseModel):
@@ -97,28 +114,76 @@ class ViewCropArgs(BaseModel):
 
     frame_id: str = Field(min_length=1)
     bbox: tuple[float, float, float, float]
+    bbox_format: BboxFormat = "normalized"
 
     @field_validator("bbox")
     @classmethod
-    def validate_bbox(
+    def validate_finite_bbox(
         cls, bbox: tuple[float, float, float, float]
     ) -> tuple[float, float, float, float]:
-        """Validate normalized crop coordinates."""
+        """Validate finite crop coordinates."""
         left, top, right, bottom = bbox
         coordinates = (left, top, right, bottom)
         if any(not math.isfinite(value) for value in coordinates):
             raise ValueError("bbox coordinates must be finite")
-        if any(value < 0.0 or value > 1.0 for value in coordinates):
-            raise ValueError("bbox coordinates must be normalized to [0, 1]")
         if left >= right or top >= bottom:
             raise ValueError("bbox must satisfy left < right and top < bottom")
         return bbox
+
+    @model_validator(mode="after")
+    def validate_bbox_format(self) -> ViewCropArgs:
+        """Validate coordinates against the declared bbox coordinate system."""
+        if self.bbox_format == "normalized":
+            _validate_normalized_bbox(self.bbox)
+        else:
+            _validate_pixel_bbox(self.bbox)
+        return self
 
 
 class ViewBevArgs(BaseModel):
     """Arguments for ``view_bev``."""
 
     model_config = ConfigDict(extra="forbid")
+
+
+class _ObjectFrameMapObject(BaseModel):
+    """One visible object entry from ``object_frame_map.json``."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    object_id: int | str
+    class_name: str = Field(min_length=1)
+    score: float = Field(ge=0.0, allow_inf_nan=False)
+    bbox_xyxy: tuple[float, float, float, float] | None = None
+
+    @field_validator("bbox_xyxy")
+    @classmethod
+    def validate_bbox_xyxy(
+        cls, bbox_xyxy: tuple[float, float, float, float] | None
+    ) -> tuple[float, float, float, float] | None:
+        """Validate ConceptGraph pixel bbox metadata at the JSON boundary."""
+        if bbox_xyxy is None:
+            return None
+        _validate_pixel_bbox(bbox_xyxy)
+        return bbox_xyxy
+
+
+class _ObjectFrameMapFrame(BaseModel):
+    """One frame entry from ``object_frame_map.json``."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    view_id: int
+    frame_name: str = Field(min_length=1)
+    objects: tuple[_ObjectFrameMapObject, ...] = ()
+
+
+class _ObjectFrameMapDocument(BaseModel):
+    """Validated ``object_frame_map.json`` payload."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    frame_to_objects: dict[str, _ObjectFrameMapFrame]
 
 
 @dataclass(frozen=True)
@@ -186,27 +251,35 @@ def view_frame(
 def frame_objects(
     tool_scene: SceneFunc3dToolScene, args: FrameObjectsArgs
 ) -> FrameObjectsResult:
-    """Return the currently available visible-object contract for one frame."""
+    """Return ConceptGraph visible objects for one frame."""
     _validate_frame_ids(tool_scene, (args.frame_id,))
-    raise ToolInputError(
-        "frame_objects requires a visible-object index, which is not available "
-        f"for frame {args.frame_id!r}"
+    object_frame_map = _load_object_frame_map(tool_scene)
+    frame_record = _object_frame_record_for(object_frame_map, args.frame_id)
+    objects = tuple(
+        _object_payload(visible_object) for visible_object in frame_record.objects
     )
+    return FrameObjectsResult(frame_id=args.frame_id, objects=objects)
 
 
 def view_crop(
     tool_scene: SceneFunc3dToolScene, args: ViewCropArgs, *, out_dir: Path
 ) -> ViewFrameResult:
-    """Return a crop evidence image for one frame.
-
-    The initial lightweight contract validates the requested frame and bbox, but
-    fails recoverably until crop rendering is backed by a real image operation.
-    """
+    """Render a crop evidence image for one frame."""
     _validate_frame_ids(tool_scene, (args.frame_id,))
-    _ = out_dir
-    raise ToolInputError(
-        "view_crop rendering is not configured for SceneFunc3D; requested "
-        f"frame {args.frame_id!r} bbox={args.bbox!r}"
+    crop_path = _write_crop_jpeg(
+        _resolve_rgb_source(tool_scene, args.frame_id),
+        out_dir
+        / tool_scene.visit_id
+        / _crop_filename(
+            args.frame_id,
+            bbox=args.bbox,
+            bbox_format=args.bbox_format,
+        ),
+        bbox=args.bbox,
+        bbox_format=args.bbox_format,
+    )
+    return ViewFrameResult(
+        frames=(ViewFrame(frame_id=args.frame_id, image_path=crop_path),)
     )
 
 
@@ -238,6 +311,94 @@ def _validate_frame_ids(
             f"{list(tool_scene.rgb_frame_ids[:_ERROR_FRAME_ID_PREVIEW])} "
             f"({len(tool_scene.rgb_frame_ids)} total)"
         )
+
+
+def _load_object_frame_map(tool_scene: SceneFunc3dToolScene) -> _ObjectFrameMapDocument:
+    object_frame_map_path = (
+        tool_scene.conceptgraph_dir / "indices" / "object_frame_map.json"
+    )
+    if not object_frame_map_path.is_file():
+        raise ToolInputError(
+            "frame_objects requires a visible-object index, which is not available: "
+            f"{object_frame_map_path}"
+        )
+    try:
+        payload: object = json.loads(object_frame_map_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ToolInputError(
+            "could not read visible-object index: "
+            f"path={object_frame_map_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    except JSONDecodeError as exc:
+        raise ToolInputError(
+            f"visible-object index is not valid JSON: {object_frame_map_path}"
+        ) from exc
+    try:
+        return _ObjectFrameMapDocument.model_validate(payload)
+    except ValidationError as exc:
+        raise ToolInputError(
+            "visible-object index failed validation: "
+            f"path={object_frame_map_path}; error={_format_validation_error(exc)}"
+        ) from exc
+
+
+def _object_frame_record_for(
+    object_frame_map: _ObjectFrameMapDocument, frame_id: str
+) -> _ObjectFrameMapFrame:
+    for frame_record in object_frame_map.frame_to_objects.values():
+        if _frame_id_from_frame_name(frame_record.frame_name) == frame_id:
+            return frame_record
+    if frame_id in object_frame_map.frame_to_objects:
+        return object_frame_map.frame_to_objects[frame_id]
+    raise ToolInputError(
+        "frame_objects found no visible-object entry for frame: "
+        f"frame_id={frame_id!r}"
+    )
+
+
+def _frame_id_from_frame_name(frame_name: str) -> str | None:
+    stem = Path(frame_name).stem
+    if stem.endswith("-rgb"):
+        stem = stem.removesuffix("-rgb")
+    if stem.isdigit():
+        return stem.zfill(6)
+    return None
+
+
+def _object_payload(visible_object: _ObjectFrameMapObject) -> FrameObjectPayload:
+    payload: FrameObjectPayload = {
+        "object_id": str(visible_object.object_id),
+        "label": visible_object.class_name,
+        "score": visible_object.score,
+        "source": "object_frame_map",
+    }
+    if visible_object.bbox_xyxy is not None:
+        payload["bbox_xyxy"] = [float(value) for value in visible_object.bbox_xyxy]
+        payload["bbox_format"] = "pixel_xyxy"
+    return payload
+
+
+def _validate_normalized_bbox(bbox: tuple[float, float, float, float]) -> None:
+    if any(value < 0.0 or value > 1.0 for value in bbox):
+        raise ValueError("bbox coordinates must be normalized to [0, 1]")
+
+
+def _validate_pixel_bbox(bbox: tuple[float, float, float, float]) -> None:
+    left, top, right, bottom = bbox
+    if any(not math.isfinite(value) for value in bbox):
+        raise ValueError("pixel_xyxy bbox coordinates must be finite")
+    if any(value < 0.0 for value in bbox):
+        raise ValueError("pixel_xyxy bbox coordinates must be non-negative")
+    if left >= right or top >= bottom:
+        raise ValueError("pixel_xyxy bbox must satisfy left < right and top < bottom")
+
+
+def _format_validation_error(exc: ValidationError) -> str:
+    parts: list[str] = []
+    for error in exc.errors():
+        location = ".".join(str(item) for item in error.get("loc", ())) or "(root)"
+        parts.append(f"{location}: {error.get('msg', 'invalid')}")
+    return "; ".join(parts)
 
 
 def _resolve_rgb_source(tool_scene: SceneFunc3dToolScene, frame_id: str) -> Path:
@@ -326,6 +487,97 @@ def _write_jpeg_copy(source_path: Path, destination_path: Path) -> Path:
             f"could not render RGB image {source_path} as JPEG: {exc}"
         ) from exc
     return destination_path
+
+
+def _write_crop_jpeg(
+    source_path: Path,
+    destination_path: Path,
+    *,
+    bbox: tuple[float, float, float, float],
+    bbox_format: BboxFormat,
+) -> Path:
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise ToolInputError(
+            "Pillow is required to render SceneFunc3D evidence crops; install the "
+            "'vision' extra"
+        ) from exc
+
+    try:
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(source_path) as image:
+            rgb_image = image.convert("RGB")
+            crop_box = _pixel_crop_box(
+                bbox,
+                bbox_format=bbox_format,
+                width=rgb_image.width,
+                height=rgb_image.height,
+            )
+            rgb_image.crop(crop_box).save(
+                destination_path,
+                format="JPEG",
+                quality=_JPEG_QUALITY,
+            )
+    except OSError as exc:
+        raise ToolInputError(
+            "could not render RGB crop: "
+            f"source_path={source_path}; destination_path={destination_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+    return destination_path
+
+
+def _crop_filename(
+    frame_id: str,
+    *,
+    bbox: tuple[float, float, float, float],
+    bbox_format: BboxFormat,
+) -> str:
+    digest = hashlib.sha1(
+        f"{bbox_format}:{','.join(str(value) for value in bbox)}".encode()
+    ).hexdigest()[:_CROP_HASH_LENGTH]
+    return f"{frame_id}_crop_{bbox_format}_{digest}.jpg"
+
+
+def _pixel_crop_box(
+    bbox: tuple[float, float, float, float],
+    *,
+    bbox_format: BboxFormat,
+    width: int,
+    height: int,
+) -> tuple[int, int, int, int]:
+    if bbox_format == "pixel_xyxy":
+        return _clamped_pixel_crop_box(bbox, width=width, height=height)
+    return _normalized_pixel_crop_box(bbox, width=width, height=height)
+
+
+def _normalized_pixel_crop_box(
+    bbox: tuple[float, float, float, float],
+    *,
+    width: int,
+    height: int,
+) -> tuple[int, int, int, int]:
+    left, top, right, bottom = bbox
+    left_px = max(0, min(width - 1, math.floor(left * width)))
+    top_px = max(0, min(height - 1, math.floor(top * height)))
+    right_px = max(left_px + 1, min(width, math.ceil(right * width)))
+    bottom_px = max(top_px + 1, min(height, math.ceil(bottom * height)))
+    return (left_px, top_px, right_px, bottom_px)
+
+
+def _clamped_pixel_crop_box(
+    bbox: tuple[float, float, float, float],
+    *,
+    width: int,
+    height: int,
+) -> tuple[int, int, int, int]:
+    left, top, right, bottom = bbox
+    left_px = max(0, min(width - 1, math.floor(left)))
+    top_px = max(0, min(height - 1, math.floor(top)))
+    right_px = max(left_px + 1, min(width, math.ceil(right)))
+    bottom_px = max(top_px + 1, min(height, math.ceil(bottom)))
+    return (left_px, top_px, right_px, bottom_px)
 
 
 __all__ = [

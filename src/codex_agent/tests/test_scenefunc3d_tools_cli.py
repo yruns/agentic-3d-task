@@ -462,6 +462,225 @@ def test_cli_frame_objects_reports_unavailable_index(
     assert "frame_objects requires a visible-object index" in payload["error"]
 
 
+def test_cli_frame_objects_reads_conceptgraph_object_frame_map(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "metadata": {"num_objects": 2, "num_views": 1},
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000000-rgb.jpg",
+                        "num_objects": 2,
+                        "objects": [
+                            {
+                                "object_id": 12,
+                                "class_name": "drawer",
+                                "score": 0.87,
+                                "bbox_xyxy": [10, 20, 110, 120],
+                            },
+                            {
+                                "object_id": 13,
+                                "class_name": "cabinet",
+                                "score": 0.42,
+                                "bbox_xyxy": None,
+                            },
+                        ],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "frame_objects",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000"}),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["frame_id"] == "000000"
+    assert payload["objects"] == [
+        {
+            "object_id": "12",
+            "label": "drawer",
+            "score": 0.87,
+            "bbox_xyxy": [10.0, 20.0, 110.0, 120.0],
+            "bbox_format": "pixel_xyxy",
+            "source": "object_frame_map",
+        },
+        {
+            "object_id": "13",
+            "label": "cabinet",
+            "score": 0.42,
+            "source": "object_frame_map",
+        },
+    ]
+
+
+def test_cli_frame_objects_rejects_invalid_object_bbox(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000000-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 12,
+                                "class_name": "drawer",
+                                "score": 0.87,
+                                "bbox_xyxy": [50, 20, 10, 120],
+                            }
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "frame_objects",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000"}),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "visible-object index failed validation" in payload["error"]
+    assert "bbox_xyxy" in payload["error"]
+
+
+def test_cli_frame_objects_rejects_non_finite_score(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000000-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 12,
+                                "class_name": "drawer",
+                                "score": float("inf"),
+                                "bbox_xyxy": [10, 20, 50, 120],
+                            }
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "frame_objects",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000"}),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "visible-object index failed validation" in payload["error"]
+    assert "score" in payload["error"]
+
+
+def test_cli_frame_objects_prefers_frame_name_over_numeric_key_collision(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "10": {
+                        "view_id": 10,
+                        "frame_name": "000123-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": "wrong-frame",
+                                "class_name": "lamp",
+                                "score": 0.5,
+                            }
+                        ],
+                    },
+                    "4": {
+                        "view_id": 4,
+                        "frame_name": "000010-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": "correct-frame",
+                                "class_name": "drawer",
+                                "score": 0.9,
+                            }
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "frame_objects",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000010"}),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["objects"] == [
+        {
+            "object_id": "correct-frame",
+            "label": "drawer",
+            "score": 0.9,
+            "source": "object_frame_map",
+        }
+    ]
+
+
 def test_cli_view_crop_requires_frame_id(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -502,10 +721,17 @@ def test_cli_view_crop_rejects_invalid_bbox(
     assert "bbox" in payload["error"]
 
 
-def test_cli_view_crop_reports_unconfigured_renderer(
+def test_cli_view_crop_renders_normalized_rgb_crop(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image, ImageDraw
+
     scene_dir = _write_raw_rgb_scene(tmp_path)
+    image = Image.new("RGB", (100, 80), color=(220, 10, 10))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((50, 0, 99, 79), fill=(10, 220, 10))
+    image.save(scene_dir / "raw" / "000000-rgb.png")
 
     code = main(
         [
@@ -513,13 +739,136 @@ def test_cli_view_crop_reports_unconfigured_renderer(
             "--scene-root",
             str(scene_dir),
             "--args",
-            json.dumps({"frame_id": "000000", "bbox": [0.1, 0.1, 0.5, 0.5]}),
+            json.dumps({"frame_id": "000000", "bbox": [0.5, 0.0, 0.9, 0.4]}),
         ]
     )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert "view_crop rendering is not configured" in payload["error"]
+    crop_path = Path(payload["frames"][0]["image_path"])
+    assert payload["frames"][0]["frame_id"] == "000000"
+    assert crop_path.exists()
+    with Image.open(crop_path) as crop_image:
+        assert crop_image.size == (40, 32)
+        red_mean, green_mean, _ = crop_image.resize((1, 1)).getpixel((0, 0))
+        assert green_mean > red_mean
+
+
+def test_cli_view_crop_accepts_frame_object_pixel_bbox(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image, ImageDraw
+
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    image = Image.new("RGB", (100, 80), color=(220, 10, 10))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((50, 0, 99, 79), fill=(10, 220, 10))
+    image.save(scene_dir / "raw" / "000000-rgb.png")
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000000-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": "handle-1",
+                                "class_name": "handle",
+                                "score": 0.91,
+                                "bbox_xyxy": [50, 0, 90, 32],
+                            }
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "frame_objects",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000"}),
+        ]
+    )
+    assert code == 0
+    object_payload = json.loads(capsys.readouterr().out.strip())["objects"][0]
+
+    code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "frame_id": "000000",
+                    "bbox": object_payload["bbox_xyxy"],
+                    "bbox_format": object_payload["bbox_format"],
+                }
+            ),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    crop_path = Path(payload["frames"][0]["image_path"])
+    with Image.open(crop_path) as crop_image:
+        assert crop_image.size == (40, 32)
+        red_mean, green_mean, _ = crop_image.resize((1, 1)).getpixel((0, 0))
+        assert green_mean > red_mean
+
+
+def test_cli_view_crop_uses_unique_paths_for_distinct_crops(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    Image.new("RGB", (100, 80), color=(10, 20, 30)).save(
+        scene_dir / "raw" / "000000-rgb.png"
+    )
+
+    first_code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000", "bbox": [0.1, 0.1, 0.5, 0.5]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+    first_payload = json.loads(capsys.readouterr().out.strip())
+    second_code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000", "bbox": [0.2, 0.2, 0.6, 0.6]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+    second_payload = json.loads(capsys.readouterr().out.strip())
+
+    assert first_code == 0
+    assert second_code == 0
+    assert (
+        first_payload["frames"][0]["image_path"]
+        != second_payload["frames"][0]["image_path"]
+    )
 
 
 def test_cli_view_bev_reports_unavailable_without_bev_asset(
