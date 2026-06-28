@@ -33,8 +33,9 @@ imports. That upgrade reports dependency conflicts with older packages such as
 
 ## Compatibility Notes
 
-Molmo remote code needed local compatibility patches for the current worker
-stack:
+Molmo remote code needs compatibility patches for the current worker stack. The
+runner now applies these patches idempotently before model loading instead of
+relying on a pre-mutated `/nas` checkout:
 
 - `image_preprocessing_molmo.py`: lazy-load TensorFlow only if the TensorFlow
   resize path is used. The smoke uses the default torch bilinear path.
@@ -42,7 +43,8 @@ stack:
   `tie_weights` arguments expected by newer `transformers`.
 - `modeling_molmo.py`: guard `cache_position` updates when generation falls
   back to legacy tuple-style KV cache.
-- `assets/molmo_sam3d_smoke.py`: force legacy generation cache for this Molmo
+- `assets/molmo_sam3d_smoke.py`: applies the file patches above when a local
+  Molmo directory is used, then forces legacy generation cache for this Molmo
   process because the downloaded remote code expects tuple-style
   `past_key_values`, not `DynamicCache`.
 
@@ -54,19 +56,23 @@ The runner records the exact scene, frame, prompt, model path, and log path:
 docs/benchmark/scenefunc_molmo_sam3d/assets/run_full_421254_000050.sh
 ```
 
-Default SAM candidate selection is highest score:
+Default SAM candidate selection is now the smallest non-empty candidate and the
+runner exits non-zero if the smoke does not pass the configured mask-coverage
+check:
 
 ```bash
 /bin/bash docs/benchmark/scenefunc_molmo_sam3d/assets/run_full_421254_000050.sh
 ```
 
-Small-object candidate selection uses the smallest non-empty SAM multimask
-candidate:
+The known failing highest-score selection can still be reproduced as an
+explicit diagnostic. `ALLOW_FAILURE=1` keeps the shell runner from treating that
+expected failure as a process failure:
 
 ```bash
-SAM_SELECTION=smallest \
-OUTPUT_DIR=/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/molmo_sam3d_full_smallest_20260627 \
-LOG_PATH=/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/logs/molmo_sam3d_full_smallest_421254_000050.log \
+SAM_SELECTION=score \
+ALLOW_FAILURE=1 \
+OUTPUT_DIR=/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/molmo_sam3d_full_score_20260627 \
+LOG_PATH=/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/logs/molmo_sam3d_full_score_421254_000050.log \
 /bin/bash docs/benchmark/scenefunc_molmo_sam3d/assets/run_full_421254_000050.sh
 ```
 
@@ -104,13 +110,13 @@ Parsed pixel point:
 `score` artifacts:
 
 - Summary:
-  `/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/molmo_sam3d_full_20260627/421254/000050/summary.json`
+  `/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/molmo_sam3d_full_score_20260627/421254/000050/summary.json`
 - Overlay:
-  `/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/molmo_sam3d_full_20260627/421254/000050/mask_00/overlay.jpg`
+  `/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/molmo_sam3d_full_score_20260627/421254/000050/mask_00/overlay.jpg`
 - PLY:
-  `/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/molmo_sam3d_full_20260627/421254/000050/mask_00/lifted_points.ply`
+  `/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/molmo_sam3d_full_score_20260627/421254/000050/mask_00/lifted_points.ply`
 - Log:
-  `/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/logs/molmo_sam3d_full_421254_000050.log`
+  `/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/logs/molmo_sam3d_full_score_421254_000050.log`
 
 `smallest` artifacts:
 

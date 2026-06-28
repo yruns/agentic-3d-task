@@ -13,10 +13,16 @@ export HF_MODULES_CACHE=/mlx_devbox/users/yueshuhao/playground/nas/Datasets/Scen
 PYTHON_BIN=/mlx_devbox/users/yueshuhao/miniforge3/envs/conceptgraph/bin/python
 DATASET_ROOT=/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG
 MODEL_DIR="${DATASET_ROOT}/models/Molmo-7B-D-0924"
-OUTPUT_DIR="${OUTPUT_DIR:-${DATASET_ROOT}/molmo_sam3d_full_20260627}"
-LOG_PATH="${LOG_PATH:-${DATASET_ROOT}/logs/molmo_sam3d_full_421254_000050.log}"
-SAM_SELECTION="${SAM_SELECTION:-score}"
+OUTPUT_DIR="${OUTPUT_DIR:-${DATASET_ROOT}/molmo_sam3d_full_smallest_20260627}"
+LOG_PATH="${LOG_PATH:-${DATASET_ROOT}/logs/molmo_sam3d_full_smallest_421254_000050.log}"
+SAM_SELECTION="${SAM_SELECTION:-smallest}"
+ALLOW_FAILURE="${ALLOW_FAILURE:-0}"
 PROMPT="${PROMPT:-Point to the small dark round drawer knob handle on the lower wooden cabinet drawer near the right side of the image. Return exactly one XML point tag with x and y percentage attributes and no other text.}"
+
+EXTRA_ARGS=()
+if [[ "${ALLOW_FAILURE}" == "1" ]]; then
+  EXTRA_ARGS+=(--allow-failure)
+fi
 
 "${PYTHON_BIN}" docs/benchmark/scenefunc_molmo_sam3d/assets/molmo_sam3d_smoke.py \
   --scene-id 421254 \
@@ -26,4 +32,5 @@ PROMPT="${PROMPT:-Point to the small dark round drawer knob handle on the lower 
   --output-dir "${OUTPUT_DIR}" \
   --sam-selection "${SAM_SELECTION}" \
   --prompt "${PROMPT}" \
+  "${EXTRA_ARGS[@]}" \
   2>&1 | tee "${LOG_PATH}"

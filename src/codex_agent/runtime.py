@@ -698,9 +698,9 @@ def _final_response_from_items(items: Sequence[ThreadItem]) -> str | None:
         if not isinstance(root, AgentMessageThreadItem):
             continue
         if root.phase == MessagePhase.final_answer:
-            return root.text
+            return str(root.text)
         if root.phase is None and last_unknown_phase is None:
-            last_unknown_phase = root.text
+            last_unknown_phase = str(root.text)
     return last_unknown_phase
 
 
@@ -767,7 +767,7 @@ def _required_keys(output_schema: Mapping[str, Any]) -> list[str]:
 def _status_str(status: TurnStatus | None) -> str | None:
     if status is None:
         return None
-    return status.value
+    return str(status.value)
 
 
 def _extract_token_counts(

@@ -21,4 +21,6 @@ from TASA is intentionally out of scope for this smoke.
   SAM point-prompt masks, and SceneFuncVal-CG depth/pose lifting.
 - `assets/run_full_421254_000050.sh` — reproducible runner for the full Molmo
   drawer-knob smoke, with environment overrides for `SAM_SELECTION`,
-  `OUTPUT_DIR`, `LOG_PATH`, and `PROMPT`.
+  `ALLOW_FAILURE`, `OUTPUT_DIR`, `LOG_PATH`, and `PROMPT`.
+- `assets/test_molmo_sam3d_smoke.py` — unit tests for point parsing, SAM
+  candidate selection, success assessment, and Molmo remote-code patching.

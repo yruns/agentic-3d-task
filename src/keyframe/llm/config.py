@@ -10,8 +10,12 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import tomllib
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+    import tomli as tomllib
 
 #: Environment variable that overrides the default config location.
 CONFIG_ENV_VAR = "KEYFRAME_LLM_CONFIG"
