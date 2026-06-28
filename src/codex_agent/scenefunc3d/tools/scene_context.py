@@ -127,11 +127,14 @@ def _frame_ids_from_source_payload(payload: object) -> tuple[str, ...]:
 
 def _frame_ids_from_source_sequence(records: list[object]) -> tuple[str, ...]:
     frame_ids: list[str] = []
-    for record in records:
+    for index, record in enumerate(records):
         frame_id = _source_frame_id_from_record(record)
-        if frame_id is not None:
-            frame_ids.append(frame_id)
-    return tuple(frame_ids)
+        if frame_id is None:
+            raise SceneFunc3dDataError(
+                f"invalid source frame record {index}: could not derive frame id"
+            )
+        frame_ids.append(frame_id)
+    return _deduplicate_frame_ids(frame_ids)
 
 
 def _frame_ids_from_source_mapping(
@@ -142,8 +145,21 @@ def _frame_ids_from_source_mapping(
         frame_id = _source_frame_id_from_record(raw_record)
         if frame_id is None:
             frame_id = _coerce_frame_id(raw_key)
-        if frame_id is not None:
-            frame_ids.append(frame_id)
+        if frame_id is None:
+            raise SceneFunc3dDataError(
+                f"invalid source frame entry {raw_key!r}: could not derive frame id "
+                "from record or key"
+            )
+        frame_ids.append(frame_id)
+    return _deduplicate_frame_ids(frame_ids)
+
+
+def _deduplicate_frame_ids(frame_ids: list[str]) -> tuple[str, ...]:
+    seen_frame_ids: set[str] = set()
+    for frame_id in frame_ids:
+        if frame_id in seen_frame_ids:
+            raise SceneFunc3dDataError(f"duplicate frame id {frame_id!r}")
+        seen_frame_ids.add(frame_id)
     return tuple(frame_ids)
 
 
