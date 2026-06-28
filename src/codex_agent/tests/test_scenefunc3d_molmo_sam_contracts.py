@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import threading
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from codex_agent.errors import SceneFunc3dDataError
+from codex_agent.scenefunc3d.servers.http_json import JsonRoute, make_json_handler
 from codex_agent.scenefunc3d.tools.__main__ import main
 from codex_agent.scenefunc3d.tools.models import ToolInputError
 from codex_agent.scenefunc3d.tools.molmo_pointing import (
@@ -133,7 +136,138 @@ def test_cli_molmo_point_returns_recoverable_backend_error(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert "molmo_point backend execution is not configured" in payload["error"]
+    assert "molmo_point backend config is required" in payload["error"]
+
+
+def test_cli_molmo_point_uses_configured_fake_backend(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    server = _start_json_server(
+        {
+            "/v1/point": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "MolmoPoint-8B",
+                "raw_text": '<point x="50" y="50">handle</point>',
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url=f"http://127.0.0.1:{server.server_port}",
+        sam_url="http://127.0.0.1:8712",
+    )
+    try:
+        code = main(
+            [
+                "molmo_point",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(image_path),
+                        "prompt": "drawer handle",
+                        "image_width": 100,
+                        "image_height": 80,
+                    }
+                ),
+                "--out-dir",
+                str(tmp_path / "out"),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["points"][0]["label"] == "handle"
+    assert Path(payload["raw_text_path"]).exists()
+    assert Path(payload["overlay_path"]).exists()
+
+
+def test_cli_molmo_point_rejects_unsafe_frame_id(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    args_payload: dict[str, object] = {
+        "frame_id": "../../escape",
+        "image_path": str(image_path),
+        "prompt": "drawer handle",
+        "image_width": 100,
+        "image_height": 80,
+    }
+
+    code = main(
+        [
+            "molmo_point",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(args_payload),
+            "--out-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "frame_id" in payload["error"]
+
+
+def test_cli_molmo_point_rejects_out_dir_outside_allowed_roots(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    server = _start_json_server(
+        {
+            "/v1/point": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "MolmoPoint-8B",
+                "raw_text": '<point x="50" y="50">handle</point>',
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url=f"http://127.0.0.1:{server.server_port}",
+        sam_url="http://127.0.0.1:8712",
+    )
+    try:
+        code = main(
+            [
+                "molmo_point",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(image_path),
+                        "prompt": "drawer handle",
+                        "image_width": 100,
+                        "image_height": 80,
+                    }
+                ),
+                "--out-dir",
+                str(tmp_path / "not-allowed-output"),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "outside configured roots" in payload["error"]
 
 
 def test_cli_sam_mask_returns_recoverable_backend_error(
@@ -347,3 +481,40 @@ def _write_cli_scene(root: Path) -> tuple[Path, Path]:
     image_path = raw_dir / "000000-rgb.png"
     image_path.write_bytes(b"not-a-real-image")
     return scene_dir, image_path
+
+
+def _write_cli_scene_with_real_image(root: Path) -> tuple[Path, Path]:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = root / "421254"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    image_path = raw_dir / "000000-rgb.png"
+    Image.new("RGB", (100, 80), color=(20, 30, 40)).save(image_path)
+    return scene_dir, image_path
+
+
+def _write_backend_config(tmp_path: Path, *, molmo_url: str, sam_url: str) -> Path:
+    config_path = tmp_path / "scenefunc3d_backends.toml"
+    output_root = tmp_path / "out"
+    output_root.mkdir()
+    config_path.write_text(
+        f"""
+molmo_url = "{molmo_url}"
+sam_url = "{sam_url}"
+request_timeout_seconds = 2.0
+artifact_staging_root = "{output_root}"
+allowed_image_roots = ["{tmp_path}"]
+allowed_output_roots = ["{output_root}"]
+""",
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _start_json_server(routes: dict[str, JsonRoute]) -> ThreadingHTTPServer:
+    server = ThreadingHTTPServer(("127.0.0.1", 0), make_json_handler(routes))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server

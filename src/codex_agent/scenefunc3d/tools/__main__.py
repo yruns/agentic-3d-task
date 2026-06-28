@@ -34,6 +34,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Writable scratch directory for rendered images.",
     )
+    parser.add_argument(
+        "--backend-config",
+        type=Path,
+        default=None,
+        help="Optional SceneFunc3D sidecar backend TOML config.",
+    )
     return parser
 
 
@@ -42,10 +48,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     out_dir = args.out_dir if args.out_dir is not None else _DEFAULT_OUT_DIR
+    backend_config_path = cast(Path | None, args.backend_config)
     try:
         raw_args = _parse_args_json(args.args)
         tool_scene = SceneFunc3dToolScene.load(args.scene_root)
-        payload = run_tool(tool_scene, args.tool, raw_args, out_dir=out_dir)
+        payload = run_tool(
+            tool_scene,
+            args.tool,
+            raw_args,
+            out_dir=out_dir,
+            backend_config_path=backend_config_path,
+        )
     except ToolInputError as exc:
         print(json.dumps({"error": str(exc)}, ensure_ascii=False))
         return 0

@@ -121,6 +121,23 @@ def load_backend_settings(path: Path) -> SceneFunc3dBackendSettings:
     return document.to_settings()
 
 
+def ensure_path_under_roots(
+    path: Path,
+    *,
+    roots: tuple[Path, ...],
+    field_name: str,
+) -> Path:
+    """Return a normalized path only when it is inside an allowed root."""
+    normalized_path = _normalize_path(path, field_name=field_name)
+    for root in roots:
+        if normalized_path == root or root in normalized_path.parents:
+            return normalized_path
+    raise ToolInputError(
+        f"{field_name} is outside configured roots: "
+        f"path={normalized_path}; roots={[str(root) for root in roots]}"
+    )
+
+
 def _validate_backend_url(url: str, *, field_name: str) -> None:
     url_summary = _summarize_url(url)
     parsed_url = urlparse(url)
@@ -206,3 +223,10 @@ def _summarize_url(url: str) -> str:
     if parsed_url.fragment:
         suffix = "/..."
     return f"{scheme}://{credentials}{host}{port_text}{suffix}"
+
+
+__all__ = [
+    "SceneFunc3dBackendSettings",
+    "ensure_path_under_roots",
+    "load_backend_settings",
+]

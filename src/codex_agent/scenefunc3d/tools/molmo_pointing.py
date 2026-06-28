@@ -16,6 +16,14 @@ from ...errors import SceneFunc3dDataError
 from .models import ToolInputError
 
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+SafeFrameIdText = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        pattern=r"^[A-Za-z0-9_-]+$",
+    ),
+]
 
 _POINT_TAG_RE = re.compile(
     r"<point\b(?P<attributes>[^>]*)>(?P<label_text>.*?)</point>",
@@ -28,6 +36,9 @@ _POINT_ATTR_RE = re.compile(
 )
 _PERCENT_MIN = 0.0
 _PERCENT_MAX = 100.0
+_OVERLAY_POINT_RADIUS_PX = 5
+_OVERLAY_POINT_OUTLINE_WIDTH_PX = 2
+_JPEG_QUALITY = 95
 
 
 class MolmoPointPayload(TypedDict):
@@ -80,7 +91,7 @@ class MolmoPointArgs(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    frame_id: NonEmptyText
+    frame_id: SafeFrameIdText
     image_path: FilePath
     prompt: NonEmptyText
     image_width: int = Field(gt=0, strict=True)
@@ -110,7 +121,7 @@ class MolmoPointResult:
     raw_text_path: Path
     overlay_path: Path
 
-    def to_payload(self) -> MolmoPointResultPayload:
+    def to_payload(self) -> dict[str, object]:
         """Return the JSON-ready CLI payload."""
         return {
             "frame_id": self.frame_id,
@@ -130,6 +141,58 @@ def run_molmo_backend(config: MolmoBackendConfig) -> None:
     raise ToolInputError(
         "Molmo backend execution is not configured: "
         f"{config.model_name} at {config.model_path}"
+    )
+
+
+def molmo_point(
+    args: MolmoPointArgs,
+    *,
+    out_dir: Path,
+    backend_config_path: Path | None,
+) -> MolmoPointResult:
+    """Call Molmo sidecar, parse points, and write raw/overlay artifacts."""
+    if backend_config_path is None:
+        raise ToolInputError("molmo_point backend config is required")
+
+    from codex_agent.scenefunc3d.backends.config import (
+        ensure_path_under_roots,
+        load_backend_settings,
+    )
+    from codex_agent.scenefunc3d.backends.molmo_rpc import request_molmo_point
+
+    settings = load_backend_settings(backend_config_path)
+    artifact_out_dir = ensure_path_under_roots(
+        out_dir,
+        roots=settings.allowed_output_roots,
+        field_name="out_dir",
+    )
+    request_id = f"{args.frame_id}_molmo"
+    response = request_molmo_point(settings, request_id=request_id, args=args)
+    raw_text_path = _write_raw_text(artifact_out_dir, args.frame_id, response.raw_text)
+    try:
+        points = parse_molmo_points(
+            response.raw_text,
+            image_width=args.image_width,
+            image_height=args.image_height,
+        )
+    except SceneFunc3dDataError as exc:
+        raise ToolInputError(
+            "Molmo point response could not be parsed: "
+            f"frame_id={args.frame_id!r}; raw_text_path={raw_text_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+    overlay_path = _write_point_overlay(
+        args.image_path,
+        artifact_out_dir,
+        args.frame_id,
+        points,
+    )
+    return MolmoPointResult(
+        frame_id=args.frame_id,
+        prompt=args.prompt,
+        points=points,
+        raw_text_path=raw_text_path,
+        overlay_path=overlay_path,
     )
 
 
@@ -228,6 +291,79 @@ def _point_label(attributes: Mapping[str, str], label_text: str) -> str:
     return html.unescape(label_text).strip()
 
 
+def _write_raw_text(out_dir: Path, frame_id: str, raw_text: str) -> Path:
+    path = out_dir / "molmo" / f"{frame_id}_raw.txt"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(raw_text, encoding="utf-8")
+    except OSError as exc:
+        raise ToolInputError(
+            "could not write Molmo raw text artifact: "
+            f"path={path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    return path
+
+
+def _write_point_overlay(
+    image_path: Path,
+    out_dir: Path,
+    frame_id: str,
+    points: tuple[MolmoPoint, ...],
+) -> Path:
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError as exc:
+        raise ToolInputError(
+            "Pillow is required to render Molmo point overlays; install the "
+            "'vision' extra"
+        ) from exc
+
+    overlay_path = out_dir / "molmo" / f"{frame_id}_points.jpg"
+    try:
+        overlay_path.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(image_path) as image:
+            overlay = image.convert("RGB")
+        draw = ImageDraw.Draw(overlay)
+        for point in points:
+            left = point.x_px - _OVERLAY_POINT_RADIUS_PX
+            top = point.y_px - _OVERLAY_POINT_RADIUS_PX
+            right = point.x_px + _OVERLAY_POINT_RADIUS_PX
+            bottom = point.y_px + _OVERLAY_POINT_RADIUS_PX
+            draw.ellipse(
+                (left, top, right, bottom),
+                outline=(255, 0, 0),
+                width=_OVERLAY_POINT_OUTLINE_WIDTH_PX,
+            )
+            draw.line(
+                (
+                    point.x_px - _OVERLAY_POINT_RADIUS_PX,
+                    point.y_px,
+                    point.x_px + _OVERLAY_POINT_RADIUS_PX,
+                    point.y_px,
+                ),
+                fill=(255, 0, 0),
+                width=_OVERLAY_POINT_OUTLINE_WIDTH_PX,
+            )
+            draw.line(
+                (
+                    point.x_px,
+                    point.y_px - _OVERLAY_POINT_RADIUS_PX,
+                    point.x_px,
+                    point.y_px + _OVERLAY_POINT_RADIUS_PX,
+                ),
+                fill=(255, 0, 0),
+                width=_OVERLAY_POINT_OUTLINE_WIDTH_PX,
+            )
+        overlay.save(overlay_path, format="JPEG", quality=_JPEG_QUALITY)
+    except OSError as exc:
+        raise ToolInputError(
+            "could not render Molmo point overlay: "
+            f"image_path={image_path}; overlay_path={overlay_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+    return overlay_path
+
+
 __all__ = [
     "MolmoBackendConfig",
     "MolmoPoint",
@@ -235,6 +371,7 @@ __all__ = [
     "MolmoPointPayload",
     "MolmoPointResult",
     "MolmoPointResultPayload",
+    "molmo_point",
     "parse_molmo_points",
     "run_molmo_backend",
 ]

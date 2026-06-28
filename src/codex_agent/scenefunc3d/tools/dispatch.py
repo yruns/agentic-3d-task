@@ -35,6 +35,7 @@ def run_tool(
     raw_args: Mapping[str, object],
     *,
     out_dir: Path,
+    backend_config_path: Path | None = None,
 ) -> ToolPayload:
     """Validate ``raw_args`` for ``name`` and return the typed tool result."""
     if name == "scene_summary":
@@ -64,10 +65,13 @@ def run_tool(
             tool_scene, _parse(KeyframeSelectorArgs, raw_args), out_dir=out_dir
         )
     if name == "molmo_point":
-        from .molmo_pointing import MolmoPointArgs
+        from .molmo_pointing import MolmoPointArgs, molmo_point
 
-        _parse(MolmoPointArgs, raw_args)
-        raise ToolInputError("molmo_point backend execution is not configured")
+        return molmo_point(
+            _parse(MolmoPointArgs, raw_args),
+            out_dir=out_dir,
+            backend_config_path=backend_config_path,
+        )
     if name == "sam_mask":
         from .sam_masking import SamMaskArgs
 
