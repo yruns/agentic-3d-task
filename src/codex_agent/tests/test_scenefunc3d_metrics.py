@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
 from pydantic import ValidationError
 
 from codex_agent.errors import SceneFunc3dDataError
+from codex_agent.scenefunc3d.evaluation import __main__ as evaluation_cli
 from codex_agent.scenefunc3d.evaluation.metrics import (
     MaskMetrics,
     compute_mask_metrics,
@@ -216,6 +219,57 @@ def test_score_result_file_uses_runner_result_artifact_path(tmp_path: Path) -> N
     )
 
 
+def test_evaluation_cli_scores_runner_result_json(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_scoring_scene(tmp_path)
+    mask_npz_path = tmp_path / "mask_data.npz"
+    np.savez_compressed(mask_npz_path, point_indices=np.array([3, 5, 8, 13, 21]))
+    artifact_path = tmp_path / "mask_artifact.json"
+    _write_scoring_mask_artifact(artifact_path, mask_npz_path=mask_npz_path)
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "task_name": "scenefunc3d_mask_generation",
+                "sample_id": "421254::desc-a",
+                "outcome": {
+                    "mask_artifact_path": str(artifact_path),
+                    "mask_npz_path": str(tmp_path / "unused_prediction.npz"),
+                    "mask_ply_path": "/tmp/lifted_points.ply",
+                    "selected_frame_ids": ["000010"],
+                    "accepted_fragment_ids": ["frag-a"],
+                    "confidence": 0.9,
+                    "uncertainties": [],
+                },
+                "turn": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = evaluation_cli.main(
+        [
+            "--data-root",
+            str(tmp_path),
+            "--result-path",
+            str(result_path),
+        ]
+    )
+
+    assert exit_code == 0
+    payload = _json_object(capsys.readouterr().out)
+    assert payload["sample_id"] == "421254::desc-a"
+    assert payload["failure_type"] == ""
+    metrics = _json_object_member(payload, "metrics")
+    assert metrics["iou"] == 1.0
+    assert metrics["precision"] == 1.0
+    assert metrics["recall"] == 1.0
+    assert metrics["f1"] == 1.0
+    assert metrics["predicted_count"] == 5
+    assert metrics["gt_count"] == 5
+
+
 def test_lift_mask_args_accepts_existing_input_files(tmp_path: Path) -> None:
     payload = _lift_mask_args_payload(tmp_path)
 
@@ -401,3 +455,17 @@ def _write_scoring_mask_artifact(artifact_path: Path, *, mask_npz_path: Path) ->
         ),
         encoding="utf-8",
     )
+
+
+def _json_object(raw_json: str) -> Mapping[str, object]:
+    payload: object = json.loads(raw_json)
+    assert isinstance(payload, dict)
+    return cast(Mapping[str, object], payload)
+
+
+def _json_object_member(
+    payload: Mapping[str, object], member_name: str
+) -> Mapping[str, object]:
+    member = payload[member_name]
+    assert isinstance(member, dict)
+    return cast(Mapping[str, object], member)
