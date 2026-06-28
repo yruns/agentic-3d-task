@@ -6,6 +6,7 @@ import json
 import threading
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from typing import cast
 
 import pytest
 from pydantic import ValidationError
@@ -26,6 +27,7 @@ from codex_agent.scenefunc3d.tools.sam_masking import (
     SamMaskArgs,
     SamMaskResult,
     run_sam_backend,
+    sam_mask,
 )
 
 
@@ -299,7 +301,274 @@ def test_cli_sam_mask_returns_recoverable_backend_error(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert "sam_mask backend execution is not configured" in payload["error"]
+    assert "sam_mask backend config is required" in payload["error"]
+
+
+def test_cli_sam_mask_uses_configured_fake_backend(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    mask_path = output_root / "server_masks" / "mask_00.npz"
+    mask_path.parent.mkdir(parents=True)
+    mask = np.zeros((80, 100), dtype=np.uint8)
+    mask[20:30, 10:30] = 1
+    np.savez(mask_path, mask=mask)
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(mask_path),
+                        "pixel_count": 2,
+                        "coverage_percent": 50.0,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    try:
+        code = main(
+            [
+                "sam_mask",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(image_path),
+                        "points": [
+                            {
+                                "x_px": 10.0,
+                                "y_px": 20.0,
+                                "source": '<point x="10" y="20">drawer</point>',
+                                "label": "drawer",
+                            }
+                        ],
+                    }
+                ),
+                "--out-dir",
+                str(output_root),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["candidates"][0]["candidate_id"] == "mask_00"
+    assert Path(payload["candidates"][0]["mask_npz_path"]).exists()
+    assert Path(payload["contact_sheet_path"]).exists()
+
+
+def test_cli_sam_mask_contact_sheet_shows_all_candidate_labels(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    mask_dir = output_root / "server_masks"
+    mask_dir.mkdir(parents=True)
+    first_mask_path = mask_dir / "mask_00.npz"
+    second_mask_path = mask_dir / "mask_01.npz"
+    first_mask = np.zeros((80, 100), dtype=np.uint8)
+    first_mask[20:30, 10:30] = 1
+    second_mask = np.zeros((80, 100), dtype=np.uint8)
+    second_mask[40:50, 60:80] = 1
+    np.savez(first_mask_path, mask=first_mask)
+    np.savez(second_mask_path, mask=second_mask)
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(first_mask_path),
+                        "pixel_count": 200,
+                        "coverage_percent": 2.0,
+                    },
+                    {
+                        "candidate_id": "mask_01",
+                        "score": 0.72,
+                        "mask_npz_path": str(second_mask_path),
+                        "pixel_count": 200,
+                        "coverage_percent": 2.0,
+                    },
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    try:
+        code = main(
+            [
+                "sam_mask",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(image_path),
+                        "points": [
+                            {
+                                "x_px": 10.0,
+                                "y_px": 20.0,
+                                "source": '<point x="10" y="20">drawer</point>',
+                                "label": "drawer",
+                            }
+                        ],
+                    }
+                ),
+                "--out-dir",
+                str(output_root),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert [candidate["candidate_id"] for candidate in payload["candidates"]] == [
+        "mask_00",
+        "mask_01",
+    ]
+    with Image.open(payload["contact_sheet_path"]) as contact_sheet:
+        assert contact_sheet.size[0] == 200
+        assert contact_sheet.size[1] > 80
+
+
+def test_sam_mask_rejects_npz_missing_mask_key(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    _, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    output_root.mkdir()
+    mask_path = output_root / "mask_00.npz"
+    np.savez(mask_path, not_mask=np.array([[0, 1], [1, 0]], dtype=np.uint8))
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(mask_path),
+                        "pixel_count": 2,
+                        "coverage_percent": 50.0,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    args = SamMaskArgs.model_validate(
+        {
+            "frame_id": "000000",
+            "image_path": image_path,
+            "points": [
+                {
+                    "x_px": 10.0,
+                    "y_px": 20.0,
+                    "source": '<point x="10" y="20">drawer</point>',
+                    "label": "drawer",
+                },
+            ],
+        }
+    )
+    try:
+        with pytest.raises(ToolInputError, match="missing required key 'mask'"):
+            sam_mask(args, out_dir=output_root, backend_config_path=config_path)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_sam_mask_rejects_mask_shape_mismatch(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    _, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    output_root.mkdir()
+    mask_path = output_root / "mask_00.npz"
+    np.savez(mask_path, mask=np.array([[0, 1], [1, 0]], dtype=np.uint8))
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(mask_path),
+                        "pixel_count": 2,
+                        "coverage_percent": 50.0,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    args = SamMaskArgs.model_validate(
+        {
+            "frame_id": "000000",
+            "image_path": image_path,
+            "points": [
+                {
+                    "x_px": 10.0,
+                    "y_px": 20.0,
+                    "source": '<point x="10" y="20">drawer</point>',
+                    "label": "drawer",
+                },
+            ],
+        }
+    )
+    try:
+        with pytest.raises(ToolInputError, match="shape"):
+            sam_mask(args, out_dir=output_root, backend_config_path=config_path)
+    finally:
+        server.shutdown()
+        server.server_close()
 
 
 def test_cli_lift_mask_returns_recoverable_backend_error(
@@ -466,12 +735,16 @@ def test_sam_result_payload() -> None:
                 score=0.82,
                 pixel_count=1119,
                 coverage_percent=0.0405,
+                mask_npz_path=Path("/tmp/mask_00.npz"),
                 overlay_path=Path("/tmp/mask_00.jpg"),
             ),
         ),
         contact_sheet_path=Path("/tmp/sam_candidates.jpg"),
     )
-    assert result.to_payload()["candidates"][0]["candidate_id"] == "mask_00"
+    payload = result.to_payload()
+    candidates = cast(list[dict[str, object]], payload["candidates"])
+    assert candidates[0]["candidate_id"] == "mask_00"
+    assert candidates[0]["mask_npz_path"] == "/tmp/mask_00.npz"
 
 
 def _write_cli_scene(root: Path) -> tuple[Path, Path]:
@@ -498,7 +771,7 @@ def _write_cli_scene_with_real_image(root: Path) -> tuple[Path, Path]:
 def _write_backend_config(tmp_path: Path, *, molmo_url: str, sam_url: str) -> Path:
     config_path = tmp_path / "scenefunc3d_backends.toml"
     output_root = tmp_path / "out"
-    output_root.mkdir()
+    output_root.mkdir(exist_ok=True)
     config_path.write_text(
         f"""
 molmo_url = "{molmo_url}"

@@ -1,10 +1,12 @@
-"""Data contracts for future SceneFunc3D SAM mask candidate generation."""
+"""Data contracts and sidecar integration for SceneFunc3D SAM masks."""
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, TypedDict
+from re import Pattern
+from typing import TYPE_CHECKING, Annotated, TypedDict
 
 from pydantic import (
     BaseModel,
@@ -18,8 +20,26 @@ from pydantic import (
 from ...errors import SceneFunc3dDataError
 from .models import ToolInputError
 
+if TYPE_CHECKING:
+    import numpy as np
+    import numpy.typing as npt
+    from PIL.Image import Image as PillowImage
+
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+SafePathComponentText = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        pattern=r"^[A-Za-z0-9_-]+$",
+    ),
+]
 StrictPixelCoordinate = Annotated[float, Field(ge=0.0, strict=True)]
+_SAFE_PATH_COMPONENT_RE: Pattern[str] = re.compile(r"^[A-Za-z0-9_-]+$")
+_MASK_OVERLAY_ALPHA = 96
+_CONTACT_LABEL_HEIGHT_PX = 24
+_CONTACT_LABEL_PADDING_PX = 4
+_JPEG_QUALITY = 95
 
 
 class SamCandidatePayload(TypedDict):
@@ -29,6 +49,7 @@ class SamCandidatePayload(TypedDict):
     score: float
     pixel_count: int
     coverage_percent: float
+    mask_npz_path: str
     overlay_path: str
 
 
@@ -78,11 +99,11 @@ class SamPointInput(BaseModel):
 
 
 class SamMaskArgs(BaseModel):
-    """Arguments for a future SAM mask candidate tool."""
+    """Arguments for a SAM mask candidate tool."""
 
     model_config = ConfigDict(extra="forbid")
 
-    frame_id: NonEmptyText
+    frame_id: SafePathComponentText
     image_path: FilePath
     points: tuple[SamPointInput, ...] = Field(min_length=1)
 
@@ -128,6 +149,7 @@ class SamCandidate:
     score: float
     pixel_count: int
     coverage_percent: float
+    mask_npz_path: Path
     overlay_path: Path
 
     def __post_init__(self) -> None:
@@ -155,6 +177,7 @@ class SamCandidate:
             "score": self.score,
             "pixel_count": self.pixel_count,
             "coverage_percent": self.coverage_percent,
+            "mask_npz_path": str(self.mask_npz_path),
             "overlay_path": str(self.overlay_path),
         }
 
@@ -167,13 +190,264 @@ class SamMaskResult:
     candidates: tuple[SamCandidate, ...]
     contact_sheet_path: Path
 
-    def to_payload(self) -> SamMaskResultPayload:
+    def to_payload(self) -> dict[str, object]:
         """Return the JSON-ready CLI payload."""
         return {
             "frame_id": self.frame_id,
             "candidates": [candidate.to_payload() for candidate in self.candidates],
             "contact_sheet_path": str(self.contact_sheet_path),
         }
+
+
+@dataclass(frozen=True)
+class _ContactSheetEntry:
+    """One labeled overlay tile for SAM candidate review."""
+
+    candidate_id: str
+    overlay_path: Path
+
+
+def sam_mask(
+    args: SamMaskArgs,
+    *,
+    out_dir: Path,
+    backend_config_path: Path | None,
+) -> SamMaskResult:
+    """Call SAM sidecar, validate masks, and write overlay artifacts."""
+    if backend_config_path is None:
+        raise ToolInputError("sam_mask backend config is required")
+
+    from codex_agent.scenefunc3d.backends.config import (
+        ensure_path_under_roots,
+        load_backend_settings,
+    )
+    from codex_agent.scenefunc3d.backends.sam_rpc import request_sam_masks
+
+    settings = load_backend_settings(backend_config_path)
+    artifact_out_dir = ensure_path_under_roots(
+        out_dir,
+        roots=settings.allowed_output_roots,
+        field_name="out_dir",
+    )
+    frame_artifact_dir = artifact_out_dir / "sam" / args.frame_id
+    staging_dir = frame_artifact_dir / "candidates"
+    try:
+        staging_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ToolInputError(
+            "could not create SAM staging directory: "
+            f"staging_dir={staging_dir}; error_type={exc.__class__.__name__}"
+        ) from exc
+    request_id = f"{args.frame_id}_sam"
+    response = request_sam_masks(
+        settings,
+        request_id=request_id,
+        args=args,
+        staging_dir=staging_dir,
+    )
+
+    candidates: list[SamCandidate] = []
+    contact_sheet_entries: list[_ContactSheetEntry] = []
+    for candidate_response in response.candidates:
+        safe_candidate_id = _safe_path_component(candidate_response.candidate_id)
+        mask_npz_path = ensure_path_under_roots(
+            candidate_response.mask_npz_path,
+            roots=settings.allowed_output_roots,
+            field_name="mask_npz_path",
+        )
+        boolean_mask = _load_boolean_mask(mask_npz_path)
+        overlay_path = _write_candidate_overlay(
+            image_path=args.image_path,
+            mask=boolean_mask,
+            overlay_path=(frame_artifact_dir / f"{safe_candidate_id}_overlay.jpg"),
+        )
+        contact_sheet_entries.append(
+            _ContactSheetEntry(
+                candidate_id=candidate_response.candidate_id,
+                overlay_path=overlay_path,
+            )
+        )
+        candidates.append(
+            SamCandidate(
+                candidate_id=candidate_response.candidate_id,
+                score=candidate_response.score,
+                pixel_count=candidate_response.pixel_count,
+                coverage_percent=candidate_response.coverage_percent,
+                mask_npz_path=mask_npz_path,
+                overlay_path=overlay_path,
+            )
+        )
+
+    contact_sheet_path = _write_contact_sheet(
+        contact_sheet_entries,
+        contact_sheet_path=frame_artifact_dir / "contact_sheet.jpg",
+    )
+    return SamMaskResult(
+        frame_id=args.frame_id,
+        candidates=tuple(candidates),
+        contact_sheet_path=contact_sheet_path,
+    )
+
+
+def _load_boolean_mask(mask_npz_path: Path) -> npt.NDArray[np.bool_]:
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise ToolInputError(
+            "numpy is required to load SAM mask npz artifacts; install the "
+            "'vision' extra"
+        ) from exc
+
+    try:
+        with np.load(mask_npz_path) as archive:
+            if "mask" not in archive.files:
+                raise ToolInputError(
+                    "SAM mask npz is missing required key 'mask': "
+                    f"path={mask_npz_path}"
+                )
+            mask_array = archive["mask"]
+    except ToolInputError:
+        raise
+    except (OSError, ValueError) as exc:
+        raise ToolInputError(
+            "could not load SAM mask npz artifact: "
+            f"path={mask_npz_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+
+    if mask_array.ndim != 2:
+        raise ToolInputError(
+            "SAM mask array must be 2D: "
+            f"path={mask_npz_path}; ndim={mask_array.ndim}"
+        )
+    try:
+        boolean_mask: npt.NDArray[np.bool_] = mask_array.astype(np.bool_, copy=False)
+        return boolean_mask
+    except (TypeError, ValueError) as exc:
+        raise ToolInputError(
+            "SAM mask array could not be converted to boolean: "
+            f"path={mask_npz_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+
+
+def _write_candidate_overlay(
+    *,
+    image_path: Path,
+    mask: npt.NDArray[np.bool_],
+    overlay_path: Path,
+) -> Path:
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise ToolInputError(
+            "Pillow is required to render SAM mask overlays; install the "
+            "'vision' extra"
+        ) from exc
+
+    try:
+        overlay_path.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(image_path) as image:
+            base_image = image.convert("RGBA")
+        if mask.shape != (base_image.height, base_image.width):
+            raise ToolInputError(
+                "SAM mask shape must match image dimensions: "
+                f"image_path={image_path}; mask_shape={mask.shape}; "
+                f"image_size={(base_image.width, base_image.height)}"
+            )
+        mask_image = Image.fromarray(mask.astype("uint8") * 255)
+        color_layer = Image.new("RGBA", base_image.size, (255, 0, 0, 0))
+        color_layer.putalpha(
+            mask_image.point(
+                lambda pixel_value: _MASK_OVERLAY_ALPHA if pixel_value else 0
+            )
+        )
+        base_image.alpha_composite(color_layer)
+        base_image.convert("RGB").save(
+            overlay_path, format="JPEG", quality=_JPEG_QUALITY
+        )
+    except OSError as exc:
+        raise ToolInputError(
+            "could not render SAM mask overlay: "
+            f"image_path={image_path}; overlay_path={overlay_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+    return overlay_path
+
+
+def _write_contact_sheet(
+    entries: list[_ContactSheetEntry],
+    *,
+    contact_sheet_path: Path,
+) -> Path:
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError as exc:
+        raise ToolInputError(
+            "Pillow is required to render SAM contact sheets; install the "
+            "'vision' extra"
+        ) from exc
+
+    try:
+        contact_sheet_path.parent.mkdir(parents=True, exist_ok=True)
+        if not entries:
+            raise ToolInputError(
+                "cannot render SAM contact sheet without mask candidates: "
+                f"contact_sheet_path={contact_sheet_path}"
+            )
+
+        images: list[PillowImage] = []
+        try:
+            for entry in entries:
+                with Image.open(entry.overlay_path) as image:
+                    images.append(image.convert("RGB"))
+            width = max(image.width for image in images)
+            overlay_height = max(image.height for image in images)
+            sheet = Image.new(
+                "RGB",
+                (width * len(images), overlay_height + _CONTACT_LABEL_HEIGHT_PX),
+                color=(255, 255, 255),
+            )
+            draw = ImageDraw.Draw(sheet)
+            for index, image in enumerate(images):
+                left = index * width
+                sheet.paste(image, (left, 0))
+                label_top = overlay_height
+                draw.rectangle(
+                    (
+                        left,
+                        label_top,
+                        left + width,
+                        label_top + _CONTACT_LABEL_HEIGHT_PX,
+                    ),
+                    fill=(245, 245, 245),
+                    outline=(180, 180, 180),
+                )
+                draw.text(
+                    (
+                        left + _CONTACT_LABEL_PADDING_PX,
+                        label_top + _CONTACT_LABEL_PADDING_PX,
+                    ),
+                    entries[index].candidate_id,
+                    fill=(0, 0, 0),
+                )
+            sheet.save(contact_sheet_path, format="JPEG", quality=_JPEG_QUALITY)
+        finally:
+            for image in images:
+                image.close()
+    except OSError as exc:
+        raise ToolInputError(
+            "could not render SAM contact sheet: "
+            f"contact_sheet_path={contact_sheet_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+    return contact_sheet_path
+
+
+def _safe_path_component(value: str) -> str:
+    if not _SAFE_PATH_COMPONENT_RE.fullmatch(value):
+        raise ToolInputError(
+            "SAM candidate_id must be a safe path component: " f"candidate_id={value!r}"
+        )
+    return value
 
 
 __all__ = [
@@ -187,4 +461,5 @@ __all__ = [
     "SamPointInput",
     "SamPointInputPayload",
     "run_sam_backend",
+    "sam_mask",
 ]

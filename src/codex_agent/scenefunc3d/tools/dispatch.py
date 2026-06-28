@@ -73,10 +73,13 @@ def run_tool(
             backend_config_path=backend_config_path,
         )
     if name == "sam_mask":
-        from .sam_masking import SamMaskArgs
+        from .sam_masking import SamMaskArgs, sam_mask
 
-        _parse(SamMaskArgs, raw_args)
-        raise ToolInputError("sam_mask backend execution is not configured")
+        return sam_mask(
+            _parse(SamMaskArgs, raw_args),
+            out_dir=out_dir,
+            backend_config_path=backend_config_path,
+        )
     if name == "lift_mask_to_3d":
         from .mask_lifting import LiftMaskArgs
 
