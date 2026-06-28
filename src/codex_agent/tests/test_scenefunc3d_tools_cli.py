@@ -305,7 +305,7 @@ def test_cli_view_frame_missing_image_is_recoverable(
     assert "no RGB image found" in payload["error"]
 
 
-def test_cli_frame_objects_returns_empty_visible_list(
+def test_cli_frame_objects_reports_unavailable_index(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     scene_dir = _write_raw_rgb_scene(tmp_path)
@@ -322,7 +322,7 @@ def test_cli_frame_objects_returns_empty_visible_list(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert payload == {"frame_id": "000000", "objects": []}
+    assert "frame_objects requires a visible-object index" in payload["error"]
 
 
 def test_cli_view_crop_requires_frame_id(
@@ -343,6 +343,46 @@ def test_cli_view_crop_requires_frame_id(
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
     assert "frame_id" in payload["error"]
+
+
+def test_cli_view_crop_rejects_invalid_bbox(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+
+    code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000", "bbox": [-1.0, 0.1, 2.0, 0.5]}),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "bbox" in payload["error"]
+
+
+def test_cli_view_crop_reports_unconfigured_renderer(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+
+    code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000", "bbox": [0.1, 0.1, 0.5, 0.5]}),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "view_crop rendering is not configured" in payload["error"]
 
 
 def test_cli_view_bev_reports_unavailable_without_bev_asset(

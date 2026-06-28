@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .models import ToolInputError
 from .scene_context import SceneFunc3dToolScene
@@ -97,6 +98,22 @@ class ViewCropArgs(BaseModel):
     frame_id: str = Field(min_length=1)
     bbox: tuple[float, float, float, float]
 
+    @field_validator("bbox")
+    @classmethod
+    def validate_bbox(
+        cls, bbox: tuple[float, float, float, float]
+    ) -> tuple[float, float, float, float]:
+        """Validate normalized crop coordinates."""
+        left, top, right, bottom = bbox
+        coordinates = (left, top, right, bottom)
+        if any(not math.isfinite(value) for value in coordinates):
+            raise ValueError("bbox coordinates must be finite")
+        if any(value < 0.0 or value > 1.0 for value in coordinates):
+            raise ValueError("bbox coordinates must be normalized to [0, 1]")
+        if left >= right or top >= bottom:
+            raise ValueError("bbox must satisfy left < right and top < bottom")
+        return bbox
+
 
 class ViewBevArgs(BaseModel):
     """Arguments for ``view_bev``."""
@@ -153,7 +170,10 @@ def frame_objects(
 ) -> FrameObjectsResult:
     """Return the currently available visible-object contract for one frame."""
     _validate_frame_ids(tool_scene, (args.frame_id,))
-    return FrameObjectsResult(frame_id=args.frame_id, objects=())
+    raise ToolInputError(
+        "frame_objects requires a visible-object index, which is not available "
+        f"for frame {args.frame_id!r}"
+    )
 
 
 def view_crop(
@@ -161,14 +181,14 @@ def view_crop(
 ) -> ViewFrameResult:
     """Return a crop evidence image for one frame.
 
-    The initial lightweight contract validates the requested frame and bbox shape,
-    then reuses the full-frame evidence image until crop rendering is backed by a
-    real image operation.
+    The initial lightweight contract validates the requested frame and bbox, but
+    fails recoverably until crop rendering is backed by a real image operation.
     """
     _validate_frame_ids(tool_scene, (args.frame_id,))
-    _ = args.bbox
-    return view_frame(
-        tool_scene, ViewFrameArgs(frame_ids=(args.frame_id,)), out_dir=out_dir
+    _ = out_dir
+    raise ToolInputError(
+        "view_crop rendering is not configured for SceneFunc3D; requested "
+        f"frame {args.frame_id!r} bbox={args.bbox!r}"
     )
 
 
@@ -234,8 +254,8 @@ def _write_jpeg_copy(source_path: Path, destination_path: Path) -> Path:
             "'vision' extra"
         ) from exc
 
-    destination_path.parent.mkdir(parents=True, exist_ok=True)
     try:
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
         with Image.open(source_path) as image:
             image.convert("RGB").save(
                 destination_path, format="JPEG", quality=_JPEG_QUALITY
