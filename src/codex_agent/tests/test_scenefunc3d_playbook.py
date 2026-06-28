@@ -60,6 +60,7 @@ def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,
         output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
     )
 
     with pytest.raises(FrozenInstanceError):
@@ -100,6 +101,7 @@ def test_load_runner_sample_uses_config_dataset_root(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,
         output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
     )
 
     sample = load_runner_sample(config, "421254::desc-a")
