@@ -81,10 +81,9 @@ def run_tool(
             backend_config_path=backend_config_path,
         )
     if name == "lift_mask_to_3d":
-        from .mask_lifting import LiftMaskArgs
+        from .mask_lifting import LiftMaskArgs, lift_mask_to_3d
 
-        _parse(LiftMaskArgs, raw_args)
-        raise ToolInputError("lift_mask_to_3d backend execution is not configured")
+        return lift_mask_to_3d(_parse(LiftMaskArgs, raw_args), out_dir=out_dir)
     if name == "inspect_mask_artifact":
         raise ToolInputError("inspect_mask_artifact requires an existing artifact path")
     if name == "suggest_additional_views":

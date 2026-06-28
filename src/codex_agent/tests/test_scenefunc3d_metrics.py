@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from codex_agent.errors import SceneFunc3dDataError
 from codex_agent.scenefunc3d.evaluation.metrics import (
     MaskMetrics,
     compute_mask_metrics,
@@ -123,6 +124,15 @@ def test_lift_mask_args_rejects_blank_ids(tmp_path: Path, field_name: str) -> No
         LiftMaskArgs.model_validate(payload)
 
 
+@pytest.mark.parametrize("field_name", ["frame_id", "candidate_id"])
+def test_lift_mask_args_rejects_unsafe_ids(tmp_path: Path, field_name: str) -> None:
+    payload = _lift_mask_args_payload(tmp_path)
+    payload[field_name] = "../escape"
+
+    with pytest.raises(ValidationError):
+        LiftMaskArgs.model_validate(payload)
+
+
 def test_lift_mask_result_payload_is_json_serializable() -> None:
     result = LiftMaskResult(
         frame_id="000050",
@@ -139,6 +149,18 @@ def test_lift_mask_result_payload_is_json_serializable() -> None:
     assert isinstance(payload["mask_ply_path"], str)
     assert isinstance(payload["overlay_path"], str)
     assert json.loads(json.dumps(payload)) == payload
+
+
+def test_lift_mask_result_rejects_zero_points() -> None:
+    with pytest.raises(SceneFunc3dDataError, match="positive"):
+        LiftMaskResult(
+            frame_id="000050",
+            candidate_id="mask_00",
+            lifted_point_count=0,
+            mask_npz_path=Path("/tmp/mask_00.npz"),
+            mask_ply_path=Path("/tmp/mask_00.ply"),
+            overlay_path=Path("/tmp/mask_00_overlay.png"),
+        )
 
 
 def _lift_mask_args_payload(tmp_path: Path) -> dict[str, object]:

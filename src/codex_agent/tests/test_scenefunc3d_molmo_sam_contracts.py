@@ -571,16 +571,22 @@ def test_sam_mask_rejects_mask_shape_mismatch(tmp_path: Path) -> None:
         server.server_close()
 
 
-def test_cli_lift_mask_returns_recoverable_backend_error(
+def test_cli_lift_mask_writes_deterministic_artifacts(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    scene_dir, _ = _write_cli_scene(tmp_path)
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir, _ = _write_cli_scene_with_real_image(tmp_path)
     mask_path = tmp_path / "mask.npz"
     depth_path = tmp_path / "depth.png"
     intrinsics_path = tmp_path / "intrinsics.txt"
     pose_path = tmp_path / "pose.txt"
-    for input_path in (mask_path, depth_path, intrinsics_path, pose_path):
-        input_path.write_bytes(b"placeholder")
+    np.savez(mask_path, mask=np.array([[0, 1], [0, 0]], dtype=np.uint8))
+    Image.fromarray(np.array([[0, 2000], [0, 0]], dtype=np.uint16)).save(depth_path)
+    intrinsics_path.write_text("2 0 0\n0 2 0\n0 0 1\n", encoding="utf-8")
+    pose_path.write_text("1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
     args_payload: dict[str, object] = {
         "frame_id": "000000",
         "candidate_id": "mask_00",
@@ -597,12 +603,23 @@ def test_cli_lift_mask_returns_recoverable_backend_error(
             str(scene_dir),
             "--args",
             json.dumps(args_payload),
+            "--out-dir",
+            str(tmp_path / "out"),
         ]
     )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert "lift_mask_to_3d backend execution is not configured" in payload["error"]
+    assert payload["frame_id"] == "000000"
+    assert payload["candidate_id"] == "mask_00"
+    assert payload["lifted_point_count"] == 1
+    assert Path(payload["mask_npz_path"]).exists()
+    assert Path(payload["mask_ply_path"]).read_text(encoding="ascii").startswith("ply")
+    assert (
+        Path(payload["overlay_path"])
+        .read_text(encoding="utf-8")
+        .startswith("frame_id=000000\n")
+    )
 
 
 def test_parse_molmo_points_preserves_tag_order() -> None:
