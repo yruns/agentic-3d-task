@@ -192,6 +192,8 @@ class ViewFrame:
 
     frame_id: str
     image_path: Path
+    image_width: int | None = None
+    image_height: int | None = None
     depth_path: Path | None = None
     intrinsics_path: Path | None = None
     pose_path: Path | None = None
@@ -202,6 +204,10 @@ class ViewFrame:
             "frame_id": self.frame_id,
             "image_path": str(self.image_path),
         }
+        if self.image_width is not None:
+            payload["image_width"] = self.image_width
+        if self.image_height is not None:
+            payload["image_height"] = self.image_height
         if self.depth_path is not None:
             payload["depth_path"] = str(self.depth_path)
         if self.intrinsics_path is not None:
@@ -233,13 +239,16 @@ def view_frame(
     frames: list[ViewFrame] = []
     for frame_id in args.frame_ids:
         geometry_paths = _resolve_frame_geometry_paths(tool_scene, frame_id)
+        rendered_image = _write_jpeg_copy(
+            _resolve_rgb_source(tool_scene, frame_id),
+            out_dir / tool_scene.visit_id / f"{frame_id}.jpg",
+        )
         frames.append(
             ViewFrame(
                 frame_id=frame_id,
-                image_path=_write_jpeg_copy(
-                    _resolve_rgb_source(tool_scene, frame_id),
-                    out_dir / tool_scene.visit_id / f"{frame_id}.jpg",
-                ),
+                image_path=rendered_image.image_path,
+                image_width=rendered_image.image_width,
+                image_height=rendered_image.image_height,
                 depth_path=geometry_paths.depth_path,
                 intrinsics_path=geometry_paths.intrinsics_path,
                 pose_path=geometry_paths.pose_path,
@@ -266,7 +275,7 @@ def view_crop(
 ) -> ViewFrameResult:
     """Render a crop evidence image for one frame."""
     _validate_frame_ids(tool_scene, (args.frame_id,))
-    crop_path = _write_crop_jpeg(
+    rendered_crop = _write_crop_jpeg(
         _resolve_rgb_source(tool_scene, args.frame_id),
         out_dir
         / tool_scene.visit_id
@@ -279,7 +288,14 @@ def view_crop(
         bbox_format=args.bbox_format,
     )
     return ViewFrameResult(
-        frames=(ViewFrame(frame_id=args.frame_id, image_path=crop_path),)
+        frames=(
+            ViewFrame(
+                frame_id=args.frame_id,
+                image_path=rendered_crop.image_path,
+                image_width=rendered_crop.image_width,
+                image_height=rendered_crop.image_height,
+            ),
+        )
     )
 
 
@@ -467,7 +483,16 @@ def _prefer_existing_file(
     return None
 
 
-def _write_jpeg_copy(source_path: Path, destination_path: Path) -> Path:
+@dataclass(frozen=True)
+class _RenderedImage:
+    """A rendered evidence image and its pixel dimensions."""
+
+    image_path: Path
+    image_width: int
+    image_height: int
+
+
+def _write_jpeg_copy(source_path: Path, destination_path: Path) -> _RenderedImage:
     try:
         from PIL import Image
     except ImportError as exc:
@@ -479,14 +504,19 @@ def _write_jpeg_copy(source_path: Path, destination_path: Path) -> Path:
     try:
         destination_path.parent.mkdir(parents=True, exist_ok=True)
         with Image.open(source_path) as image:
-            image.convert("RGB").save(
-                destination_path, format="JPEG", quality=_JPEG_QUALITY
-            )
+            rgb_image = image.convert("RGB")
+            rgb_image.save(destination_path, format="JPEG", quality=_JPEG_QUALITY)
+            image_width = rgb_image.width
+            image_height = rgb_image.height
     except OSError as exc:
         raise ToolInputError(
             f"could not render RGB image {source_path} as JPEG: {exc}"
         ) from exc
-    return destination_path
+    return _RenderedImage(
+        image_path=destination_path,
+        image_width=image_width,
+        image_height=image_height,
+    )
 
 
 def _write_crop_jpeg(
@@ -495,7 +525,7 @@ def _write_crop_jpeg(
     *,
     bbox: tuple[float, float, float, float],
     bbox_format: BboxFormat,
-) -> Path:
+) -> _RenderedImage:
     try:
         from PIL import Image
     except ImportError as exc:
@@ -514,18 +544,25 @@ def _write_crop_jpeg(
                 width=rgb_image.width,
                 height=rgb_image.height,
             )
-            rgb_image.crop(crop_box).save(
+            crop_image = rgb_image.crop(crop_box)
+            crop_image.save(
                 destination_path,
                 format="JPEG",
                 quality=_JPEG_QUALITY,
             )
+            image_width = crop_image.width
+            image_height = crop_image.height
     except OSError as exc:
         raise ToolInputError(
             "could not render RGB crop: "
             f"source_path={source_path}; destination_path={destination_path}; "
             f"error_type={exc.__class__.__name__}"
         ) from exc
-    return destination_path
+    return _RenderedImage(
+        image_path=destination_path,
+        image_width=image_width,
+        image_height=image_height,
+    )
 
 
 def _crop_filename(

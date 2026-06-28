@@ -56,6 +56,12 @@ def test_playbook_requires_agent_approval_gates() -> None:
     assert "must approve" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_tells_agent_to_pass_evidence_image_dimensions_to_molmo() -> None:
+    assert "image_width" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "image_height" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "molmo_point" in SCENEFUNC3D_TOOLS_PLAYBOOK
+
+
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,

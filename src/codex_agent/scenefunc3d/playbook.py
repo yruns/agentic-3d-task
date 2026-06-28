@@ -39,6 +39,9 @@ Tool catalog
 - suggest_additional_views: propose more views for multi-view completion.
 - fuse_accepted_masks: fuse approved 3D fragments into the final artifact.
 
+When calling molmo_point, pass the image_path, image_width, and image_height
+returned by view_frame or view_crop. Do not guess evidence image dimensions.
+
 Approval gates are mandatory:
 1. After molmo_point, inspect the Molmo point overlay. You must approve the
 Molmo point before calling sam_mask.

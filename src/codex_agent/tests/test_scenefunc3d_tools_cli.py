@@ -176,6 +176,8 @@ def test_cli_view_frame_returns_image_path(
     payload = json.loads(capsys.readouterr().out.strip())
     assert payload["frames"][0]["frame_id"] == "000000"
     assert Path(payload["frames"][0]["image_path"]).exists()
+    assert payload["frames"][0]["image_width"] == 12
+    assert payload["frames"][0]["image_height"] == 10
 
 
 def test_cli_view_frame_exposes_raw_geometry_paths(
@@ -747,6 +749,8 @@ def test_cli_view_crop_renders_normalized_rgb_crop(
     payload = json.loads(capsys.readouterr().out.strip())
     crop_path = Path(payload["frames"][0]["image_path"])
     assert payload["frames"][0]["frame_id"] == "000000"
+    assert payload["frames"][0]["image_width"] == 40
+    assert payload["frames"][0]["image_height"] == 32
     assert crop_path.exists()
     with Image.open(crop_path) as crop_image:
         assert crop_image.size == (40, 32)
