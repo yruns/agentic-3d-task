@@ -83,7 +83,11 @@ def run_tool(
     if name == "lift_mask_to_3d":
         from .mask_lifting import LiftMaskArgs, lift_mask_to_3d
 
-        return lift_mask_to_3d(_parse(LiftMaskArgs, raw_args), out_dir=out_dir)
+        return lift_mask_to_3d(
+            _parse(LiftMaskArgs, raw_args),
+            out_dir=out_dir,
+            scene_mesh_path=tool_scene.conceptgraph_dir / "mesh.ply",
+        )
     if name == "inspect_mask_artifact":
         from .mask_inspection import InspectMaskArtifactArgs, inspect_mask_artifact
 

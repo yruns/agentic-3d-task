@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import struct
 import threading
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -630,6 +631,10 @@ def test_cli_lift_mask_writes_deterministic_artifacts(
     from PIL import Image
 
     scene_dir, _ = _write_cli_scene_with_real_image(tmp_path)
+    _write_binary_scene_mesh(
+        scene_dir / "conceptgraph" / "mesh.ply",
+        points=((10.0, 0.0, 0.0), (1.0, 0.0, 2.0)),
+    )
     mask_path = tmp_path / "mask.npz"
     depth_path = tmp_path / "depth.png"
     intrinsics_path = tmp_path / "intrinsics.txt"
@@ -665,6 +670,10 @@ def test_cli_lift_mask_writes_deterministic_artifacts(
     assert payload["candidate_id"] == "mask_00"
     assert payload["lifted_point_count"] == 1
     assert Path(payload["mask_npz_path"]).exists()
+    with np.load(Path(payload["mask_npz_path"])) as archive:
+        np.testing.assert_array_equal(
+            archive["point_indices"], np.array([1], dtype=np.int64)
+        )
     assert Path(payload["mask_ply_path"]).read_text(encoding="ascii").startswith("ply")
     assert (
         Path(payload["overlay_path"])
@@ -830,10 +839,45 @@ def _write_cli_scene_with_real_image(root: Path) -> tuple[Path, Path]:
 
     scene_dir = root / "421254"
     raw_dir = scene_dir / "raw"
+    conceptgraph_dir = scene_dir / "conceptgraph"
     raw_dir.mkdir(parents=True)
+    conceptgraph_dir.mkdir()
     image_path = raw_dir / "000000-rgb.png"
     Image.new("RGB", (100, 80), color=(20, 30, 40)).save(image_path)
     return scene_dir, image_path
+
+
+def _write_binary_scene_mesh(
+    path: Path, *, points: tuple[tuple[float, float, float], ...]
+) -> Path:
+    header = (
+        "ply\n"
+        "format binary_little_endian 1.0\n"
+        f"element vertex {len(points)}\n"
+        "property float x\n"
+        "property float y\n"
+        "property float z\n"
+        "property uchar red\n"
+        "property uchar green\n"
+        "property uchar blue\n"
+        "end_header\n"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("wb") as handle:
+        handle.write(header.encode("ascii"))
+        for x_value, y_value, z_value in points:
+            handle.write(
+                struct.pack(
+                    "<fffBBB",
+                    x_value,
+                    y_value,
+                    z_value,
+                    0,
+                    0,
+                    0,
+                )
+            )
+    return path
 
 
 def _write_backend_config(tmp_path: Path, *, molmo_url: str, sam_url: str) -> Path:

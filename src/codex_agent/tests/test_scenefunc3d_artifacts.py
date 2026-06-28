@@ -35,6 +35,7 @@ from codex_agent.scenefunc3d.tools.mask_inspection import (
     inspect_mask_artifact,
     suggest_additional_views,
 )
+from codex_agent.scenefunc3d.tools.models import ToolInputError
 from codex_agent.scenefunc3d.tools.scene_context import SceneFunc3dToolScene
 
 _APPROVED_FRAGMENT_ACTIONS: tuple[ApprovalAction, ...] = (
@@ -243,8 +244,13 @@ def test_accepted_fragment_rejects_invalid_approval_actions() -> None:
 
 
 def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None:
-    first_npz_path, first_ply_path = _write_points_artifact(tmp_path / "frag-a")
-    second_npz_path, second_ply_path = _write_points_artifact(tmp_path / "frag-b")
+    np = pytest.importorskip("numpy")
+    first_npz_path, first_ply_path = _write_points_artifact(
+        tmp_path / "frag-a", point_indices=(10, 12)
+    )
+    second_npz_path, second_ply_path = _write_points_artifact(
+        tmp_path / "frag-b", point_indices=(20, 22)
+    )
     first_review_artifacts = _write_review_artifacts(tmp_path / "review-a")
     second_review_artifacts = _write_review_artifacts(tmp_path / "review-b")
     args = FuseAcceptedMasksArgs(
@@ -295,8 +301,38 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
     assert result.to_payload()["accepted_frame_ids"] == ["000010", "000020"]
     assert Path(payload["mask_npz_path"]) == result.mask_npz_path
     assert Path(payload["mask_ply_path"]) == result.mask_ply_path
+    with np.load(result.mask_npz_path) as archive:
+        np.testing.assert_array_equal(
+            archive["point_indices"], np.array([10, 12, 20, 22], dtype=np.int64)
+        )
     assert result.mask_npz_path.exists()
     assert result.mask_ply_path.read_text(encoding="ascii").startswith("ply\n")
+
+
+def test_fuse_accepted_masks_rejects_fragment_without_point_indices(
+    tmp_path: Path,
+) -> None:
+    mask_npz_path, mask_ply_path = _write_points_world_only_artifact(
+        tmp_path / "frag-a"
+    )
+    review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+    args = FuseAcceptedMasksArgs(
+        fragments=(
+            AcceptedFragmentInput(
+                fragment_id="frag-a",
+                frame_id="000010",
+                mask_npz_path=mask_npz_path,
+                mask_ply_path=mask_ply_path,
+                approval_actions=_APPROVED_FRAGMENT_ACTIONS,
+                review_artifacts=AcceptedFragmentReviewArtifactsInput.model_validate(
+                    review_artifacts
+                ),
+            ),
+        )
+    )
+
+    with pytest.raises(ToolInputError, match="point_indices"):
+        fuse_accepted_masks(args, out_dir=tmp_path / "out")
 
 
 def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
@@ -372,7 +408,26 @@ def _write_review_artifacts(root: Path) -> dict[str, str]:
     return {key: str(path) for key, path in paths.items()}
 
 
-def _write_points_artifact(root: Path) -> tuple[Path, Path]:
+def _write_points_artifact(
+    root: Path, *, point_indices: tuple[int, ...] = (10, 12)
+) -> tuple[Path, Path]:
+    import numpy as np
+
+    from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
+
+    points_world = np.array(
+        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+        dtype=np.float64,
+    )
+    point_indices_array = np.array(point_indices, dtype=np.int64)
+    mask_npz_path = write_lift_npz(
+        root / "mask_data.npz", points_world, point_indices=point_indices_array
+    )
+    mask_ply_path = write_lift_ply(root / "lifted_points.ply", points_world)
+    return mask_npz_path, mask_ply_path
+
+
+def _write_points_world_only_artifact(root: Path) -> tuple[Path, Path]:
     import numpy as np
 
     from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply

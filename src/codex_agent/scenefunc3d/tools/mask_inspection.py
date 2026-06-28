@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, FilePath, StringConstraints
 
 from ...errors import CodexResponseError, SceneFunc3dDataError
 from ..final_mask_artifacts import (
+    load_point_indices_npz,
     load_points_world_npz,
     validate_ascii_points_ply,
     validate_points_world_npz,
@@ -20,7 +21,7 @@ from .models import ToolInputError
 from .scene_context import SceneFunc3dToolScene
 
 if TYPE_CHECKING:
-    from codex_agent.scenefunc3d.backends.lift_3d import FloatArray
+    from codex_agent.scenefunc3d.backends.lift_3d import FloatArray, IntArray
 
 SafePathComponentText = Annotated[
     str,
@@ -373,6 +374,7 @@ def fuse_accepted_masks(
     _validate_unique_fragment_ids(args.fragments)
     accepted_fragments: list[AcceptedFragment] = []
     fragment_points: list[FloatArray] = []
+    fragment_point_indices: list[IntArray] = []
     for fragment in args.fragments:
         _validate_accepted_fragment_approval_actions(
             fragment.fragment_id, fragment.approval_actions
@@ -382,6 +384,12 @@ def fuse_accepted_masks(
             mask_ply_path=fragment.mask_ply_path,
         )
         fragment_points.append(load_points_world_npz(fragment.mask_npz_path))
+        fragment_point_indices.append(
+            load_point_indices_npz(
+                fragment.mask_npz_path,
+                expected_count=point_count,
+            )
+        )
         accepted_fragments.append(
             AcceptedFragment(
                 fragment_id=fragment.fragment_id,
@@ -393,8 +401,15 @@ def fuse_accepted_masks(
         )
 
     fused_points = cast("FloatArray", np.concatenate(fragment_points, axis=0))
+    fused_point_indices = cast(
+        "IntArray", np.concatenate(fragment_point_indices, axis=0)
+    )
     fused_dir = out_dir / "fused"
-    mask_npz_path = write_lift_npz(fused_dir / "mask_data.npz", fused_points)
+    mask_npz_path = write_lift_npz(
+        fused_dir / "mask_data.npz",
+        fused_points,
+        point_indices=fused_point_indices,
+    )
     mask_ply_path = write_lift_ply(fused_dir / "lifted_points.ply", fused_points)
     mask_artifact_path = _write_fused_mask_artifact(
         fused_dir / "mask_artifact.json",
@@ -413,6 +428,7 @@ def fuse_accepted_masks(
 def _validate_mask_pair(*, mask_npz_path: Path, mask_ply_path: Path) -> int:
     try:
         npz_point_count = validate_points_world_npz(mask_npz_path)
+        load_point_indices_npz(mask_npz_path, expected_count=npz_point_count)
         ply_vertex_count = validate_ascii_points_ply(mask_ply_path)
     except CodexResponseError as exc:
         raise ToolInputError(str(exc)) from exc

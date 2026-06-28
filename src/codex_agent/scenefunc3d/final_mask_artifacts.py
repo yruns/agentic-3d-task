@@ -17,7 +17,7 @@ from ..errors import CodexResponseError, SceneFunc3dDataError
 from .task import ApprovalAction, validate_fragment_approval_actions
 
 if TYPE_CHECKING:
-    from codex_agent.scenefunc3d.backends.lift_3d import FloatArray
+    from codex_agent.scenefunc3d.backends.lift_3d import FloatArray, IntArray
 
 NonEmptyString: TypeAlias = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1)
@@ -128,6 +128,7 @@ def validate_final_mask_artifact(
         _validate_fragment_review_artifacts(fragment)
 
     npz_point_count = validate_points_world_npz(mask_npz_path)
+    load_point_indices_npz(mask_npz_path, expected_count=npz_point_count)
     ply_vertex_count = validate_ascii_points_ply(mask_ply_path)
     if ply_vertex_count != npz_point_count:
         raise CodexResponseError(
@@ -214,6 +215,57 @@ def load_points_world_npz(mask_npz_path: Path) -> FloatArray:
             f"mask_npz_path={mask_npz_path}"
         )
     return points_world
+
+
+def load_point_indices_npz(mask_npz_path: Path, *, expected_count: int) -> IntArray:
+    """Load and validate point ids aligned with a lifted/fused mask NPZ."""
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise CodexResponseError(
+            "mask_npz_path point_indices validation requires numpy: "
+            f"mask_npz_path={mask_npz_path}"
+        ) from exc
+
+    try:
+        with np.load(mask_npz_path) as archive:
+            if "point_indices" not in archive.files:
+                raise CodexResponseError(
+                    "mask_npz_path is missing required key 'point_indices': "
+                    f"mask_npz_path={mask_npz_path}"
+                )
+            point_indices = np.asarray(archive["point_indices"])
+    except CodexResponseError:
+        raise
+    except (BadZipFile, OSError, ValueError) as exc:
+        raise CodexResponseError(
+            "could not read mask_npz_path point_indices: "
+            f"mask_npz_path={mask_npz_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+
+    if point_indices.ndim != 1:
+        raise CodexResponseError(
+            "mask_npz_path point_indices must be a 1D array: "
+            f"mask_npz_path={mask_npz_path}; ndim={point_indices.ndim}"
+        )
+    if point_indices.shape[0] != expected_count:
+        raise CodexResponseError(
+            "mask_npz_path point_indices count must match points_world count: "
+            f"mask_npz_path={mask_npz_path}; indices={point_indices.shape[0]}; "
+            f"points={expected_count}"
+        )
+    if not np.issubdtype(point_indices.dtype, np.integer):
+        raise CodexResponseError(
+            "mask_npz_path point_indices must contain integer scene point ids: "
+            f"mask_npz_path={mask_npz_path}; dtype={point_indices.dtype}"
+        )
+    if bool(np.any(point_indices < 0)):
+        raise CodexResponseError(
+            "mask_npz_path point_indices must contain non-negative scene point ids: "
+            f"mask_npz_path={mask_npz_path}"
+        )
+    return cast("IntArray", point_indices.astype(np.int64, copy=False))
 
 
 def validate_ascii_points_ply(mask_ply_path: Path) -> int:
@@ -396,6 +448,7 @@ __all__ = [
     "FinalMaskArtifactDocument",
     "FinalMaskReviewArtifacts",
     "ValidatedFinalMaskArtifact",
+    "load_point_indices_npz",
     "load_points_world_npz",
     "validate_ascii_points_ply",
     "validate_final_mask_artifact",

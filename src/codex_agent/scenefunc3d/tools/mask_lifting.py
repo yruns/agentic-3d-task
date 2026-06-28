@@ -25,6 +25,7 @@ SafePathComponentText = Annotated[
     ),
 ]
 _SAFE_PATH_COMPONENT_RE: Pattern[str] = re.compile(r"^[A-Za-z0-9_-]+$")
+_MAX_SCENE_POINT_ASSIGNMENT_DISTANCE_METERS = 0.05
 
 
 class LiftMaskResultPayload(TypedDict):
@@ -86,12 +87,16 @@ class LiftMaskResult:
         }
 
 
-def lift_mask_to_3d(args: LiftMaskArgs, *, out_dir: Path) -> LiftMaskResult:
+def lift_mask_to_3d(
+    args: LiftMaskArgs, *, out_dir: Path, scene_mesh_path: Path
+) -> LiftMaskResult:
     """Lift one 2D mask candidate into deterministic world-space point artifacts."""
     from codex_agent.scenefunc3d.backends.lift_3d import (
         CameraGeometry,
+        assign_nearest_scene_point_indices,
         backproject_mask_to_world,
         load_mask_npz,
+        load_scene_mesh_vertices,
         write_lift_npz,
         write_lift_ply,
     )
@@ -120,14 +125,25 @@ def lift_mask_to_3d(args: LiftMaskArgs, *, out_dir: Path) -> LiftMaskResult:
             f"error={exc}"
         ) from exc
     points_world = backproject_mask_to_world(mask, depth_meters, geometry)
+    scene_points_world = load_scene_mesh_vertices(scene_mesh_path)
+    point_indices = assign_nearest_scene_point_indices(
+        points_world,
+        scene_points_world,
+        max_distance_meters=_MAX_SCENE_POINT_ASSIGNMENT_DISTANCE_METERS,
+    )
     fragment_dir = _fragment_dir(
         out_dir, frame_id=args.frame_id, candidate_id=args.candidate_id
     )
-    mask_npz_path = write_lift_npz(fragment_dir / "mask_data.npz", points_world)
+    mask_npz_path = write_lift_npz(
+        fragment_dir / "mask_data.npz",
+        points_world,
+        point_indices=point_indices,
+    )
     mask_ply_path = write_lift_ply(fragment_dir / "lifted_points.ply", points_world)
     overlay_path = _write_lift_summary(
         fragment_dir / "lift_overlay.txt",
         args=args,
+        scene_mesh_path=scene_mesh_path,
         lifted_point_count=int(points_world.shape[0]),
     )
     return LiftMaskResult(
@@ -228,6 +244,7 @@ def _write_lift_summary(
     overlay_path: Path,
     *,
     args: LiftMaskArgs,
+    scene_mesh_path: Path,
     lifted_point_count: int,
 ) -> Path:
     summary = (
@@ -238,6 +255,7 @@ def _write_lift_summary(
         f"depth_path={args.depth_path}\n"
         f"intrinsics_path={args.intrinsics_path}\n"
         f"pose_path={args.pose_path}\n"
+        f"scene_mesh_path={scene_mesh_path}\n"
     )
     try:
         overlay_path.parent.mkdir(parents=True, exist_ok=True)

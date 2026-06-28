@@ -1237,7 +1237,10 @@ def _write_points_artifact(root: Path) -> tuple[Path, Path]:
         [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
         dtype=np.float64,
     )
-    mask_npz_path = write_lift_npz(root / "mask_data.npz", points_world)
+    point_indices = np.array([10, 12], dtype=np.int64)
+    mask_npz_path = write_lift_npz(
+        root / "mask_data.npz", points_world, point_indices=point_indices
+    )
     mask_ply_path = write_lift_ply(root / "lifted_points.ply", points_world)
     return mask_npz_path, mask_ply_path
 

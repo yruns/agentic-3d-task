@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import struct
 from pathlib import Path
 
 import pytest
@@ -12,8 +13,10 @@ from codex_agent.scenefunc3d.backends.frame_assets import (
 )
 from codex_agent.scenefunc3d.backends.lift_3d import (
     CameraGeometry,
+    assign_nearest_scene_point_indices,
     backproject_mask_to_world,
     load_mask_npz,
+    load_scene_mesh_vertices,
     write_lift_npz,
     write_lift_ply,
 )
@@ -156,21 +159,84 @@ def test_camera_geometry_rejects_degenerate_rotation_block() -> None:
 def test_write_lift_npz_and_ascii_ply_artifacts(tmp_path: Path) -> None:
     np = pytest.importorskip("numpy")
     points_world = np.array([[1.0, 0.0, 2.0], [3.5, 4.0, 5.0]], dtype=np.float64)
+    point_indices = np.array([10, 12], dtype=np.int64)
     npz_path = tmp_path / "lifted_points.npz"
     ply_path = tmp_path / "lifted_points.ply"
 
-    written_npz_path = write_lift_npz(npz_path, points_world)
+    written_npz_path = write_lift_npz(
+        npz_path, points_world, point_indices=point_indices
+    )
     written_ply_path = write_lift_ply(ply_path, points_world)
 
     assert written_npz_path == npz_path
     assert written_ply_path == ply_path
     with np.load(npz_path) as archive:
         np.testing.assert_allclose(archive["points_world"], points_world)
+        np.testing.assert_array_equal(archive["point_indices"], point_indices)
     ply_text = ply_path.read_text(encoding="ascii")
     assert ply_text.startswith("ply\nformat ascii 1.0\n")
     assert "element vertex 2\n" in ply_text
     assert "1 0 2\n" in ply_text
     assert "3.5 4 5\n" in ply_text
+
+
+def test_write_lift_npz_rejects_point_index_count_mismatch(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    points_world = np.array([[1.0, 0.0, 2.0], [3.5, 4.0, 5.0]], dtype=np.float64)
+    point_indices = np.array([10], dtype=np.int64)
+
+    with pytest.raises(ToolInputError, match="point_indices"):
+        write_lift_npz(
+            tmp_path / "lifted_points.npz",
+            points_world,
+            point_indices=point_indices,
+        )
+
+
+def test_load_scene_mesh_vertices_reads_binary_little_endian_ply(
+    tmp_path: Path,
+) -> None:
+    np = pytest.importorskip("numpy")
+    mesh_path = _write_binary_scene_mesh(
+        tmp_path / "mesh.ply",
+        points=((1.0, 0.0, 2.0), (3.5, 4.0, 5.0)),
+    )
+
+    vertices = load_scene_mesh_vertices(mesh_path)
+
+    np.testing.assert_allclose(
+        vertices,
+        np.array([[1.0, 0.0, 2.0], [3.5, 4.0, 5.0]], dtype=np.float64),
+    )
+
+
+def test_assign_nearest_scene_point_indices_returns_vertex_indices() -> None:
+    np = pytest.importorskip("numpy")
+    points_world = np.array([[1.02, 0.0, 2.0], [3.45, 4.0, 5.0]], dtype=np.float64)
+    scene_points_world = np.array(
+        [[1.0, 0.0, 2.0], [3.5, 4.0, 5.0], [10.0, 0.0, 0.0]], dtype=np.float64
+    )
+
+    point_indices = assign_nearest_scene_point_indices(
+        points_world,
+        scene_points_world,
+        max_distance_meters=0.1,
+    )
+
+    np.testing.assert_array_equal(point_indices, np.array([0, 1], dtype=np.int64))
+
+
+def test_assign_nearest_scene_point_indices_rejects_far_points() -> None:
+    np = pytest.importorskip("numpy")
+    points_world = np.array([[1.2, 0.0, 2.0]], dtype=np.float64)
+    scene_points_world = np.array([[1.0, 0.0, 2.0]], dtype=np.float64)
+
+    with pytest.raises(ToolInputError, match="nearest_scene_point_too_far"):
+        assign_nearest_scene_point_indices(
+            points_world,
+            scene_points_world,
+            max_distance_meters=0.05,
+        )
 
 
 def test_write_lift_ply_rejects_nonfinite_points(tmp_path: Path) -> None:
@@ -218,3 +284,36 @@ def _make_tool_scene(tmp_path: Path) -> SceneFunc3dToolScene:
         rgb_frame_ids=("000050",),
         source_frame_index=SourceFrameIndex(records=()),
     )
+
+
+def _write_binary_scene_mesh(
+    path: Path, *, points: tuple[tuple[float, float, float], ...]
+) -> Path:
+    header = (
+        "ply\n"
+        "format binary_little_endian 1.0\n"
+        f"element vertex {len(points)}\n"
+        "property float x\n"
+        "property float y\n"
+        "property float z\n"
+        "property uchar red\n"
+        "property uchar green\n"
+        "property uchar blue\n"
+        "end_header\n"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("wb") as handle:
+        handle.write(header.encode("ascii"))
+        for x_value, y_value, z_value in points:
+            handle.write(
+                struct.pack(
+                    "<fffBBB",
+                    x_value,
+                    y_value,
+                    z_value,
+                    0,
+                    0,
+                    0,
+                )
+            )
+    return path

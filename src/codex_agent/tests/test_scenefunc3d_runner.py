@@ -179,6 +179,25 @@ def test_mask_task_rejects_corrupt_zip_mask_npz_contents(
         task.parse_response(json.dumps(_outcome_payload(output_dir)))
 
 
+def test_mask_task_rejects_mask_npz_without_point_indices(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir)
+    points_world = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
+    np.savez_compressed(output_dir / "mask.npz", points_world=points_world)
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="point_indices"):
+        task.parse_response(json.dumps(_outcome_payload(output_dir)))
+
+
 def test_mask_task_rejects_invalid_mask_ply_contents(
     tmp_path: Path,
 ) -> None:
@@ -669,7 +688,10 @@ def _write_outcome_artifacts(
 
     root.mkdir(parents=True, exist_ok=True)
     points_world = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
-    mask_npz_path = write_lift_npz(root / "mask.npz", points_world)
+    point_indices = np.array([10, 12], dtype=np.int64)
+    mask_npz_path = write_lift_npz(
+        root / "mask.npz", points_world, point_indices=point_indices
+    )
     mask_ply_path = write_lift_ply(root / "mask.ply", points_world)
     accepted_fragments = [
         {
