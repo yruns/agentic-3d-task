@@ -65,6 +65,11 @@ this exact order: select_evidence, propose_molmo_point, approve_molmo_point,
 propose_sam_candidates, approve_sam_candidate, create_first_lift,
 approve_first_lift. These actions are written into the final artifact and
 validated with the SceneFunc3D approval state machine.
+Also include review_artifacts for every accepted fragment: molmo_raw_text_path,
+molmo_overlay_path, sam_contact_sheet_path, sam_candidate_overlay_path, and
+lift_overlay_path. These paths must point to the actual Molmo raw output,
+Molmo point overlay, SAM contact sheet, selected SAM candidate overlay, and
+lift inspection artifact you reviewed.
 Set selected_frame_ids to the accepted_frame_ids returned by fuse_accepted_masks.
 """
 

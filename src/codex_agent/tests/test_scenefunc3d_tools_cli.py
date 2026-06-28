@@ -1062,6 +1062,8 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
     scene_dir = _write_raw_rgb_scene(tmp_path)
     first_npz_path, first_ply_path = _write_points_artifact(tmp_path / "frag-a")
     second_npz_path, second_ply_path = _write_points_artifact(tmp_path / "frag-b")
+    first_review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+    second_review_artifacts = _write_review_artifacts(tmp_path / "review-b")
 
     code = main(
         [
@@ -1078,6 +1080,7 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
                             "mask_npz_path": str(first_npz_path),
                             "mask_ply_path": str(first_ply_path),
                             "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
+                            "review_artifacts": first_review_artifacts,
                         },
                         {
                             "fragment_id": "frag-b",
@@ -1085,6 +1088,7 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
                             "mask_npz_path": str(second_npz_path),
                             "mask_ply_path": str(second_ply_path),
                             "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
+                            "review_artifacts": second_review_artifacts,
                         },
                     ]
                 }
@@ -1113,6 +1117,12 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
     ] == [
         list(_APPROVED_FRAGMENT_ACTIONS),
         list(_APPROVED_FRAGMENT_ACTIONS),
+    ]
+    assert [
+        fragment["review_artifacts"] for fragment in payload["accepted_fragments"]
+    ] == [
+        first_review_artifacts,
+        second_review_artifacts,
     ]
 
 
@@ -1148,6 +1158,41 @@ def test_cli_fuse_accepted_masks_requires_fragment_approval_actions(
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
     assert "approval_actions" in payload["error"]
+
+
+def test_cli_fuse_accepted_masks_requires_fragment_review_artifacts(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "frag-a")
+
+    code = main(
+        [
+            "fuse_accepted_masks",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "fragments": [
+                        {
+                            "fragment_id": "frag-a",
+                            "frame_id": "000000",
+                            "mask_npz_path": str(mask_npz_path),
+                            "mask_ply_path": str(mask_ply_path),
+                            "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
+                        },
+                    ]
+                }
+            ),
+            "--out-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "review_artifacts" in payload["error"]
 
 
 def test_cli_suggest_additional_views_returns_scene_neighbors(
@@ -1195,3 +1240,17 @@ def _write_points_artifact(root: Path) -> tuple[Path, Path]:
     mask_npz_path = write_lift_npz(root / "mask_data.npz", points_world)
     mask_ply_path = write_lift_ply(root / "lifted_points.ply", points_world)
     return mask_npz_path, mask_ply_path
+
+
+def _write_review_artifacts(root: Path) -> dict[str, str]:
+    root.mkdir(parents=True, exist_ok=True)
+    paths = {
+        "molmo_raw_text_path": root / "molmo_raw.txt",
+        "molmo_overlay_path": root / "molmo_overlay.jpg",
+        "sam_contact_sheet_path": root / "sam_contact_sheet.jpg",
+        "sam_candidate_overlay_path": root / "sam_candidate_overlay.jpg",
+        "lift_overlay_path": root / "lift_overlay.txt",
+    }
+    for path in paths.values():
+        path.write_text("reviewed\n", encoding="utf-8")
+    return {key: str(path) for key, path in paths.items()}

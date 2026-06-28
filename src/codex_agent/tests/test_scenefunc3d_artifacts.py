@@ -19,6 +19,8 @@ from codex_agent.scenefunc3d.tools.mask_artifacts import (
 from codex_agent.scenefunc3d.tools.mask_inspection import (
     AcceptedFragment,
     AcceptedFragmentInput,
+    AcceptedFragmentReviewArtifacts,
+    AcceptedFragmentReviewArtifactsInput,
     FuseAcceptedMasksArgs,
     FusedMaskPayload,
     FusedMaskResult,
@@ -181,7 +183,8 @@ def test_suggest_additional_views_ranks_temporal_neighbors(tmp_path: Path) -> No
     assert tuple(view.frame_id for view in result.views) == ("000000", "000020")
 
 
-def test_fused_mask_payload() -> None:
+def test_fused_mask_payload(tmp_path: Path) -> None:
+    review_artifacts = _write_review_artifacts(tmp_path / "review-a")
     result = FusedMaskResult(
         accepted_fragments=(
             AcceptedFragment(
@@ -189,6 +192,17 @@ def test_fused_mask_payload() -> None:
                 frame_id="000050",
                 point_count=1119,
                 approval_actions=_APPROVED_FRAGMENT_ACTIONS,
+                review_artifacts=AcceptedFragmentReviewArtifacts(
+                    molmo_raw_text_path=Path(review_artifacts["molmo_raw_text_path"]),
+                    molmo_overlay_path=Path(review_artifacts["molmo_overlay_path"]),
+                    sam_contact_sheet_path=Path(
+                        review_artifacts["sam_contact_sheet_path"]
+                    ),
+                    sam_candidate_overlay_path=Path(
+                        review_artifacts["sam_candidate_overlay_path"]
+                    ),
+                    lift_overlay_path=Path(review_artifacts["lift_overlay_path"]),
+                ),
             ),
         ),
         mask_artifact_path=Path("/tmp/fused/mask_artifact.json"),
@@ -203,6 +217,7 @@ def test_fused_mask_payload() -> None:
     assert payload["accepted_fragments"][0]["approval_actions"] == _action_values(
         _APPROVED_FRAGMENT_ACTIONS
     )
+    assert payload["accepted_fragments"][0]["review_artifacts"] == review_artifacts
     assert payload["accepted_frame_ids"] == ["000050"]
     assert payload["mask_artifact_path"] == "/tmp/fused/mask_artifact.json"
 
@@ -217,12 +232,21 @@ def test_accepted_fragment_rejects_invalid_approval_actions() -> None:
                 ApprovalAction.SELECT_EVIDENCE,
                 ApprovalAction.PROPOSE_SAM_CANDIDATES,
             ),
+            review_artifacts=AcceptedFragmentReviewArtifacts(
+                molmo_raw_text_path=Path("/tmp/molmo_raw.txt"),
+                molmo_overlay_path=Path("/tmp/molmo_overlay.jpg"),
+                sam_contact_sheet_path=Path("/tmp/sam_contact.jpg"),
+                sam_candidate_overlay_path=Path("/tmp/sam_candidate.jpg"),
+                lift_overlay_path=Path("/tmp/lift_overlay.txt"),
+            ),
         )
 
 
 def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None:
     first_npz_path, first_ply_path = _write_points_artifact(tmp_path / "frag-a")
     second_npz_path, second_ply_path = _write_points_artifact(tmp_path / "frag-b")
+    first_review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+    second_review_artifacts = _write_review_artifacts(tmp_path / "review-b")
     args = FuseAcceptedMasksArgs(
         fragments=(
             AcceptedFragmentInput(
@@ -231,6 +255,9 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
                 mask_npz_path=first_npz_path,
                 mask_ply_path=first_ply_path,
                 approval_actions=_APPROVED_FRAGMENT_ACTIONS,
+                review_artifacts=AcceptedFragmentReviewArtifactsInput.model_validate(
+                    first_review_artifacts
+                ),
             ),
             AcceptedFragmentInput(
                 fragment_id="frag-b",
@@ -238,6 +265,9 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
                 mask_npz_path=second_npz_path,
                 mask_ply_path=second_ply_path,
                 approval_actions=_APPROVED_FRAGMENT_ACTIONS,
+                review_artifacts=AcceptedFragmentReviewArtifactsInput.model_validate(
+                    second_review_artifacts
+                ),
             ),
         )
     )
@@ -252,12 +282,14 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
             "frame_id": "000010",
             "point_count": 2,
             "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+            "review_artifacts": first_review_artifacts,
         },
         {
             "fragment_id": "frag-b",
             "frame_id": "000020",
             "point_count": 2,
             "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+            "review_artifacts": second_review_artifacts,
         },
     ]
     assert result.to_payload()["accepted_frame_ids"] == ["000010", "000020"]
@@ -272,6 +304,8 @@ def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
 ) -> None:
     first_npz_path, first_ply_path = _write_points_artifact(tmp_path / "frag-a")
     second_npz_path, second_ply_path = _write_points_artifact(tmp_path / "frag-b")
+    first_review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+    second_review_artifacts = _write_review_artifacts(tmp_path / "review-b")
     args = FuseAcceptedMasksArgs(
         fragments=(
             AcceptedFragmentInput(
@@ -280,6 +314,9 @@ def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
                 mask_npz_path=first_npz_path,
                 mask_ply_path=first_ply_path,
                 approval_actions=_APPROVED_FRAGMENT_ACTIONS,
+                review_artifacts=AcceptedFragmentReviewArtifactsInput.model_validate(
+                    first_review_artifacts
+                ),
             ),
             AcceptedFragmentInput(
                 fragment_id="frag-b",
@@ -287,6 +324,9 @@ def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
                 mask_npz_path=second_npz_path,
                 mask_ply_path=second_ply_path,
                 approval_actions=_APPROVED_FRAGMENT_ACTIONS,
+                review_artifacts=AcceptedFragmentReviewArtifactsInput.model_validate(
+                    second_review_artifacts
+                ),
             ),
         )
     )
@@ -306,10 +346,30 @@ def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
         _action_values(_APPROVED_FRAGMENT_ACTIONS),
         _action_values(_APPROVED_FRAGMENT_ACTIONS),
     ]
+    assert [
+        fragment["review_artifacts"] for fragment in payload["accepted_fragments"]
+    ] == [
+        first_review_artifacts,
+        second_review_artifacts,
+    ]
 
 
 def _action_values(actions: tuple[ApprovalAction, ...]) -> list[str]:
     return [action.value for action in actions]
+
+
+def _write_review_artifacts(root: Path) -> dict[str, str]:
+    root.mkdir(parents=True, exist_ok=True)
+    paths = {
+        "molmo_raw_text_path": root / "molmo_raw.txt",
+        "molmo_overlay_path": root / "molmo_overlay.jpg",
+        "sam_contact_sheet_path": root / "sam_contact_sheet.jpg",
+        "sam_candidate_overlay_path": root / "sam_candidate_overlay.jpg",
+        "lift_overlay_path": root / "lift_overlay.txt",
+    }
+    for path in paths.values():
+        path.write_text("reviewed\n", encoding="utf-8")
+    return {key: str(path) for key, path in paths.items()}
 
 
 def _write_points_artifact(root: Path) -> tuple[Path, Path]:

@@ -33,6 +33,19 @@ class FinalMaskAcceptedFragment(BaseModel):
     frame_id: NonEmptyString
     point_count: int = Field(gt=0, strict=True)
     approval_actions: tuple[ApprovalAction, ...] = Field(min_length=1)
+    review_artifacts: FinalMaskReviewArtifacts
+
+
+class FinalMaskReviewArtifacts(BaseModel):
+    """Review artifacts the agent inspected before accepting a fragment."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    molmo_raw_text_path: NonEmptyString
+    molmo_overlay_path: NonEmptyString
+    sam_contact_sheet_path: NonEmptyString
+    sam_candidate_overlay_path: NonEmptyString
+    lift_overlay_path: NonEmptyString
 
 
 class FinalMaskArtifactDocument(BaseModel):
@@ -112,6 +125,7 @@ def validate_final_mask_artifact(
                 f"gate replay: fragment_id={fragment.fragment_id}; "
                 f"frame_id={fragment.frame_id}; error={exc}"
             ) from exc
+        _validate_fragment_review_artifacts(fragment)
 
     npz_point_count = validate_points_world_npz(mask_npz_path)
     ply_vertex_count = validate_ascii_points_ply(mask_ply_path)
@@ -292,6 +306,33 @@ def _accepted_frame_ids_from_fragments(
     return tuple(accepted_frame_ids)
 
 
+def _validate_fragment_review_artifacts(fragment: FinalMaskAcceptedFragment) -> None:
+    for field_name, raw_path in _review_artifact_path_items(fragment.review_artifacts):
+        artifact_path = Path(raw_path).expanduser().resolve()
+        if not artifact_path.is_file():
+            raise CodexResponseError(
+                "accepted fragment review_artifacts path must exist: "
+                f"fragment_id={fragment.fragment_id}; "
+                f"frame_id={fragment.frame_id}; "
+                f"field={field_name}; path={artifact_path}"
+            )
+
+
+def _review_artifact_path_items(
+    review_artifacts: FinalMaskReviewArtifacts,
+) -> tuple[tuple[str, str], ...]:
+    return (
+        ("molmo_raw_text_path", review_artifacts.molmo_raw_text_path),
+        ("molmo_overlay_path", review_artifacts.molmo_overlay_path),
+        ("sam_contact_sheet_path", review_artifacts.sam_contact_sheet_path),
+        (
+            "sam_candidate_overlay_path",
+            review_artifacts.sam_candidate_overlay_path,
+        ),
+        ("lift_overlay_path", review_artifacts.lift_overlay_path),
+    )
+
+
 def _parse_ply_vertex_count(lines: list[str], mask_ply_path: Path) -> int:
     for line in lines:
         tokens = line.strip().split()
@@ -353,6 +394,7 @@ def _validate_ply_vertex_line(
 __all__ = [
     "FinalMaskAcceptedFragment",
     "FinalMaskArtifactDocument",
+    "FinalMaskReviewArtifacts",
     "ValidatedFinalMaskArtifact",
     "load_points_world_npz",
     "validate_ascii_points_ply",

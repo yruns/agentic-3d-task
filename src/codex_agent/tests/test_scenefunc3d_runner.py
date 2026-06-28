@@ -253,6 +253,7 @@ def test_mask_task_rejects_fragment_point_count_sum_mismatch(
             "frame_id": "000010",
             "point_count": 1,
             "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
+            "review_artifacts": _write_review_artifacts(output_dir / "review-a"),
         }
     ]
     (output_dir / "mask_artifact.json").write_text(
@@ -378,6 +379,32 @@ def test_mask_task_rejects_fragment_approval_actions_out_of_order(
     )
 
     with pytest.raises(CodexResponseError, match="approval_actions"):
+        task.parse_response(json.dumps(_outcome_payload(output_dir)))
+
+
+def test_mask_task_rejects_missing_fragment_review_artifact(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir)
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["review_artifacts"][
+        "molmo_overlay_path"
+    ] = str(output_dir / "missing_overlay.jpg")
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="review_artifacts"):
         task.parse_response(json.dumps(_outcome_payload(output_dir)))
 
 
@@ -650,6 +677,9 @@ def _write_outcome_artifacts(
             "frame_id": frame_id,
             "point_count": int(points_world.shape[0]),
             "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
+            "review_artifacts": _write_review_artifacts(
+                root / "review_artifacts" / fragment_id
+            ),
         }
         for fragment_id, frame_id in zip(
             accepted_fragment_ids, accepted_frame_ids, strict=True
@@ -664,6 +694,20 @@ def _write_outcome_artifacts(
     (root / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
+
+
+def _write_review_artifacts(root: Path) -> dict[str, str]:
+    root.mkdir(parents=True, exist_ok=True)
+    paths = {
+        "molmo_raw_text_path": root / "molmo_raw.txt",
+        "molmo_overlay_path": root / "molmo_overlay.jpg",
+        "sam_contact_sheet_path": root / "sam_contact_sheet.jpg",
+        "sam_candidate_overlay_path": root / "sam_candidate_overlay.jpg",
+        "lift_overlay_path": root / "lift_overlay.txt",
+    }
+    for path in paths.values():
+        path.write_text("reviewed\n", encoding="utf-8")
+    return {key: str(path) for key, path in paths.items()}
 
 
 def _write_backend_config(

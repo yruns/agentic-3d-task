@@ -63,6 +63,17 @@ class AcceptedFragmentPayload(TypedDict):
     frame_id: str
     point_count: int
     approval_actions: list[str]
+    review_artifacts: AcceptedFragmentReviewArtifactsPayload
+
+
+class AcceptedFragmentReviewArtifactsPayload(TypedDict):
+    """JSON-ready review artifact paths for one accepted fragment."""
+
+    molmo_raw_text_path: str
+    molmo_overlay_path: str
+    sam_contact_sheet_path: str
+    sam_candidate_overlay_path: str
+    lift_overlay_path: str
 
 
 class FusedMaskPayload(TypedDict):
@@ -116,6 +127,29 @@ class AcceptedFragmentInput(BaseModel):
     mask_npz_path: FilePath
     mask_ply_path: FilePath
     approval_actions: tuple[ApprovalAction, ...] = Field(min_length=1)
+    review_artifacts: AcceptedFragmentReviewArtifactsInput
+
+
+class AcceptedFragmentReviewArtifactsInput(BaseModel):
+    """Agent-reviewed artifacts supporting one accepted fragment."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    molmo_raw_text_path: FilePath
+    molmo_overlay_path: FilePath
+    sam_contact_sheet_path: FilePath
+    sam_candidate_overlay_path: FilePath
+    lift_overlay_path: FilePath
+
+    def to_domain(self) -> AcceptedFragmentReviewArtifacts:
+        """Return an immutable domain value for persisted fragment provenance."""
+        return AcceptedFragmentReviewArtifacts(
+            molmo_raw_text_path=self.molmo_raw_text_path,
+            molmo_overlay_path=self.molmo_overlay_path,
+            sam_contact_sheet_path=self.sam_contact_sheet_path,
+            sam_candidate_overlay_path=self.sam_candidate_overlay_path,
+            lift_overlay_path=self.lift_overlay_path,
+        )
 
 
 class FuseAcceptedMasksArgs(BaseModel):
@@ -191,6 +225,27 @@ class SuggestedViewsResult:
 
 
 @dataclass(frozen=True)
+class AcceptedFragmentReviewArtifacts:
+    """Agent-visible evidence artifacts reviewed before accepting a fragment."""
+
+    molmo_raw_text_path: Path
+    molmo_overlay_path: Path
+    sam_contact_sheet_path: Path
+    sam_candidate_overlay_path: Path
+    lift_overlay_path: Path
+
+    def to_payload(self) -> AcceptedFragmentReviewArtifactsPayload:
+        """Return JSON-ready review artifact paths."""
+        return {
+            "molmo_raw_text_path": str(self.molmo_raw_text_path),
+            "molmo_overlay_path": str(self.molmo_overlay_path),
+            "sam_contact_sheet_path": str(self.sam_contact_sheet_path),
+            "sam_candidate_overlay_path": str(self.sam_candidate_overlay_path),
+            "lift_overlay_path": str(self.lift_overlay_path),
+        }
+
+
+@dataclass(frozen=True)
 class AcceptedFragment:
     """One accepted 3D mask fragment."""
 
@@ -198,6 +253,7 @@ class AcceptedFragment:
     frame_id: str
     point_count: int
     approval_actions: tuple[ApprovalAction, ...]
+    review_artifacts: AcceptedFragmentReviewArtifacts
 
     def __post_init__(self) -> None:
         """Validate domain invariants for one accepted fragment."""
@@ -221,6 +277,7 @@ class AcceptedFragment:
             "frame_id": self.frame_id,
             "point_count": self.point_count,
             "approval_actions": [action.value for action in self.approval_actions],
+            "review_artifacts": self.review_artifacts.to_payload(),
         }
 
 
@@ -331,6 +388,7 @@ def fuse_accepted_masks(
                 frame_id=fragment.frame_id,
                 point_count=point_count,
                 approval_actions=fragment.approval_actions,
+                review_artifacts=fragment.review_artifacts.to_domain(),
             )
         )
 
@@ -466,6 +524,9 @@ __all__ = [
     "AcceptedFragment",
     "AcceptedFragmentInput",
     "AcceptedFragmentPayload",
+    "AcceptedFragmentReviewArtifacts",
+    "AcceptedFragmentReviewArtifactsInput",
+    "AcceptedFragmentReviewArtifactsPayload",
     "FuseAcceptedMasksArgs",
     "FusedMaskPayload",
     "FusedMaskResult",

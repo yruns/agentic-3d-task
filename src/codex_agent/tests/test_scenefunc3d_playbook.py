@@ -74,6 +74,13 @@ def test_playbook_tells_agent_to_record_fragment_approval_actions() -> None:
     assert "approve_first_lift" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_tells_agent_to_record_fragment_review_artifacts() -> None:
+    assert "review_artifacts" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "molmo_raw_text_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "sam_contact_sheet_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "lift_overlay_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
+
+
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,
