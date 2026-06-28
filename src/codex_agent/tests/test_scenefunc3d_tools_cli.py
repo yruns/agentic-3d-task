@@ -1063,11 +1063,13 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
                     "fragments": [
                         {
                             "fragment_id": "frag-a",
+                            "frame_id": "000000",
                             "mask_npz_path": str(first_npz_path),
                             "mask_ply_path": str(first_ply_path),
                         },
                         {
                             "fragment_id": "frag-b",
+                            "frame_id": "000010",
                             "mask_npz_path": str(second_npz_path),
                             "mask_ply_path": str(second_ply_path),
                         },
@@ -1084,9 +1086,14 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
     assert Path(payload["mask_artifact_path"]).exists()
     assert Path(payload["mask_npz_path"]).exists()
     assert Path(payload["mask_ply_path"]).exists()
+    assert payload["accepted_frame_ids"] == ["000000", "000010"]
     assert [fragment["fragment_id"] for fragment in payload["accepted_fragments"]] == [
         "frag-a",
         "frag-b",
+    ]
+    assert [fragment["frame_id"] for fragment in payload["accepted_fragments"]] == [
+        "000000",
+        "000010",
     ]
 
 

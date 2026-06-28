@@ -173,7 +173,11 @@ def test_suggest_additional_views_ranks_temporal_neighbors(tmp_path: Path) -> No
 def test_fused_mask_payload() -> None:
     result = FusedMaskResult(
         accepted_fragments=(
-            AcceptedFragment(fragment_id="000050_mask_00", point_count=1119),
+            AcceptedFragment(
+                fragment_id="000050_mask_00",
+                frame_id="000050",
+                point_count=1119,
+            ),
         ),
         mask_artifact_path=Path("/tmp/fused/mask_artifact.json"),
         mask_npz_path=Path("/tmp/fused/mask_data.npz"),
@@ -183,6 +187,8 @@ def test_fused_mask_payload() -> None:
     payload = cast(FusedMaskPayload, result.to_payload())
 
     assert payload["accepted_fragments"][0]["fragment_id"] == "000050_mask_00"
+    assert payload["accepted_fragments"][0]["frame_id"] == "000050"
+    assert payload["accepted_frame_ids"] == ["000050"]
     assert payload["mask_artifact_path"] == "/tmp/fused/mask_artifact.json"
 
 
@@ -193,11 +199,13 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
         fragments=(
             AcceptedFragmentInput(
                 fragment_id="frag-a",
+                frame_id="000010",
                 mask_npz_path=first_npz_path,
                 mask_ply_path=first_ply_path,
             ),
             AcceptedFragmentInput(
                 fragment_id="frag-b",
+                frame_id="000020",
                 mask_npz_path=second_npz_path,
                 mask_ply_path=second_ply_path,
             ),
@@ -207,14 +215,49 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
     result = fuse_accepted_masks(args, out_dir=tmp_path / "out")
 
     payload = json.loads(result.mask_artifact_path.read_text(encoding="utf-8"))
+    assert payload["accepted_frame_ids"] == ["000010", "000020"]
     assert payload["accepted_fragments"] == [
-        {"fragment_id": "frag-a", "point_count": 2},
-        {"fragment_id": "frag-b", "point_count": 2},
+        {"fragment_id": "frag-a", "frame_id": "000010", "point_count": 2},
+        {"fragment_id": "frag-b", "frame_id": "000020", "point_count": 2},
     ]
+    assert result.to_payload()["accepted_frame_ids"] == ["000010", "000020"]
     assert Path(payload["mask_npz_path"]) == result.mask_npz_path
     assert Path(payload["mask_ply_path"]) == result.mask_ply_path
     assert result.mask_npz_path.exists()
     assert result.mask_ply_path.read_text(encoding="ascii").startswith("ply\n")
+
+
+def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
+    tmp_path: Path,
+) -> None:
+    first_npz_path, first_ply_path = _write_points_artifact(tmp_path / "frag-a")
+    second_npz_path, second_ply_path = _write_points_artifact(tmp_path / "frag-b")
+    args = FuseAcceptedMasksArgs(
+        fragments=(
+            AcceptedFragmentInput(
+                fragment_id="frag-a",
+                frame_id="000010",
+                mask_npz_path=first_npz_path,
+                mask_ply_path=first_ply_path,
+            ),
+            AcceptedFragmentInput(
+                fragment_id="frag-b",
+                frame_id="000010",
+                mask_npz_path=second_npz_path,
+                mask_ply_path=second_ply_path,
+            ),
+        )
+    )
+
+    result = fuse_accepted_masks(args, out_dir=tmp_path / "out")
+
+    payload = json.loads(result.mask_artifact_path.read_text(encoding="utf-8"))
+    assert payload["accepted_frame_ids"] == ["000010"]
+    assert result.to_payload()["accepted_frame_ids"] == ["000010"]
+    assert [fragment["frame_id"] for fragment in payload["accepted_fragments"]] == [
+        "000010",
+        "000010",
+    ]
 
 
 def _write_points_artifact(root: Path) -> tuple[Path, Path]:

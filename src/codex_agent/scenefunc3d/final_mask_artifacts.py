@@ -29,6 +29,7 @@ class FinalMaskAcceptedFragment(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     fragment_id: NonEmptyString
+    frame_id: NonEmptyString
     point_count: int = Field(gt=0, strict=True)
 
 
@@ -37,6 +38,7 @@ class FinalMaskArtifactDocument(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    accepted_frame_ids: tuple[NonEmptyString, ...] = Field(min_length=1)
     accepted_fragments: tuple[FinalMaskAcceptedFragment, ...] = Field(min_length=1)
     mask_npz_path: NonEmptyString
     mask_ply_path: NonEmptyString
@@ -49,6 +51,7 @@ class ValidatedFinalMaskArtifact:
     artifact_path: Path
     mask_npz_path: Path
     mask_ply_path: Path
+    accepted_frame_ids: tuple[str, ...]
     accepted_fragment_ids: tuple[str, ...]
     point_count: int
 
@@ -58,6 +61,7 @@ def validate_final_mask_artifact(
     artifact_path: Path,
     mask_npz_path: Path,
     mask_ply_path: Path,
+    selected_frame_ids: tuple[str, ...],
     accepted_fragment_ids: tuple[str, ...],
 ) -> ValidatedFinalMaskArtifact:
     """Validate final artifact JSON, NPZ points, and PLY vertex consistency."""
@@ -79,6 +83,21 @@ def validate_final_mask_artifact(
         raise CodexResponseError(
             "accepted_fragment_ids must match final artifact accepted_fragments: "
             f"response={accepted_fragment_ids}; artifact={artifact_fragment_ids}"
+        )
+    fragment_frame_ids = _accepted_frame_ids_from_fragments(
+        artifact_document.accepted_fragments
+    )
+    if artifact_document.accepted_frame_ids != fragment_frame_ids:
+        raise CodexResponseError(
+            "accepted_frame_ids must match final artifact accepted_fragments frame_id "
+            f"provenance: accepted_frame_ids={artifact_document.accepted_frame_ids}; "
+            f"fragment_frame_ids={fragment_frame_ids}"
+        )
+    if selected_frame_ids != artifact_document.accepted_frame_ids:
+        raise CodexResponseError(
+            "selected_frame_ids must match final artifact accepted_frame_ids: "
+            f"response={selected_frame_ids}; "
+            f"artifact={artifact_document.accepted_frame_ids}"
         )
 
     npz_point_count = validate_points_world_npz(mask_npz_path)
@@ -111,6 +130,7 @@ def validate_final_mask_artifact(
         artifact_path=artifact_path,
         mask_npz_path=mask_npz_path,
         mask_ply_path=mask_ply_path,
+        accepted_frame_ids=artifact_document.accepted_frame_ids,
         accepted_fragment_ids=accepted_fragment_ids,
         point_count=npz_point_count,
     )
@@ -245,6 +265,18 @@ def _require_matching_artifact_path(
             f"mask_artifact_path {field_name} must match final response: "
             f"artifact={actual_path}; response={resolved_expected_path}"
         )
+
+
+def _accepted_frame_ids_from_fragments(
+    accepted_fragments: tuple[FinalMaskAcceptedFragment, ...],
+) -> tuple[str, ...]:
+    seen_frame_ids: set[str] = set()
+    accepted_frame_ids: list[str] = []
+    for fragment in accepted_fragments:
+        if fragment.frame_id not in seen_frame_ids:
+            accepted_frame_ids.append(fragment.frame_id)
+            seen_frame_ids.add(fragment.frame_id)
+    return tuple(accepted_frame_ids)
 
 
 def _parse_ply_vertex_count(lines: list[str], mask_ply_path: Path) -> int:

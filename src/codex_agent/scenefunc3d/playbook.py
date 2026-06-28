@@ -60,6 +60,7 @@ model-quality failure. Change crop, prompt, or frame.
 Final answer must be compact JSON with mask_artifact_path, mask_npz_path,
 mask_ply_path, selected_frame_ids, accepted_fragment_ids, confidence, and
 uncertainties.
+Set selected_frame_ids to the accepted_frame_ids returned by fuse_accepted_masks.
 """
 
 

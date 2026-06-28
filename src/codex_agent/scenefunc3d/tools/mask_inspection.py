@@ -59,12 +59,14 @@ class AcceptedFragmentPayload(TypedDict):
     """JSON-ready accepted mask fragment."""
 
     fragment_id: str
+    frame_id: str
     point_count: int
 
 
 class FusedMaskPayload(TypedDict):
     """JSON-ready fused mask result."""
 
+    accepted_frame_ids: list[str]
     accepted_fragments: list[AcceptedFragmentPayload]
     mask_artifact_path: str
     mask_npz_path: str
@@ -74,6 +76,7 @@ class FusedMaskPayload(TypedDict):
 class FusedMaskArtifactFilePayload(TypedDict):
     """JSON payload written as the final evaluable mask artifact."""
 
+    accepted_frame_ids: list[str]
     accepted_fragments: list[AcceptedFragmentPayload]
     mask_npz_path: str
     mask_ply_path: str
@@ -107,6 +110,7 @@ class AcceptedFragmentInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     fragment_id: SafePathComponentText
+    frame_id: SafePathComponentText
     mask_npz_path: FilePath
     mask_ply_path: FilePath
 
@@ -188,16 +192,22 @@ class AcceptedFragment:
     """One accepted 3D mask fragment."""
 
     fragment_id: str
+    frame_id: str
     point_count: int
 
     def __post_init__(self) -> None:
         """Validate domain invariants for one accepted fragment."""
         _validate_non_empty_text("fragment_id", self.fragment_id)
+        _validate_non_empty_text("frame_id", self.frame_id)
         _validate_positive_int("point_count", self.point_count)
 
     def to_payload(self) -> AcceptedFragmentPayload:
         """Return the JSON-ready accepted fragment."""
-        return {"fragment_id": self.fragment_id, "point_count": self.point_count}
+        return {
+            "fragment_id": self.fragment_id,
+            "frame_id": self.frame_id,
+            "point_count": self.point_count,
+        }
 
 
 @dataclass(frozen=True)
@@ -212,6 +222,7 @@ class FusedMaskResult:
     def to_payload(self) -> dict[str, object]:
         """Return the JSON-ready fused mask result."""
         return {
+            "accepted_frame_ids": list(_accepted_frame_ids(self.accepted_fragments)),
             "accepted_fragments": [
                 fragment.to_payload() for fragment in self.accepted_fragments
             ],
@@ -300,6 +311,7 @@ def fuse_accepted_masks(
         accepted_fragments.append(
             AcceptedFragment(
                 fragment_id=fragment.fragment_id,
+                frame_id=fragment.frame_id,
                 point_count=point_count,
             )
         )
@@ -357,6 +369,7 @@ def _write_fused_mask_artifact(
     mask_ply_path: Path,
 ) -> Path:
     payload: FusedMaskArtifactFilePayload = {
+        "accepted_frame_ids": list(_accepted_frame_ids(accepted_fragments)),
         "accepted_fragments": [
             fragment.to_payload() for fragment in accepted_fragments
         ],
@@ -375,6 +388,18 @@ def _write_fused_mask_artifact(
             f"artifact_path={artifact_path}; error_type={exc.__class__.__name__}"
         ) from exc
     return artifact_path
+
+
+def _accepted_frame_ids(
+    accepted_fragments: tuple[AcceptedFragment, ...],
+) -> tuple[str, ...]:
+    seen_frame_ids: set[str] = set()
+    accepted_frame_ids: list[str] = []
+    for fragment in accepted_fragments:
+        if fragment.frame_id not in seen_frame_ids:
+            accepted_frame_ids.append(fragment.frame_id)
+            seen_frame_ids.add(fragment.frame_id)
+    return tuple(accepted_frame_ids)
 
 
 def _view_rank_key(frame_id: str, accepted_frame_id: str) -> tuple[int, str]:

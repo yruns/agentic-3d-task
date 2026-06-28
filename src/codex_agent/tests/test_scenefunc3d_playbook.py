@@ -62,6 +62,12 @@ def test_playbook_tells_agent_to_pass_evidence_image_dimensions_to_molmo() -> No
     assert "molmo_point" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_tells_agent_selected_frames_must_match_fused_artifact() -> None:
+    assert "selected_frame_ids" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "accepted_frame_ids" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "fuse_accepted_masks" in SCENEFUNC3D_TOOLS_PLAYBOOK
+
+
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,

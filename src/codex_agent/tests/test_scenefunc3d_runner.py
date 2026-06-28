@@ -107,7 +107,7 @@ def test_mask_task_parses_strict_final_json(
     assert outcome.mask_artifact_path == output_dir / "mask_artifact.json"
     assert outcome.mask_npz_path == output_dir / "mask.npz"
     assert outcome.mask_ply_path == output_dir / "mask.ply"
-    assert outcome.selected_frame_ids == ("000010", "000020")
+    assert outcome.selected_frame_ids == ("000010",)
     assert outcome.accepted_fragment_ids == ("frag-a",)
     assert outcome.confidence == 0.87
     assert outcome.uncertainties == ("partial occlusion",)
@@ -237,7 +237,7 @@ def test_mask_task_rejects_fragment_point_count_sum_mismatch(
         (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
     )
     artifact_payload["accepted_fragments"] = [
-        {"fragment_id": "frag-a", "point_count": 1}
+        {"fragment_id": "frag-a", "frame_id": "000010", "point_count": 1}
     ]
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
@@ -266,8 +266,52 @@ def test_mask_task_rejects_selected_frame_missing_from_scene(
         backend_config_path=tmp_path / "backends.toml",
     )
 
+    payload = _outcome_payload(output_dir, selected_frame_ids=("000020",))
     with pytest.raises(CodexResponseError, match="selected_frame_ids"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
+        task.parse_response(json.dumps(payload))
+
+
+def test_mask_task_rejects_selected_frame_mismatch_with_final_artifact(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir, accepted_frame_ids=("000010",))
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+    payload = _outcome_payload(output_dir, selected_frame_ids=("000020",))
+
+    with pytest.raises(CodexResponseError, match="selected_frame_ids"):
+        task.parse_response(json.dumps(payload))
+
+
+def test_mask_task_rejects_artifact_accepted_frame_mismatch_with_fragments(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir)
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_frame_ids"] = ["000020"]
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+    payload = _outcome_payload(output_dir, selected_frame_ids=("000020",))
+
+    with pytest.raises(CodexResponseError, match="accepted_frame_ids"):
+        task.parse_response(json.dumps(payload))
 
 
 def test_check_sidecar_health_passes_for_healthy_fake_servers(
@@ -355,7 +399,7 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
         mask_artifact_path=sample_output_dir / "mask_artifact.json",
         mask_npz_path=sample_output_dir / "mask.npz",
         mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010", "000020"),
+        selected_frame_ids=("000010",),
         accepted_fragment_ids=("frag-a",),
         confidence=0.87,
         uncertainties=("partial occlusion",),
@@ -405,7 +449,7 @@ def test_run_single_sample_revalidates_executor_outcome(
         mask_artifact_path=sample_output_dir / "mask_artifact.json",
         mask_npz_path=sample_output_dir / "mask.npz",
         mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010", "000020"),
+        selected_frame_ids=("000010",),
         accepted_fragment_ids=("frag-a",),
         confidence=0.87,
         uncertainties=("partial occlusion",),
@@ -505,12 +549,16 @@ def _sample() -> SceneFunc3dSample:
     )
 
 
-def _outcome_payload(root: Path) -> dict[str, object]:
+def _outcome_payload(
+    root: Path,
+    *,
+    selected_frame_ids: tuple[str, ...] = ("000010",),
+) -> dict[str, object]:
     return {
         "mask_artifact_path": str(root / "mask_artifact.json"),
         "mask_npz_path": str(root / "mask.npz"),
         "mask_ply_path": str(root / "mask.ply"),
-        "selected_frame_ids": ["000010", "000020"],
+        "selected_frame_ids": list(selected_frame_ids),
         "accepted_fragment_ids": ["frag-a"],
         "confidence": 0.87,
         "uncertainties": ["partial occlusion"],
@@ -521,6 +569,7 @@ def _write_outcome_artifacts(
     root: Path,
     *,
     accepted_fragment_ids: tuple[str, ...] = ("frag-a",),
+    accepted_frame_ids: tuple[str, ...] = ("000010",),
 ) -> None:
     from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
 
@@ -529,10 +578,17 @@ def _write_outcome_artifacts(
     mask_npz_path = write_lift_npz(root / "mask.npz", points_world)
     mask_ply_path = write_lift_ply(root / "mask.ply", points_world)
     accepted_fragments = [
-        {"fragment_id": fragment_id, "point_count": int(points_world.shape[0])}
-        for fragment_id in accepted_fragment_ids
+        {
+            "fragment_id": fragment_id,
+            "frame_id": frame_id,
+            "point_count": int(points_world.shape[0]),
+        }
+        for fragment_id, frame_id in zip(
+            accepted_fragment_ids, accepted_frame_ids, strict=True
+        )
     ]
     artifact_payload: dict[str, object] = {
+        "accepted_frame_ids": list(accepted_frame_ids),
         "accepted_fragments": accepted_fragments,
         "mask_npz_path": str(mask_npz_path),
         "mask_ply_path": str(mask_ply_path),

@@ -212,6 +212,7 @@ class SceneFunc3dMaskTask:
             artifact_path=mask_artifact_path,
             mask_npz_path=mask_npz_path,
             mask_ply_path=mask_ply_path,
+            selected_frame_ids=selected_frame_ids,
             accepted_fragment_ids=accepted_fragment_ids,
         )
         return SceneFunc3dMaskOutcome(
