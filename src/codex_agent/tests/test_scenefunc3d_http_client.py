@@ -101,8 +101,11 @@ def test_json_server_rejects_non_object_post_body() -> None:
         server.shutdown()
         server.server_close()
 
-    assert exc_info.value.code == 500
-    assert response_body == {"error": "request body must be a JSON object"}
+    assert exc_info.value.code == 400
+    assert response_body == {
+        "error": "invalid_request_body",
+        "message": "request body must be a JSON object",
+    }
 
 
 def test_json_server_route_value_error_does_not_echo_secret() -> None:

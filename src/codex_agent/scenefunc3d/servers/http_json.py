@@ -4,11 +4,27 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler
 from typing import TypeAlias
 
 JsonObject: TypeAlias = dict[str, object]
 JsonRoute: TypeAlias = Callable[[JsonObject], JsonObject]
+
+
+@dataclass(frozen=True)
+class JsonHttpError(Exception):
+    """Structured JSON route error with an explicit HTTP status."""
+
+    status_code: int
+    payload: JsonObject
+
+    def __post_init__(self) -> None:
+        """Validate route errors before they cross the HTTP boundary."""
+        if self.status_code < 400 or self.status_code > 599:
+            raise ValueError(f"status_code must be 4xx/5xx; got {self.status_code}")
+        if "error" not in self.payload:
+            raise ValueError("JsonHttpError payload must include an error field")
 
 
 def make_json_handler(routes: dict[str, JsonRoute]) -> type[BaseHTTPRequestHandler]:
@@ -26,6 +42,8 @@ def make_json_handler(routes: dict[str, JsonRoute]) -> type[BaseHTTPRequestHandl
             try:
                 response_payload = route({})
                 self._write_json(200, response_payload)
+            except JsonHttpError as exc:
+                self._write_json(exc.status_code, exc.payload)
             except Exception:  # noqa: BLE001 - HTTP route boundary.
                 self._write_json(500, {"error": "route_exception"})
 
@@ -37,11 +55,19 @@ def make_json_handler(routes: dict[str, JsonRoute]) -> type[BaseHTTPRequestHandl
             try:
                 request_payload = self._read_json_object()
             except ValueError as exc:
-                self._write_json(500, {"error": str(exc)})
+                self._write_json(
+                    400,
+                    {
+                        "error": "invalid_request_body",
+                        "message": str(exc),
+                    },
+                )
                 return
             try:
                 response_payload = route(request_payload)
                 self._write_json(200, response_payload)
+            except JsonHttpError as exc:
+                self._write_json(exc.status_code, exc.payload)
             except Exception:  # noqa: BLE001 - HTTP route boundary.
                 self._write_json(500, {"error": "route_exception"})
 
@@ -82,4 +108,4 @@ def make_json_handler(routes: dict[str, JsonRoute]) -> type[BaseHTTPRequestHandl
     return JsonHandler
 
 
-__all__ = ["JsonObject", "JsonRoute", "make_json_handler"]
+__all__ = ["JsonHttpError", "JsonObject", "JsonRoute", "make_json_handler"]
