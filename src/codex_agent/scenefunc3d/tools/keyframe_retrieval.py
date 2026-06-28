@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from .scene_context import SceneFunc3dToolScene
+
+QueryText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class KeyframeSelectorArgs(BaseModel):
@@ -15,8 +18,8 @@ class KeyframeSelectorArgs(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    query: str = Field(min_length=1)
-    k: int = Field(default=4, ge=1, le=8)
+    query: QueryText
+    k: int = Field(default=4, ge=1, le=8, strict=True)
 
 
 @dataclass(frozen=True)

@@ -127,13 +127,22 @@ def _resolve_rgb_source(tool_scene: SceneFunc3dToolScene, frame_id: str) -> Path
     conceptgraph_rgb_path = tool_scene.conceptgraph_rgb_vis_dir / f"{frame_id}-rgb.jpg"
     if conceptgraph_rgb_path.is_file():
         return conceptgraph_rgb_path
+    source_frame_rgb_path = tool_scene.source_frame_raw_rgb_path(frame_id)
+    if source_frame_rgb_path is not None and source_frame_rgb_path.is_file():
+        return source_frame_rgb_path
     for suffix in _RAW_RGB_SUFFIXES:
         raw_rgb_path = tool_scene.raw_dir / f"{frame_id}-rgb{suffix}"
         if raw_rgb_path.is_file():
             return raw_rgb_path
+    source_frame_message = (
+        f", source_frames RGB path {source_frame_rgb_path}"
+        if source_frame_rgb_path is not None
+        else ""
+    )
     raise ToolInputError(
         f"no RGB image found for frame id {frame_id!r}; checked "
-        f"{conceptgraph_rgb_path} and raw RGB files under {tool_scene.raw_dir}"
+        f"{conceptgraph_rgb_path}{source_frame_message} and raw RGB files under "
+        f"{tool_scene.raw_dir}"
     )
 
 

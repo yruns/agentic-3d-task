@@ -33,6 +33,35 @@ _SOURCE_FRAME_ID_FIELDS: tuple[str, ...] = (
     "image",
     "image_path",
 )
+_SOURCE_FRAME_RGB_PATH_FIELDS: tuple[str, ...] = ("rgb", "image", "image_path", "path")
+_SOURCE_FRAME_RGB_SUFFIXES: tuple[str, ...] = (".png", ".jpg", ".jpeg")
+
+
+@dataclass(frozen=True)
+class SourceFrameRecord:
+    """One source frame entry from ``raw/source_frames.json``."""
+
+    frame_id: str
+    raw_rgb_path: Path | None = None
+
+
+@dataclass(frozen=True)
+class SourceFrameIndex:
+    """Typed index of source-frame metadata for one prepared scene."""
+
+    records: tuple[SourceFrameRecord, ...]
+
+    @property
+    def frame_ids(self) -> tuple[str, ...]:
+        """Return source frame ids in source index order."""
+        return tuple(record.frame_id for record in self.records)
+
+    def raw_rgb_path_for(self, frame_id: str) -> Path | None:
+        """Return the indexed raw RGB path for ``frame_id``, if one exists."""
+        for record in self.records:
+            if record.frame_id == frame_id:
+                return record.raw_rgb_path
+        return None
 
 
 @dataclass(frozen=True)
@@ -42,6 +71,7 @@ class SceneFunc3dToolScene:
     visit_id: str
     scene_root: Path
     rgb_frame_ids: tuple[str, ...]
+    source_frame_index: SourceFrameIndex
 
     @property
     def raw_dir(self) -> Path:
@@ -63,6 +93,10 @@ class SceneFunc3dToolScene:
         """Likely ConceptGraph RGB visualization directory for frame tools."""
         return self.conceptgraph_dir / _CONCEPTGRAPH_RGB_VIS_DIRNAME
 
+    def source_frame_raw_rgb_path(self, frame_id: str) -> Path | None:
+        """Return the source-frame raw RGB path for ``frame_id``, if indexed."""
+        return self.source_frame_index.raw_rgb_path_for(frame_id)
+
     @classmethod
     def load(cls, scene_root: Path) -> SceneFunc3dToolScene:
         """Load and validate one prepared SceneFunc3D scene root."""
@@ -75,7 +109,12 @@ class SceneFunc3dToolScene:
             raise SceneFunc3dDataError(
                 f"SceneFunc3D raw frame directory is missing: {raw_dir}"
             )
-        frame_ids = _discover_frame_ids(raw_dir)
+        source_frame_index = _load_source_frame_index_if_present(raw_dir)
+        frame_ids = (
+            source_frame_index.frame_ids
+            if source_frame_index.records
+            else _discover_raw_rgb_frame_ids(raw_dir)
+        )
         if not frame_ids:
             source_frames_json = raw_dir / _SOURCE_FRAMES_FILENAME
             raise SceneFunc3dDataError(
@@ -86,17 +125,18 @@ class SceneFunc3dToolScene:
             visit_id=scene_root.name,
             scene_root=scene_root,
             rgb_frame_ids=frame_ids,
+            source_frame_index=source_frame_index,
         )
 
 
-def _discover_frame_ids(raw_dir: Path) -> tuple[str, ...]:
+def _load_source_frame_index_if_present(raw_dir: Path) -> SourceFrameIndex:
     source_frames_json = raw_dir / _SOURCE_FRAMES_FILENAME
     if source_frames_json.is_file():
-        return _load_source_frame_ids(source_frames_json)
-    return _discover_raw_rgb_frame_ids(raw_dir)
+        return _load_source_frame_index(source_frames_json)
+    return SourceFrameIndex(records=())
 
 
-def _load_source_frame_ids(source_frames_json: Path) -> tuple[str, ...]:
+def _load_source_frame_index(source_frames_json: Path) -> SourceFrameIndex:
     try:
         parsed: object = json.loads(source_frames_json.read_text(encoding="utf-8"))
     except OSError as exc:
@@ -108,39 +148,54 @@ def _load_source_frame_ids(source_frames_json: Path) -> tuple[str, ...]:
             f"invalid SceneFunc3D source frame index JSON: {source_frames_json}"
         ) from exc
 
-    frame_ids = _frame_ids_from_source_payload(parsed)
-    if not frame_ids:
+    source_frame_index = _source_frame_index_from_payload(parsed, source_frames_json)
+    if not source_frame_index.records:
         raise SceneFunc3dDataError(
             f"no frame ids discovered in SceneFunc3D source frame index: "
             f"{source_frames_json}"
         )
-    return frame_ids
+    return source_frame_index
 
 
-def _frame_ids_from_source_payload(payload: object) -> tuple[str, ...]:
+def _source_frame_index_from_payload(
+    payload: object, source_frames_json: Path
+) -> SourceFrameIndex:
     if isinstance(payload, list):
-        return _frame_ids_from_source_sequence(cast(list[object], payload))
+        return _source_frame_index_from_sequence(
+            cast(list[object], payload), source_frames_json.parent
+        )
     if isinstance(payload, Mapping):
-        return _frame_ids_from_source_mapping(cast(Mapping[object, object], payload))
-    return ()
+        return _source_frame_index_from_mapping(
+            cast(Mapping[object, object], payload), source_frames_json.parent
+        )
+    return SourceFrameIndex(records=())
 
 
-def _frame_ids_from_source_sequence(records: list[object]) -> tuple[str, ...]:
-    frame_ids: list[str] = []
-    for index, record in enumerate(records):
-        frame_id = _source_frame_id_from_record(record)
+def _source_frame_index_from_sequence(
+    records: list[object], source_frames_dir: Path
+) -> SourceFrameIndex:
+    source_records: list[SourceFrameRecord] = []
+    for index, raw_record in enumerate(records):
+        frame_id = _source_frame_id_from_record(raw_record)
         if frame_id is None:
             raise SceneFunc3dDataError(
                 f"invalid source frame record {index}: could not derive frame id"
             )
-        frame_ids.append(frame_id)
-    return _deduplicate_frame_ids(frame_ids)
+        source_records.append(
+            SourceFrameRecord(
+                frame_id=frame_id,
+                raw_rgb_path=_source_rgb_path_from_record(
+                    raw_record, source_frames_dir
+                ),
+            )
+        )
+    return SourceFrameIndex(records=_deduplicate_source_frame_records(source_records))
 
 
-def _frame_ids_from_source_mapping(
-    records_by_frame: Mapping[object, object],
-) -> tuple[str, ...]:
-    frame_ids: list[str] = []
+def _source_frame_index_from_mapping(
+    records_by_frame: Mapping[object, object], source_frames_dir: Path
+) -> SourceFrameIndex:
+    source_records: list[SourceFrameRecord] = []
     for raw_key, raw_record in records_by_frame.items():
         frame_id = _source_frame_id_from_record(raw_record)
         if frame_id is None:
@@ -150,17 +205,26 @@ def _frame_ids_from_source_mapping(
                 f"invalid source frame entry {raw_key!r}: could not derive frame id "
                 "from record or key"
             )
-        frame_ids.append(frame_id)
-    return _deduplicate_frame_ids(frame_ids)
+        source_records.append(
+            SourceFrameRecord(
+                frame_id=frame_id,
+                raw_rgb_path=_source_rgb_path_from_record(
+                    raw_record, source_frames_dir
+                ),
+            )
+        )
+    return SourceFrameIndex(records=_deduplicate_source_frame_records(source_records))
 
 
-def _deduplicate_frame_ids(frame_ids: list[str]) -> tuple[str, ...]:
+def _deduplicate_source_frame_records(
+    source_records: list[SourceFrameRecord],
+) -> tuple[SourceFrameRecord, ...]:
     seen_frame_ids: set[str] = set()
-    for frame_id in frame_ids:
-        if frame_id in seen_frame_ids:
-            raise SceneFunc3dDataError(f"duplicate frame id {frame_id!r}")
-        seen_frame_ids.add(frame_id)
-    return tuple(frame_ids)
+    for record in source_records:
+        if record.frame_id in seen_frame_ids:
+            raise SceneFunc3dDataError(f"duplicate frame id {record.frame_id!r}")
+        seen_frame_ids.add(record.frame_id)
+    return tuple(source_records)
 
 
 def _source_frame_id_from_record(record: object) -> str | None:
@@ -177,6 +241,42 @@ def _source_frame_id_from_mapping(record: Mapping[object, object]) -> str | None
         if frame_id is not None:
             return frame_id
     return None
+
+
+def _source_rgb_path_from_record(
+    record: object, source_frames_dir: Path
+) -> Path | None:
+    if isinstance(record, Mapping):
+        return _source_rgb_path_from_mapping(
+            cast(Mapping[object, object], record), source_frames_dir
+        )
+    return _coerce_source_rgb_path(record, source_frames_dir)
+
+
+def _source_rgb_path_from_mapping(
+    record: Mapping[object, object], source_frames_dir: Path
+) -> Path | None:
+    for field_name in _SOURCE_FRAME_RGB_PATH_FIELDS:
+        if field_name not in record:
+            continue
+        raw_rgb_path = _coerce_source_rgb_path(record[field_name], source_frames_dir)
+        if raw_rgb_path is not None:
+            return raw_rgb_path
+    return None
+
+
+def _coerce_source_rgb_path(raw_value: object, source_frames_dir: Path) -> Path | None:
+    if not isinstance(raw_value, str):
+        return None
+    stripped_value = raw_value.strip()
+    if not stripped_value:
+        return None
+    source_path = Path(stripped_value)
+    if source_path.suffix.lower() not in _SOURCE_FRAME_RGB_SUFFIXES:
+        return None
+    if source_path.is_absolute():
+        return source_path
+    return source_frames_dir / source_path
 
 
 def _coerce_frame_id(raw_value: object) -> str | None:
@@ -211,4 +311,4 @@ def _discover_raw_rgb_frame_ids(raw_dir: Path) -> tuple[str, ...]:
     return tuple(frame_ids)
 
 
-__all__ = ["SceneFunc3dToolScene"]
+__all__ = ["SceneFunc3dToolScene", "SourceFrameIndex", "SourceFrameRecord"]
