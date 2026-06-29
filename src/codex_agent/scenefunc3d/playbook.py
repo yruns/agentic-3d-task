@@ -50,6 +50,11 @@ Approval gates are mandatory:
 Molmo point before calling sam_mask.
 2. After sam_mask, inspect the SAM candidates contact sheet. You must approve
 one SAM candidate before calling lift_mask_to_3d.
+Do not choose a SAM candidate by highest score alone. Use each candidate's
+pixel_count and coverage_percent together with the contact sheet. For small
+knobs, dials, handles, switches, buttons, and valves, prefer a compact candidate
+that tightly covers the operable part; reject a broad panel, radiator body,
+cabinet face, wall patch, pipe run, or shadow even if its SAM score is higher.
 3. After lift_mask_to_3d, inspect the selected mask overlay and artifact
 summary. You must approve the first 3D lift before any multi-view expansion.
 4. Every additional view repeats Molmo point approval, SAM candidates approval,

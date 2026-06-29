@@ -116,6 +116,16 @@ def test_playbook_requires_nearby_frame_sweep_before_accepting_drawer_seams() ->
     assert "seam or lip only after" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_warns_against_score_only_sam_candidate_choice() -> None:
+    assert "Do not choose a SAM candidate by highest score alone" in (
+        SCENEFUNC3D_TOOLS_PLAYBOOK
+    )
+    assert "pixel_count" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "coverage_percent" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "compact candidate" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "broad panel" in SCENEFUNC3D_TOOLS_PLAYBOOK
+
+
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,
