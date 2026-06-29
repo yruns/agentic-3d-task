@@ -1,4 +1,4 @@
-"""Tests for the SceneFunc3D single-case runtime runner."""
+"""Tests for the SceneFunc3D runtime runner."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 
 import codex_agent.scenefunc3d.runner as runner
-from codex_agent.errors import CodexResponseError
+from codex_agent.errors import CodexResponseError, SceneFunc3dDataError
 from codex_agent.models import CodexTaskResult, CodexTurnMetadata, CodexTurnResult
 from codex_agent.scenefunc3d.runner import (
     SCENEFUNC3D_ALLOWED_TOOL_NAMES,
@@ -1376,6 +1376,85 @@ def test_run_samples_writes_batch_evaluation_summary(
     assert payload["results"][0]["score"]["metrics"]["gt_count"] == 3
 
 
+def test_run_samples_preserves_result_path_when_scoring_fails(
+    tmp_path: Path,
+) -> None:
+    _write_unscorable_scene(tmp_path / "data")
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    summary = run_samples(
+        config,
+        sample_ids=("421254::desc-a",),
+        executor=_DynamicSceneFuncExecutor(),
+        check_sidecars=False,
+        score=True,
+    )
+
+    result_path = tmp_path / "out" / "421254" / "desc-a" / "result.json"
+    assert result_path.is_file()
+    assert summary.sample_count == 1
+    assert summary.completed_count == 0
+    assert summary.failed_count == 1
+    assert summary.scoring_enabled is True
+    assert summary.scored_count == 0
+    assert summary.mean_iou is None
+    assert summary.results[0].status == "failed"
+    assert summary.results[0].failure_stage == "score"
+    assert summary.results[0].result_path == result_path
+    assert summary.results[0].score is None
+    assert "SceneFunc3dDataError" in summary.results[0].error
+
+    payload = json.loads(
+        (tmp_path / "out" / "evaluation_summary.json").read_text(encoding="utf-8")
+    )
+    assert payload["scoring_enabled"] is True
+    assert payload["scored_count"] == 0
+    assert payload["mean_metrics"] is None
+    assert payload["results"][0]["result_path"] == str(result_path)
+    assert payload["results"][0]["failure_stage"] == "score"
+
+
+def test_run_samples_marks_unscored_batch_metrics_as_not_computed(
+    tmp_path: Path,
+) -> None:
+    _write_two_sample_scene(tmp_path / "data")
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    summary = run_samples(
+        config,
+        sample_ids=("421254::desc-a", "421254::desc-b"),
+        executor=_DynamicSceneFuncExecutor(),
+        check_sidecars=False,
+        score=False,
+    )
+
+    assert summary.sample_count == 2
+    assert summary.completed_count == 2
+    assert summary.failed_count == 0
+    assert summary.scoring_enabled is False
+    assert summary.scored_count == 0
+    assert summary.mean_iou is None
+    assert summary.mean_precision is None
+    assert summary.mean_recall is None
+    assert summary.mean_f1 is None
+    assert all(result.score is None for result in summary.results)
+
+    payload = json.loads(
+        (tmp_path / "out" / "evaluation_summary.json").read_text(encoding="utf-8")
+    )
+    assert payload["scoring_enabled"] is False
+    assert payload["scored_count"] == 0
+    assert payload["mean_metrics"] is None
+
+
 def test_main_with_score_prints_result_path_and_score(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1468,9 +1547,11 @@ def test_main_all_samples_prints_batch_summary_path(
         assert score is True
         captured_sample_ids.extend(sample_ids)
         return runner.SceneFunc3dBatchRunSummary(
+            scoring_enabled=True,
             sample_count=2,
             completed_count=2,
             failed_count=0,
+            scored_count=2,
             mean_iou=0.25,
             mean_precision=0.5,
             mean_recall=0.75,
@@ -1535,9 +1616,11 @@ def test_main_sample_ids_path_strips_file_entries_before_batch_run(
         _ = continue_on_error
         captured_sample_ids.extend(sample_ids)
         return runner.SceneFunc3dBatchRunSummary(
+            scoring_enabled=True,
             sample_count=2,
             completed_count=2,
             failed_count=0,
+            scored_count=2,
             mean_iou=0.25,
             mean_precision=0.5,
             mean_recall=0.75,
@@ -1570,6 +1653,57 @@ def test_main_sample_ids_path_strips_file_entries_before_batch_run(
     assert captured_sample_ids == ["421254::desc-b", "421254::desc-a"]
     payload = json.loads(capsys.readouterr().out)
     assert payload["summary_path"] == str(tmp_path / "out" / "evaluation_summary.json")
+
+
+def test_main_validates_sample_ids_path_before_building_executor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_build_executor() -> CodexExecutor:
+        raise AssertionError("executor should not be built before input validation")
+
+    monkeypatch.setattr(runner, "_build_executor", fake_build_executor)
+
+    with pytest.raises(SceneFunc3dDataError, match="sample ids file is missing"):
+        main(
+            [
+                "--dataset-root",
+                str(tmp_path / "data"),
+                "--sample-ids-path",
+                str(tmp_path / "missing_sample_ids.json"),
+                "--backend-config",
+                str(tmp_path / "backends.toml"),
+                "--output-dir",
+                str(tmp_path / "out"),
+                "--skip-sidecar-health-check",
+            ]
+        )
+
+
+def test_main_rejects_empty_all_samples_before_building_executor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "data").mkdir()
+
+    def fake_build_executor() -> CodexExecutor:
+        raise AssertionError("executor should not be built before input validation")
+
+    monkeypatch.setattr(runner, "_build_executor", fake_build_executor)
+
+    with pytest.raises(SceneFunc3dDataError, match="sample_ids must not be empty"):
+        main(
+            [
+                "--dataset-root",
+                str(tmp_path / "data"),
+                "--all-samples",
+                "--backend-config",
+                str(tmp_path / "backends.toml"),
+                "--output-dir",
+                str(tmp_path / "out"),
+                "--skip-sidecar-health-check",
+            ]
+        )
 
 
 def test_build_executor_uses_tool_writable_runtime_defaults(
@@ -2255,6 +2389,30 @@ def _write_two_sample_scene(root: Path) -> None:
                         "annot_id": "annot-a",
                         "label": "pinch_pull",
                         "indices": [10, 12, 99],
+                    },
+                    {
+                        "annot_id": "annot-b",
+                        "label": "press",
+                        "indices": [10],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_unscorable_scene(root: Path) -> None:
+    _write_two_sample_scene(root)
+    scene_dir = root / "421254"
+    (scene_dir / "421254_annotations.json").write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "annotations": [
+                    {
+                        "annot_id": "annot-a",
+                        "label": "pinch_pull",
                     },
                     {
                         "annot_id": "annot-b",

@@ -1,4 +1,4 @@
-"""Single-case SceneFunc3D mask-generation runner."""
+"""SceneFunc3D mask-generation runner for single samples and batches."""
 
 from __future__ import annotations
 
@@ -126,6 +126,7 @@ class SceneFunc3dBatchSampleResultPayload(TypedDict):
 
     sample_id: str
     status: str
+    failure_stage: str
     result_path: str | None
     score: SceneFunc3dScorePayload | None
     error: str
@@ -135,10 +136,12 @@ class SceneFunc3dBatchRunSummaryPayload(TypedDict):
     """JSON-ready summary for a SceneFunc3D batch run."""
 
     task_name: str
+    scoring_enabled: bool
     sample_count: int
     completed_count: int
     failed_count: int
-    mean_metrics: SceneFunc3dBatchMeanMetricsPayload
+    scored_count: int
+    mean_metrics: SceneFunc3dBatchMeanMetricsPayload | None
     results: list[SceneFunc3dBatchSampleResultPayload]
 
 
@@ -150,6 +153,7 @@ class SceneFunc3dCliBatchRunPayload(TypedDict):
 
 
 SceneFunc3dBatchSampleStatus: TypeAlias = Literal["completed", "failed"]
+SceneFunc3dBatchFailureStage: TypeAlias = Literal["", "run", "score"]
 
 
 class SceneFunc3dMaskDecision(BaseModel):
@@ -295,6 +299,7 @@ class SceneFunc3dBatchSampleResult:
 
     sample_id: str
     status: SceneFunc3dBatchSampleStatus
+    failure_stage: SceneFunc3dBatchFailureStage
     result_path: Path | None
     score: SceneFunc3dScore | None
     error: str = ""
@@ -304,6 +309,7 @@ class SceneFunc3dBatchSampleResult:
         return {
             "sample_id": self.sample_id,
             "status": self.status,
+            "failure_stage": self.failure_stage,
             "result_path": (
                 str(self.result_path) if self.result_path is not None else None
             ),
@@ -316,29 +322,43 @@ class SceneFunc3dBatchSampleResult:
 class SceneFunc3dBatchRunSummary:
     """Aggregate metrics over one SceneFunc3D batch run."""
 
+    scoring_enabled: bool
     sample_count: int
     completed_count: int
     failed_count: int
-    mean_iou: float
-    mean_precision: float
-    mean_recall: float
-    mean_f1: float
+    scored_count: int
+    mean_iou: float | None
+    mean_precision: float | None
+    mean_recall: float | None
+    mean_f1: float | None
     results: tuple[SceneFunc3dBatchSampleResult, ...]
 
     def to_payload(self) -> SceneFunc3dBatchRunSummaryPayload:
         """Return the JSON-ready representation stored in ``evaluation_summary``."""
         return {
             "task_name": TASK_NAME,
+            "scoring_enabled": self.scoring_enabled,
             "sample_count": self.sample_count,
             "completed_count": self.completed_count,
             "failed_count": self.failed_count,
-            "mean_metrics": {
-                "iou": self.mean_iou,
-                "precision": self.mean_precision,
-                "recall": self.mean_recall,
-                "f1": self.mean_f1,
-            },
+            "scored_count": self.scored_count,
+            "mean_metrics": self._mean_metrics_payload(),
             "results": [result.to_payload() for result in self.results],
+        }
+
+    def _mean_metrics_payload(self) -> SceneFunc3dBatchMeanMetricsPayload | None:
+        if (
+            self.mean_iou is None
+            or self.mean_precision is None
+            or self.mean_recall is None
+            or self.mean_f1 is None
+        ):
+            return None
+        return {
+            "iou": self.mean_iou,
+            "precision": self.mean_precision,
+            "recall": self.mean_recall,
+            "f1": self.mean_f1,
         }
 
 
@@ -643,21 +663,6 @@ def run_samples(
                 executor=executor,
                 check_sidecars=False,
             )
-            sample_score = (
-                score_result_file(
-                    data_root=config.dataset_root, result_path=result_path
-                )
-                if score
-                else None
-            )
-            results.append(
-                SceneFunc3dBatchSampleResult(
-                    sample_id=sample_id,
-                    status="completed",
-                    result_path=result_path,
-                    score=sample_score,
-                )
-            )
         except Exception as exc:
             if not continue_on_error:
                 raise
@@ -665,13 +670,45 @@ def run_samples(
                 SceneFunc3dBatchSampleResult(
                     sample_id=sample_id,
                     status="failed",
+                    failure_stage="run",
                     result_path=None,
                     score=None,
                     error=_format_batch_error(exc),
                 )
             )
+            continue
 
-    summary = _summarize_batch_results(tuple(results))
+        sample_score: SceneFunc3dScore | None = None
+        if score:
+            try:
+                sample_score = score_result_file(
+                    data_root=config.dataset_root, result_path=result_path
+                )
+            except Exception as exc:
+                if not continue_on_error:
+                    raise
+                results.append(
+                    SceneFunc3dBatchSampleResult(
+                        sample_id=sample_id,
+                        status="failed",
+                        failure_stage="score",
+                        result_path=result_path,
+                        score=None,
+                        error=_format_batch_error(exc),
+                    )
+                )
+                continue
+        results.append(
+            SceneFunc3dBatchSampleResult(
+                sample_id=sample_id,
+                status="completed",
+                failure_stage="",
+                result_path=result_path,
+                score=sample_score,
+            )
+        )
+
+    summary = _summarize_batch_results(tuple(results), scoring_enabled=score)
     _write_batch_summary(config.output_dir / "evaluation_summary.json", summary)
     return summary
 
@@ -697,22 +734,23 @@ def _normalized_batch_sample_ids(sample_ids: Sequence[str]) -> tuple[str, ...]:
 
 def _summarize_batch_results(
     results: tuple[SceneFunc3dBatchSampleResult, ...],
+    *,
+    scoring_enabled: bool,
 ) -> SceneFunc3dBatchRunSummary:
     sample_count = len(results)
-    denominator = max(sample_count, 1)
     completed_count = sum(1 for result in results if result.status == "completed")
     failed_count = sample_count - completed_count
+    scores = tuple(result.score for result in results if result.score is not None)
     return SceneFunc3dBatchRunSummary(
+        scoring_enabled=scoring_enabled,
         sample_count=sample_count,
         completed_count=completed_count,
         failed_count=failed_count,
-        mean_iou=sum(_score_iou(result.score) for result in results) / denominator,
-        mean_precision=(
-            sum(_score_precision(result.score) for result in results) / denominator
-        ),
-        mean_recall=sum(_score_recall(result.score) for result in results)
-        / denominator,
-        mean_f1=sum(_score_f1(result.score) for result in results) / denominator,
+        scored_count=len(scores),
+        mean_iou=_mean_score_iou(scores),
+        mean_precision=_mean_score_precision(scores),
+        mean_recall=_mean_score_recall(scores),
+        mean_f1=_mean_score_f1(scores),
         results=results,
     )
 
@@ -727,20 +765,28 @@ def _write_batch_summary(
     return summary_path
 
 
-def _score_iou(score: SceneFunc3dScore | None) -> float:
-    return score.metrics.iou if score is not None else 0.0
+def _mean_score_iou(scores: tuple[SceneFunc3dScore, ...]) -> float | None:
+    if not scores:
+        return None
+    return sum(score.metrics.iou for score in scores) / len(scores)
 
 
-def _score_precision(score: SceneFunc3dScore | None) -> float:
-    return score.metrics.precision if score is not None else 0.0
+def _mean_score_precision(scores: tuple[SceneFunc3dScore, ...]) -> float | None:
+    if not scores:
+        return None
+    return sum(score.metrics.precision for score in scores) / len(scores)
 
 
-def _score_recall(score: SceneFunc3dScore | None) -> float:
-    return score.metrics.recall if score is not None else 0.0
+def _mean_score_recall(scores: tuple[SceneFunc3dScore, ...]) -> float | None:
+    if not scores:
+        return None
+    return sum(score.metrics.recall for score in scores) / len(scores)
 
 
-def _score_f1(score: SceneFunc3dScore | None) -> float:
-    return score.metrics.f1 if score is not None else 0.0
+def _mean_score_f1(scores: tuple[SceneFunc3dScore, ...]) -> float | None:
+    if not scores:
+        return None
+    return sum(score.metrics.f1 for score in scores) / len(scores)
 
 
 def _format_batch_error(exc: Exception) -> str:
@@ -1209,8 +1255,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         output_dir=args.output_dir,
         backend_config_path=args.backend_config,
     )
-    executor = _build_executor()
     sample_ids = _sample_ids_from_args(args, data_root=config.dataset_root)
+    executor = _build_executor()
     if len(sample_ids) == 1 and _namespace_optional_str(args, "sample_id") is not None:
         result_path = run_single_sample(
             config,
@@ -1246,14 +1292,17 @@ def main(argv: Sequence[str] | None = None) -> int:
 def _sample_ids_from_args(
     args: argparse.Namespace, *, data_root: Path
 ) -> tuple[str, ...]:
-    sample_id = _namespace_optional_str(args, "sample_id")
-    if sample_id is not None:
-        return (sample_id,)
-    sample_ids_path = _namespace_optional_path(args, "sample_ids_path")
-    if sample_ids_path is not None:
-        return _load_sample_ids_file(sample_ids_path)
-    if _namespace_bool(args, "all_samples"):
-        return list_sample_ids(data_root)
+    try:
+        sample_id = _namespace_optional_str(args, "sample_id")
+        if sample_id is not None:
+            return _normalized_batch_sample_ids((sample_id,))
+        sample_ids_path = _namespace_optional_path(args, "sample_ids_path")
+        if sample_ids_path is not None:
+            return _normalized_batch_sample_ids(_load_sample_ids_file(sample_ids_path))
+        if _namespace_bool(args, "all_samples"):
+            return _normalized_batch_sample_ids(list_sample_ids(data_root))
+    except ValueError as exc:
+        raise SceneFunc3dDataError(str(exc)) from exc
     raise SceneFunc3dDataError("one SceneFunc3D sample source is required")
 
 
