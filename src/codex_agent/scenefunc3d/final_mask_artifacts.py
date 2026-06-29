@@ -120,6 +120,12 @@ class ValidatedFinalMaskArtifact:
     point_count: int
 
 
+@dataclass(frozen=True)
+class _LiftOverlaySummary:
+    frame_id: str
+    candidate_id: str
+
+
 def validate_final_mask_artifact(
     *,
     artifact_path: Path,
@@ -470,6 +476,12 @@ def _validate_fragment_review_artifacts(
                 candidate_id=standard_candidate_id,
                 artifact_root=artifact_root,
             )
+            if field_name == "lift_overlay_path":
+                _validate_standard_lift_overlay_summary(
+                    fragment,
+                    artifact_path,
+                    candidate_id=standard_candidate_id,
+                )
 
 
 def _candidate_id_from_standard_fragment(
@@ -554,6 +566,54 @@ def _validate_lift_overlay_provenance(
             f"frame_id={fragment.frame_id}; "
             f"path={lift_overlay_path}"
         )
+
+
+def _validate_standard_lift_overlay_summary(
+    fragment: FinalMaskAcceptedFragment,
+    lift_overlay_path: Path,
+    *,
+    candidate_id: str,
+) -> None:
+    summary = _read_lift_overlay_summary(lift_overlay_path)
+    if summary.frame_id != fragment.frame_id:
+        raise CodexResponseError(
+            "accepted fragment review_artifacts lift_overlay_path frame_id must "
+            "match the accepted fragment frame_id: "
+            f"fragment_id={fragment.fragment_id}; "
+            f"frame_id={fragment.frame_id!r}; "
+            f"lift_frame_id={summary.frame_id!r}; "
+            f"path={lift_overlay_path}"
+        )
+    if summary.candidate_id != candidate_id:
+        raise CodexResponseError(
+            "accepted fragment review_artifacts lift_overlay_path candidate_id must "
+            "match the accepted fragment candidate_id: "
+            f"fragment_id={fragment.fragment_id}; "
+            f"candidate_id={candidate_id!r}; "
+            f"lift_candidate_id={summary.candidate_id!r}; "
+            f"path={lift_overlay_path}"
+        )
+
+
+def _read_lift_overlay_summary(lift_overlay_path: Path) -> _LiftOverlaySummary:
+    try:
+        lines = lift_overlay_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise CodexResponseError(
+            "could not read accepted fragment lift overlay summary: "
+            f"lift_overlay_path={lift_overlay_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+    fields: dict[str, str] = {}
+    for line in lines:
+        if "=" not in line:
+            continue
+        key, value = line.split("=", maxsplit=1)
+        fields[key.strip()] = value.strip()
+    return _LiftOverlaySummary(
+        frame_id=fields.get("frame_id", ""),
+        candidate_id=fields.get("candidate_id", ""),
+    )
 
 
 def _review_artifact_path_items(

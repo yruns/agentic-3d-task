@@ -695,6 +695,96 @@ def test_mask_task_rejects_standard_review_artifacts_from_other_run(
         )
 
 
+def test_mask_task_rejects_lift_overlay_candidate_mismatch(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(
+        output_dir,
+        accepted_fragment_ids=("000010_mask_00",),
+        accepted_frame_ids=("000010",),
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    _write_lift_overlay_summary(
+        Path(review_artifacts["lift_overlay_path"]),
+        frame_id="000010",
+        candidate_id="mask_01",
+    )
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="candidate_id"):
+        task.parse_response(
+            json.dumps(
+                _outcome_payload(
+                    output_dir,
+                    accepted_fragment_ids=("000010_mask_00",),
+                )
+            )
+        )
+
+
+def test_mask_task_rejects_lift_overlay_frame_mismatch(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(
+        output_dir,
+        accepted_fragment_ids=("000010_mask_00",),
+        accepted_frame_ids=("000010",),
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    _write_lift_overlay_summary(
+        Path(review_artifacts["lift_overlay_path"]),
+        frame_id="000011",
+        candidate_id="mask_00",
+    )
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="frame_id"):
+        task.parse_response(
+            json.dumps(
+                _outcome_payload(
+                    output_dir,
+                    accepted_fragment_ids=("000010_mask_00",),
+                )
+            )
+        )
+
+
 def test_check_sidecar_health_passes_for_healthy_fake_servers(
     tmp_path: Path,
 ) -> None:
@@ -1199,7 +1289,24 @@ def _write_standard_review_artifacts(
     for path in paths.values():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("reviewed\n", encoding="utf-8")
+    _write_lift_overlay_summary(
+        paths["lift_overlay_path"],
+        frame_id=frame_id,
+        candidate_id=candidate_id,
+    )
     return {key: str(path) for key, path in paths.items()}
+
+
+def _write_lift_overlay_summary(
+    path: Path, *, frame_id: str, candidate_id: str
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"frame_id={frame_id}\n"
+        f"candidate_id={candidate_id}\n"
+        "lifted_point_count=2\n",
+        encoding="utf-8",
+    )
 
 
 def _unique_frame_ids(frame_ids: tuple[str, ...]) -> tuple[str, ...]:
