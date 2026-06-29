@@ -785,6 +785,50 @@ def test_mask_task_rejects_lift_overlay_frame_mismatch(
         )
 
 
+def test_mask_task_rejects_standard_fragment_point_count_mismatch(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(
+        output_dir,
+        accepted_fragment_ids=("000010_mask_00",),
+        accepted_frame_ids=("000010",),
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    _write_fragment_points_artifact(
+        output_dir / "fragments" / "000010_mask_00",
+        point_count=1,
+    )
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="point_count"):
+        task.parse_response(
+            json.dumps(
+                _outcome_payload(
+                    output_dir,
+                    accepted_fragment_ids=("000010_mask_00",),
+                )
+            )
+        )
+
+
 def test_check_sidecar_health_passes_for_healthy_fake_servers(
     tmp_path: Path,
 ) -> None:
@@ -1294,7 +1338,24 @@ def _write_standard_review_artifacts(
         frame_id=frame_id,
         candidate_id=candidate_id,
     )
+    _write_fragment_points_artifact(root / "fragments" / fragment_id, point_count=2)
     return {key: str(path) for key, path in paths.items()}
+
+
+def _write_fragment_points_artifact(root: Path, *, point_count: int) -> None:
+    from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
+
+    root.mkdir(parents=True, exist_ok=True)
+    points_world = np.array(
+        [
+            [float(index), float(index + 1), float(index + 2)]
+            for index in range(point_count)
+        ],
+        dtype=np.float64,
+    )
+    point_indices = np.arange(point_count, dtype=np.int64)
+    write_lift_npz(root / "mask_data.npz", points_world, point_indices=point_indices)
+    write_lift_ply(root / "lifted_points.ply", points_world)
 
 
 def _write_lift_overlay_summary(

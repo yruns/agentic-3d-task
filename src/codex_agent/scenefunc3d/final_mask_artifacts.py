@@ -482,6 +482,10 @@ def _validate_fragment_review_artifacts(
                     artifact_path,
                     candidate_id=standard_candidate_id,
                 )
+                _validate_standard_fragment_mask_artifacts(
+                    fragment,
+                    artifact_root=artifact_root,
+                )
 
 
 def _candidate_id_from_standard_fragment(
@@ -592,6 +596,33 @@ def _validate_standard_lift_overlay_summary(
             f"candidate_id={candidate_id!r}; "
             f"lift_candidate_id={summary.candidate_id!r}; "
             f"path={lift_overlay_path}"
+        )
+
+
+def _validate_standard_fragment_mask_artifacts(
+    fragment: FinalMaskAcceptedFragment, *, artifact_root: Path
+) -> None:
+    fragment_dir = artifact_root / "fragments" / fragment.fragment_id
+    mask_npz_path = fragment_dir / "mask_data.npz"
+    mask_ply_path = fragment_dir / "lifted_points.ply"
+    fragment_npz_point_count = validate_points_world_npz(mask_npz_path)
+    load_point_indices_npz(mask_npz_path, expected_count=fragment_npz_point_count)
+    fragment_ply_vertex_count = validate_ascii_points_ply(mask_ply_path)
+    if fragment_ply_vertex_count != fragment_npz_point_count:
+        raise CodexResponseError(
+            "accepted fragment lifted_points.ply vertex count must match "
+            "mask_data.npz point count: "
+            f"fragment_id={fragment.fragment_id}; "
+            f"mask_npz_path={mask_npz_path}; points={fragment_npz_point_count}; "
+            f"mask_ply_path={mask_ply_path}; vertices={fragment_ply_vertex_count}"
+        )
+    if fragment_npz_point_count != fragment.point_count:
+        raise CodexResponseError(
+            "accepted fragment point_count must match canonical fragment "
+            "mask_data.npz point count: "
+            f"fragment_id={fragment.fragment_id}; "
+            f"point_count={fragment.point_count}; "
+            f"mask_npz_path={mask_npz_path}; points={fragment_npz_point_count}"
         )
 
 
