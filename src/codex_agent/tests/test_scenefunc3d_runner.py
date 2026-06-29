@@ -308,7 +308,9 @@ def test_mask_task_rejects_fragment_point_count_sum_mismatch(
             "frame_id": "000010",
             "point_count": 1,
             "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
-            "review_artifacts": _write_review_artifacts(output_dir / "review-a"),
+            "review_artifacts": _write_review_artifacts(
+                output_dir / "review_artifacts" / "frag-a"
+            ),
         }
     ]
     (output_dir / "mask_artifact.json").write_text(
@@ -460,6 +462,63 @@ def test_mask_task_rejects_missing_fragment_review_artifact(
     )
 
     with pytest.raises(CodexResponseError, match="review_artifacts"):
+        task.parse_response(json.dumps(_outcome_payload(output_dir)))
+
+
+def test_mask_task_rejects_review_artifact_from_wrong_fragment(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir)
+    wrong_review_artifacts = _write_review_artifacts(
+        output_dir / "review_artifacts" / "wrong-fragment"
+    )
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["review_artifacts"][
+        "lift_overlay_path"
+    ] = wrong_review_artifacts["lift_overlay_path"]
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="review_artifacts"):
+        task.parse_response(json.dumps(_outcome_payload(output_dir)))
+
+
+def test_mask_task_rejects_lift_overlay_with_nonstandard_filename(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir)
+    nonstandard_overlay_path = output_dir / "review_artifacts" / "frag-a" / "other.txt"
+    nonstandard_overlay_path.write_text("reviewed\n", encoding="utf-8")
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["review_artifacts"][
+        "lift_overlay_path"
+    ] = str(nonstandard_overlay_path)
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="lift_overlay.txt"):
         task.parse_response(json.dumps(_outcome_payload(output_dir)))
 
 

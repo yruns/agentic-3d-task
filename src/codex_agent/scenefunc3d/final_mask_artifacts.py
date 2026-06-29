@@ -445,6 +445,32 @@ def _validate_fragment_review_artifacts(fragment: FinalMaskAcceptedFragment) -> 
                 f"frame_id={fragment.frame_id}; "
                 f"field={field_name}; path={artifact_path}"
             )
+        if field_name == "lift_overlay_path":
+            _validate_lift_overlay_provenance(fragment, artifact_path)
+
+
+def _validate_lift_overlay_provenance(
+    fragment: FinalMaskAcceptedFragment,
+    lift_overlay_path: Path,
+) -> None:
+    expected_lift_overlay_name = "lift_overlay.txt"
+    if lift_overlay_path.name != expected_lift_overlay_name:
+        raise CodexResponseError(
+            "accepted fragment review_artifacts lift_overlay_path must use the "
+            "standard lift overlay filename: "
+            f"expected_name={expected_lift_overlay_name!r}; "
+            f"fragment_id={fragment.fragment_id}; "
+            f"frame_id={fragment.frame_id}; "
+            f"path={lift_overlay_path}"
+        )
+    if lift_overlay_path.parent.name != fragment.fragment_id:
+        raise CodexResponseError(
+            "accepted fragment review_artifacts lift_overlay_path must come from "
+            "the accepted fragment directory: "
+            f"fragment_id={fragment.fragment_id}; "
+            f"frame_id={fragment.frame_id}; "
+            f"path={lift_overlay_path}"
+        )
 
 
 def _review_artifact_path_items(
