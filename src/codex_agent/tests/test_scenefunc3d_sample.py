@@ -10,6 +10,7 @@ import pytest
 from codex_agent.errors import SceneFunc3dDataError
 from codex_agent.scenefunc3d.sample import (
     SceneFunc3dSampleId,
+    list_sample_ids,
     load_sample,
     safe_sample_id,
     scene_dir_for,
@@ -101,6 +102,57 @@ def test_scene_dir_for() -> None:
 
 def test_safe_sample_id() -> None:
     assert safe_sample_id("421254::desc-a") == "421254__desc-a"
+
+
+def test_list_sample_ids_returns_all_descriptions_in_scene_order(
+    tmp_path: Path,
+) -> None:
+    scene_dir = tmp_path / "421393"
+    scene_dir.mkdir()
+    (scene_dir / "421393_descriptions.json").write_text(
+        json.dumps(
+            {
+                "visit_id": "421393",
+                "descriptions": [
+                    {
+                        "desc_id": "desc-b",
+                        "annot_id": ["annot-b"],
+                        "description": "Adjust the radiator dial.",
+                    },
+                    {
+                        "desc_id": "desc-c",
+                        "annot_id": ["annot-c"],
+                        "description": "Open the bottom drawer.",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_scene(tmp_path)
+
+    assert list_sample_ids(tmp_path) == (
+        "421254::desc-a",
+        "421393::desc-b",
+        "421393::desc-c",
+    )
+
+
+def test_list_sample_ids_rejects_duplicate_description_ids(tmp_path: Path) -> None:
+    _write_scene(tmp_path)
+    path = tmp_path / "421254" / "421254_descriptions.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["descriptions"].append(
+        {
+            "desc_id": "desc-a",
+            "annot_id": ["annot-b"],
+            "description": "Duplicate task id.",
+        }
+    )
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(SceneFunc3dDataError, match="duplicate description id"):
+        list_sample_ids(tmp_path)
 
 
 def test_load_sample_hides_gt_indices(tmp_path: Path) -> None:

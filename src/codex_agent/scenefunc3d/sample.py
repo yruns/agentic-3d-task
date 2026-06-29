@@ -174,6 +174,26 @@ def safe_sample_id(sample_id: str) -> str:
     return sample_id.replace("::", "__").replace("/", "__")
 
 
+def list_sample_ids(data_root: Path) -> tuple[str, ...]:
+    """Return all SceneFunc3D sample ids under a prepared dataset root."""
+    root = Path(data_root)
+    if not root.is_dir():
+        raise SceneFunc3dDataError(f"SceneFunc3D data root is missing: {root}")
+
+    sample_ids: list[str] = []
+    for scene_dir in _numeric_scene_dirs(root):
+        visit_id = scene_dir.name
+        descriptions = _load_scene_model(
+            scene_dir / f"{visit_id}_descriptions.json", _RawDescriptionsFile
+        )
+        _validate_visit_id(descriptions.visit_id, visit_id, "descriptions")
+        sample_ids.extend(
+            f"{visit_id}::{description_id}"
+            for description_id in _description_ids(descriptions)
+        )
+    return tuple(sample_ids)
+
+
 def load_sample(data_root: Path, sample_id: str) -> SceneFunc3dSample:
     """Load one SceneFunc3D sample, excluding hidden annotation GT from context."""
     parsed = SceneFunc3dSampleId.parse(sample_id)
@@ -221,16 +241,47 @@ def _load_scene_model(path: Path, model_type: type[ModelT]) -> ModelT:
         raise SceneFunc3dDataError(f"{path}: failed validation: {exc}") from exc
 
 
+def _numeric_scene_dirs(data_root: Path) -> tuple[Path, ...]:
+    return tuple(
+        sorted(
+            (
+                scene_dir
+                for scene_dir in data_root.iterdir()
+                if scene_dir.is_dir()
+                and _VISIT_ID_PATTERN.fullmatch(scene_dir.name) is not None
+            ),
+            key=lambda path: path.name,
+        )
+    )
+
+
 def _validate_visit_id(actual: str, visit_id: str, name: str) -> None:
     if actual != visit_id:
         raise SceneFunc3dDataError(f"{name} visit_id={actual!r}, expected {visit_id!r}")
 
 
 def _find_description(payload: _RawDescriptionsFile, desc_id: str) -> _RawDescription:
+    matches: list[_RawDescription] = []
     for item in payload.descriptions:
         if item.desc_id == desc_id:
-            return item
+            matches.append(item)
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise SceneFunc3dDataError(f"duplicate description id: {desc_id!r}")
     raise SceneFunc3dDataError(f"description id not found: {desc_id}")
+
+
+def _description_ids(payload: _RawDescriptionsFile) -> tuple[str, ...]:
+    seen_description_ids: set[str] = set()
+    description_ids: list[str] = []
+    for description in payload.descriptions:
+        description_id = _coerce_non_empty_string(description.desc_id, "desc_id")
+        if description_id in seen_description_ids:
+            raise SceneFunc3dDataError(f"duplicate description id: {description_id!r}")
+        seen_description_ids.add(description_id)
+        description_ids.append(description_id)
+    return tuple(description_ids)
 
 
 def _validate_selected_annotations(
@@ -311,5 +362,6 @@ __all__ = [
     "SceneFunc3dSample",
     "scene_dir_for",
     "safe_sample_id",
+    "list_sample_ids",
     "load_sample",
 ]

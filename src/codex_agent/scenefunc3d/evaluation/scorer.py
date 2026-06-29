@@ -326,9 +326,66 @@ def _load_final_mask_artifact_document(
 
 def _resolve_artifact_member_path(*, artifact_path: Path, raw_member_path: str) -> Path:
     member_path = Path(raw_member_path).expanduser()
+    if member_path.is_absolute() and member_path.is_file():
+        return member_path.resolve()
     if member_path.is_absolute():
+        copied_member_path = _resolve_copied_artifact_member_path(
+            artifact_path=artifact_path,
+            stale_member_path=member_path,
+        )
+        if copied_member_path is not None:
+            return copied_member_path
         return member_path.resolve()
     return (artifact_path.parent / member_path).resolve()
+
+
+def _resolve_copied_artifact_member_path(
+    *,
+    artifact_path: Path,
+    stale_member_path: Path,
+) -> Path | None:
+    search_root = artifact_path.parent
+    candidates = _existing_copied_member_candidates(
+        search_root=search_root,
+        stale_member_path=stale_member_path,
+    )
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        raise SceneFunc3dDataError(
+            "copied artifact member path is ambiguous: "
+            f"artifact_path={artifact_path}; "
+            f"stale_member_path={stale_member_path}; "
+            f"candidates={tuple(str(path) for path in candidates)}"
+        )
+    return None
+
+
+def _existing_copied_member_candidates(
+    *,
+    search_root: Path,
+    stale_member_path: Path,
+) -> tuple[Path, ...]:
+    parent_name = stale_member_path.parent.name
+    candidate_paths = [
+        search_root / stale_member_path.name,
+        search_root / parent_name / stale_member_path.name,
+    ]
+    return _deduplicate_existing_paths(candidate_paths)
+
+
+def _deduplicate_existing_paths(candidate_paths: list[Path]) -> tuple[Path, ...]:
+    resolved_candidates: list[Path] = []
+    seen_paths: set[Path] = set()
+    for candidate_path in candidate_paths:
+        if not candidate_path.is_file():
+            continue
+        resolved_path = candidate_path.resolve()
+        if resolved_path in seen_paths:
+            continue
+        resolved_candidates.append(resolved_path)
+        seen_paths.add(resolved_path)
+    return tuple(sorted(resolved_candidates))
 
 
 __all__ = [

@@ -219,6 +219,146 @@ def test_score_result_file_uses_runner_result_artifact_path(tmp_path: Path) -> N
     )
 
 
+def test_score_result_file_falls_back_to_copied_artifact_members(
+    tmp_path: Path,
+) -> None:
+    _write_scoring_scene(tmp_path)
+    result_dir = tmp_path / "copied_case"
+    fused_dir = result_dir / "fused"
+    fused_dir.mkdir(parents=True)
+    mask_npz_path = fused_dir / "mask_data.npz"
+    np.savez_compressed(mask_npz_path, point_indices=np.array([3, 5, 8, 13, 21]))
+    artifact_path = fused_dir / "mask_artifact.json"
+    stale_run_root = tmp_path / "missing_run" / "agent_outputs" / "421254" / "desc-a"
+    _write_scoring_mask_artifact(
+        artifact_path,
+        mask_npz_path=stale_run_root / "fused" / "mask_data.npz",
+    )
+    result_path = result_dir / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "task_name": "scenefunc3d_mask_generation",
+                "sample_id": "421254::desc-a",
+                "outcome": {
+                    "mask_artifact_path": str(
+                        stale_run_root / "fused" / "mask_artifact.json"
+                    ),
+                    "mask_npz_path": str(stale_run_root / "fused" / "mask_data.npz"),
+                    "mask_ply_path": str(stale_run_root / "fused" / "mask.ply"),
+                    "selected_frame_ids": ["000010"],
+                    "accepted_fragment_ids": ["frag-a"],
+                    "confidence": 0.9,
+                    "uncertainties": [],
+                },
+                "turn": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    score = score_result_file(data_root=tmp_path, result_path=result_path)
+
+    assert score.metrics == MaskMetrics(
+        iou=1.0,
+        precision=1.0,
+        recall=1.0,
+        f1=1.0,
+        predicted_count=5,
+        gt_count=5,
+    )
+
+
+def test_score_result_file_rejects_ambiguous_copied_artifact_member(
+    tmp_path: Path,
+) -> None:
+    _write_scoring_scene(tmp_path)
+    result_dir = tmp_path / "copied_case"
+    fused_dir = result_dir / "fused"
+    fused_dir.mkdir(parents=True)
+    mask_npz_path = fused_dir / "mask_data.npz"
+    stale_run_root = tmp_path / "missing_run" / "agent_outputs" / "421254" / "desc-a"
+    artifact_path = fused_dir / "mask_artifact.json"
+    _write_scoring_mask_artifact(
+        artifact_path,
+        mask_npz_path=stale_run_root / "fused" / "mask_data.npz",
+    )
+    _write_scoring_mask_artifact(
+        result_dir / "mask_artifact.json",
+        mask_npz_path=stale_run_root / "fused" / "mask_data.npz",
+    )
+    np.savez_compressed(mask_npz_path, point_indices=np.array([3, 5]))
+    result_path = result_dir / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "task_name": "scenefunc3d_mask_generation",
+                "sample_id": "421254::desc-a",
+                "outcome": {
+                    "mask_artifact_path": str(
+                        stale_run_root / "fused" / "mask_artifact.json"
+                    ),
+                    "mask_npz_path": str(stale_run_root / "fused" / "mask_data.npz"),
+                    "mask_ply_path": str(stale_run_root / "fused" / "mask.ply"),
+                    "selected_frame_ids": ["000010"],
+                    "accepted_fragment_ids": ["frag-a"],
+                    "confidence": 0.9,
+                    "uncertainties": [],
+                },
+                "turn": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SceneFunc3dDataError, match="ambiguous"):
+        score_result_file(data_root=tmp_path, result_path=result_path)
+
+
+def test_score_result_file_rejects_unrelated_copied_artifact_basename(
+    tmp_path: Path,
+) -> None:
+    _write_scoring_scene(tmp_path)
+    result_dir = tmp_path / "copied_case"
+    unrelated_fused_dir = result_dir / "other_case" / "fused"
+    unrelated_fused_dir.mkdir(parents=True)
+    unrelated_mask_npz_path = unrelated_fused_dir / "mask_data.npz"
+    np.savez_compressed(
+        unrelated_mask_npz_path,
+        point_indices=np.array([3, 5, 8, 13, 21]),
+    )
+    _write_scoring_mask_artifact(
+        unrelated_fused_dir / "mask_artifact.json",
+        mask_npz_path=unrelated_mask_npz_path,
+    )
+    stale_run_root = tmp_path / "missing_run" / "agent_outputs" / "421254" / "desc-a"
+    result_path = result_dir / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "task_name": "scenefunc3d_mask_generation",
+                "sample_id": "421254::desc-a",
+                "outcome": {
+                    "mask_artifact_path": str(
+                        stale_run_root / "fused" / "mask_artifact.json"
+                    ),
+                    "mask_npz_path": str(stale_run_root / "fused" / "mask_data.npz"),
+                    "mask_ply_path": str(stale_run_root / "fused" / "mask.ply"),
+                    "selected_frame_ids": ["000010"],
+                    "accepted_fragment_ids": ["frag-a"],
+                    "confidence": 0.9,
+                    "uncertainties": [],
+                },
+                "turn": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SceneFunc3dDataError, match="final mask artifact JSON"):
+        score_result_file(data_root=tmp_path, result_path=result_path)
+
+
 def test_evaluation_cli_scores_runner_result_json(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -268,6 +408,47 @@ def test_evaluation_cli_scores_runner_result_json(
     assert metrics["f1"] == 1.0
     assert metrics["predicted_count"] == 5
     assert metrics["gt_count"] == 5
+
+
+def test_evaluation_cli_scores_result_directory_manifest(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_scoring_scene(tmp_path)
+    second_result_path = _write_scoring_result_file(
+        tmp_path / "runs" / "421254" / "second" / "result.json",
+        mask_point_indices=(3, 99),
+    )
+    first_result_path = _write_scoring_result_file(
+        tmp_path / "runs" / "421254" / "first" / "result.json",
+        mask_point_indices=(3, 5, 8, 13, 21),
+    )
+
+    exit_code = evaluation_cli.main(
+        [
+            "--data-root",
+            str(tmp_path),
+            "--results-dir",
+            str(tmp_path / "runs"),
+        ]
+    )
+
+    assert exit_code == 0
+    payload = _json_object(capsys.readouterr().out)
+    assert payload["result_count"] == 2
+    assert payload["result_paths"] == [
+        str(first_result_path),
+        str(second_result_path),
+    ]
+    scores = cast(list[object], payload["scores"])
+    first_score = cast(Mapping[str, object], scores[0])
+    second_score = cast(Mapping[str, object], scores[1])
+    assert first_score["sample_id"] == "421254::desc-a"
+    assert second_score["sample_id"] == "421254::desc-a"
+    first_metrics = _json_object_member(first_score, "metrics")
+    second_metrics = _json_object_member(second_score, "metrics")
+    assert first_metrics["iou"] == 1.0
+    assert second_metrics["iou"] == 1 / 6
+    assert second_metrics["predicted_count"] == 2
 
 
 def test_lift_mask_args_accepts_existing_input_files(tmp_path: Path) -> None:
@@ -482,6 +663,38 @@ def _write_scoring_mask_artifact(artifact_path: Path, *, mask_npz_path: Path) ->
         ),
         encoding="utf-8",
     )
+
+
+def _write_scoring_result_file(
+    result_path: Path,
+    *,
+    mask_point_indices: tuple[int, ...],
+) -> Path:
+    result_path.parent.mkdir(parents=True)
+    mask_npz_path = result_path.parent / "mask_data.npz"
+    np.savez_compressed(mask_npz_path, point_indices=np.array(mask_point_indices))
+    artifact_path = result_path.parent / "mask_artifact.json"
+    _write_scoring_mask_artifact(artifact_path, mask_npz_path=mask_npz_path)
+    result_path.write_text(
+        json.dumps(
+            {
+                "task_name": "scenefunc3d_mask_generation",
+                "sample_id": "421254::desc-a",
+                "outcome": {
+                    "mask_artifact_path": str(artifact_path),
+                    "mask_npz_path": str(mask_npz_path),
+                    "mask_ply_path": "/tmp/lifted_points.ply",
+                    "selected_frame_ids": ["000010"],
+                    "accepted_fragment_ids": ["frag-a"],
+                    "confidence": 0.9,
+                    "uncertainties": [],
+                },
+                "turn": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    return result_path
 
 
 def _json_object(raw_json: str) -> Mapping[str, object]:

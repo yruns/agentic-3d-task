@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TypedDict
 
 from .scorer import SceneFunc3dScore
@@ -26,6 +27,14 @@ class SceneFunc3dScorePayload(TypedDict):
     metrics: MaskMetricsPayload
 
 
+class SceneFunc3dScoreManifestPayload(TypedDict):
+    """JSON-ready manifest for scoring multiple SceneFunc3D runner results."""
+
+    result_count: int
+    result_paths: list[str]
+    scores: list[SceneFunc3dScorePayload]
+
+
 def score_to_payload(score: SceneFunc3dScore) -> SceneFunc3dScorePayload:
     """Convert an internal score object into a public JSON payload."""
     return {
@@ -42,8 +51,23 @@ def score_to_payload(score: SceneFunc3dScore) -> SceneFunc3dScorePayload:
     }
 
 
+def score_manifest_to_payload(
+    *,
+    scores: Sequence[SceneFunc3dScore],
+    result_paths: Sequence[str],
+) -> SceneFunc3dScoreManifestPayload:
+    """Convert multiple scores into a deterministic evaluation manifest."""
+    return {
+        "result_count": len(scores),
+        "result_paths": list(result_paths),
+        "scores": [score_to_payload(score) for score in scores],
+    }
+
+
 __all__ = [
     "MaskMetricsPayload",
     "SceneFunc3dScorePayload",
+    "SceneFunc3dScoreManifestPayload",
+    "score_manifest_to_payload",
     "score_to_payload",
 ]
