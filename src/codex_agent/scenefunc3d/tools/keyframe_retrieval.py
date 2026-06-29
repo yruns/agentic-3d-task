@@ -125,11 +125,14 @@ class KeyframeSelectorArgs(BaseModel):
         values = dict(payload)
         task_description = values.pop("task_description", None)
         target = values.pop("target", None)
+        object_hint = values.pop("object_hint", None)
         if "query" not in values:
             if task_description is not None:
                 values["query"] = task_description
             elif target is not None:
                 values["query"] = target
+            elif object_hint is not None:
+                values["query"] = object_hint
         if "k" not in values and "max_frames" in values:
             values["k"] = values.pop("max_frames")
         else:

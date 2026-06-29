@@ -84,6 +84,25 @@ def test_keyframe_selector_args_accept_agent_task_context_fields() -> None:
     assert args.query == "Adjust room temperature using the radiator dial."
 
 
+def test_keyframe_selector_args_accept_object_hint_context() -> None:
+    args = KeyframeSelectorArgs.model_validate(
+        {
+            "task_description": "Adjust the room temperature using the radiator dial",
+            "object_hint": "radiator dial temperature knob valve",
+        }
+    )
+
+    assert args.query == "Adjust the room temperature using the radiator dial"
+
+
+def test_keyframe_selector_args_accept_object_hint_as_query_fallback() -> None:
+    args = KeyframeSelectorArgs.model_validate(
+        {"object_hint": "radiator dial temperature knob valve"}
+    )
+
+    assert args.query == "radiator dial temperature knob valve"
+
+
 def test_keyframe_selector_args_accept_target_alias_when_query_is_absent() -> None:
     args = KeyframeSelectorArgs.model_validate(
         {
@@ -160,6 +179,35 @@ def test_view_crop_args_accept_xywh_aliases_and_infer_pixel_format() -> None:
     assert args.bbox_format == "pixel_xyxy"
 
 
+def test_view_crop_args_accept_xywh_sequence_alias_and_infer_pixel_format() -> None:
+    args = ViewCropArgs.model_validate(
+        {"frame_id": "000011", "xywh": [920.0, 1370.0, 190.0, 190.0]}
+    )
+
+    assert args.bbox == (920.0, 1370.0, 1110.0, 1560.0)
+    assert args.bbox_format == "pixel_xyxy"
+
+
+@pytest.mark.parametrize(
+    "raw_xywh",
+    [
+        "920,1370,190,190",
+        b"abcd",
+        [920.0, 1370.0, 190.0],
+        [920.0, 1370.0, 190.0, 190.0, 1.0],
+        [True, 1370.0, 190.0, 190.0],
+        ["920", 1370.0, 190.0, 190.0],
+        [920.0, 1370.0, -190.0, 190.0],
+        [920.0, 1370.0, 190.0, 0.0],
+    ],
+)
+def test_view_crop_args_reject_invalid_xywh_sequence_alias(
+    raw_xywh: object,
+) -> None:
+    with pytest.raises(ValidationError):
+        ViewCropArgs.model_validate({"frame_id": "000011", "xywh": raw_xywh})
+
+
 def test_view_crop_args_reject_duplicate_bbox_alias_shapes() -> None:
     with pytest.raises(ValidationError):
         ViewCropArgs.model_validate(
@@ -192,6 +240,14 @@ def test_view_crop_args_reject_duplicate_bbox_alias_shapes() -> None:
                 "y1": 1500.0,
                 "x2": 1120.0,
                 "y2": 1720.0,
+            }
+        )
+    with pytest.raises(ValidationError):
+        ViewCropArgs.model_validate(
+            {
+                "frame_id": "000011",
+                "bbox_xyxy": [900.0, 1500.0, 1100.0, 1730.0],
+                "xywh": [920.0, 1370.0, 190.0, 190.0],
             }
         )
 

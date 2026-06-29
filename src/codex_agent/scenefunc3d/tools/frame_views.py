@@ -200,7 +200,16 @@ class ViewCropArgs(BaseModel):
             and "box" not in values
             and "bbox_xyxy" not in values
             and not _has_xyxy_aliases(values)
+            and "xywh" not in values
             and _has_xywh_aliases(values)
+        )
+        used_xywh_sequence_alias = (
+            "bbox" not in values
+            and "box" not in values
+            and "bbox_xyxy" not in values
+            and not _has_xyxy_aliases(values)
+            and not _has_xywh_aliases(values)
+            and "xywh" in values
         )
         if "bbox" not in values and "box" in values:
             values["bbox"] = values.pop("box")
@@ -217,10 +226,20 @@ class ViewCropArgs(BaseModel):
             values["bbox"] = _bbox_from_xywh_aliases(values)
             for alias_name in ("x", "y", "width", "height"):
                 values.pop(alias_name)
-        if (used_bbox_xyxy_alias or used_xywh_alias) and "bbox_format" not in values:
+        if used_xywh_sequence_alias:
+            values["bbox"] = _bbox_from_xywh_sequence(values.pop("xywh"))
+        if (
+            used_bbox_xyxy_alias or used_xywh_alias or used_xywh_sequence_alias
+        ) and "bbox_format" not in values:
             values["bbox_format"] = "pixel_xyxy"
         if (
-            (used_box_alias or used_xyxy_alias or used_xywh_alias or "bbox" in values)
+            (
+                used_box_alias
+                or used_xyxy_alias
+                or used_xywh_alias
+                or used_xywh_sequence_alias
+                or "bbox" in values
+            )
             and "bbox_format" not in values
             and _raw_bbox_looks_like_pixels(values.get("bbox"))
         ):
@@ -617,6 +636,19 @@ def _bbox_from_xywh_aliases(
     top = _xywh_alias_number(values["y"], field_name="y")
     width = _xywh_alias_number(values["width"], field_name="width")
     height = _xywh_alias_number(values["height"], field_name="height")
+    return (left, top, left + width, top + height)
+
+
+def _bbox_from_xywh_sequence(raw_xywh: object) -> tuple[float, float, float, float]:
+    if not isinstance(raw_xywh, Sequence) or isinstance(raw_xywh, str | bytes):
+        raise ValueError("xywh must be a four-item numeric crop box")
+    coordinates = tuple(raw_xywh)
+    if len(coordinates) != 4:
+        raise ValueError("xywh must be a four-item numeric crop box")
+    left = _xywh_alias_number(coordinates[0], field_name="xywh[0]")
+    top = _xywh_alias_number(coordinates[1], field_name="xywh[1]")
+    width = _xywh_alias_number(coordinates[2], field_name="xywh[2]")
+    height = _xywh_alias_number(coordinates[3], field_name="xywh[3]")
     return (left, top, left + width, top + height)
 
 
