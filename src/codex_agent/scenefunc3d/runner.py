@@ -21,6 +21,8 @@ from ..json_extraction import extract_json_object
 from ..models import CodexTurnMetadata, CodexTurnRequest
 from ..tasks.base import CodexExecutor
 from .backends.config import load_backend_settings
+from .evaluation.payloads import SceneFunc3dScorePayload, score_to_payload
+from .evaluation.scorer import score_result_file
 from .final_mask_artifacts import validate_final_mask_artifact
 from .playbook import SCENEFUNC3D_TOOLS_PLAYBOOK
 from .sample import SceneFunc3dSample, load_sample, safe_sample_id, scene_dir_for
@@ -68,6 +70,19 @@ class SceneFunc3dRunResultPayload(TypedDict):
     sample_id: str
     outcome: SceneFunc3dMaskOutcomePayload
     turn: CodexTurnMetadataPayload
+
+
+class SceneFunc3dCliRunPayload(TypedDict):
+    """Default CLI payload after running one SceneFunc3D sample."""
+
+    result_path: str
+
+
+class SceneFunc3dCliRunAndScorePayload(TypedDict):
+    """CLI payload after running and scoring one SceneFunc3D sample."""
+
+    result_path: str
+    score: SceneFunc3dScorePayload
 
 
 class SceneFunc3dMaskDecision(BaseModel):
@@ -414,14 +429,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip Molmo/SAM /health checks before launching Codex.",
     )
+    parser.add_argument(
+        "--score",
+        action="store_true",
+        help="Score the written result.json against hidden GT and include metrics.",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run one SceneFunc3D sample from the command line."""
-    from ..config import CodexAgentConfig
-    from ..runtime import CodexAgentRuntime
-
     parser = build_arg_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
     config = SceneFunc3dRunnerConfig(
@@ -429,15 +446,45 @@ def main(argv: Sequence[str] | None = None) -> int:
         output_dir=args.output_dir,
         backend_config_path=args.backend_config,
     )
-    executor = CodexAgentRuntime(CodexAgentConfig.from_env())
+    executor = _build_executor()
     result_path = run_single_sample(
         config,
         sample_id=args.sample_id,
         executor=executor,
         check_sidecars=not args.skip_sidecar_health_check,
     )
-    print(json.dumps({"result_path": str(result_path)}, ensure_ascii=False))
+    if _namespace_bool(args, "score"):
+        payload: SceneFunc3dCliRunPayload | SceneFunc3dCliRunAndScorePayload = (
+            _run_and_score_payload(
+                data_root=config.dataset_root, result_path=result_path
+            )
+        )
+    else:
+        payload = _run_payload(result_path)
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
+
+
+def _build_executor() -> CodexExecutor:
+    from ..config import CodexAgentConfig
+    from ..runtime import CodexAgentRuntime
+
+    return CodexAgentRuntime(CodexAgentConfig.from_env())
+
+
+def _run_payload(result_path: Path) -> SceneFunc3dCliRunPayload:
+    return {"result_path": str(result_path)}
+
+
+def _run_and_score_payload(
+    *, data_root: Path, result_path: Path
+) -> SceneFunc3dCliRunAndScorePayload:
+    return {
+        "result_path": str(result_path),
+        "score": score_to_payload(
+            score_result_file(data_root=data_root, result_path=result_path)
+        ),
+    }
 
 
 def _fetch_sidecar_health(
@@ -518,6 +565,13 @@ def _metadata_payload(metadata: CodexTurnMetadata) -> CodexTurnMetadataPayload:
 
 def _health_endpoint(base_url: str) -> str:
     return base_url.rstrip("/") + "/health"
+
+
+def _namespace_bool(args: argparse.Namespace, name: str) -> bool:
+    value: object = getattr(args, name)
+    if not isinstance(value, bool):
+        raise TypeError(f"argparse field {name!r} must be a bool")
+    return value
 
 
 def _require_non_empty_string_tuple(

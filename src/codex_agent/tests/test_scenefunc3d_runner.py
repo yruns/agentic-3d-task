@@ -14,6 +14,7 @@ from typing import TypeVar, cast
 import numpy as np
 import pytest
 
+import codex_agent.scenefunc3d.runner as runner
 from codex_agent.errors import CodexResponseError
 from codex_agent.models import CodexTaskResult, CodexTurnMetadata, CodexTurnResult
 from codex_agent.scenefunc3d.runner import (
@@ -22,6 +23,7 @@ from codex_agent.scenefunc3d.runner import (
     SceneFunc3dRunnerConfig,
     build_arg_parser,
     check_sidecar_health,
+    main,
     run_single_sample,
 )
 from codex_agent.scenefunc3d.sample import SceneFunc3dSample, SceneFuncMotionHint
@@ -30,7 +32,7 @@ from codex_agent.scenefunc3d.servers.http_json import (
     make_json_handler,
 )
 from codex_agent.scenefunc3d.task import ApprovalAction
-from codex_agent.tasks.base import CodexTask
+from codex_agent.tasks.base import CodexExecutor, CodexTask
 
 ResultT = TypeVar("ResultT")
 
@@ -551,6 +553,72 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
     assert str(tmp_path / "data" / "421254") in executor.prompt
 
 
+def test_main_with_score_prints_result_path_and_score(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_scene(tmp_path / "data")
+
+    def fake_run_single_sample(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_id: str,
+        executor: object,
+        check_sidecars: bool = True,
+    ) -> Path:
+        assert sample_id == "421254::desc-a"
+        assert check_sidecars is False
+        _ = executor
+        sample_output_dir = config.output_dir / "421254__desc-a"
+        _write_outcome_artifacts(sample_output_dir)
+        result_path = sample_output_dir / "result.json"
+        result_path.write_text(
+            json.dumps(
+                {
+                    "task_name": "scenefunc3d_mask_generation",
+                    "sample_id": sample_id,
+                    "outcome": _outcome_payload(sample_output_dir),
+                    "turn": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return result_path
+
+    def fake_build_executor() -> CodexExecutor:
+        return _UnusedExecutor()
+
+    monkeypatch.setattr(runner, "run_single_sample", fake_run_single_sample)
+    monkeypatch.setattr(runner, "_build_executor", fake_build_executor)
+
+    exit_code = main(
+        [
+            "--dataset-root",
+            str(tmp_path / "data"),
+            "--sample-id",
+            "421254::desc-a",
+            "--backend-config",
+            str(tmp_path / "backends.toml"),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--skip-sidecar-health-check",
+            "--score",
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["result_path"] == str(
+        tmp_path / "out" / "421254__desc-a" / "result.json"
+    )
+    score = payload["score"]
+    assert score["sample_id"] == "421254::desc-a"
+    assert score["metrics"]["iou"] == 0.0
+    assert score["metrics"]["predicted_count"] == 2
+    assert score["metrics"]["gt_count"] == 3
+
+
 def test_run_single_sample_revalidates_executor_outcome(
     tmp_path: Path,
 ) -> None:
@@ -601,6 +669,12 @@ class _FakeExecutor:
                 metadata=CodexTurnMetadata(turn_id="fake-turn", status="completed"),
             ),
         )
+
+
+class _UnusedExecutor:
+    def execute(self, task: CodexTask[ResultT]) -> CodexTaskResult[ResultT]:
+        _ = task
+        raise AssertionError("test patched run_single_sample must not execute tasks")
 
 
 @dataclass(frozen=True)

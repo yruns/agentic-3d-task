@@ -6,30 +6,11 @@ import argparse
 import json
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TypedDict
 
 from codex_agent.errors import CodexAgentError
 
-from .scorer import SceneFunc3dScore, score_result_file
-
-
-class MaskMetricsPayload(TypedDict):
-    """JSON-ready payload for one SceneFunc3D mask metric bundle."""
-
-    iou: float
-    precision: float
-    recall: float
-    f1: float
-    predicted_count: int
-    gt_count: int
-
-
-class SceneFunc3dScorePayload(TypedDict):
-    """JSON-ready score payload for one SceneFunc3D runner result."""
-
-    sample_id: str
-    failure_type: str
-    metrics: MaskMetricsPayload
+from .payloads import score_to_payload
+from .scorer import score_result_file
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -72,22 +53,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.exit(status=1, message=f"ERROR: {exc}\n")
     print(json.dumps(score_to_payload(score), ensure_ascii=False))
     return 0
-
-
-def score_to_payload(score: SceneFunc3dScore) -> SceneFunc3dScorePayload:
-    """Convert an internal score object into the public CLI JSON payload."""
-    return {
-        "sample_id": score.sample_id,
-        "failure_type": score.failure_type,
-        "metrics": {
-            "iou": score.metrics.iou,
-            "precision": score.metrics.precision,
-            "recall": score.metrics.recall,
-            "f1": score.metrics.f1,
-            "predicted_count": score.metrics.predicted_count,
-            "gt_count": score.metrics.gt_count,
-        },
-    }
 
 
 def _namespace_path(args: argparse.Namespace, name: str) -> Path:
