@@ -9,11 +9,18 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Annotated, Literal, TypeAlias, TypedDict
+from typing import Annotated, Literal, NoReturn, TypeAlias, TypedDict
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, ValidationError
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    model_validator,
+)
 from pydantic.types import StringConstraints
 
 from ..config import CodexAgentConfig
@@ -52,6 +59,7 @@ SCENEFUNC3D_ALLOWED_TOOL_NAMES = SCENEFUNC3D_TOOL_NAMES
 NonEmptyString: TypeAlias = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1)
 ]
+_POINT_MATCH_ABS_TOLERANCE_PX = 1e-6
 
 
 class SceneFunc3dMaskOutcomePayload(TypedDict):
@@ -218,12 +226,33 @@ class _FuseToolEvent(BaseModel):
     error: str
 
 
+class _ToolPointAliasPayload(TypedDict):
+    """Strict point payload built from compact tool-event aliases."""
+
+    x_px: float
+    y_px: float
+    source: str
+    label: str
+
+
+class _ToolPointPayload(BaseModel):
+    """One point prompt exchanged between Molmo and SAM."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    x_px: float = Field(ge=0.0, allow_inf_nan=False)
+    y_px: float = Field(ge=0.0, allow_inf_nan=False)
+    source: str = ""
+    label: str = ""
+
+
 class _MolmoPointToolResult(BaseModel):
     """Fields needed to prove one accepted fragment's Molmo provenance."""
 
     model_config = ConfigDict(extra="ignore")
 
     frame_id: NonEmptyString
+    points: tuple[_ToolPointPayload, ...] = Field(min_length=1)
     raw_text_path: NonEmptyString
     overlay_path: NonEmptyString
 
@@ -246,6 +275,34 @@ class _SamMaskToolResult(BaseModel):
     frame_id: NonEmptyString
     candidates: tuple[_SamCandidateToolResult, ...] = Field(min_length=1)
     contact_sheet_path: NonEmptyString
+
+
+class _SamMaskToolArgs(BaseModel):
+    """Fields needed to prove one SAM call used Molmo point prompts."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    frame_id: NonEmptyString
+    points: tuple[_ToolPointPayload, ...] = Field(min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_point_aliases(cls, payload: object) -> object:
+        """Accept the compact point aliases supported by the SAM tool."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        if "points" not in values and "point" in values:
+            values["points"] = (values.pop("point"),)
+        if "points" not in values and "point_xy" in values:
+            values["points"] = (
+                _tool_point_alias_payload_from_xy(
+                    values.pop("point_xy"),
+                    raw_source=values.get("point_source"),
+                    raw_label=values.get("point_label"),
+                ),
+            )
+        return values
 
 
 class _LiftMaskToolResult(BaseModel):
@@ -293,6 +350,7 @@ class _ParsedSamMaskToolEvent:
     """A validated SAM mask event with source location for diagnostics."""
 
     line_number: int
+    args: _SamMaskToolArgs
     result: _SamMaskToolResult
 
 
@@ -1119,21 +1177,55 @@ def _validate_standard_fragment_upstream_tool_events(
         candidate_id = _standard_fragment_candidate_id(fragment)
         if candidate_id is None:
             continue
-        molmo_event = _require_matching_molmo_point_event(
-            fragment,
-            molmo_events,
-            events_path=events_path,
-            before_line_number=fuse_line_number,
-        )
-        sam_event = _require_matching_sam_mask_event(
+        _require_matching_standard_fragment_tool_chain(
             fragment,
             candidate_id=candidate_id,
+            molmo_events=molmo_events,
+            sam_events=sam_events,
+            lift_events=lift_events,
+            artifact_root=artifact_root,
+            events_path=events_path,
+            fuse_line_number=fuse_line_number,
+        )
+
+
+def _require_matching_standard_fragment_tool_chain(
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    candidate_id: str,
+    molmo_events: tuple[_ParsedMolmoPointToolEvent, ...],
+    sam_events: tuple[_ParsedSamMaskToolEvent, ...],
+    lift_events: tuple[_ParsedLiftMaskToolEvent, ...],
+    artifact_root: Path,
+    events_path: Path,
+    fuse_line_number: int,
+) -> None:
+    matching_molmo_events = _matching_molmo_point_events(
+        fragment,
+        molmo_events,
+        events_path=events_path,
+        before_line_number=fuse_line_number,
+    )
+    if not matching_molmo_events:
+        _raise_missing_molmo_point_event(
+            fragment, events_path=events_path, before_line_number=fuse_line_number
+        )
+
+    last_matching_sam_event: _MatchedSamMaskToolEvent | None = None
+    for molmo_event in matching_molmo_events:
+        sam_event = _matching_sam_mask_event(
+            fragment,
+            candidate_id=candidate_id,
+            molmo_points=molmo_event.result.points,
             sam_events=sam_events,
             events_path=events_path,
             after_line_number=molmo_event.line_number,
             before_line_number=fuse_line_number,
         )
-        _require_matching_lift_mask_event(
+        if sam_event is None:
+            continue
+        last_matching_sam_event = sam_event
+        lift_event = _matching_lift_mask_event(
             fragment,
             candidate_id=candidate_id,
             sam_candidate_mask_npz_path=sam_event.candidate_mask_npz_path,
@@ -1143,6 +1235,26 @@ def _validate_standard_fragment_upstream_tool_events(
             after_line_number=sam_event.line_number,
             before_line_number=fuse_line_number,
         )
+        if lift_event is not None:
+            return
+
+    if last_matching_sam_event is not None:
+        _raise_missing_lift_mask_event(
+            fragment,
+            candidate_id=candidate_id,
+            sam_candidate_mask_npz_path=last_matching_sam_event.candidate_mask_npz_path,
+            artifact_root=artifact_root,
+            events_path=events_path,
+            after_line_number=last_matching_sam_event.line_number,
+            before_line_number=fuse_line_number,
+        )
+    _raise_missing_sam_mask_event(
+        fragment,
+        candidate_id=candidate_id,
+        events_path=events_path,
+        after_line_number=matching_molmo_events[-1].line_number,
+        before_line_number=fuse_line_number,
+    )
 
 
 def _standard_fragment_candidate_id(
@@ -1157,13 +1269,14 @@ def _standard_fragment_candidate_id(
     return candidate_id
 
 
-def _require_matching_molmo_point_event(
+def _matching_molmo_point_events(
     fragment: FinalMaskAcceptedFragment,
     molmo_events: tuple[_ParsedMolmoPointToolEvent, ...],
     *,
     events_path: Path,
     before_line_number: int,
-) -> _ParsedMolmoPointToolEvent:
+) -> tuple[_ParsedMolmoPointToolEvent, ...]:
+    matching_events: list[_ParsedMolmoPointToolEvent] = []
     for parsed_event in molmo_events:
         if parsed_event.line_number >= before_line_number:
             continue
@@ -1188,7 +1301,16 @@ def _require_matching_molmo_point_event(
             line_number=parsed_event.line_number,
         ):
             continue
-        return parsed_event
+        matching_events.append(parsed_event)
+    return tuple(matching_events)
+
+
+def _raise_missing_molmo_point_event(
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    events_path: Path,
+    before_line_number: int,
+) -> NoReturn:
     raise CodexResponseError(
         "accepted standard fragment must be backed by a successful molmo_point "
         "tool event from this run before fuse_accepted_masks in the required "
@@ -1201,22 +1323,28 @@ def _require_matching_molmo_point_event(
     )
 
 
-def _require_matching_sam_mask_event(
+def _matching_sam_mask_event(
     fragment: FinalMaskAcceptedFragment,
     *,
     candidate_id: str,
+    molmo_points: tuple[_ToolPointPayload, ...],
     sam_events: tuple[_ParsedSamMaskToolEvent, ...],
     events_path: Path,
     after_line_number: int,
     before_line_number: int,
-) -> _MatchedSamMaskToolEvent:
+) -> _MatchedSamMaskToolEvent | None:
     for parsed_event in sam_events:
         if (
             parsed_event.line_number <= after_line_number
             or parsed_event.line_number >= before_line_number
         ):
             continue
+        args = parsed_event.args
         result = parsed_event.result
+        if args.frame_id != fragment.frame_id:
+            continue
+        if not _sam_points_match_molmo_points(args.points, molmo_points):
+            continue
         if result.frame_id != fragment.frame_id:
             continue
         if not _tool_event_path_matches(
@@ -1239,10 +1367,22 @@ def _require_matching_sam_mask_event(
                 line_number=parsed_event.line_number,
                 candidate_mask_npz_path=candidate_mask_npz_path,
             )
+    return None
+
+
+def _raise_missing_sam_mask_event(
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    candidate_id: str,
+    events_path: Path,
+    after_line_number: int,
+    before_line_number: int,
+) -> NoReturn:
     raise CodexResponseError(
         "accepted standard fragment must be backed by a successful sam_mask "
         "tool event from this run before fuse_accepted_masks in the required "
-        "Molmo point -> SAM mask -> lift_mask_to_3d order: "
+        "Molmo point -> SAM mask -> lift_mask_to_3d order, and the SAM point "
+        "prompt must come from the matched Molmo point output: "
         f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
         f"candidate_id={candidate_id}; "
         f"sam_contact_sheet_path={fragment.review_artifacts.sam_contact_sheet_path}; "
@@ -1275,7 +1415,61 @@ def _sam_event_matching_candidate_mask_npz_path(
     return None
 
 
-def _require_matching_lift_mask_event(
+def _sam_points_match_molmo_points(
+    sam_points: tuple[_ToolPointPayload, ...],
+    molmo_points: tuple[_ToolPointPayload, ...],
+) -> bool:
+    return all(
+        any(
+            _point_coordinates_match(sam_point, molmo_point)
+            for molmo_point in molmo_points
+        )
+        for sam_point in sam_points
+    )
+
+
+def _point_coordinates_match(left: _ToolPointPayload, right: _ToolPointPayload) -> bool:
+    return math.isclose(
+        left.x_px,
+        right.x_px,
+        rel_tol=0.0,
+        abs_tol=_POINT_MATCH_ABS_TOLERANCE_PX,
+    ) and math.isclose(
+        left.y_px,
+        right.y_px,
+        rel_tol=0.0,
+        abs_tol=_POINT_MATCH_ABS_TOLERANCE_PX,
+    )
+
+
+def _tool_point_alias_payload_from_xy(
+    raw_point_xy: object,
+    *,
+    raw_source: object,
+    raw_label: object,
+) -> _ToolPointAliasPayload:
+    if not isinstance(raw_point_xy, Sequence) or isinstance(raw_point_xy, str | bytes):
+        raise ValueError("point_xy must be a two-item numeric sequence")
+    if len(raw_point_xy) != 2:
+        raise ValueError("point_xy must contain exactly two coordinates")
+    return {
+        "x_px": _coerce_tool_point_coordinate(raw_point_xy[0], "point_xy[0]"),
+        "y_px": _coerce_tool_point_coordinate(raw_point_xy[1], "point_xy[1]"),
+        "source": raw_source if isinstance(raw_source, str) else "",
+        "label": raw_label if isinstance(raw_label, str) else "",
+    }
+
+
+def _coerce_tool_point_coordinate(raw_coordinate: object, field_name: str) -> float:
+    if isinstance(raw_coordinate, bool) or not isinstance(raw_coordinate, int | float):
+        raise ValueError(f"{field_name} must be numeric")
+    coordinate = float(raw_coordinate)
+    if not math.isfinite(coordinate):
+        raise ValueError(f"{field_name} must be finite")
+    return coordinate
+
+
+def _matching_lift_mask_event(
     fragment: FinalMaskAcceptedFragment,
     *,
     candidate_id: str,
@@ -1285,7 +1479,7 @@ def _require_matching_lift_mask_event(
     events_path: Path,
     after_line_number: int,
     before_line_number: int,
-) -> _ParsedLiftMaskToolEvent:
+) -> _ParsedLiftMaskToolEvent | None:
     expected_mask_npz_path = (
         artifact_root / "fragments" / fragment.fragment_id / ("mask_data.npz")
     )
@@ -1341,6 +1535,25 @@ def _require_matching_lift_mask_event(
         ):
             continue
         return parsed_event
+    return None
+
+
+def _raise_missing_lift_mask_event(
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    candidate_id: str,
+    sam_candidate_mask_npz_path: str,
+    artifact_root: Path,
+    events_path: Path,
+    after_line_number: int,
+    before_line_number: int,
+) -> NoReturn:
+    expected_mask_npz_path = (
+        artifact_root / "fragments" / fragment.fragment_id / ("mask_data.npz")
+    )
+    expected_mask_ply_path = (
+        artifact_root / "fragments" / fragment.fragment_id / "lifted_points.ply"
+    )
     raise CodexResponseError(
         "accepted standard fragment must be backed by a successful "
         "lift_mask_to_3d tool event from this run before fuse_accepted_masks in "
@@ -1382,15 +1595,18 @@ def _successful_sam_mask_tool_events(
     events: list[_ParsedSamMaskToolEvent] = []
     for event in _successful_tool_result_events(events_path, tool_names={"sam_mask"}):
         try:
+            args = _SamMaskToolArgs.model_validate(event.args)
             result = _SamMaskToolResult.model_validate(event.result)
         except ValidationError as exc:
             raise CodexResponseError(
                 "successful sam_mask tool event does not match the expected "
-                "result schema: "
+                "args/result schema: "
                 f"events_path={events_path}; line={event.line_number}; error={exc}"
             ) from exc
         events.append(
-            _ParsedSamMaskToolEvent(line_number=event.line_number, result=result)
+            _ParsedSamMaskToolEvent(
+                line_number=event.line_number, args=args, result=result
+            )
         )
     return tuple(events)
 

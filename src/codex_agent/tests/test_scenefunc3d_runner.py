@@ -1186,6 +1186,18 @@ def test_run_single_sample_rejects_standard_fragment_with_wrong_sam_candidate(
     )
 
 
+def test_run_single_sample_rejects_standard_fragment_with_wrong_sam_point(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
+        tmp_path,
+        tool_name="sam_mask",
+        result_mutator=_keep_tool_result,
+        args_mutator=_set_wrong_sam_point_prompt,
+        match="Molmo point",
+    )
+
+
 def test_run_single_sample_rejects_standard_fragment_with_wrong_lift_event_path(
     tmp_path: Path,
 ) -> None:
@@ -1378,6 +1390,107 @@ def test_run_single_sample_accepts_standard_fragment_with_upstream_tool_events(
         sample_id="421254::desc-a",
         executor=executor,
         check_sidecars=False,
+    )
+
+    assert result_path == sample_output_dir / "result.json"
+
+
+def test_run_single_sample_accepts_standard_fragment_with_later_matching_molmo_point(
+    tmp_path: Path,
+) -> None:
+    def write_tool_events(sample_output_dir: Path) -> None:
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _rewrite_first_tool_result(
+            sample_output_dir,
+            tool_name="molmo_point",
+            args_mutator=lambda args: _keep_tool_args(args, sample_output_dir),
+            event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
+            result_mutator=lambda result: _set_stale_molmo_point_prompt(
+                result, sample_output_dir
+            ),
+        )
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00",),
+            accepted_frame_ids=("000010",),
+        )
+
+    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
+        tmp_path,
+        write_tool_events,
+    )
+
+    assert result_path == sample_output_dir / "result.json"
+
+
+def test_run_single_sample_accepts_standard_fragment_with_sam_point_alias(
+    tmp_path: Path,
+) -> None:
+    def write_tool_events(sample_output_dir: Path) -> None:
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _rewrite_first_tool_result(
+            sample_output_dir,
+            tool_name="sam_mask",
+            args_mutator=lambda args: _set_sam_single_point_alias_with_different_text(
+                args, sample_output_dir
+            ),
+            event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
+            result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00",),
+            accepted_frame_ids=("000010",),
+        )
+
+    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
+        tmp_path,
+        write_tool_events,
+    )
+
+    assert result_path == sample_output_dir / "result.json"
+
+
+def test_run_single_sample_accepts_standard_fragment_with_sam_point_xy_alias(
+    tmp_path: Path,
+) -> None:
+    def write_tool_events(sample_output_dir: Path) -> None:
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _rewrite_first_tool_result(
+            sample_output_dir,
+            tool_name="sam_mask",
+            args_mutator=lambda args: _set_sam_point_xy_alias_with_different_text(
+                args, sample_output_dir
+            ),
+            event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
+            result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00",),
+            accepted_frame_ids=("000010",),
+        )
+
+    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
+        tmp_path,
+        write_tool_events,
     )
 
     assert result_path == sample_output_dir / "result.json"
@@ -2524,7 +2637,14 @@ def _write_standard_upstream_tool_events(
             "result": {
                 "frame_id": frame_id,
                 "prompt": "point to the target handle",
-                "points": [],
+                "points": [
+                    {
+                        "x_px": 12.5,
+                        "y_px": 34.25,
+                        "source": '<point x="12.5" y="34.25">handle</point>',
+                        "label": "handle",
+                    }
+                ],
                 "raw_text_path": str(root / "molmo" / f"{frame_id}_raw.txt"),
                 "overlay_path": str(root / "molmo" / f"{frame_id}_points.jpg"),
             },
@@ -2537,7 +2657,17 @@ def _write_standard_upstream_tool_events(
             "event_type": "tool_completed",
             "tool_name": "sam_mask",
             "status": "success",
-            "args": {"frame_id": frame_id},
+            "args": {
+                "frame_id": frame_id,
+                "points": [
+                    {
+                        "x_px": 12.5,
+                        "y_px": 34.25,
+                        "source": '<point x="12.5" y="34.25">handle</point>',
+                        "label": "handle",
+                    }
+                ],
+            },
             "result": {
                 "frame_id": frame_id,
                 "candidates": [
@@ -2607,6 +2737,46 @@ def _keep_tool_result(result: dict[str, object], root: Path) -> None:
 
 def _keep_tool_event(event: dict[str, object], root: Path) -> None:
     _ = event, root
+
+
+def _run_single_sample_with_standard_outcome(
+    tmp_path: Path,
+    write_tool_events: Callable[[Path], None],
+) -> tuple[Path, Path]:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_standard_outcome_artifacts(
+        sample_output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("000010_mask_00",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+
+    executor = _FakeExecutor(
+        outcome,
+        on_execute=lambda: write_tool_events(sample_output_dir),
+    )
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    result_path = run_single_sample(
+        config,
+        sample_id="421254::desc-a",
+        executor=executor,
+        check_sidecars=False,
+    )
+    return sample_output_dir, result_path
 
 
 def _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
@@ -2739,6 +2909,62 @@ def _set_wrong_sam_candidate_id(result: dict[str, object], root: Path) -> None:
     if not isinstance(candidate, dict):
         raise AssertionError("test sam_mask candidate must be a JSON object")
     candidate["candidate_id"] = "mask_99"
+
+
+def _set_wrong_sam_point_prompt(args: dict[str, object], root: Path) -> None:
+    _ = root
+    points = args.get("points")
+    if not isinstance(points, list):
+        raise AssertionError("test sam_mask args must contain points")
+    point = points[0]
+    if not isinstance(point, dict):
+        raise AssertionError("test sam_mask point must be a JSON object")
+    point["x_px"] = 98.0
+
+
+def _set_stale_molmo_point_prompt(result: dict[str, object], root: Path) -> None:
+    _ = root
+    point = _copy_first_tool_point(result)
+    point["x_px"] = 98.0
+    result["points"] = [point]
+
+
+def _set_sam_single_point_alias_with_different_text(
+    args: dict[str, object], root: Path
+) -> None:
+    _ = root
+    point = _copy_first_tool_point(args)
+    point["source"] = '<point x="12.5" y="34.25">different text</point>'
+    point["label"] = "different text"
+    args.pop("points", None)
+    args["point"] = point
+
+
+def _set_sam_point_xy_alias_with_different_text(
+    args: dict[str, object], root: Path
+) -> None:
+    _ = root
+    point = _copy_first_tool_point(args)
+    x_px = point.get("x_px")
+    y_px = point.get("y_px")
+    if isinstance(x_px, bool) or not isinstance(x_px, int | float):
+        raise AssertionError("test point x_px must be numeric")
+    if isinstance(y_px, bool) or not isinstance(y_px, int | float):
+        raise AssertionError("test point y_px must be numeric")
+    args.pop("points", None)
+    args["point_xy"] = [float(x_px), float(y_px)]
+    args["point_source"] = '<point x="12.5" y="34.25">different text</point>'
+    args["point_label"] = "different text"
+
+
+def _copy_first_tool_point(payload: dict[str, object]) -> dict[str, object]:
+    points = payload.get("points")
+    if not isinstance(points, list):
+        raise AssertionError("test payload must contain points")
+    point = points[0]
+    if not isinstance(point, dict):
+        raise AssertionError("test point must be a JSON object")
+    return dict(cast(dict[str, object], point))
 
 
 def _set_wrong_lift_mask_ply_path(result: dict[str, object], root: Path) -> None:
