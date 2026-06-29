@@ -10,12 +10,23 @@ RUN_ROOT="${RUN_ROOT:-${DATASET_ROOT}/agent_runner_e2e_20260629}"
 SAMPLE_ID="${SAMPLE_ID:-421254::af0b7790-028c-4eed-945b-d90386d4f16b}"
 SIDECAR_PYTHON_BIN="${SIDECAR_PYTHON_BIN:-/usr/bin/python}"
 RUNNER_PYTHON_BIN="${RUNNER_PYTHON_BIN:-/mlx_devbox/users/yueshuhao/miniforge3/envs/conceptgraph/bin/python}"
+USE_CODEX_AUTH="${USE_CODEX_AUTH:-0}"
+PRECHECK_ONLY="${PRECHECK_ONLY:-0}"
 MOLMO_PROCESSOR_SNAPSHOT="${MOLMO_PROCESSOR_SNAPSHOT:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home/transformers/models--allenai--MolmoPoint-8B/snapshots/188130f961c8e0888a34e11121a1423c461a01ba}"
 MOLMO_CODE_SNAPSHOT="${MOLMO_CODE_SNAPSHOT:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home/hub/models--allenai--MolmoPoint-8B/snapshots/188130f961c8e0888a34e11121a1423c461a01ba}"
 MOLMO_MODEL_PATH="${MOLMO_MODEL_PATH:-${RUN_ROOT}/molmopoint_merged_model}"
 SAM_MODEL_PATH="${SAM_MODEL_PATH:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home/transformers/models--facebook--sam2.1-hiera-large/snapshots/665f8e2ad61cf5f53d65644ff27c8ee525124610}"
 HF_HOME="${HF_HOME:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home}"
-CODEX_HOME="${CODEX_HOME:-${REPO_ROOT}/.codex-home}"
+if [[ "${USE_CODEX_AUTH}" == "1" ]]; then
+  CODEX_HOME="${CODEX_HOME:-/home/tiger/.codex}"
+  CODEX_AGENT_MODEL="${CODEX_AGENT_MODEL:-gpt-5.5}"
+  CODEX_AGENT_MODEL_PROVIDER="openai"
+  CODEX_AGENT_COPY_AUTH="1"
+  CODEX_AGENT_ENABLE_PREFIX_CACHE="0"
+  CODEX_AGENT_KEEP_RUN_HOME="0"
+else
+  CODEX_HOME="${CODEX_HOME:-${REPO_ROOT}/.codex-home}"
+fi
 START_ADAPTER="${START_ADAPTER:-0}"
 ADAPTER_PYTHON_BIN="${ADAPTER_PYTHON_BIN:-/usr/bin/python}"
 ADAPTER_HOST="${ADAPTER_HOST:-127.0.0.1}"
@@ -30,6 +41,8 @@ export RUN_ROOT
 export SAMPLE_ID
 export SIDECAR_PYTHON_BIN
 export RUNNER_PYTHON_BIN
+export USE_CODEX_AUTH
+export PRECHECK_ONLY
 export MOLMO_PROCESSOR_SNAPSHOT
 export MOLMO_CODE_SNAPSHOT
 export MOLMO_MODEL_PATH
@@ -49,6 +62,10 @@ export HF_HUB_ENABLE_HF_TRANSFER=1
 export PYTHONUNBUFFERED=1
 export PYTHONPATH="${REPO_ROOT}/src${PYTHONPATH:+:${PYTHONPATH}}"
 export CODEX_AGENT_PROJECT_ROOT="${REPO_ROOT}"
+export CODEX_AGENT_MODEL="${CODEX_AGENT_MODEL:-gpt-5.4-2026-03-05}"
+export CODEX_AGENT_MODEL_PROVIDER="${CODEX_AGENT_MODEL_PROVIDER:-modelhub_adapter}"
+export CODEX_AGENT_COPY_AUTH="${CODEX_AGENT_COPY_AUTH:-0}"
+export CODEX_AGENT_ENABLE_PREFIX_CACHE="${CODEX_AGENT_ENABLE_PREFIX_CACHE:-1}"
 export CODEX_AGENT_TURN_TIMEOUT_S="${CODEX_AGENT_TURN_TIMEOUT_S:-1800}"
 export CODEX_AGENT_MAX_TOOL_CALLS="${CODEX_AGENT_MAX_TOOL_CALLS:-48}"
 export CODEX_AGENT_MAX_REPEATED_TOOL_CALLS="${CODEX_AGENT_MAX_REPEATED_TOOL_CALLS:-3}"
@@ -84,6 +101,8 @@ sam_model_path = Path(os.environ["SAM_MODEL_PATH"])
 codex_home = Path(os.environ["CODEX_HOME"])
 adapter_health_url = os.environ["ADAPTER_HEALTH_URL"]
 start_adapter = os.environ["START_ADAPTER"] == "1"
+use_codex_auth = os.environ["USE_CODEX_AUTH"] == "1"
+precheck_only = os.environ["PRECHECK_ONLY"] == "1"
 adapter_python_bin = os.environ["ADAPTER_PYTHON_BIN"]
 adapter_host = os.environ["ADAPTER_HOST"]
 adapter_port = os.environ["ADAPTER_PORT"]
@@ -203,6 +222,25 @@ def check_adapter_ready() -> None:
     )
 
 
+def check_codex_auth_ready() -> None:
+    auth_path = codex_home / "auth.json"
+    if not auth_path.is_file():
+        raise RuntimeError(
+            "USE_CODEX_AUTH=1 requires an authenticated CODEX_HOME with "
+            f"auth.json: {auth_path}"
+        )
+    print(
+        "codex auth ready: "
+        f"codex_home={codex_home} "
+        f"model={os.environ.get('CODEX_AGENT_MODEL')} "
+        f"provider={os.environ.get('CODEX_AGENT_MODEL_PROVIDER')} "
+        f"copy_auth={os.environ.get('CODEX_AGENT_COPY_AUTH')} "
+        f"prefix_cache={os.environ.get('CODEX_AGENT_ENABLE_PREFIX_CACHE')} "
+        f"keep_run_home={os.environ.get('CODEX_AGENT_KEEP_RUN_HOME')}",
+        flush=True,
+    )
+
+
 def prepare_molmo_model_dir() -> None:
     if molmo_model_path != default_merged_molmo_path:
         return
@@ -313,10 +351,16 @@ def main() -> None:
     molmo: subprocess.Popen[bytes] | None = None
     sam: subprocess.Popen[bytes] | None = None
     try:
-        adapter = start_adapter_if_requested()
-        if adapter is not None:
-            wait_health("adapter", adapter_health_url, adapter)
-        check_adapter_ready()
+        if use_codex_auth:
+            check_codex_auth_ready()
+        else:
+            adapter = start_adapter_if_requested()
+            if adapter is not None:
+                wait_health("adapter", adapter_health_url, adapter)
+            check_adapter_ready()
+        if precheck_only:
+            print("precheck complete", flush=True)
+            return
         prepare_molmo_model_dir()
         molmo = start_process(
             "molmo_server",

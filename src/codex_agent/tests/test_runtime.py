@@ -209,6 +209,8 @@ def _install(
     restrict_skills_to_project: bool = True,
     reasoning_effort: ConfigReasoningEffort = "medium",
     reasoning_summary: ConfigReasoningSummary = "",
+    copy_auth_file: bool = False,
+    keep_run_home: bool = False,
 ) -> _Fake:
     agent_config = CodexAgentConfig(
         project_root=tmp_path,
@@ -218,6 +220,8 @@ def _install(
         restrict_skills_to_project=restrict_skills_to_project,
         reasoning_effort=reasoning_effort,
         reasoning_summary=reasoning_summary,
+        copy_auth_file=copy_auth_file,
+        keep_run_home=keep_run_home,
     )
     runtime = CodexAgentRuntime(agent_config)
     client = _FakeClient(_FakeThread(results))
@@ -302,6 +306,62 @@ def test_run_turn_cleans_up_run_home(
     fake.runtime.run_turn(_request())
     runs_dir = fake_codex_home / "runs"
     assert not list(runs_dir.iterdir())
+
+
+def test_run_turn_does_not_copy_auth_by_default(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (fake_codex_home / "auth.json").write_text("{}", encoding="utf-8")
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
+        keep_run_home=True,
+    )
+
+    result = fake.runtime.run_turn(_request())
+
+    assert result.metadata.run_home is not None
+    assert not (Path(result.metadata.run_home) / "auth.json").exists()
+
+
+def test_run_turn_copies_auth_when_enabled(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (fake_codex_home / "auth.json").write_text(
+        '{"auth_mode":"chatgpt"}\n', encoding="utf-8"
+    )
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
+        copy_auth_file=True,
+        keep_run_home=True,
+    )
+
+    result = fake.runtime.run_turn(_request())
+
+    assert result.metadata.run_home is not None
+    assert (Path(result.metadata.run_home) / "auth.json").read_text(
+        encoding="utf-8"
+    ) == '{"auth_mode":"chatgpt"}\n'
+
+
+def test_run_turn_requires_auth_file_when_copy_enabled(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
+        copy_auth_file=True,
+    )
+
+    with pytest.raises(CodexConfigError, match="auth.json"):
+        fake.runtime.run_turn(_request())
 
 
 def test_prefix_cache_headers_present(

@@ -475,7 +475,16 @@ class CodexAgentRuntime:
         if run_home.exists():
             shutil.rmtree(run_home)
         run_home.mkdir(parents=True, exist_ok=True)
-        for name in _RUN_HOME_SEED_FILES:
+        seed_files = list(_RUN_HOME_SEED_FILES)
+        if self.config.copy_auth_file:
+            auth_path = home / "auth.json"
+            if not auth_path.is_file():
+                raise CodexConfigError(
+                    "CODEX_AGENT_COPY_AUTH is enabled but CODEX_HOME is missing "
+                    f"auth.json: {auth_path}"
+                )
+            seed_files.append("auth.json")
+        for name in seed_files:
             source = home / name
             if source.exists():
                 shutil.copy2(source, run_home / name)

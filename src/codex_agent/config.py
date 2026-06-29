@@ -127,6 +127,10 @@ class CodexAgentConfig:
             files (see ``docs/benchmark/nr3d`` trace analysis).
         keep_run_home: Keep the per-turn ``CODEX_HOME`` copy on disk for
             debugging instead of deleting it after the turn.
+        copy_auth_file: Copy ``auth.json`` from the base ``CODEX_HOME`` into the
+            per-turn run home. This is off by default because the ModelHub
+            adapter path keeps secrets outside Codex run homes; enable it only
+            for explicit runs that use the standard Codex ``openai`` provider.
     """
 
     project_root: Path = DEFAULT_PROJECT_ROOT
@@ -145,6 +149,7 @@ class CodexAgentConfig:
     model_context_window: int = 0
     restrict_skills_to_project: bool = True
     keep_run_home: bool = False
+    copy_auth_file: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "project_root", Path(self.project_root))
@@ -254,6 +259,9 @@ class CodexAgentConfig:
             ),
             keep_run_home=_env_bool(
                 os.environ.get("CODEX_AGENT_KEEP_RUN_HOME"), default=False
+            ),
+            copy_auth_file=_env_bool(
+                os.environ.get("CODEX_AGENT_COPY_AUTH"), default=False
             ),
         )
 

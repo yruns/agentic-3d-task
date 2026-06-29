@@ -36,6 +36,17 @@ def test_agent_e2e_script_can_start_project_local_adapter() -> None:
     assert "adapter_server.log" in script_text
 
 
+def test_agent_e2e_script_can_use_codex_auth_provider() -> None:
+    script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
+
+    assert 'USE_CODEX_AUTH="${USE_CODEX_AUTH:-0}"' in script_text
+    assert "CODEX_AGENT_COPY_AUTH" in script_text
+    assert "CODEX_AGENT_MODEL_PROVIDER" in script_text
+    assert "CODEX_AGENT_ENABLE_PREFIX_CACHE" in script_text
+    assert "check_codex_auth_ready()" in script_text
+    assert 'PRECHECK_ONLY="${PRECHECK_ONLY:-0}"' in script_text
+
+
 def test_agent_e2e_script_preflight_stops_before_gpu_sidecars(
     tmp_path: Path,
 ) -> None:
@@ -71,6 +82,115 @@ def test_agent_e2e_script_preflight_stops_before_gpu_sidecars(
     assert "started molmo_server" not in completed.stdout
     assert "started sam_server" not in completed.stdout
     assert not _port_is_open(port)
+
+
+def test_agent_e2e_script_codex_auth_preflight_stops_before_sidecars(
+    tmp_path: Path,
+) -> None:
+    codex_home = tmp_path / ".codex-home"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "USE_CODEX_AUTH": "1",
+            "CODEX_HOME": str(codex_home),
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 1
+    assert "auth.json" in completed.stdout
+    assert "started adapter:" not in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_codex_auth_precheck_only_succeeds(
+    tmp_path: Path,
+) -> None:
+    codex_home = tmp_path / ".codex-home"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
+    (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "USE_CODEX_AUTH": "1",
+            "PRECHECK_ONLY": "1",
+            "CODEX_HOME": str(codex_home),
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 0
+    assert "codex auth ready:" in completed.stdout
+    assert "precheck complete" in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_codex_auth_overrides_inherited_modelhub_env(
+    tmp_path: Path,
+) -> None:
+    codex_home = tmp_path / ".codex-home"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
+    (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "USE_CODEX_AUTH": "1",
+            "PRECHECK_ONLY": "1",
+            "CODEX_HOME": str(codex_home),
+            "CODEX_AGENT_MODEL_PROVIDER": "modelhub_adapter",
+            "CODEX_AGENT_COPY_AUTH": "0",
+            "CODEX_AGENT_ENABLE_PREFIX_CACHE": "1",
+            "CODEX_AGENT_KEEP_RUN_HOME": "1",
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 0
+    assert "provider=openai" in completed.stdout
+    assert "copy_auth=1" in completed.stdout
+    assert "prefix_cache=0" in completed.stdout
+    assert "keep_run_home=0" in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
 
 
 def test_agent_e2e_script_does_not_manual_chain_mask_tools() -> None:
