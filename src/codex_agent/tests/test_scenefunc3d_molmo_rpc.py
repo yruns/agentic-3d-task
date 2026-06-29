@@ -24,6 +24,14 @@ def test_request_molmo_point_returns_raw_text(tmp_path: Path) -> None:
                 "request_id": payload["request_id"],
                 "model_name": "MolmoPoint-8B",
                 "raw_text": '<point x="50" y="50">handle</point>',
+                "image_points": (
+                    {
+                        "x_px": 50.0,
+                        "y_px": 40.0,
+                        "source": '<point x="50" y="50">handle</point>',
+                        "label": "handle",
+                    },
+                ),
                 "latency_ms": 1.0,
             }
         }
@@ -43,6 +51,8 @@ def test_request_molmo_point_returns_raw_text(tmp_path: Path) -> None:
         server.server_close()
 
     assert response.raw_text == '<point x="50" y="50">handle</point>'
+    assert response.image_points[0].x_px == 50.0
+    assert response.image_points[0].label == "handle"
 
 
 def test_request_molmo_point_server_down_is_recoverable(tmp_path: Path) -> None:

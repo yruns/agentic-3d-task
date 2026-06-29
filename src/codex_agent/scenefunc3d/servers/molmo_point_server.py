@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import html
 import importlib
+import math
+import re
 import time
 from collections.abc import Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from http.server import ThreadingHTTPServer
+from numbers import Real
 from pathlib import Path
 from types import ModuleType
 from typing import Literal, Protocol, TypedDict, cast, runtime_checkable
@@ -22,6 +26,7 @@ from codex_agent.scenefunc3d.servers.http_json import (
 )
 from codex_agent.scenefunc3d.servers.schemas import (
     HealthResponse,
+    MolmoImagePoint,
     MolmoPointRequest,
     MolmoPointResponse,
 )
@@ -36,6 +41,10 @@ MOLMOPOINT_SUBPATCH_MAPPING_KEY = "subpatch_mapping"
 MOLMOPOINT_IMAGE_SIZES_KEY = "image_sizes"
 MOLMOPOINT_LEGACY_METADATA_KEY = "metadata"
 MOLMOPOINT_LEGACY_TOKEN_POOLING_KEY = "token_pooling"
+_MOLMOPOINT_LABEL_RE = re.compile(
+    r"<points?\b(?:[^'\">]|\"[^\"]*\"|'[^']*')*>(?P<label_text>.*?)</point>",
+    flags=re.IGNORECASE | re.DOTALL,
+)
 
 _CUDA_OOM_MARKERS = (
     "cuda out of memory",
@@ -49,8 +58,8 @@ class MolmoRunner(Protocol):
 
     model_name: str
 
-    def point(self, request: MolmoPointRequest) -> str:
-        """Return raw Molmo generated text for one pointing request."""
+    def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
+        """Return raw Molmo text and parsed image points for one request."""
 
 
 class _FromPretrainedLoader(Protocol):
@@ -227,6 +236,14 @@ class MolmoPointGenerationInputs:
     metadata: MolmoPointMetadata
 
 
+@dataclass(frozen=True)
+class MolmoRunnerPointResult:
+    """Molmo sidecar result before HTTP response serialization."""
+
+    raw_text: str
+    image_points: tuple[MolmoImagePoint, ...]
+
+
 class ValidationIssuePayload(TypedDict):
     """JSON-ready details for one request validation issue."""
 
@@ -297,7 +314,7 @@ class TransformersMolmoRunner:
         )
         self._model.eval()
 
-    def point(self, request: MolmoPointRequest) -> str:
+    def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
         image_module = cast(_ImageModule, importlib.import_module("PIL.Image"))
         with image_module.open(request.image_path) as image:
             rgb_image = image.convert("RGB")
@@ -335,12 +352,17 @@ class TransformersMolmoRunner:
             clean_up_tokenization_spaces=False,
         )
         generated_text = _first_generated_text(generated_texts)
-        _validate_generated_points(
+        image_points = _extract_generated_points(
             self._model,
             generated_text,
             generation_inputs.metadata,
+            fallback_label=request.prompt,
+            image_width=request.image_width,
+            image_height=request.image_height,
         )
-        return generated_text
+        return MolmoRunnerPointResult(
+            raw_text=generated_text, image_points=image_points
+        )
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -396,7 +418,7 @@ def _handle_point(runner: MolmoRunner, payload: JsonObject) -> JsonObject:
         ) from exc
     start_time = time.perf_counter()
     try:
-        raw_text = runner.point(request)
+        point_result = runner.point(request)
     except RuntimeError as exc:
         if _is_gpu_resource_error(exc):
             raise JsonHttpError(503, {"error": "molmo_resource_unavailable"}) from exc
@@ -405,7 +427,8 @@ def _handle_point(runner: MolmoRunner, payload: JsonObject) -> JsonObject:
     response = MolmoPointResponse(
         request_id=request.request_id,
         model_name=runner.model_name,
-        raw_text=raw_text,
+        raw_text=point_result.raw_text,
+        image_points=point_result.image_points,
         latency_ms=latency_ms,
     )
     return response.model_dump(mode="json")
@@ -531,13 +554,17 @@ def _first_generated_text(generated_texts: Sequence[str]) -> str:
     return generated_text
 
 
-def _validate_generated_points(
+def _extract_generated_points(
     model: _MolmoPointModel,
     generated_text: str,
     metadata: MolmoPointMetadata,
-) -> None:
+    *,
+    fallback_label: str,
+    image_width: int,
+    image_height: int,
+) -> tuple[MolmoImagePoint, ...]:
     try:
-        model.extract_image_points(
+        raw_points = model.extract_image_points(
             generated_text,
             metadata.token_pooling,
             metadata.subpatch_mapping,
@@ -547,6 +574,94 @@ def _validate_generated_points(
         raise RuntimeError(
             "MolmoPoint generated text failed image-point extraction sanity check"
         ) from exc
+    return _parse_extracted_image_points(
+        raw_points,
+        source_text=generated_text,
+        label=_extract_point_label(generated_text, fallback_label=fallback_label),
+        image_width=image_width,
+        image_height=image_height,
+    )
+
+
+def _parse_extracted_image_points(
+    raw_points: object,
+    *,
+    source_text: str,
+    label: str,
+    image_width: int,
+    image_height: int,
+) -> tuple[MolmoImagePoint, ...]:
+    if not isinstance(raw_points, Sequence) or isinstance(raw_points, str | bytes):
+        raise RuntimeError("MolmoPoint extracted image points must be a sequence")
+    image_points: list[MolmoImagePoint] = []
+    for raw_point in raw_points:
+        image_points.append(
+            _parse_extracted_image_point(
+                raw_point,
+                source_text=source_text,
+                label=label,
+                image_width=image_width,
+                image_height=image_height,
+            )
+        )
+    return tuple(image_points)
+
+
+def _parse_extracted_image_point(
+    raw_point: object,
+    *,
+    source_text: str,
+    label: str,
+    image_width: int,
+    image_height: int,
+) -> MolmoImagePoint:
+    if not isinstance(raw_point, Sequence) or isinstance(raw_point, str | bytes):
+        raise RuntimeError("MolmoPoint extracted image point must be a sequence")
+    if len(raw_point) < 4:
+        raise RuntimeError(
+            "MolmoPoint extracted image point must include object, image, x, and y"
+        )
+    return MolmoImagePoint(
+        x_px=_require_bounded_pixel_coordinate(
+            raw_point[2],
+            field_name="x_px",
+            upper_bound=image_width,
+        ),
+        y_px=_require_bounded_pixel_coordinate(
+            raw_point[3],
+            field_name="y_px",
+            upper_bound=image_height,
+        ),
+        source=source_text,
+        label=label,
+    )
+
+
+def _require_bounded_pixel_coordinate(
+    value: object,
+    *,
+    field_name: str,
+    upper_bound: int,
+) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise RuntimeError(f"MolmoPoint {field_name} must be a real number")
+    float_value = float(value)
+    if not math.isfinite(float_value) or float_value < 0.0:
+        raise RuntimeError(f"MolmoPoint {field_name} must be finite and nonnegative")
+    if float_value >= float(upper_bound):
+        raise RuntimeError(
+            f"MolmoPoint {field_name} must be inside the request image bounds"
+        )
+    return float_value
+
+
+def _extract_point_label(generated_text: str, *, fallback_label: str) -> str:
+    match = _MOLMOPOINT_LABEL_RE.search(generated_text)
+    if match is not None:
+        label = html.unescape(match.group("label_text")).strip()
+        if label:
+            return label
+    return fallback_label.strip()
 
 
 def patch_molmo_remote_code(model_dir: Path) -> tuple[MolmoPatchReport, ...]:

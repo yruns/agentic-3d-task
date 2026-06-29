@@ -13,6 +13,7 @@ from typing import Annotated, TypedDict
 from pydantic import BaseModel, ConfigDict, Field, FilePath, StringConstraints
 
 from ...errors import SceneFunc3dDataError
+from ..servers.schemas import MolmoImagePoint
 from .models import ToolInputError
 
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -170,17 +171,30 @@ def molmo_point(
     response = request_molmo_point(settings, request_id=request_id, args=args)
     raw_text_path = _write_raw_text(artifact_out_dir, args.frame_id, response.raw_text)
     try:
-        points = parse_molmo_points(
-            response.raw_text,
+        points = _points_from_sidecar_image_points(
+            response.image_points,
             image_width=args.image_width,
             image_height=args.image_height,
         )
     except SceneFunc3dDataError as exc:
         raise ToolInputError(
-            "Molmo point response could not be parsed: "
+            "Molmo point response contained invalid structured image points: "
             f"frame_id={args.frame_id!r}; raw_text_path={raw_text_path}; "
-            f"error_type={exc.__class__.__name__}"
+            f"error_type={exc.__class__.__name__}; error={exc}"
         ) from exc
+    if not points:
+        try:
+            points = parse_molmo_points(
+                response.raw_text,
+                image_width=args.image_width,
+                image_height=args.image_height,
+            )
+        except SceneFunc3dDataError as exc:
+            raise ToolInputError(
+                "Molmo point response could not be parsed: "
+                f"frame_id={args.frame_id!r}; raw_text_path={raw_text_path}; "
+                f"error_type={exc.__class__.__name__}"
+            ) from exc
     if not points:
         raise ToolInputError(
             "Molmo point response contained no <point> tags: "
@@ -231,6 +245,43 @@ def parse_molmo_points(
             )
         )
     return tuple(points)
+
+
+def _points_from_sidecar_image_points(
+    image_points: tuple[MolmoImagePoint, ...],
+    *,
+    image_width: int,
+    image_height: int,
+) -> tuple[MolmoPoint, ...]:
+    _validate_image_dimensions(image_width=image_width, image_height=image_height)
+    return tuple(
+        _sidecar_image_point_to_molmo_point(
+            point,
+            image_width=image_width,
+            image_height=image_height,
+        )
+        for point in image_points
+    )
+
+
+def _sidecar_image_point_to_molmo_point(
+    point: MolmoImagePoint,
+    *,
+    image_width: int,
+    image_height: int,
+) -> MolmoPoint:
+    if point.x_px >= image_width or point.y_px >= image_height:
+        raise SceneFunc3dDataError(
+            "Molmo sidecar image point is outside image bounds: "
+            f"x_px={point.x_px!r}; y_px={point.y_px!r}; "
+            f"image_width={image_width!r}; image_height={image_height!r}"
+        )
+    return MolmoPoint(
+        x_px=point.x_px,
+        y_px=point.y_px,
+        source=point.source,
+        label=point.label,
+    )
 
 
 def _validate_complete_point_tags(

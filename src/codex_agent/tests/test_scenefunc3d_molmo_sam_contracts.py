@@ -194,6 +194,139 @@ def test_cli_molmo_point_uses_configured_fake_backend(
     assert Path(payload["overlay_path"]).exists()
 
 
+def test_cli_molmo_point_uses_sidecar_image_points_for_token_output(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    raw_text = (
+        '<points coords="<POINT_1429><POINT_2759><POINT_2765>1<POINT_2758>">'
+        "small dark round knob handle</point><|im_end|>"
+    )
+    server = _start_json_server(
+        {
+            "/v1/point": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "MolmoPoint-8B",
+                "raw_text": raw_text,
+                "image_points": (
+                    {
+                        "x_px": 719.0,
+                        "y_px": 930.0,
+                        "source": raw_text,
+                        "label": "small dark round knob handle",
+                    },
+                ),
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url=f"http://127.0.0.1:{server.server_port}",
+        sam_url="http://127.0.0.1:8712",
+    )
+    try:
+        code = main(
+            [
+                "molmo_point",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(image_path),
+                        "prompt": "drawer handle",
+                        "image_width": 1440,
+                        "image_height": 1920,
+                    }
+                ),
+                "--out-dir",
+                str(tmp_path / "out"),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["points"] == [
+        {
+            "x_px": 719.0,
+            "y_px": 930.0,
+            "source": raw_text,
+            "label": "small dark round knob handle",
+        }
+    ]
+    assert Path(payload["raw_text_path"]).read_text(encoding="utf-8") == raw_text
+    assert Path(payload["overlay_path"]).exists()
+
+
+def test_cli_molmo_point_rejects_out_of_bounds_sidecar_image_points(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    raw_text = (
+        '<points coords="<POINT_1429><POINT_2759>">'
+        "small dark round knob handle</point><|im_end|>"
+    )
+    server = _start_json_server(
+        {
+            "/v1/point": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "MolmoPoint-8B",
+                "raw_text": raw_text,
+                "image_points": (
+                    {
+                        "x_px": 100.0,
+                        "y_px": 10.0,
+                        "source": raw_text,
+                        "label": "small dark round knob handle",
+                    },
+                ),
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url=f"http://127.0.0.1:{server.server_port}",
+        sam_url="http://127.0.0.1:8712",
+    )
+    try:
+        code = main(
+            [
+                "molmo_point",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(image_path),
+                        "prompt": "drawer handle",
+                        "image_width": 100,
+                        "image_height": 80,
+                    }
+                ),
+                "--out-dir",
+                str(tmp_path / "out"),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "outside image bounds" in payload["error"]
+
+
 def test_cli_molmo_point_rejects_raw_output_without_point_tags(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

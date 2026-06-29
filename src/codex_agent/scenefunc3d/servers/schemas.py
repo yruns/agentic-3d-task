@@ -38,12 +38,29 @@ class MolmoPointRequest(_StrictSchema):
     image_height: int = Field(gt=0, strict=True)
 
 
+class MolmoImagePoint(_StrictSchema):
+    """One MolmoPoint sidecar point in image pixel coordinates."""
+
+    x_px: float = Field(ge=0.0, strict=True)
+    y_px: float = Field(ge=0.0, strict=True)
+    source: str = ""
+    label: str = ""
+
+    @field_validator("x_px", "y_px", mode="before")
+    @classmethod
+    def _require_float_coordinate(cls, value: object) -> object:
+        if not isinstance(value, float) or not math.isfinite(value):
+            raise ValueError("Molmo point coordinates must be finite floats")
+        return value
+
+
 class MolmoPointResponse(_StrictSchema):
     """Response body for the Molmo point sidecar endpoint."""
 
     request_id: NonEmptyString
     model_name: NonEmptyString
     raw_text: str
+    image_points: tuple[MolmoImagePoint, ...] = ()
     latency_ms: float = Field(ge=0)
 
     @field_validator("latency_ms")
@@ -109,6 +126,7 @@ def _require_finite_float(value: float, *, field_name: str) -> float:
 
 __all__ = [
     "HealthResponse",
+    "MolmoImagePoint",
     "MolmoPointRequest",
     "MolmoPointResponse",
     "SamMaskCandidateResponse",

@@ -531,12 +531,55 @@ def test_transformers_runner_writes_valid_candidate_masks_with_fake_runtime(
         "input_points": "cuda:0",
         "input_labels": "cuda:0",
     }
+    assert fake_transformers_module.model.input_dtypes["pixel_values"] == (
+        "fake-bfloat16"
+    )
     assert fake_transformers_module.model.received_keys == (
         "input_labels",
         "input_points",
         "pixel_values",
     )
     assert fake_torch_module.inference_mode_enter_count == 1
+
+
+def test_transformers_runner_casts_bfloat16_scores_before_numpy_conversion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from codex_agent.scenefunc3d.servers import sam2_mask_server
+
+    model_path = tmp_path / "hf_snapshot"
+    image_path = tmp_path / "frame.jpg"
+    staging_dir = tmp_path / "out" / "sam" / "000050" / "candidates"
+    model_path.mkdir()
+    image_path.write_bytes(b"image")
+    fake_torch_module = _FakeTorchModule()
+    fake_transformers_module = _FakeTransformersModule(
+        torch_module=fake_torch_module,
+        score_dtype=fake_torch_module.bfloat16,
+    )
+
+    def fake_import_module(module_name: str) -> ModuleType:
+        modules_by_name: dict[str, ModuleType] = {
+            "PIL.Image": _FakeImageModule(),
+            "torch": fake_torch_module,
+            "transformers": fake_transformers_module,
+        }
+        return modules_by_name[module_name]
+
+    monkeypatch.setattr(sam2_mask_server.importlib, "import_module", fake_import_module)
+    runner = sam2_mask_server.TransformersSam2Runner(
+        model_name="SAM2.1-Hiera-L",
+        model_reference=str(model_path),
+        staging_root=tmp_path / "out",
+        device="cuda:0",
+    )
+
+    candidates = runner.masks(
+        _sam_request(image_path=image_path, staging_dir=staging_dir)
+    )
+
+    assert [candidate.score for candidate in candidates] == pytest.approx([0.8, 0.25])
 
 
 def test_transformers_runner_rejects_non_binary_masks(
@@ -960,9 +1003,13 @@ class _FakeTransformersModule(ModuleType):
         torch_module: _FakeTorchModule,
         post_processed_masks: NDArray[np.bool_] | NDArray[np.float32] | None = None,
         original_sizes_value: object = None,
+        score_dtype: object = None,
     ) -> None:
         super().__init__("transformers")
-        self.model = _FakeSam2TransformersModel(torch_module=torch_module)
+        self.model = _FakeSam2TransformersModel(
+            torch_module=torch_module,
+            score_dtype=score_dtype,
+        )
         self.processor = _FakeSam2Processor(
             post_processed_masks=post_processed_masks,
             original_sizes_value=original_sizes_value,
@@ -1001,11 +1048,18 @@ class _FakeSam2ProcessorLoader:
 
 
 class _FakeSam2TransformersModel:
-    def __init__(self, *, torch_module: _FakeTorchModule) -> None:
+    def __init__(
+        self,
+        *,
+        torch_module: _FakeTorchModule,
+        score_dtype: object,
+    ) -> None:
         self._torch_module = torch_module
+        self._score_dtype = score_dtype
         self.device = ""
         self.eval_called = False
         self.input_devices: dict[str, str] = {}
+        self.input_dtypes: dict[str, object] = {}
         self.received_keys: tuple[str, ...] = ()
 
     def to(self, device: str) -> _FakeSam2TransformersModel:
@@ -1029,10 +1083,14 @@ class _FakeSam2TransformersModel:
             if not isinstance(value, _FakeTensor):
                 raise AssertionError(f"expected fake tensor for {key}")
             input_devices[key] = value.device
+            self.input_dtypes[key] = value.dtype
         self.input_devices = input_devices
         return _FakeSam2Output(
             pred_masks=_FakeTensor(np.zeros((1, 1, 2, 2, 3), dtype=np.float32)),
-            iou_scores=_FakeTensor(np.array([[[0.8, 0.25]]], dtype=np.float32)),
+            iou_scores=_FakeTensor(
+                np.array([[[0.8, 0.25]]], dtype=np.float32),
+                dtype=self._score_dtype,
+            ),
         )
 
 
@@ -1124,12 +1182,21 @@ class _FakeProcessorInputs(dict[str, object]):
 
 
 class _FakeTensor:
-    def __init__(self, value: NDArray[np.generic]) -> None:
+    def __init__(self, value: NDArray[np.generic], *, dtype: object = None) -> None:
         self._value = value
         self.device = ""
+        self.dtype: object = dtype
 
-    def to(self, device: str) -> _FakeTensor:
-        self.device = device
+    def to(
+        self,
+        device: str | None = None,
+        *,
+        dtype: object | None = None,
+    ) -> _FakeTensor:
+        if device is not None:
+            self.device = device
+        if dtype is not None:
+            self.dtype = dtype
         return self
 
     def detach(self) -> _FakeTensor:
@@ -1138,10 +1205,15 @@ class _FakeTensor:
     def cpu(self) -> _FakeTensor:
         return self
 
+    def float(self) -> _FakeTensor:
+        return _FakeTensor(self._value.astype(np.float32), dtype="fake-float32")
+
     def __getitem__(self, key: int) -> _FakeTensor:
-        return _FakeTensor(np.asarray(self._value[key]))
+        return _FakeTensor(np.asarray(self._value[key]), dtype=self.dtype)
 
     def __array__(self, dtype: DTypeLike | None = None) -> NDArray[np.generic]:
+        if self.dtype == "fake-bfloat16":
+            raise TypeError("Got unsupported ScalarType BFloat16")
         if dtype is None:
             return self._value
         return np.asarray(self._value, dtype=dtype)

@@ -130,13 +130,8 @@ def backproject_mask_to_world(
         raise ToolInputError(
             "lift_too_sparse: mask contains no pixels with finite positive depth"
         )
-    invalid_masked_depth = boolean_mask & ~valid_depth_mask
-    if bool(np.any(invalid_masked_depth)):
-        raise ToolInputError(
-            "lift_invalid_depth: mask contains non-finite or non-positive depth pixels"
-        )
 
-    rows, columns = np.nonzero(boolean_mask)
+    rows, columns = np.nonzero(valid_mask)
     z_values = depth[rows, columns]
     fx = geometry.intrinsics[0, 0]
     fy = geometry.intrinsics[1, 1]

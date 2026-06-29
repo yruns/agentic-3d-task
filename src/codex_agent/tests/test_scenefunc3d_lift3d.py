@@ -58,7 +58,7 @@ def test_backproject_mask_to_world_rejects_sparse_mask() -> None:
         backproject_mask_to_world(mask, depth_meters, geometry)
 
 
-def test_backproject_mask_to_world_rejects_mixed_invalid_depth_under_mask() -> None:
+def test_backproject_mask_to_world_filters_mixed_invalid_depth_under_mask() -> None:
     np = pytest.importorskip("numpy")
     geometry = CameraGeometry(
         intrinsics=np.eye(3, dtype=np.float64),
@@ -67,8 +67,9 @@ def test_backproject_mask_to_world_rejects_mixed_invalid_depth_under_mask() -> N
     mask = np.array([[True, True]], dtype=np.bool_)
     depth_meters = np.array([[1.0, np.nan]], dtype=np.float64)
 
-    with pytest.raises(ToolInputError, match="lift_invalid_depth"):
-        backproject_mask_to_world(mask, depth_meters, geometry)
+    points_world = backproject_mask_to_world(mask, depth_meters, geometry)
+
+    np.testing.assert_allclose(points_world, np.array([[0.0, 0.0, 1.0]]))
 
 
 def test_load_mask_npz_round_trip_returns_bool_2d(tmp_path: Path) -> None:

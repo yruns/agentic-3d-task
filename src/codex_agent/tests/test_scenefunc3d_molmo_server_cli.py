@@ -11,25 +11,37 @@ import urllib.request
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from types import ModuleType
-from typing import Literal
+from typing import Literal, cast
 
 import pytest
 
 from codex_agent.scenefunc3d.servers.http_json import JsonRoute, make_json_handler
-from codex_agent.scenefunc3d.servers.schemas import MolmoPointRequest
+from codex_agent.scenefunc3d.servers.molmo_point_server import MolmoRunnerPointResult
+from codex_agent.scenefunc3d.servers.schemas import MolmoImagePoint, MolmoPointRequest
 
 
 class _FakeMolmoRunner:
     model_name: str = "fake-molmo"
 
-    def point(self, request: MolmoPointRequest) -> str:
-        return f'<point x="50" y="50">{request.prompt}</point>'
+    def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
+        raw_text = f'<point x="50" y="50">{request.prompt}</point>'
+        return MolmoRunnerPointResult(
+            raw_text=raw_text,
+            image_points=(
+                MolmoImagePoint(
+                    x_px=float(request.image_width) * 0.5,
+                    y_px=float(request.image_height) * 0.5,
+                    source=raw_text,
+                    label=request.prompt,
+                ),
+            ),
+        )
 
 
 class _OutOfMemoryMolmoRunner:
     model_name: str = "fake-molmo"
 
-    def point(self, request: MolmoPointRequest) -> str:
+    def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
         raise RuntimeError("CUDA out of memory while allocating tensor")
 
 
@@ -115,7 +127,7 @@ def test_transformers_runner_uses_molmopoint_image_text_to_text_api(
     )
     image_path = tmp_path / "frame.jpg"
     image_path.write_bytes(b"image")
-    raw_text = runner.point(
+    point_result = runner.point(
         MolmoPointRequest(
             request_id="req-1",
             image_path=image_path,
@@ -125,7 +137,9 @@ def test_transformers_runner_uses_molmopoint_image_text_to_text_api(
         )
     )
 
-    assert raw_text == '<point x="50" y="50">handle</point>'
+    assert point_result.raw_text == '<point x="50" y="50">handle</point>'
+    assert point_result.image_points[0].x_px == 5.0
+    assert point_result.image_points[0].label == "handle"
     assert fake_transformers.model_loader.last_source == str(model_path)
     assert fake_transformers.model_loader.last_kwargs["local_files_only"] is True
     assert fake_transformers.model_loader.last_kwargs["device_map"] == "auto"
@@ -148,7 +162,7 @@ def test_transformers_runner_uses_molmopoint_image_text_to_text_api(
     assert fake_transformers.model.generated_max_new_tokens == 200
     assert fake_transformers.model.generated_metadata_keys == ()
     assert fake_transformers.model.extract_called is True
-    assert fake_transformers.model.extracted_text == raw_text
+    assert fake_transformers.model.extracted_text == point_result.raw_text
     assert (
         fake_transformers.model.extracted_token_pooling
         is fake_transformers.image_token_pooling
@@ -162,6 +176,101 @@ def test_transformers_runner_uses_molmopoint_image_text_to_text_api(
     )
     assert fake_torch.inference_mode_entered is True
     assert fake_torch.autocast_device_type == "cuda"
+
+
+def test_transformers_runner_extracts_label_from_molmopoint_token_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from codex_agent.scenefunc3d.servers import molmo_point_server
+
+    model_path = tmp_path / "molmo"
+    model_path.mkdir()
+    fake_torch = _FakeTorchModule()
+    fake_transformers = _FakeTransformersModule()
+    fake_pil_image = _FakeImageModule()
+    raw_text = (
+        '<points coords="<POINT_1429><POINT_2759><POINT_2765>1<POINT_2758>">'
+        "small dark round knob handle</point><|im_end|>"
+    )
+    fake_transformers.processor.generated_text = raw_text
+    fake_transformers.model.extracted_points = [[1.0, 0.0, 719.0, 930.0]]
+
+    def fake_import_module(module_name: str) -> ModuleType:
+        modules_by_name: dict[str, ModuleType] = {
+            "torch": fake_torch,
+            "transformers": fake_transformers,
+            "PIL.Image": fake_pil_image,
+        }
+        return modules_by_name[module_name]
+
+    monkeypatch.setattr(
+        molmo_point_server.importlib, "import_module", fake_import_module
+    )
+
+    runner = molmo_point_server.TransformersMolmoRunner(
+        model_name="MolmoPoint-8B",
+        model_path=model_path,
+        device="cuda:0",
+    )
+    image_path = tmp_path / "frame.jpg"
+    image_path.write_bytes(b"image")
+    point_result = runner.point(
+        MolmoPointRequest(
+            request_id="req-1",
+            image_path=image_path,
+            prompt="drawer handle",
+            image_width=1440,
+            image_height=1920,
+        )
+    )
+
+    assert point_result.raw_text == raw_text
+    assert point_result.image_points[0].x_px == 719.0
+    assert point_result.image_points[0].y_px == 930.0
+    assert point_result.image_points[0].label == "small dark round knob handle"
+
+
+def test_transformers_runner_rejects_out_of_frame_extracted_points(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from codex_agent.scenefunc3d.servers import molmo_point_server
+
+    model_path = tmp_path / "molmo"
+    model_path.mkdir()
+    fake_torch = _FakeTorchModule()
+    fake_transformers = _FakeTransformersModule()
+    fake_pil_image = _FakeImageModule()
+    fake_transformers.model.extracted_points = [[1.0, 0.0, 10.0, 5.0]]
+
+    def fake_import_module(module_name: str) -> ModuleType:
+        modules_by_name: dict[str, ModuleType] = {
+            "torch": fake_torch,
+            "transformers": fake_transformers,
+            "PIL.Image": fake_pil_image,
+        }
+        return modules_by_name[module_name]
+
+    monkeypatch.setattr(
+        molmo_point_server.importlib, "import_module", fake_import_module
+    )
+
+    runner = molmo_point_server.TransformersMolmoRunner(
+        model_name="MolmoPoint-8B",
+        model_path=model_path,
+        device="cuda:0",
+    )
+    image_path = tmp_path / "frame.jpg"
+    image_path.write_bytes(b"image")
+    with pytest.raises(RuntimeError, match="x_px"):
+        runner.point(
+            MolmoPointRequest(
+                request_id="req-1",
+                image_path=image_path,
+                prompt="drawer handle",
+                image_width=10,
+                image_height=10,
+            )
+        )
 
 
 def test_patch_molmo_remote_code_requires_tensorflow_resize_branch(
@@ -242,6 +351,8 @@ def test_handler_supports_health_and_point_routes(tmp_path: Path) -> None:
     assert point_payload["request_id"] == "req-1"
     assert point_payload["model_name"] == "fake-molmo"
     assert point_payload["raw_text"] == '<point x="50" y="50">drawer handle</point>'
+    point_image_points = cast(list[dict[str, object]], point_payload["image_points"])
+    assert point_image_points[0]["x_px"] == 320.0
     assert isinstance(point_payload["latency_ms"], float)
 
 
@@ -319,6 +430,11 @@ def test_handle_point_validates_payload_and_returns_response(tmp_path: Path) -> 
     assert response_payload["request_id"] == "req-2"
     assert response_payload["model_name"] == "fake-molmo"
     assert response_payload["raw_text"] == '<point x="50" y="50">cabinet knob</point>'
+    response_image_points = cast(
+        list[dict[str, object]],
+        response_payload["image_points"],
+    )
+    assert response_image_points[0]["label"] == "cabinet knob"
 
 
 def _restore_modules(modules_by_name: dict[str, ModuleType]) -> None:
@@ -440,6 +556,7 @@ class _FakeProcessor:
         self._model_inputs = model_inputs
         self.prompt_text = ""
         self.return_pointing_metadata = False
+        self.generated_text = '<point x="50" y="50">handle</point>'
 
     def apply_chat_template(
         self,
@@ -463,7 +580,7 @@ class _FakeProcessor:
         skip_special_tokens: bool,
         clean_up_tokenization_spaces: bool,
     ) -> list[str]:
-        return ['<point x="50" y="50">handle</point>']
+        return [self.generated_text]
 
 
 class _FakeModel:
@@ -483,6 +600,7 @@ class _FakeModel:
         self.extracted_token_pooling: object = None
         self.extracted_subpatch_mapping: object = None
         self.extracted_image_sizes: object = None
+        self.extracted_points: list[list[float]] = [[1.0, 0.0, 5.0, 5.0]]
 
     def to(self, device: object) -> _FakeModel:
         self.to_device = str(device)
@@ -527,7 +645,7 @@ class _FakeModel:
         self.extracted_token_pooling = token_pooling
         self.extracted_subpatch_mapping = subpatch_mapping
         self.extracted_image_sizes = image_sizes
-        return object()
+        return self.extracted_points
 
 
 class _FakeTransformersModule(ModuleType):

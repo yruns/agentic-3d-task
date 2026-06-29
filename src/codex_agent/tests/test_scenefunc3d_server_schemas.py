@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from codex_agent.scenefunc3d.servers.schemas import (
     HealthResponse,
+    MolmoImagePoint,
     MolmoPointRequest,
     MolmoPointResponse,
     SamMaskCandidateResponse,
@@ -32,11 +33,20 @@ def test_molmo_point_schema_round_trip(tmp_path: Path) -> None:
         request_id=request.request_id,
         model_name="MolmoPoint-8B",
         raw_text='<point x="50" y="50">handle</point>',
+        image_points=(
+            MolmoImagePoint(
+                x_px=320.0,
+                y_px=240.0,
+                source='<point x="50" y="50">handle</point>',
+                label="handle",
+            ),
+        ),
         latency_ms=12,
     )
 
     assert request.model_dump(mode="json")["image_path"] == str(image_path)
     assert response.model_dump(mode="json")["raw_text"].startswith("<point")
+    assert response.model_dump(mode="json")["image_points"][0]["x_px"] == 320.0
 
 
 def test_molmo_point_request_rejects_extra_fields(tmp_path: Path) -> None:

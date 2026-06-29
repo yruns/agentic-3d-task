@@ -158,8 +158,22 @@ class _TensorLike(Protocol):
     def cpu(self) -> _TensorLike:
         """Return a CPU-backed representation."""
 
+    def float(self) -> _TensorLike:
+        """Return a float32 representation."""
+
     def __getitem__(self, key: int) -> _TensorLike:
         """Return an indexed tensor-like value."""
+
+
+@runtime_checkable
+class _DTypeMovable(Protocol):
+    def to(
+        self,
+        device: str | None = None,
+        *,
+        dtype: object | None = None,
+    ) -> object:
+        """Move or cast a tensor-like value."""
 
 
 class _ProcessorInputs(Protocol):
@@ -462,7 +476,10 @@ class TransformersSam2Runner:
                 input_labels=input_labels,
                 return_tensors="pt",
             ).to(self._device)
-            model_inputs = _filter_transformers_model_inputs(processor_inputs)
+            model_inputs = _cast_transformers_pixel_values(
+                _filter_transformers_model_inputs(processor_inputs),
+                dtype=self._torch_module.bfloat16,
+            )
             with self._torch_module.inference_mode():
                 outputs = self._model(**model_inputs)
             post_processed_masks = self._processor.post_process_masks(
@@ -472,7 +489,7 @@ class TransformersSam2Runner:
                 .cpu(),
             )
             raw_scores = _extract_single_prompt_scores(
-                outputs.iou_scores.detach().cpu()[0]
+                outputs.iou_scores.detach().float().cpu()[0]
             )
 
         raw_masks = _extract_single_prompt_masks(post_processed_masks)
@@ -795,6 +812,18 @@ def _filter_transformers_model_inputs(
             model_inputs[key] = processor_inputs[key]
     if "pixel_values" not in model_inputs:
         raise SamInvalidOutputError("SAM2 processor did not return pixel_values")
+    return model_inputs
+
+
+def _cast_transformers_pixel_values(
+    model_inputs: dict[str, object],
+    *,
+    dtype: object,
+) -> dict[str, object]:
+    pixel_values = model_inputs["pixel_values"]
+    if not isinstance(pixel_values, _DTypeMovable):
+        raise SamInvalidOutputError("SAM2 processor returned non-castable pixel_values")
+    model_inputs["pixel_values"] = pixel_values.to(dtype=dtype)
     return model_inputs
 
 
