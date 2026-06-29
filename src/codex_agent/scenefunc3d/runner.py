@@ -28,7 +28,7 @@ from .final_mask_artifacts import (
     ValidatedFinalMaskArtifact,
     validate_final_mask_artifact,
 )
-from .playbook import SCENEFUNC3D_TOOLS_PLAYBOOK
+from .playbook import SCENEFUNC3D_TOOL_NAMES, SCENEFUNC3D_TOOLS_PLAYBOOK
 from .sample import SceneFunc3dSample, load_sample, scene_dir_for
 from .servers.schemas import HealthResponse
 from .tools.mask_artifacts import (
@@ -43,6 +43,7 @@ from .tools.scene_context import SceneFunc3dToolScene
 
 TASK_NAME = "scenefunc3d_mask_generation"
 DEFAULT_TOOL_CLI_MODULE = "codex_agent.scenefunc3d.tools"
+SCENEFUNC3D_ALLOWED_TOOL_NAMES = SCENEFUNC3D_TOOL_NAMES
 
 NonEmptyString: TypeAlias = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1)
@@ -337,9 +338,7 @@ class SceneFunc3dMaskTask:
             "view_image before relying on visual evidence.\n"
             "- Use the Molmo point and SAM candidates approval gates in the "
             "playbook before accepting mask fragments.\n"
-            "\nYou are NOT exploring or editing a codebase. Everything needed "
-            "for this single SceneFunc3D case is in this message and the CLI "
-            "tools above.\n"
+            "\n" + _hard_limits_section() + "\n"
             "\nFinal JSON schema:\n" + json.dumps(schema, ensure_ascii=False)
         )
 
@@ -352,6 +351,24 @@ def build_prompt(sample: SceneFunc3dSample) -> str:
         "Task context:\n"
         f"{context_json}\n\n"
         "Generate a SceneFunc3D 3D mask artifact for this task."
+    )
+
+
+def _hard_limits_section() -> str:
+    """Return prompt limits that keep the turn focused on SceneFunc3D tools."""
+    return (
+        "Hard limits:\n"
+        "- You are NOT exploring or editing a codebase. Everything needed for "
+        "this single SceneFunc3D case is in this message and the CLI tools "
+        "above.\n"
+        "- Do NOT read, cat, sed, head, grep, rg, or open any SKILL.md, "
+        "AGENTS.md, README, docs, or source file, and do NOT list or search the "
+        "repository.\n"
+        "- Use ONLY these SceneFunc3D tools plus view_image: "
+        f"{', '.join(SCENEFUNC3D_ALLOWED_TOOL_NAMES)}.\n"
+        "- Never re-run a tool with identical arguments and never re-view an "
+        "image you have already seen; if a result is empty or errors, change "
+        "frame, crop, prompt, or mask candidate instead."
     )
 
 
@@ -694,6 +711,7 @@ def _require_non_empty_string_tuple(
 __all__ = [
     "TASK_NAME",
     "DEFAULT_TOOL_CLI_MODULE",
+    "SCENEFUNC3D_ALLOWED_TOOL_NAMES",
     "SceneFunc3dMaskDecision",
     "CodexTurnMetadataPayload",
     "SceneFunc3dMaskOutcome",

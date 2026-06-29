@@ -18,6 +18,7 @@ import codex_agent.scenefunc3d.runner as runner
 from codex_agent.errors import CodexResponseError
 from codex_agent.models import CodexTaskResult, CodexTurnMetadata, CodexTurnResult
 from codex_agent.scenefunc3d.runner import (
+    SCENEFUNC3D_ALLOWED_TOOL_NAMES,
     SceneFunc3dMaskOutcome,
     SceneFunc3dMaskTask,
     SceneFunc3dRunnerConfig,
@@ -97,6 +98,15 @@ def test_mask_task_prompt_inlines_tools_without_attachments(
         f"--backend-config {backend_config_path} "
         f"--out-dir {output_dir} --args '<json>'"
     ) in request.prompt
+    hard_limits = request.prompt.split("Hard limits:\n", maxsplit=1)[1].split(
+        "\nFinal JSON schema:", maxsplit=1
+    )[0]
+    assert "Use ONLY these SceneFunc3D tools plus view_image" in hard_limits
+    assert ", ".join(SCENEFUNC3D_ALLOWED_TOOL_NAMES) in hard_limits
+    for tool_name in SCENEFUNC3D_ALLOWED_TOOL_NAMES:
+        assert tool_name in hard_limits
+    assert "Do NOT read, cat, sed, head, grep, rg, or open" in hard_limits
+    assert "Never re-run a tool with identical arguments" in hard_limits
 
 
 def test_mask_task_parses_strict_final_json(
