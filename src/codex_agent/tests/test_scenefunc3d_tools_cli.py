@@ -38,13 +38,25 @@ _APPROVED_FRAGMENT_ACTIONS = (
 def test_scene_summary_args_ignore_task_context_fields() -> None:
     args = SceneSummaryArgs.model_validate(
         {
+            "visit_id": "421393",
             "task_description": "Open the lower drawer.",
             "desc_id": "desc-a",
+            "target": "drawer handle",
             "annotation_ids": ["annotation-a"],
         }
     )
 
     assert isinstance(args, SceneSummaryArgs)
+
+
+def test_scene_summary_args_rejects_unrelated_motion_hints() -> None:
+    with pytest.raises(ValidationError):
+        SceneSummaryArgs.model_validate(
+            {
+                "task_description": "Open the lower drawer.",
+                "motion_hints": [{"motion_type": "trans"}],
+            }
+        )
 
 
 def test_keyframe_selector_args_accept_task_description_alias() -> None:
@@ -64,6 +76,7 @@ def test_keyframe_selector_args_accept_agent_task_context_fields() -> None:
             "task_description": "Adjust room temperature using the radiator dial.",
             "target": "radiator dial",
             "motion_type": "rot",
+            "motion_hints": [{"motion_type": "rot", "motion_dir": [0.0, 0.0, -1.0]}],
             "annotation_ids": ["annotation-a"],
         }
     )

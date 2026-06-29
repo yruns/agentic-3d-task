@@ -136,6 +136,7 @@ class KeyframeSelectorArgs(BaseModel):
             values.pop("max_frames", None)
         values.pop("annotation_ids", None)
         values.pop("motion_type", None)
+        values.pop("motion_hints", None)
         return values
 
 

@@ -44,8 +44,10 @@ class SceneSummaryArgs(BaseModel):
         if not isinstance(payload, Mapping):
             return payload
         values = dict(payload)
+        values.pop("visit_id", None)
         values.pop("task_description", None)
         values.pop("desc_id", None)
+        values.pop("target", None)
         values.pop("annotation_ids", None)
         return values
 
