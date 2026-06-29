@@ -33,6 +33,7 @@ from .servers.schemas import HealthResponse
 from .tools.mask_artifacts import (
     SceneFunc3dCompletedRunSummary,
     SceneFunc3dRunCompletionEvent,
+    SceneFunc3dRunMultiViewDecisionPayload,
     append_run_completion_event,
     artifact_paths_for,
     write_completed_run_summary,
@@ -79,7 +80,17 @@ class SceneFunc3dRunResultPayload(TypedDict):
     task_name: str
     sample_id: str
     outcome: SceneFunc3dMaskOutcomePayload
+    artifact: SceneFunc3dRunArtifactPayload
     turn: CodexTurnMetadataPayload
+
+
+class SceneFunc3dRunArtifactPayload(TypedDict):
+    """JSON-ready validated artifact summary for one SceneFunc3D result."""
+
+    accepted_frame_ids: list[str]
+    accepted_fragment_ids: list[str]
+    final_point_count: int
+    multi_view_decision: SceneFunc3dRunMultiViewDecisionPayload
 
 
 class SceneFunc3dCliRunPayload(TypedDict):
@@ -400,6 +411,7 @@ def run_single_sample(
         "task_name": result.task_name,
         "sample_id": sample_id,
         "outcome": validated_outcome.to_payload(),
+        "artifact": _artifact_payload(validated_artifact),
         "turn": _metadata_payload(result.turn.metadata),
     }
     result_path.write_text(
@@ -459,6 +471,25 @@ def _completed_run_summary(
         multi_view_decision=artifact.multi_view_decision,
         final_point_count=artifact.point_count,
     )
+
+
+def _artifact_payload(
+    artifact: ValidatedFinalMaskArtifact,
+) -> SceneFunc3dRunArtifactPayload:
+    """Return validated final artifact details stored alongside ``result.json``."""
+    return {
+        "accepted_frame_ids": list(artifact.accepted_frame_ids),
+        "accepted_fragment_ids": list(artifact.accepted_fragment_ids),
+        "final_point_count": artifact.point_count,
+        "multi_view_decision": {
+            "seed_fragment_id": artifact.multi_view_decision.seed_fragment_id,
+            "action": artifact.multi_view_decision.action.value,
+            "reason": artifact.multi_view_decision.reason,
+            "suggested_frame_ids": list(
+                artifact.multi_view_decision.suggested_frame_ids
+            ),
+        },
+    }
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -662,6 +693,7 @@ __all__ = [
     "SceneFunc3dMaskOutcomePayload",
     "SceneFunc3dMaskTask",
     "SceneFunc3dRunnerConfig",
+    "SceneFunc3dRunArtifactPayload",
     "SceneFunc3dRunResultPayload",
     "build_arg_parser",
     "build_prompt",

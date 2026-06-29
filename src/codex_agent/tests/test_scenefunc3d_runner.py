@@ -562,6 +562,17 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
     assert payload["task_name"] == "scenefunc3d_mask_generation"
     assert payload["sample_id"] == "421254::desc-a"
     assert payload["outcome"] == _outcome_payload(sample_output_dir)
+    assert payload["artifact"] == {
+        "accepted_frame_ids": ["000010"],
+        "accepted_fragment_ids": ["frag-a"],
+        "final_point_count": 2,
+        "multi_view_decision": {
+            "seed_fragment_id": "frag-a",
+            "action": "stop",
+            "reason": "test artifact records the first-lift multi-view decision",
+            "suggested_frame_ids": [],
+        },
+    }
     assert payload["turn"] == {
         "turn_id": "fake-turn",
         "status": "completed",
