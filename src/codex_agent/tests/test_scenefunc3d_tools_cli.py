@@ -49,14 +49,15 @@ def test_scene_summary_args_ignore_task_context_fields() -> None:
     assert isinstance(args, SceneSummaryArgs)
 
 
-def test_scene_summary_args_rejects_unrelated_motion_hints() -> None:
-    with pytest.raises(ValidationError):
-        SceneSummaryArgs.model_validate(
-            {
-                "task_description": "Open the lower drawer.",
-                "motion_hints": [{"motion_type": "trans"}],
-            }
-        )
+def test_scene_summary_args_ignore_motion_hints_context_field() -> None:
+    args = SceneSummaryArgs.model_validate(
+        {
+            "task_description": "Open the lower drawer.",
+            "motion_hints": [{"motion_type": "trans"}],
+        }
+    )
+
+    assert isinstance(args, SceneSummaryArgs)
 
 
 def test_keyframe_selector_args_accept_task_description_alias() -> None:

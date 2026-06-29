@@ -50,6 +50,7 @@ class SceneSummaryArgs(BaseModel):
         values.pop("desc_id", None)
         values.pop("target", None)
         values.pop("annotation_ids", None)
+        values.pop("motion_hints", None)
         return values
 
 
