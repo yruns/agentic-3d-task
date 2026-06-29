@@ -49,6 +49,7 @@ class SceneFunc3dRunMultiViewDecisionPayload(TypedDict):
     action: str
     reason: str
     suggested_frame_ids: list[str]
+    rejected_suggested_frame_ids: list[str]
 
 
 class SceneFunc3dCompletedRunSummaryPayload(TypedDict):
@@ -330,4 +331,5 @@ def _multi_view_decision_payload(
         "action": decision.action.value,
         "reason": decision.reason,
         "suggested_frame_ids": list(decision.suggested_frame_ids),
+        "rejected_suggested_frame_ids": list(decision.rejected_suggested_frame_ids),
     }

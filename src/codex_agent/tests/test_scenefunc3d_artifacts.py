@@ -835,6 +835,7 @@ def test_fuse_accepted_masks_records_multi_view_decision(tmp_path: Path) -> None
         "action": "expand",
         "reason": "first lift is sparse and the handle side may be occluded",
         "suggested_frame_ids": ["000020"],
+        "rejected_suggested_frame_ids": [],
     }
     args = FuseAcceptedMasksArgs.model_validate(
         {
@@ -855,6 +856,44 @@ def test_fuse_accepted_masks_records_multi_view_decision(tmp_path: Path) -> None
                     "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
                     "review_artifacts": second_review_artifacts,
                 },
+            ],
+            "multi_view_decision": multi_view_decision,
+        }
+    )
+
+    result = fuse_accepted_masks(args, out_dir=tmp_path / "out")
+
+    payload = json.loads(result.mask_artifact_path.read_text(encoding="utf-8"))
+    assert payload["multi_view_decision"] == multi_view_decision
+    assert result.to_payload()["multi_view_decision"] == multi_view_decision
+
+
+def test_fuse_accepted_masks_records_rejected_suggested_frames_for_stop(
+    tmp_path: Path,
+) -> None:
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "frag-a")
+    review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+    multi_view_decision = {
+        "seed_fragment_id": "frag-a",
+        "action": "stop",
+        "reason": (
+            "inspected suggested follow-up frames and found no acceptable target "
+            "part evidence"
+        ),
+        "suggested_frame_ids": [],
+        "rejected_suggested_frame_ids": ["000020", "000030"],
+    }
+    args = FuseAcceptedMasksArgs.model_validate(
+        {
+            "fragments": [
+                {
+                    "fragment_id": "frag-a",
+                    "frame_id": "000010",
+                    "mask_npz_path": str(mask_npz_path),
+                    "mask_ply_path": str(mask_ply_path),
+                    "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+                    "review_artifacts": review_artifacts,
+                }
             ],
             "multi_view_decision": multi_view_decision,
         }
@@ -957,6 +996,7 @@ def test_fuse_accepted_masks_rejects_stop_decision_for_multiple_frames(
             "action": FinalMaskMultiViewAction.STOP.value,
             "reason": "incorrectly stops despite accepting a follow-up frame",
             "suggested_frame_ids": [],
+            "rejected_suggested_frame_ids": [],
         },
     )
 
@@ -1113,6 +1153,7 @@ def _expand_decision_payload(
         "action": FinalMaskMultiViewAction.EXPAND.value,
         "reason": "first lift is sparse and the target part needs another view",
         "suggested_frame_ids": list(suggested_frame_ids),
+        "rejected_suggested_frame_ids": [],
     }
 
 

@@ -506,6 +506,9 @@ def _artifact_payload(
             "suggested_frame_ids": list(
                 artifact.multi_view_decision.suggested_frame_ids
             ),
+            "rejected_suggested_frame_ids": list(
+                artifact.multi_view_decision.rejected_suggested_frame_ids
+            ),
         },
     }
 

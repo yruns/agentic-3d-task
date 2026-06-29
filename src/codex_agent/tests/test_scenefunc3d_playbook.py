@@ -139,6 +139,10 @@ def test_playbook_tells_agent_to_review_lift_geometry_summary() -> None:
 def test_playbook_tells_agent_stop_decision_has_no_suggested_frame_ids() -> None:
     assert 'When multi_view_decision.action is "stop"' in (SCENEFUNC3D_TOOLS_PLAYBOOK)
     assert "suggested_frame_ids must be empty" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "rejected_suggested_frame_ids" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "record every suggested follow-up frame you inspected and rejected" in (
+        SCENEFUNC3D_TOOLS_PLAYBOOK
+    )
     assert 'Use action "expand" when you accepted fragments from later frames' in (
         SCENEFUNC3D_TOOLS_PLAYBOOK
     )

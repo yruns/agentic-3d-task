@@ -909,7 +909,10 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
 ) -> None:
     _write_scene(tmp_path / "data")
     sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(sample_output_dir)
+    _write_outcome_artifacts(
+        sample_output_dir,
+        rejected_suggested_frame_ids=("000020", "000030"),
+    )
     outcome = SceneFunc3dMaskOutcome(
         mask_artifact_path=sample_output_dir / "mask_artifact.json",
         mask_npz_path=sample_output_dir / "mask.npz",
@@ -947,6 +950,7 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
             "action": "stop",
             "reason": "test artifact records the first-lift multi-view decision",
             "suggested_frame_ids": [],
+            "rejected_suggested_frame_ids": ["000020", "000030"],
         },
     }
     assert payload["turn"] == {
@@ -986,6 +990,7 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
         "action": "stop",
         "reason": "test artifact records the first-lift multi-view decision",
         "suggested_frame_ids": [],
+        "rejected_suggested_frame_ids": ["000020", "000030"],
     }
     event_lines = (
         (sample_output_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
@@ -1258,6 +1263,7 @@ def _write_outcome_artifacts(
     *,
     accepted_fragment_ids: tuple[str, ...] = ("frag-a",),
     accepted_frame_ids: tuple[str, ...] = ("000010",),
+    rejected_suggested_frame_ids: tuple[str, ...] = (),
 ) -> None:
     from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
 
@@ -1294,6 +1300,7 @@ def _write_outcome_artifacts(
             "suggested_frame_ids": (
                 list(unique_frame_ids[1:]) if multi_view_action == "expand" else []
             ),
+            "rejected_suggested_frame_ids": list(rejected_suggested_frame_ids),
         },
         "mask_npz_path": str(mask_npz_path),
         "mask_ply_path": str(mask_ply_path),

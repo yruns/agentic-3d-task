@@ -126,6 +126,7 @@ class MultiViewDecisionPayload(TypedDict):
     action: str
     reason: str
     suggested_frame_ids: list[str]
+    rejected_suggested_frame_ids: list[str]
 
 
 class FusedMaskPayload(TypedDict):
@@ -282,6 +283,7 @@ class MultiViewDecisionInput(BaseModel):
     action: FinalMaskMultiViewAction
     reason: NonEmptyText
     suggested_frame_ids: tuple[SafePathComponentText, ...] = ()
+    rejected_suggested_frame_ids: tuple[SafePathComponentText, ...] = ()
 
     def to_domain(self) -> MultiViewDecision:
         """Return an immutable domain value for persisted fusion provenance."""
@@ -290,6 +292,7 @@ class MultiViewDecisionInput(BaseModel):
             action=self.action,
             reason=self.reason,
             suggested_frame_ids=self.suggested_frame_ids,
+            rejected_suggested_frame_ids=self.rejected_suggested_frame_ids,
         )
 
 
@@ -531,6 +534,7 @@ class MultiViewDecision:
     action: FinalMaskMultiViewAction
     reason: str
     suggested_frame_ids: tuple[str, ...]
+    rejected_suggested_frame_ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
         """Validate domain invariants for a multi-view decision."""
@@ -538,6 +542,8 @@ class MultiViewDecision:
         _validate_non_empty_text("reason", self.reason)
         for frame_id in self.suggested_frame_ids:
             _validate_non_empty_text("suggested_frame_id", frame_id)
+        for frame_id in self.rejected_suggested_frame_ids:
+            _validate_non_empty_text("rejected_suggested_frame_id", frame_id)
 
     def to_payload(self) -> MultiViewDecisionPayload:
         """Return the JSON-ready multi-view decision."""
@@ -546,6 +552,7 @@ class MultiViewDecision:
             "action": self.action.value,
             "reason": self.reason,
             "suggested_frame_ids": list(self.suggested_frame_ids),
+            "rejected_suggested_frame_ids": list(self.rejected_suggested_frame_ids),
         }
 
 

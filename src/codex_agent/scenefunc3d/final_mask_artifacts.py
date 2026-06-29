@@ -65,6 +65,7 @@ class FinalMaskMultiViewDecision(BaseModel):
     action: FinalMaskMultiViewAction
     reason: NonEmptyString
     suggested_frame_ids: tuple[NonEmptyString, ...] = ()
+    rejected_suggested_frame_ids: tuple[NonEmptyString, ...] = ()
 
 
 class FinalMaskArtifactDocument(BaseModel):
