@@ -67,6 +67,10 @@ class MaskInspectionPayload(TypedDict):
     artifact_path: str | None
     overlay_paths: list[str]
     lifted_point_count: int
+    bbox_min_xyz: list[float]
+    bbox_max_xyz: list[float]
+    bbox_extent_xyz: list[float]
+    max_extent_meters: float
     status: str
 
 
@@ -319,11 +323,23 @@ class MaskInspectionResult:
     artifact_path: Path | None
     overlay_paths: tuple[Path, ...]
     lifted_point_count: int
+    bbox_min_xyz: tuple[float, float, float]
+    bbox_max_xyz: tuple[float, float, float]
+    bbox_extent_xyz: tuple[float, float, float]
+    max_extent_meters: float
     status: str
 
     def __post_init__(self) -> None:
         """Validate domain invariants for one inspection result."""
         _validate_non_negative_int("lifted_point_count", self.lifted_point_count)
+        _validate_xyz_tuple("bbox_min_xyz", self.bbox_min_xyz)
+        _validate_xyz_tuple("bbox_max_xyz", self.bbox_max_xyz)
+        _validate_xyz_tuple("bbox_extent_xyz", self.bbox_extent_xyz)
+        if not math.isfinite(self.max_extent_meters) or self.max_extent_meters < 0.0:
+            raise ValueError(
+                "max_extent_meters must be finite and non-negative: "
+                f"{self.max_extent_meters!r}"
+            )
         _validate_non_empty_text("status", self.status)
 
     def to_payload(self) -> dict[str, object]:
@@ -334,6 +350,10 @@ class MaskInspectionResult:
             ),
             "overlay_paths": [str(path) for path in self.overlay_paths],
             "lifted_point_count": self.lifted_point_count,
+            "bbox_min_xyz": list(self.bbox_min_xyz),
+            "bbox_max_xyz": list(self.bbox_max_xyz),
+            "bbox_extent_xyz": list(self.bbox_extent_xyz),
+            "max_extent_meters": self.max_extent_meters,
             "status": self.status,
         }
 
@@ -559,11 +579,54 @@ def inspect_mask_artifact(args: InspectMaskArtifactArgs) -> MaskInspectionResult
         mask_npz_path=args.mask_npz_path,
         mask_ply_path=args.mask_ply_path,
     )
+    geometry_summary = _mask_geometry_summary(args.mask_npz_path)
     return MaskInspectionResult(
         artifact_path=args.artifact_path,
         overlay_paths=tuple(args.overlay_paths),
         lifted_point_count=lifted_point_count,
+        bbox_min_xyz=geometry_summary.bbox_min_xyz,
+        bbox_max_xyz=geometry_summary.bbox_max_xyz,
+        bbox_extent_xyz=geometry_summary.bbox_extent_xyz,
+        max_extent_meters=geometry_summary.max_extent_meters,
         status="valid",
+    )
+
+
+@dataclass(frozen=True)
+class _MaskGeometrySummary:
+    """Axis-aligned 3D extent summary for an inspected mask."""
+
+    bbox_min_xyz: tuple[float, float, float]
+    bbox_max_xyz: tuple[float, float, float]
+    bbox_extent_xyz: tuple[float, float, float]
+    max_extent_meters: float
+
+
+def _mask_geometry_summary(mask_npz_path: Path) -> _MaskGeometrySummary:
+    points_world = load_points_world_npz(mask_npz_path)
+    bbox_min_xyz = _xyz_tuple(cast("FloatArray", points_world.min(axis=0)))
+    bbox_max_xyz = _xyz_tuple(cast("FloatArray", points_world.max(axis=0)))
+    bbox_extent_xyz = _extent_xyz_tuple(bbox_min_xyz, bbox_max_xyz)
+    return _MaskGeometrySummary(
+        bbox_min_xyz=bbox_min_xyz,
+        bbox_max_xyz=bbox_max_xyz,
+        bbox_extent_xyz=bbox_extent_xyz,
+        max_extent_meters=max(bbox_extent_xyz),
+    )
+
+
+def _xyz_tuple(values: FloatArray) -> tuple[float, float, float]:
+    return (float(values[0]), float(values[1]), float(values[2]))
+
+
+def _extent_xyz_tuple(
+    bbox_min_xyz: tuple[float, float, float],
+    bbox_max_xyz: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    return (
+        bbox_max_xyz[0] - bbox_min_xyz[0],
+        bbox_max_xyz[1] - bbox_min_xyz[1],
+        bbox_max_xyz[2] - bbox_min_xyz[2],
     )
 
 
@@ -1200,6 +1263,13 @@ def _validate_non_empty_text(field_name: str, field_value: str) -> None:
 def _validate_non_negative_int(field_name: str, field_value: int) -> None:
     if field_value < 0:
         raise ValueError(f"{field_name} must be non-negative")
+
+
+def _validate_xyz_tuple(
+    field_name: str, field_value: tuple[float, float, float]
+) -> None:
+    if any(not math.isfinite(value) for value in field_value):
+        raise ValueError(f"{field_name} must contain finite coordinates")
 
 
 def _validate_positive_int(field_name: str, field_value: int) -> None:

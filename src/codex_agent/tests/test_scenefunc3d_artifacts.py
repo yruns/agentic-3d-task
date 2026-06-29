@@ -128,6 +128,10 @@ def test_mask_inspection_payload() -> None:
         artifact_path=Path("/tmp/summary.json"),
         overlay_paths=(Path("/tmp/overlay.jpg"),),
         lifted_point_count=42,
+        bbox_min_xyz=(1.0, 2.0, 3.0),
+        bbox_max_xyz=(4.0, 5.0, 7.0),
+        bbox_extent_xyz=(3.0, 3.0, 4.0),
+        max_extent_meters=4.0,
         status="success",
     )
 
@@ -135,6 +139,10 @@ def test_mask_inspection_payload() -> None:
 
     assert payload["artifact_path"] == "/tmp/summary.json"
     assert payload["overlay_paths"] == ["/tmp/overlay.jpg"]
+    assert payload["bbox_min_xyz"] == [1.0, 2.0, 3.0]
+    assert payload["bbox_max_xyz"] == [4.0, 5.0, 7.0]
+    assert payload["bbox_extent_xyz"] == [3.0, 3.0, 4.0]
+    assert payload["max_extent_meters"] == 4.0
 
 
 def test_inspect_mask_artifact_validates_npz_and_ply(tmp_path: Path) -> None:
@@ -153,6 +161,10 @@ def test_inspect_mask_artifact_validates_npz_and_ply(tmp_path: Path) -> None:
 
     assert result.status == "valid"
     assert result.lifted_point_count == 2
+    assert result.bbox_min_xyz == (1.0, 2.0, 3.0)
+    assert result.bbox_max_xyz == (4.0, 5.0, 6.0)
+    assert result.bbox_extent_xyz == (3.0, 3.0, 3.0)
+    assert result.max_extent_meters == 3.0
     assert result.overlay_paths == (overlay_path,)
 
 

@@ -2509,6 +2509,10 @@ def test_cli_inspect_mask_artifact_validates_npz_ply(
     payload = json.loads(capsys.readouterr().out.strip())
     assert payload["status"] == "valid"
     assert payload["lifted_point_count"] == 2
+    assert payload["bbox_min_xyz"] == [1.0, 2.0, 3.0]
+    assert payload["bbox_max_xyz"] == [4.0, 5.0, 6.0]
+    assert payload["bbox_extent_xyz"] == [3.0, 3.0, 3.0]
+    assert payload["max_extent_meters"] == 3.0
 
 
 def test_cli_fuse_accepted_masks_writes_final_artifact(
