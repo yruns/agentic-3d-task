@@ -236,7 +236,9 @@ def test_suggest_additional_views_ranks_geometry_ready_views(
     assert payload["expansion_recommendation"] == "expand"
 
 
-def test_suggest_additional_views_stops_for_usable_seed(tmp_path: Path) -> None:
+def test_suggest_additional_views_expands_usable_seed_when_views_exist(
+    tmp_path: Path,
+) -> None:
     scene_dir = tmp_path / "421254"
     raw_dir = scene_dir / "raw"
     raw_dir.mkdir(parents=True)
@@ -263,9 +265,43 @@ def test_suggest_additional_views_stops_for_usable_seed(tmp_path: Path) -> None:
     result = suggest_additional_views(tool_scene, args)
 
     assert result.seed_lift_status is SeedLiftStatus.USABLE
+    assert result.expansion_recommendation is FinalMaskMultiViewAction.EXPAND
+    assert tuple(view.frame_id for view in result.views) == ("000020",)
+    assert "meets min_seed_point_count=1" in result.expansion_reason
+    assert "additional candidate views are available" in result.expansion_reason
+
+
+def test_suggest_additional_views_stops_when_only_accepted_frame_exists(
+    tmp_path: Path,
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    (raw_dir / "000010-rgb.png").write_bytes(b"not-a-real-image")
+    seed_dir = tmp_path / "fragments" / "000010_mask_00"
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    tool_scene = SceneFunc3dToolScene.load(scene_dir)
+    args = SuggestAdditionalViewsArgs(
+        seed_fragment_id="000010_mask_00",
+        accepted_frame_id="000010",
+        seed_mask_npz_path=mask_npz_path,
+        seed_mask_ply_path=mask_ply_path,
+        seed_lift_overlay_path=lift_overlay_path,
+        min_seed_point_count=1,
+        k=1,
+    )
+
+    result = suggest_additional_views(tool_scene, args)
+
+    assert result.seed_lift_status is SeedLiftStatus.USABLE
     assert result.expansion_recommendation is FinalMaskMultiViewAction.STOP
     assert result.views == ()
-    assert "meets min_seed_point_count=1" in result.expansion_reason
+    assert "no additional candidate views are available" in result.expansion_reason
 
 
 def test_suggest_additional_views_rejects_seed_artifact_mismatch(

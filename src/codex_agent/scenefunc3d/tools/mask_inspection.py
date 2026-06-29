@@ -479,16 +479,6 @@ def suggest_additional_views(
         seed_lift_overlay_path=args.seed_lift_overlay_path,
         seed_fragment_id=args.seed_fragment_id,
     )
-    seed_lift_status = _seed_lift_status(
-        seed_lift_point_count,
-        min_seed_point_count=args.min_seed_point_count,
-    )
-    expansion_recommendation = _expansion_recommendation(seed_lift_status)
-    expansion_reason = _expansion_reason(
-        seed_lift_point_count=seed_lift_point_count,
-        min_seed_point_count=args.min_seed_point_count,
-        seed_lift_status=seed_lift_status,
-    )
     available_frame_ids = set(tool_scene.rgb_frame_ids)
     if args.accepted_frame_id not in available_frame_ids:
         raise ToolInputError(
@@ -511,15 +501,6 @@ def suggest_additional_views(
             "candidate_frame_ids must exist in the SceneFunc3D scene: "
             f"missing={missing_candidate_ids}; scene_root={tool_scene.scene_root}"
         )
-    if expansion_recommendation is FinalMaskMultiViewAction.STOP:
-        return SuggestedViewsResult(
-            seed_fragment_id=args.seed_fragment_id,
-            seed_lift_point_count=seed_lift_point_count,
-            seed_lift_status=seed_lift_status,
-            expansion_recommendation=expansion_recommendation,
-            expansion_reason=expansion_reason,
-            views=(),
-        )
 
     accepted_camera_center = _camera_center_for_frame(
         tool_scene, args.accepted_frame_id
@@ -534,6 +515,30 @@ def suggest_additional_views(
         for frame_id in candidate_frame_ids
         if frame_id != args.accepted_frame_id
     )
+    seed_lift_status = _seed_lift_status(
+        seed_lift_point_count,
+        min_seed_point_count=args.min_seed_point_count,
+    )
+    expansion_recommendation = _expansion_recommendation(
+        seed_lift_status,
+        candidate_view_count=len(candidate_geometries),
+    )
+    expansion_reason = _expansion_reason(
+        seed_lift_point_count=seed_lift_point_count,
+        min_seed_point_count=args.min_seed_point_count,
+        seed_lift_status=seed_lift_status,
+        candidate_view_count=len(candidate_geometries),
+    )
+    if expansion_recommendation is FinalMaskMultiViewAction.STOP:
+        return SuggestedViewsResult(
+            seed_fragment_id=args.seed_fragment_id,
+            seed_lift_point_count=seed_lift_point_count,
+            seed_lift_status=seed_lift_status,
+            expansion_recommendation=expansion_recommendation,
+            expansion_reason=expansion_reason,
+            views=(),
+        )
+
     ranked_candidates = sorted(candidate_geometries, key=_candidate_rank_key)
     views = tuple(
         _suggested_view_from_geometry(
@@ -795,8 +800,12 @@ def _seed_lift_status(
 
 def _expansion_recommendation(
     seed_lift_status: SeedLiftStatus,
+    *,
+    candidate_view_count: int,
 ) -> FinalMaskMultiViewAction:
     if seed_lift_status is SeedLiftStatus.SPARSE:
+        return FinalMaskMultiViewAction.EXPAND
+    if candidate_view_count > 0:
         return FinalMaskMultiViewAction.EXPAND
     return FinalMaskMultiViewAction.STOP
 
@@ -806,6 +815,7 @@ def _expansion_reason(
     seed_lift_point_count: int,
     min_seed_point_count: int,
     seed_lift_status: SeedLiftStatus,
+    candidate_view_count: int,
 ) -> str:
     if seed_lift_status is SeedLiftStatus.SPARSE:
         return (
@@ -814,11 +824,19 @@ def _expansion_reason(
             f"min_seed_point_count={min_seed_point_count}; "
             "additional views are recommended"
         )
+    if candidate_view_count > 0:
+        return (
+            "seed_geometry_usable: "
+            f"point_count={seed_lift_point_count} meets "
+            f"min_seed_point_count={min_seed_point_count}; "
+            f"{candidate_view_count} additional candidate views are available; "
+            "multi-view expansion is recommended"
+        )
     return (
         "seed_geometry_usable: "
         f"point_count={seed_lift_point_count} meets "
         f"min_seed_point_count={min_seed_point_count}; "
-        "no additional views are recommended by default"
+        "no additional candidate views are available"
     )
 
 

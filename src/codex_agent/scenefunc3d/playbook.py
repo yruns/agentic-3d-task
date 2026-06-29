@@ -65,8 +65,11 @@ lift_mask_to_3d.mask_ply_path as seed_mask_ply_path, lift_mask_to_3d.overlay_pat
 as seed_lift_overlay_path, and build seed_fragment_id as
 <frame_id>_<candidate_id> from that same lift result.
 
-For small knobs, handles, dials, switches, and buttons, first identify the
-affordance concept, then use a complete task-constrained Molmo point prompt.
+For small knobs, handles, dials, switches, buttons, and pinch_pull annotations,
+first identify the affordance concept, then use a complete task-constrained
+Molmo point prompt. For drawer or cabinet pull tasks, point to the handle,
+pull edge, recessed grip, seam, or lip that a hand would pinch/pull. The target
+is not the drawer front panel center or the broad cabinet body.
 Never repeat an expensive Molmo or SAM call with identical arguments after a
 model-quality failure. Change crop, prompt, or frame.
 

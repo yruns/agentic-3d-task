@@ -88,6 +88,13 @@ def test_playbook_tells_agent_to_pass_seed_artifact_to_multiview_suggestion() ->
     assert "seed_lift_overlay_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_tells_agent_to_target_pinch_pull_affordance_points() -> None:
+    assert "pinch_pull" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "handle" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "pull edge" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "not the drawer front panel center" in SCENEFUNC3D_TOOLS_PLAYBOOK
+
+
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,
