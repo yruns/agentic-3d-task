@@ -1122,6 +1122,154 @@ def test_run_single_sample_rejects_final_artifact_without_fuse_tool_event(
         )
 
 
+def test_run_single_sample_rejects_standard_fragment_without_upstream_tool_events(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_standard_outcome_artifacts(
+        sample_output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("000010_mask_00",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+    executor = _FakeExecutor(
+        outcome,
+        on_execute=lambda: _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00",),
+            accepted_frame_ids=("000010",),
+        ),
+    )
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="molmo_point"):
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
+
+
+def test_run_single_sample_rejects_standard_fragment_with_wrong_molmo_event_path(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
+        tmp_path,
+        tool_name="molmo_point",
+        result_mutator=_set_wrong_molmo_raw_text_path,
+        match="molmo_point",
+    )
+
+
+def test_run_single_sample_rejects_standard_fragment_with_wrong_sam_candidate(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
+        tmp_path,
+        tool_name="sam_mask",
+        result_mutator=_set_wrong_sam_candidate_id,
+        match="sam_mask",
+    )
+
+
+def test_run_single_sample_rejects_standard_fragment_with_wrong_lift_event_path(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
+        tmp_path,
+        tool_name="lift_mask_to_3d",
+        result_mutator=_set_wrong_lift_mask_ply_path,
+        match="lift_mask_to_3d",
+    )
+
+
+def test_run_single_sample_rejects_standard_fragment_with_wrong_lift_input_mask(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
+        tmp_path,
+        tool_name="lift_mask_to_3d",
+        result_mutator=_keep_tool_result,
+        args_mutator=_set_wrong_lift_mask_input_path,
+        match="lift_mask_to_3d",
+    )
+
+
+def test_run_single_sample_rejects_standard_fragment_with_non_completed_tool_event(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
+        tmp_path,
+        tool_name="molmo_point",
+        event_mutator=_set_non_completed_tool_event_type,
+        result_mutator=_keep_tool_result,
+        match="molmo_point",
+    )
+
+
+def test_run_single_sample_accepts_standard_fragment_with_upstream_tool_events(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_standard_outcome_artifacts(
+        sample_output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("000010_mask_00",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+
+    def write_tool_events() -> None:
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00",),
+            accepted_frame_ids=("000010",),
+        )
+
+    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    result_path = run_single_sample(
+        config,
+        sample_id="421254::desc-a",
+        executor=executor,
+        check_sidecars=False,
+    )
+
+    assert result_path == sample_output_dir / "result.json"
+
+
 def test_run_single_sample_rejects_incomplete_fuse_tool_event(
     tmp_path: Path,
 ) -> None:
@@ -2024,6 +2172,27 @@ def _write_outcome_artifacts(
     )
 
 
+def _write_standard_outcome_artifacts(
+    root: Path, *, frame_id: str, candidate_id: str
+) -> None:
+    fragment_id = f"{frame_id}_{candidate_id}"
+    _write_outcome_artifacts(
+        root,
+        accepted_fragment_ids=(fragment_id,),
+        accepted_frame_ids=(frame_id,),
+    )
+    artifact_path = root / "mask_artifact.json"
+    artifact_payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    artifact_payload["accepted_fragments"][0]["review_artifacts"] = (
+        _write_standard_review_artifacts(
+            root,
+            frame_id=frame_id,
+            candidate_id=candidate_id,
+        )
+    )
+    artifact_path.write_text(json.dumps(artifact_payload), encoding="utf-8")
+
+
 def _test_lift_geometry_payload() -> dict[str, object]:
     return {
         "bbox_min_xyz": [1.0, 2.0, 3.0],
@@ -2072,6 +2241,228 @@ def _write_suggest_additional_views_event(
     events_path.parent.mkdir(parents=True, exist_ok=True)
     with events_path.open("a", encoding="utf-8") as event_file:
         event_file.write(json.dumps(event_payload, ensure_ascii=False) + "\n")
+
+
+def _write_standard_upstream_tool_events(
+    root: Path, *, frame_id: str, candidate_id: str
+) -> None:
+    fragment_id = f"{frame_id}_{candidate_id}"
+    _append_event_payload(
+        root,
+        {
+            "event_type": "tool_completed",
+            "tool_name": "molmo_point",
+            "status": "success",
+            "args": {"frame_id": frame_id},
+            "result": {
+                "frame_id": frame_id,
+                "prompt": "point to the target handle",
+                "points": [],
+                "raw_text_path": str(root / "molmo" / f"{frame_id}_raw.txt"),
+                "overlay_path": str(root / "molmo" / f"{frame_id}_points.jpg"),
+            },
+            "error": "",
+        },
+    )
+    _append_event_payload(
+        root,
+        {
+            "event_type": "tool_completed",
+            "tool_name": "sam_mask",
+            "status": "success",
+            "args": {"frame_id": frame_id},
+            "result": {
+                "frame_id": frame_id,
+                "candidates": [
+                    {
+                        "candidate_id": candidate_id,
+                        "score": 0.9,
+                        "pixel_count": 2,
+                        "coverage_percent": 0.1,
+                        "mask_npz_path": str(
+                            root
+                            / "sam"
+                            / frame_id
+                            / "candidates"
+                            / f"{candidate_id}.npz"
+                        ),
+                        "overlay_path": str(
+                            root / "sam" / frame_id / f"{candidate_id}_overlay.jpg"
+                        ),
+                    }
+                ],
+                "contact_sheet_path": str(
+                    root / "sam" / frame_id / "contact_sheet.jpg"
+                ),
+            },
+            "error": "",
+        },
+    )
+    _append_event_payload(
+        root,
+        {
+            "event_type": "tool_completed",
+            "tool_name": "lift_mask_to_3d",
+            "status": "success",
+            "args": {
+                "frame_id": frame_id,
+                "candidate_id": candidate_id,
+                "mask_path": str(
+                    root / "sam" / frame_id / "candidates" / f"{candidate_id}.npz"
+                ),
+            },
+            "result": {
+                "frame_id": frame_id,
+                "candidate_id": candidate_id,
+                "lifted_point_count": 2,
+                "mask_npz_path": str(
+                    root / "fragments" / fragment_id / "mask_data.npz"
+                ),
+                "mask_ply_path": str(
+                    root / "fragments" / fragment_id / "lifted_points.ply"
+                ),
+                "overlay_path": str(
+                    root / "fragments" / fragment_id / "lift_overlay.txt"
+                ),
+            },
+            "error": "",
+        },
+    )
+
+
+def _keep_tool_args(args: dict[str, object], root: Path) -> None:
+    _ = args, root
+
+
+def _keep_tool_result(result: dict[str, object], root: Path) -> None:
+    _ = result, root
+
+
+def _keep_tool_event(event: dict[str, object], root: Path) -> None:
+    _ = event, root
+
+
+def _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
+    tmp_path: Path,
+    *,
+    tool_name: str,
+    result_mutator: Callable[[dict[str, object], Path], None],
+    args_mutator: Callable[[dict[str, object], Path], None] = _keep_tool_args,
+    event_mutator: Callable[[dict[str, object], Path], None] = _keep_tool_event,
+    match: str,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_standard_outcome_artifacts(
+        sample_output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("000010_mask_00",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+
+    def write_tool_events() -> None:
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _rewrite_first_tool_result(
+            sample_output_dir,
+            tool_name=tool_name,
+            args_mutator=lambda args: args_mutator(args, sample_output_dir),
+            event_mutator=lambda event: event_mutator(event, sample_output_dir),
+            result_mutator=lambda result: result_mutator(result, sample_output_dir),
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00",),
+            accepted_frame_ids=("000010",),
+        )
+
+    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match=match):
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
+
+
+def _set_wrong_molmo_raw_text_path(result: dict[str, object], root: Path) -> None:
+    result["raw_text_path"] = str(root / "molmo" / "wrong_raw.txt")
+
+
+def _set_wrong_sam_candidate_id(result: dict[str, object], root: Path) -> None:
+    candidates = result.get("candidates")
+    if not isinstance(candidates, list):
+        raise AssertionError("test sam_mask result must contain candidates")
+    candidate = candidates[0]
+    if not isinstance(candidate, dict):
+        raise AssertionError("test sam_mask candidate must be a JSON object")
+    candidate["candidate_id"] = "mask_99"
+
+
+def _set_wrong_lift_mask_ply_path(result: dict[str, object], root: Path) -> None:
+    result["mask_ply_path"] = str(
+        root / "fragments" / "000010_mask_00" / "wrong_lifted_points.ply"
+    )
+
+
+def _set_wrong_lift_mask_input_path(args: dict[str, object], root: Path) -> None:
+    args["mask_path"] = str(root / "stale" / "sam" / "mask_00.npz")
+
+
+def _set_non_completed_tool_event_type(event: dict[str, object], root: Path) -> None:
+    _ = root
+    event["event_type"] = "manual_success"
+
+
+def _rewrite_first_tool_result(
+    root: Path,
+    *,
+    tool_name: str,
+    args_mutator: Callable[[dict[str, object]], None],
+    event_mutator: Callable[[dict[str, object]], None],
+    result_mutator: Callable[[dict[str, object]], None],
+) -> None:
+    events_path = root / "events.jsonl"
+    rewritten_lines: list[str] = []
+    did_rewrite = False
+    for raw_line in events_path.read_text(encoding="utf-8").splitlines():
+        event_payload = json.loads(raw_line)
+        if not isinstance(event_payload, dict):
+            raise AssertionError("test event line must be a JSON object")
+        event = cast(dict[str, object], event_payload)
+        if event.get("tool_name") == tool_name and not did_rewrite:
+            event_mutator(event)
+            args = event.get("args")
+            if not isinstance(args, dict):
+                raise AssertionError("test tool event args must be a JSON object")
+            result = event.get("result")
+            if not isinstance(result, dict):
+                raise AssertionError("test tool event result must be a JSON object")
+            args_mutator(cast(dict[str, object], args))
+            result_mutator(cast(dict[str, object], result))
+            did_rewrite = True
+        rewritten_lines.append(json.dumps(event, ensure_ascii=False))
+    if not did_rewrite:
+        raise AssertionError(f"test did not find tool event: tool_name={tool_name}")
+    events_path.write_text("\n".join(rewritten_lines) + "\n", encoding="utf-8")
 
 
 def _write_fuse_accepted_masks_event(

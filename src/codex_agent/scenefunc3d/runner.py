@@ -13,7 +13,7 @@ from typing import Annotated, Literal, TypeAlias, TypedDict
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, ValidationError
 from pydantic.types import StringConstraints
 
 from ..config import CodexAgentConfig
@@ -218,12 +218,101 @@ class _FuseToolEvent(BaseModel):
     error: str
 
 
+class _MolmoPointToolResult(BaseModel):
+    """Fields needed to prove one accepted fragment's Molmo provenance."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    frame_id: NonEmptyString
+    raw_text_path: NonEmptyString
+    overlay_path: NonEmptyString
+
+
+class _SamCandidateToolResult(BaseModel):
+    """Fields needed to prove one accepted fragment's SAM candidate provenance."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    candidate_id: NonEmptyString
+    mask_npz_path: NonEmptyString
+    overlay_path: NonEmptyString
+
+
+class _SamMaskToolResult(BaseModel):
+    """Fields needed to prove one accepted fragment's SAM provenance."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    frame_id: NonEmptyString
+    candidates: tuple[_SamCandidateToolResult, ...] = Field(min_length=1)
+    contact_sheet_path: NonEmptyString
+
+
+class _LiftMaskToolResult(BaseModel):
+    """Fields needed to prove one accepted fragment's 3D lift provenance."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    frame_id: NonEmptyString
+    candidate_id: NonEmptyString
+    mask_npz_path: NonEmptyString
+    mask_ply_path: NonEmptyString
+    overlay_path: NonEmptyString
+
+
+class _LiftMaskToolArgs(BaseModel):
+    """Fields needed to prove one lift call used the accepted SAM candidate."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    frame_id: NonEmptyString
+    candidate_id: NonEmptyString
+    mask_path: NonEmptyString = Field(
+        validation_alias=AliasChoices("mask_path", "mask_npz_path")
+    )
+
+
 @dataclass(frozen=True)
 class _ParsedFuseToolEvent:
     """A validated fuse event with source location for diagnostics."""
 
     line_number: int
     event: _FuseToolEvent
+
+
+@dataclass(frozen=True)
+class _ParsedMolmoPointToolEvent:
+    """A validated Molmo point event with source location for diagnostics."""
+
+    line_number: int
+    result: _MolmoPointToolResult
+
+
+@dataclass(frozen=True)
+class _ParsedSamMaskToolEvent:
+    """A validated SAM mask event with source location for diagnostics."""
+
+    line_number: int
+    result: _SamMaskToolResult
+
+
+@dataclass(frozen=True)
+class _ParsedLiftMaskToolEvent:
+    """A validated 3D lift event with source location for diagnostics."""
+
+    line_number: int
+    args: _LiftMaskToolArgs
+    result: _LiftMaskToolResult
+
+
+@dataclass(frozen=True)
+class _SuccessfulToolResultEvent:
+    """A successful generic tool event result and source location."""
+
+    line_number: int
+    tool_name: str
+    args: Mapping[object, object]
+    result: Mapping[object, object]
 
 
 @dataclass(frozen=True)
@@ -824,7 +913,7 @@ def _validate_outcome_against_fuse_tool_event(
     artifact_document = _load_mask_artifact_document_for_provenance(
         outcome.mask_artifact_path
     )
-    if any(
+    has_matching_fuse_event = any(
         _fuse_event_matches_outcome(
             parsed_event,
             outcome,
@@ -832,7 +921,13 @@ def _validate_outcome_against_fuse_tool_event(
             events_path=events_path,
         )
         for parsed_event in _successful_fuse_tool_events(events_path)
-    ):
+    )
+    if has_matching_fuse_event:
+        _validate_standard_fragment_upstream_tool_events(
+            artifact_document,
+            artifact_root=_infer_output_root_from_outcome(outcome),
+            events_path=events_path,
+        )
         return
     raise CodexResponseError(
         "final SceneFunc3D mask outcome must match a successful "
@@ -844,6 +939,16 @@ def _validate_outcome_against_fuse_tool_event(
         f"accepted_fragment_ids={outcome.accepted_fragment_ids}; "
         f"events_path={events_path}"
     )
+
+
+def _infer_output_root_from_outcome(outcome: SceneFunc3dMaskOutcome) -> Path:
+    resolved_artifact_path = outcome.mask_artifact_path.expanduser().resolve()
+    if (
+        resolved_artifact_path.name == "mask_artifact.json"
+        and resolved_artifact_path.parent.name == "fused"
+    ):
+        return resolved_artifact_path.parent.parent
+    return resolved_artifact_path.parent
 
 
 def _load_mask_artifact_document_for_provenance(
@@ -975,6 +1080,344 @@ def _fuse_event_matches_artifact_document(
     )
 
 
+def _validate_standard_fragment_upstream_tool_events(
+    artifact_document: FinalMaskArtifactDocument,
+    *,
+    artifact_root: Path,
+    events_path: Path,
+) -> None:
+    molmo_events = _successful_molmo_point_tool_events(events_path)
+    sam_events = _successful_sam_mask_tool_events(events_path)
+    lift_events = _successful_lift_mask_tool_events(events_path)
+    for fragment in artifact_document.accepted_fragments:
+        candidate_id = _standard_fragment_candidate_id(fragment)
+        if candidate_id is None:
+            continue
+        _require_matching_molmo_point_event(
+            fragment,
+            molmo_events,
+            events_path=events_path,
+        )
+        sam_candidate_mask_npz_path = _require_matching_sam_mask_event(
+            fragment,
+            candidate_id=candidate_id,
+            sam_events=sam_events,
+            events_path=events_path,
+        )
+        _require_matching_lift_mask_event(
+            fragment,
+            candidate_id=candidate_id,
+            sam_candidate_mask_npz_path=sam_candidate_mask_npz_path,
+            lift_events=lift_events,
+            artifact_root=artifact_root,
+            events_path=events_path,
+        )
+
+
+def _standard_fragment_candidate_id(
+    fragment: FinalMaskAcceptedFragment,
+) -> str | None:
+    expected_prefix = f"{fragment.frame_id}_"
+    if not fragment.fragment_id.startswith(expected_prefix):
+        return None
+    candidate_id = fragment.fragment_id[len(expected_prefix) :]
+    if candidate_id == "":
+        return None
+    return candidate_id
+
+
+def _require_matching_molmo_point_event(
+    fragment: FinalMaskAcceptedFragment,
+    molmo_events: tuple[_ParsedMolmoPointToolEvent, ...],
+    *,
+    events_path: Path,
+) -> None:
+    for parsed_event in molmo_events:
+        result = parsed_event.result
+        if result.frame_id != fragment.frame_id:
+            continue
+        if not _tool_event_path_matches(
+            result.raw_text_path,
+            Path(fragment.review_artifacts.molmo_raw_text_path),
+            tool_name="molmo_point",
+            field_name="result.raw_text_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            continue
+        if not _tool_event_path_matches(
+            result.overlay_path,
+            Path(fragment.review_artifacts.molmo_overlay_path),
+            tool_name="molmo_point",
+            field_name="result.overlay_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            continue
+        return
+    raise CodexResponseError(
+        "accepted standard fragment must be backed by a successful molmo_point "
+        "tool event from this run: "
+        f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
+        f"molmo_raw_text_path={fragment.review_artifacts.molmo_raw_text_path}; "
+        f"molmo_overlay_path={fragment.review_artifacts.molmo_overlay_path}; "
+        f"events_path={events_path}"
+    )
+
+
+def _require_matching_sam_mask_event(
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    candidate_id: str,
+    sam_events: tuple[_ParsedSamMaskToolEvent, ...],
+    events_path: Path,
+) -> str:
+    for parsed_event in sam_events:
+        result = parsed_event.result
+        if result.frame_id != fragment.frame_id:
+            continue
+        if not _tool_event_path_matches(
+            result.contact_sheet_path,
+            Path(fragment.review_artifacts.sam_contact_sheet_path),
+            tool_name="sam_mask",
+            field_name="result.contact_sheet_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            continue
+        candidate_mask_npz_path = _sam_event_matching_candidate_mask_npz_path(
+            parsed_event,
+            fragment,
+            candidate_id=candidate_id,
+            events_path=events_path,
+        )
+        if candidate_mask_npz_path is not None:
+            return candidate_mask_npz_path
+    raise CodexResponseError(
+        "accepted standard fragment must be backed by a successful sam_mask "
+        "tool event from this run: "
+        f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
+        f"candidate_id={candidate_id}; "
+        f"sam_contact_sheet_path={fragment.review_artifacts.sam_contact_sheet_path}; "
+        f"sam_candidate_overlay_path="
+        f"{fragment.review_artifacts.sam_candidate_overlay_path}; "
+        f"events_path={events_path}"
+    )
+
+
+def _sam_event_matching_candidate_mask_npz_path(
+    parsed_event: _ParsedSamMaskToolEvent,
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    candidate_id: str,
+    events_path: Path,
+) -> str | None:
+    for candidate in parsed_event.result.candidates:
+        if candidate.candidate_id != candidate_id:
+            continue
+        if _tool_event_path_matches(
+            candidate.overlay_path,
+            Path(fragment.review_artifacts.sam_candidate_overlay_path),
+            tool_name="sam_mask",
+            field_name=f"result.candidates[{candidate_id}].overlay_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            return candidate.mask_npz_path
+    return None
+
+
+def _require_matching_lift_mask_event(
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    candidate_id: str,
+    sam_candidate_mask_npz_path: str,
+    lift_events: tuple[_ParsedLiftMaskToolEvent, ...],
+    artifact_root: Path,
+    events_path: Path,
+) -> None:
+    expected_mask_npz_path = (
+        artifact_root / "fragments" / fragment.fragment_id / ("mask_data.npz")
+    )
+    expected_mask_ply_path = (
+        artifact_root / "fragments" / fragment.fragment_id / "lifted_points.ply"
+    )
+    for parsed_event in lift_events:
+        args = parsed_event.args
+        result = parsed_event.result
+        if result.frame_id != fragment.frame_id or result.candidate_id != candidate_id:
+            continue
+        if args.frame_id != fragment.frame_id or args.candidate_id != candidate_id:
+            continue
+        if not _tool_event_path_matches(
+            args.mask_path,
+            Path(sam_candidate_mask_npz_path),
+            tool_name="lift_mask_to_3d",
+            field_name="args.mask_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            continue
+        if not _tool_event_path_matches(
+            result.mask_npz_path,
+            expected_mask_npz_path,
+            tool_name="lift_mask_to_3d",
+            field_name="result.mask_npz_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            continue
+        if not _tool_event_path_matches(
+            result.mask_ply_path,
+            expected_mask_ply_path,
+            tool_name="lift_mask_to_3d",
+            field_name="result.mask_ply_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            continue
+        if not _tool_event_path_matches(
+            result.overlay_path,
+            Path(fragment.review_artifacts.lift_overlay_path),
+            tool_name="lift_mask_to_3d",
+            field_name="result.overlay_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            continue
+        return
+    raise CodexResponseError(
+        "accepted standard fragment must be backed by a successful "
+        "lift_mask_to_3d tool event from this run: "
+        f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
+        f"candidate_id={candidate_id}; mask_npz_path={expected_mask_npz_path}; "
+        f"mask_ply_path={expected_mask_ply_path}; "
+        f"sam_candidate_mask_npz_path={sam_candidate_mask_npz_path}; "
+        f"lift_overlay_path={fragment.review_artifacts.lift_overlay_path}; "
+        f"events_path={events_path}"
+    )
+
+
+def _successful_molmo_point_tool_events(
+    events_path: Path,
+) -> tuple[_ParsedMolmoPointToolEvent, ...]:
+    events: list[_ParsedMolmoPointToolEvent] = []
+    for event in _successful_tool_result_events(
+        events_path, tool_names={"molmo_point"}
+    ):
+        try:
+            result = _MolmoPointToolResult.model_validate(event.result)
+        except ValidationError as exc:
+            raise CodexResponseError(
+                "successful molmo_point tool event does not match the expected "
+                "result schema: "
+                f"events_path={events_path}; line={event.line_number}; error={exc}"
+            ) from exc
+        events.append(
+            _ParsedMolmoPointToolEvent(line_number=event.line_number, result=result)
+        )
+    return tuple(events)
+
+
+def _successful_sam_mask_tool_events(
+    events_path: Path,
+) -> tuple[_ParsedSamMaskToolEvent, ...]:
+    events: list[_ParsedSamMaskToolEvent] = []
+    for event in _successful_tool_result_events(events_path, tool_names={"sam_mask"}):
+        try:
+            result = _SamMaskToolResult.model_validate(event.result)
+        except ValidationError as exc:
+            raise CodexResponseError(
+                "successful sam_mask tool event does not match the expected "
+                "result schema: "
+                f"events_path={events_path}; line={event.line_number}; error={exc}"
+            ) from exc
+        events.append(
+            _ParsedSamMaskToolEvent(line_number=event.line_number, result=result)
+        )
+    return tuple(events)
+
+
+def _successful_lift_mask_tool_events(
+    events_path: Path,
+) -> tuple[_ParsedLiftMaskToolEvent, ...]:
+    events: list[_ParsedLiftMaskToolEvent] = []
+    for event in _successful_tool_result_events(
+        events_path, tool_names={"lift_mask_to_3d"}
+    ):
+        try:
+            args = _LiftMaskToolArgs.model_validate(event.args)
+            result = _LiftMaskToolResult.model_validate(event.result)
+        except ValidationError as exc:
+            raise CodexResponseError(
+                "successful lift_mask_to_3d tool event does not match the expected "
+                "result schema: "
+                f"events_path={events_path}; line={event.line_number}; error={exc}"
+            ) from exc
+        events.append(
+            _ParsedLiftMaskToolEvent(
+                line_number=event.line_number, args=args, result=result
+            )
+        )
+    return tuple(events)
+
+
+def _successful_tool_result_events(
+    events_path: Path, *, tool_names: set[str]
+) -> tuple[_SuccessfulToolResultEvent, ...]:
+    if not events_path.is_file():
+        return ()
+    try:
+        event_lines = events_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as exc:
+        raise CodexResponseError(
+            "could not read SceneFunc3D tool events while validating upstream "
+            "tool provenance: "
+            f"events_path={events_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    events: list[_SuccessfulToolResultEvent] = []
+    for line_number, raw_line in enumerate(event_lines, start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        event = _load_event_payload(
+            line, events_path=events_path, line_number=line_number
+        )
+        tool_name = event.get("tool_name")
+        if not isinstance(tool_name, str) or tool_name not in tool_names:
+            continue
+        if event.get("status") != "success":
+            continue
+        if event.get("event_type") != "tool_completed":
+            raise CodexResponseError(
+                "successful SceneFunc3D upstream tool event must have "
+                "event_type='tool_completed': "
+                f"tool_name={tool_name}; events_path={events_path}; "
+                f"line={line_number}"
+            )
+        args = _require_mapping_field(
+            event,
+            "args",
+            events_path=events_path,
+            line_number=line_number,
+        )
+        result = _require_mapping_field(
+            event,
+            "result",
+            events_path=events_path,
+            line_number=line_number,
+        )
+        events.append(
+            _SuccessfulToolResultEvent(
+                line_number=line_number,
+                tool_name=tool_name,
+                args=args,
+                result=result,
+            )
+        )
+    return tuple(events)
+
+
 def _event_path_matches(
     raw_path: str,
     expected_path: Path,
@@ -989,6 +1432,27 @@ def _event_path_matches(
         raise CodexResponseError(
             "successful fuse_accepted_masks tool event contains an invalid path: "
             f"field={field_name}; events_path={events_path}; line={line_number}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+    return event_path == expected_path.expanduser().resolve()
+
+
+def _tool_event_path_matches(
+    raw_path: str,
+    expected_path: Path,
+    *,
+    tool_name: str,
+    field_name: str,
+    events_path: Path,
+    line_number: int,
+) -> bool:
+    try:
+        event_path = Path(raw_path).expanduser().resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise CodexResponseError(
+            "successful SceneFunc3D tool event contains an invalid path: "
+            f"tool_name={tool_name}; field={field_name}; "
+            f"events_path={events_path}; line={line_number}; "
             f"error_type={exc.__class__.__name__}"
         ) from exc
     return event_path == expected_path.expanduser().resolve()
