@@ -23,10 +23,20 @@ from ..tasks.base import CodexExecutor
 from .backends.config import load_backend_settings
 from .evaluation.payloads import SceneFunc3dScorePayload, score_to_payload
 from .evaluation.scorer import score_result_file
-from .final_mask_artifacts import validate_final_mask_artifact
+from .final_mask_artifacts import (
+    ValidatedFinalMaskArtifact,
+    validate_final_mask_artifact,
+)
 from .playbook import SCENEFUNC3D_TOOLS_PLAYBOOK
-from .sample import SceneFunc3dSample, load_sample, safe_sample_id, scene_dir_for
+from .sample import SceneFunc3dSample, load_sample, scene_dir_for
 from .servers.schemas import HealthResponse
+from .tools.mask_artifacts import (
+    SceneFunc3dCompletedRunSummary,
+    SceneFunc3dRunCompletionEvent,
+    append_run_completion_event,
+    artifact_paths_for,
+    write_completed_run_summary,
+)
 from .tools.scene_context import SceneFunc3dToolScene
 
 TASK_NAME = "scenefunc3d_mask_generation"
@@ -371,7 +381,10 @@ def run_single_sample(
         check_sidecar_health(config.backend_config_path)
 
     sample = load_runner_sample(config, sample_id)
-    sample_output_dir = config.output_dir / safe_sample_id(sample_id)
+    artifact_paths = artifact_paths_for(
+        config.output_dir, sample.visit_id, sample.desc_id
+    )
+    sample_output_dir = artifact_paths.root
     sample_output_dir.mkdir(parents=True, exist_ok=True)
     task = SceneFunc3dMaskTask(
         sample=sample,
@@ -381,6 +394,7 @@ def run_single_sample(
     )
     result = executor.execute(task)
     validated_outcome = task.validate_outcome(result.outcome)
+    validated_artifact = _validate_outcome_artifact(validated_outcome)
     result_path = sample_output_dir / "result.json"
     result_payload: SceneFunc3dRunResultPayload = {
         "task_name": result.task_name,
@@ -392,7 +406,59 @@ def run_single_sample(
         json.dumps(result_payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    summary_path = write_completed_run_summary(
+        artifact_paths,
+        _completed_run_summary(
+            sample=sample,
+            outcome=validated_outcome,
+            artifact=validated_artifact,
+        ),
+    )
+    append_run_completion_event(
+        artifact_paths,
+        SceneFunc3dRunCompletionEvent(
+            sample_id=sample_id,
+            result_path=result_path,
+            summary_path=summary_path,
+            mask_artifact_path=validated_outcome.mask_artifact_path,
+        ),
+    )
     return result_path
+
+
+def _validate_outcome_artifact(
+    outcome: SceneFunc3dMaskOutcome,
+) -> ValidatedFinalMaskArtifact:
+    return validate_final_mask_artifact(
+        artifact_path=outcome.mask_artifact_path,
+        mask_npz_path=outcome.mask_npz_path,
+        mask_ply_path=outcome.mask_ply_path,
+        selected_frame_ids=outcome.selected_frame_ids,
+        accepted_fragment_ids=outcome.accepted_fragment_ids,
+    )
+
+
+def _completed_run_summary(
+    *,
+    sample: SceneFunc3dSample,
+    outcome: SceneFunc3dMaskOutcome,
+    artifact: ValidatedFinalMaskArtifact,
+) -> SceneFunc3dCompletedRunSummary:
+    return SceneFunc3dCompletedRunSummary(
+        sample_id=sample.sample_id,
+        visit_id=sample.visit_id,
+        desc_id=sample.desc_id,
+        task_description=sample.task_description,
+        selected_frame_ids=outcome.selected_frame_ids,
+        accepted_fragment_ids=outcome.accepted_fragment_ids,
+        mask_artifact_path=outcome.mask_artifact_path,
+        mask_npz_path=outcome.mask_npz_path,
+        mask_ply_path=outcome.mask_ply_path,
+        confidence=outcome.confidence,
+        uncertainties=outcome.uncertainties,
+        multi_view_decision=artifact.multi_view_decision,
+        final_point_count=artifact.point_count,
+    )
 
 
 def build_arg_parser() -> argparse.ArgumentParser:

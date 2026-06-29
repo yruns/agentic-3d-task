@@ -532,7 +532,7 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
     tmp_path: Path,
 ) -> None:
     _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254__desc-a"
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
     _write_outcome_artifacts(sample_output_dir)
     outcome = SceneFunc3dMaskOutcome(
         mask_artifact_path=sample_output_dir / "mask_artifact.json",
@@ -557,7 +557,7 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
         check_sidecars=False,
     )
 
-    assert result_path == tmp_path / "out" / "421254__desc-a" / "result.json"
+    assert result_path == tmp_path / "out" / "421254" / "desc-a" / "result.json"
     payload = json.loads(result_path.read_text(encoding="utf-8"))
     assert payload["task_name"] == "scenefunc3d_mask_generation"
     assert payload["sample_id"] == "421254::desc-a"
@@ -575,6 +575,44 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
     }
     assert executor.task_name == "scenefunc3d_mask_generation"
     assert str(tmp_path / "data" / "421254") in executor.prompt
+    summary_path = sample_output_dir / "summary.json"
+    summary_payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary_payload["sample_id"] == "421254::desc-a"
+    assert summary_payload["visit_id"] == "421254"
+    assert summary_payload["desc_id"] == "desc-a"
+    assert summary_payload["task_description"] == "Open the lower drawer."
+    assert summary_payload["status"] == "success"
+    assert summary_payload["selected_frame_ids"] == ["000010"]
+    assert summary_payload["accepted_fragment_ids"] == ["frag-a"]
+    assert summary_payload["failure_type"] == ""
+    assert summary_payload["stop_reason"] == "single_view_complete"
+    assert summary_payload["mask_artifact_path"] == str(
+        sample_output_dir / "mask_artifact.json"
+    )
+    assert summary_payload["mask_npz_path"] == str(sample_output_dir / "mask.npz")
+    assert summary_payload["mask_ply_path"] == str(sample_output_dir / "mask.ply")
+    assert summary_payload["confidence"] == 0.87
+    assert summary_payload["uncertainties"] == ["partial occlusion"]
+    assert summary_payload["final_point_count"] == 2
+    assert summary_payload["multi_view_decision"] == {
+        "seed_fragment_id": "frag-a",
+        "action": "stop",
+        "reason": "test artifact records the first-lift multi-view decision",
+        "suggested_frame_ids": [],
+    }
+    event_lines = (
+        (sample_output_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    )
+    assert len(event_lines) == 1
+    completion_event = json.loads(event_lines[0])
+    assert completion_event == {
+        "event_type": "run_completed",
+        "sample_id": "421254::desc-a",
+        "status": "success",
+        "result_path": str(result_path),
+        "summary_path": str(summary_path),
+        "mask_artifact_path": str(sample_output_dir / "mask_artifact.json"),
+    }
 
 
 def test_main_with_score_prints_result_path_and_score(
@@ -594,7 +632,7 @@ def test_main_with_score_prints_result_path_and_score(
         assert sample_id == "421254::desc-a"
         assert check_sidecars is False
         _ = executor
-        sample_output_dir = config.output_dir / "421254__desc-a"
+        sample_output_dir = config.output_dir / "421254" / "desc-a"
         _write_outcome_artifacts(sample_output_dir)
         result_path = sample_output_dir / "result.json"
         result_path.write_text(
@@ -634,7 +672,7 @@ def test_main_with_score_prints_result_path_and_score(
     assert exit_code == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["result_path"] == str(
-        tmp_path / "out" / "421254__desc-a" / "result.json"
+        tmp_path / "out" / "421254" / "desc-a" / "result.json"
     )
     score = payload["score"]
     assert score["sample_id"] == "421254::desc-a"
@@ -647,7 +685,7 @@ def test_run_single_sample_revalidates_executor_outcome(
     tmp_path: Path,
 ) -> None:
     _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254__desc-a"
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
     _write_outcome_artifacts(sample_output_dir)
     (sample_output_dir / "mask.npz").write_bytes(b"npz")
     outcome = SceneFunc3dMaskOutcome(

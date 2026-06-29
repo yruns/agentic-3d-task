@@ -116,6 +116,7 @@ class ValidatedFinalMaskArtifact:
     mask_ply_path: Path
     accepted_frame_ids: tuple[str, ...]
     accepted_fragment_ids: tuple[str, ...]
+    multi_view_decision: FinalMaskMultiViewDecision
     point_count: int
 
 
@@ -208,6 +209,7 @@ def validate_final_mask_artifact(
         mask_ply_path=mask_ply_path,
         accepted_frame_ids=artifact_document.accepted_frame_ids,
         accepted_fragment_ids=accepted_fragment_ids,
+        multi_view_decision=artifact_document.multi_view_decision,
         point_count=npz_point_count,
     )
 
