@@ -44,15 +44,35 @@ class SceneSummaryResult:
     total_rgb_frames: int
     rgb_frame_ids: tuple[str, ...]
     has_conceptgraph: bool
+    has_bev: bool
+    bev_path: Path | None
+    has_scene_mesh: bool
+    scene_mesh_path: Path | None
+    has_visible_object_index: bool
+    visible_object_index_path: Path | None
+    visible_object_frame_count: int
+    visible_object_total_count: int
 
     def to_payload(self) -> dict[str, object]:
         """Return the JSON-ready CLI payload."""
-        return {
+        payload: dict[str, object] = {
             "visit_id": self.visit_id,
             "total_rgb_frames": self.total_rgb_frames,
             "rgb_frame_ids": list(self.rgb_frame_ids),
             "has_conceptgraph": self.has_conceptgraph,
+            "has_bev": self.has_bev,
+            "has_scene_mesh": self.has_scene_mesh,
+            "has_visible_object_index": self.has_visible_object_index,
+            "visible_object_frame_count": self.visible_object_frame_count,
+            "visible_object_total_count": self.visible_object_total_count,
         }
+        if self.bev_path is not None:
+            payload["bev_path"] = str(self.bev_path)
+        if self.scene_mesh_path is not None:
+            payload["scene_mesh_path"] = str(self.scene_mesh_path)
+        if self.visible_object_index_path is not None:
+            payload["visible_object_index_path"] = str(self.visible_object_index_path)
+        return payload
 
 
 def scene_summary(
@@ -60,11 +80,27 @@ def scene_summary(
 ) -> SceneSummaryResult:
     """Return lightweight filesystem metadata for one SceneFunc3D scene."""
     _ = args
+    bev_path = _scene_bev_path(tool_scene)
+    scene_mesh_path = _scene_mesh_path(tool_scene)
+    visible_object_index_path = _visible_object_index_path(tool_scene)
+    visible_object_summary = _summarize_visible_object_index(
+        tool_scene, visible_object_index_path
+    )
     return SceneSummaryResult(
         visit_id=tool_scene.visit_id,
         total_rgb_frames=len(tool_scene.rgb_frame_ids),
         rgb_frame_ids=tool_scene.rgb_frame_ids,
         has_conceptgraph=tool_scene.conceptgraph_dir.is_dir(),
+        has_bev=bev_path.is_file(),
+        bev_path=bev_path if bev_path.is_file() else None,
+        has_scene_mesh=scene_mesh_path.is_file(),
+        scene_mesh_path=scene_mesh_path if scene_mesh_path.is_file() else None,
+        has_visible_object_index=visible_object_index_path.is_file(),
+        visible_object_index_path=(
+            visible_object_index_path if visible_object_index_path.is_file() else None
+        ),
+        visible_object_frame_count=visible_object_summary.frame_count,
+        visible_object_total_count=visible_object_summary.object_count,
     )
 
 
@@ -187,6 +223,14 @@ class _ObjectFrameMapDocument(BaseModel):
 
 
 @dataclass(frozen=True)
+class _VisibleObjectIndexSummary:
+    """Counts derived from the validated visible-object frame index."""
+
+    frame_count: int
+    object_count: int
+
+
+@dataclass(frozen=True)
 class ViewFrame:
     """One rendered SceneFunc3D RGB evidence frame."""
 
@@ -305,7 +349,7 @@ def view_bev(
     """Return the top-down BEV image when the prepared scene provides one."""
     _ = args
     _ = out_dir
-    bev_path = tool_scene.conceptgraph_dir / "bev" / "scene_bev.png"
+    bev_path = _scene_bev_path(tool_scene)
     if not bev_path.is_file():
         raise ToolInputError(f"BEV asset is not available: {bev_path}")
     return ViewFrameResult(frames=(ViewFrame(frame_id="bev", image_path=bev_path),))
@@ -330,9 +374,7 @@ def _validate_frame_ids(
 
 
 def _load_object_frame_map(tool_scene: SceneFunc3dToolScene) -> _ObjectFrameMapDocument:
-    object_frame_map_path = (
-        tool_scene.conceptgraph_dir / "indices" / "object_frame_map.json"
-    )
+    object_frame_map_path = _visible_object_index_path(tool_scene)
     if not object_frame_map_path.is_file():
         raise ToolInputError(
             "frame_objects requires a visible-object index, which is not available: "
@@ -356,6 +398,33 @@ def _load_object_frame_map(tool_scene: SceneFunc3dToolScene) -> _ObjectFrameMapD
             "visible-object index failed validation: "
             f"path={object_frame_map_path}; error={_format_validation_error(exc)}"
         ) from exc
+
+
+def _summarize_visible_object_index(
+    tool_scene: SceneFunc3dToolScene, object_frame_map_path: Path
+) -> _VisibleObjectIndexSummary:
+    if not object_frame_map_path.is_file():
+        return _VisibleObjectIndexSummary(frame_count=0, object_count=0)
+    object_frame_map = _load_object_frame_map(tool_scene)
+    object_count = sum(
+        len(frame.objects) for frame in object_frame_map.frame_to_objects.values()
+    )
+    return _VisibleObjectIndexSummary(
+        frame_count=len(object_frame_map.frame_to_objects),
+        object_count=object_count,
+    )
+
+
+def _scene_bev_path(tool_scene: SceneFunc3dToolScene) -> Path:
+    return tool_scene.conceptgraph_dir / "bev" / "scene_bev.png"
+
+
+def _scene_mesh_path(tool_scene: SceneFunc3dToolScene) -> Path:
+    return tool_scene.conceptgraph_dir / "mesh.ply"
+
+
+def _visible_object_index_path(tool_scene: SceneFunc3dToolScene) -> Path:
+    return tool_scene.conceptgraph_dir / "indices" / "object_frame_map.json"
 
 
 def _object_frame_record_for(

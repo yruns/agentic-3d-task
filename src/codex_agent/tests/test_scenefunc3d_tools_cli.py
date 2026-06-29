@@ -79,6 +79,14 @@ def test_cli_scene_summary_reads_source_frame_index(
     assert payload["total_rgb_frames"] == 2
     assert payload["rgb_frame_ids"] == ["000000", "000010"]
     assert payload["has_conceptgraph"] is True
+    assert payload["has_bev"] is False
+    assert "bev_path" not in payload
+    assert payload["has_scene_mesh"] is False
+    assert "scene_mesh_path" not in payload
+    assert payload["has_visible_object_index"] is False
+    assert "visible_object_index_path" not in payload
+    assert payload["visible_object_frame_count"] == 0
+    assert payload["visible_object_total_count"] == 0
 
 
 def test_cli_source_frame_list_rejects_invalid_record(
@@ -140,6 +148,105 @@ def test_cli_scene_summary_falls_back_to_raw_rgb_frames(
     assert payload["total_rgb_frames"] == 2
     assert payload["rgb_frame_ids"] == ["000000", "000010"]
     assert payload["has_conceptgraph"] is True
+
+
+def test_cli_scene_summary_exposes_indexed_evidence_assets(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    bev_path = scene_dir / "conceptgraph" / "bev" / "scene_bev.png"
+    mesh_path = scene_dir / "conceptgraph" / "mesh.ply"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    bev_path.parent.mkdir()
+    bev_path.write_bytes(b"bev")
+    mesh_path.write_bytes(b"ply\n")
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000000-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 12,
+                                "class_name": "drawer",
+                                "score": 0.87,
+                            },
+                            {
+                                "object_id": 13,
+                                "class_name": "cabinet",
+                                "score": 0.42,
+                            },
+                        ],
+                    },
+                    "1": {
+                        "view_id": 1,
+                        "frame_name": "000010-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 14,
+                                "class_name": "handle",
+                                "score": 0.91,
+                            }
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["has_bev"] is True
+    assert payload["bev_path"] == str(bev_path)
+    assert payload["has_scene_mesh"] is True
+    assert payload["scene_mesh_path"] == str(mesh_path)
+    assert payload["has_visible_object_index"] is True
+    assert payload["visible_object_index_path"] == str(object_frame_map_path)
+    assert payload["visible_object_frame_count"] == 2
+    assert payload["visible_object_total_count"] == 3
+
+
+def test_cli_scene_summary_validates_visible_object_index(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000000-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 12,
+                                "class_name": "drawer",
+                                "score": float("inf"),
+                            }
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "visible-object index failed validation" in payload["error"]
+    assert "score" in payload["error"]
 
 
 def test_cli_bad_args_json_is_recoverable(
