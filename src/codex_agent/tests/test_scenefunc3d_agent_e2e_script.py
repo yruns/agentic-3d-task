@@ -47,6 +47,15 @@ def test_agent_e2e_script_can_use_codex_auth_provider() -> None:
     assert 'PRECHECK_ONLY="${PRECHECK_ONLY:-0}"' in script_text
 
 
+def test_agent_e2e_script_allows_agent_generated_frame_artifacts() -> None:
+    script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
+
+    assert (
+        'f\'allowed_image_roots = ["{dataset_root.parent}", "{run_root}"]\''
+        in script_text
+    )
+
+
 def test_agent_e2e_script_preflight_stops_before_gpu_sidecars(
     tmp_path: Path,
 ) -> None:

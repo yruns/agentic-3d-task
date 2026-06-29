@@ -272,7 +272,7 @@ def write_backend_config() -> None:
                 'sam_url = "http://127.0.0.1:8712"',
                 "request_timeout_seconds = 300.0",
                 f'artifact_staging_root = "{run_root}"',
-                f'allowed_image_roots = ["{dataset_root.parent}"]',
+                f'allowed_image_roots = ["{dataset_root.parent}", "{run_root}"]',
                 f'allowed_output_roots = ["{run_root}"]',
                 "",
             )

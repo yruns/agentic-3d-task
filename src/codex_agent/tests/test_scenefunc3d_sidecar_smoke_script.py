@@ -28,6 +28,15 @@ def test_sidecar_smoke_uses_lift_fragment_id_for_seed_provenance() -> None:
     assert '"seed_fragment_id": fragment_id' in script_text
 
 
+def test_sidecar_smoke_allows_generated_crop_artifacts_as_inputs() -> None:
+    script_text = _sidecar_smoke_script_path().read_text(encoding="utf-8")
+
+    assert (
+        'f\'allowed_image_roots = ["{dataset_root.parent}", "{run_root}"]\''
+        in script_text
+    )
+
+
 def _sidecar_smoke_script_path() -> Path:
     return (
         Path.cwd()
