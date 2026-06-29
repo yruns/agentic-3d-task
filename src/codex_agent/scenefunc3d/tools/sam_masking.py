@@ -125,6 +125,8 @@ class SamMaskArgs(BaseModel):
         values.pop("image_width", None)
         values.pop("image_height", None)
         values.pop("point_label", None)
+        values.pop("point_source", None)
+        values.pop("crop_metadata_path", None)
         return values
 
     def to_payload(self) -> SamMaskArgsPayload:

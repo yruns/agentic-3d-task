@@ -156,6 +156,31 @@ def test_sam_mask_args_accept_single_point_alias_and_redundant_image_size(
     assert args.points[0].label == "bottom drawer handle"
 
 
+def test_sam_mask_args_accept_agent_point_review_context(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "000011_crop_pixel_xyxy_196cce1bc0a8.jpg"
+    image_path.write_bytes(b"image")
+    crop_metadata_path = tmp_path / "000011_crop_pixel_xyxy_196cce1bc0a8.crop.json"
+    crop_metadata_path.write_text("{}", encoding="utf-8")
+
+    args = SamMaskArgs.model_validate(
+        {
+            "frame_id": "000011",
+            "image_path": str(image_path),
+            "point": {
+                "x_px": 124.62962962962962,
+                "y_px": 188.13333333333333,
+            },
+            "point_source": "molmo",
+            "crop_metadata_path": str(crop_metadata_path),
+        }
+    )
+
+    assert args.points[0].x_px == 124.62962962962962
+    assert args.points[0].y_px == 188.13333333333333
+
+
 def test_sam_mask_args_ignore_redundant_point_label(tmp_path: Path) -> None:
     image_path = tmp_path / "000056.jpg"
     image_path.write_bytes(b"image")
