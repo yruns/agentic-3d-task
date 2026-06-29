@@ -7,7 +7,14 @@ export TERM=dumb
 REPO_ROOT="${REPO_ROOT:-/mlx_devbox/users/yueshuhao/playground/repos/agentic-3d-task/.worktrees/scenefunc3d-agent-tools}"
 DATASET_ROOT="${DATASET_ROOT:-/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG}"
 RUN_ROOT="${RUN_ROOT:-${DATASET_ROOT}/agent_runner_e2e_20260629}"
+SAMPLE_ID_RAW="${SAMPLE_ID-}"
+SAMPLE_ID_WAS_SET="0"
+if [[ "${SAMPLE_ID+x}" == "x" ]]; then
+  SAMPLE_ID_WAS_SET="1"
+fi
 SAMPLE_ID="${SAMPLE_ID:-421254::af0b7790-028c-4eed-945b-d90386d4f16b}"
+SAMPLE_IDS_PATH="${SAMPLE_IDS_PATH:-}"
+ALL_SAMPLES="${ALL_SAMPLES:-0}"
 SIDECAR_PYTHON_BIN="${SIDECAR_PYTHON_BIN:-/usr/bin/python}"
 RUNNER_PYTHON_BIN="${RUNNER_PYTHON_BIN:-/mlx_devbox/users/yueshuhao/miniforge3/envs/conceptgraph/bin/python}"
 USE_CODEX_AUTH="${USE_CODEX_AUTH:-0}"
@@ -43,7 +50,11 @@ ADAPTER_HEALTH_URL="${ADAPTER_HEALTH_URL:-http://${ADAPTER_HOST}:${ADAPTER_PORT}
 export REPO_ROOT
 export DATASET_ROOT
 export RUN_ROOT
+export SAMPLE_ID_RAW
 export SAMPLE_ID
+export SAMPLE_ID_WAS_SET
+export SAMPLE_IDS_PATH
+export ALL_SAMPLES
 export SIDECAR_PYTHON_BIN
 export RUNNER_PYTHON_BIN
 export USE_CODEX_AUTH
@@ -93,11 +104,18 @@ import time
 import urllib.request
 from pathlib import Path
 
+from codex_agent.errors import SceneFunc3dDataError
+from codex_agent.scenefunc3d.sample import SceneFunc3dSampleId
+
 
 repo_root = Path(os.environ["REPO_ROOT"])
 dataset_root = Path(os.environ["DATASET_ROOT"])
 run_root = Path(os.environ["RUN_ROOT"])
+sample_id_raw = os.environ["SAMPLE_ID_RAW"]
 sample_id = os.environ["SAMPLE_ID"]
+sample_id_was_set = os.environ["SAMPLE_ID_WAS_SET"] == "1"
+sample_ids_path = os.environ["SAMPLE_IDS_PATH"]
+all_samples_value = os.environ["ALL_SAMPLES"]
 sidecar_python_bin = os.environ["SIDECAR_PYTHON_BIN"]
 runner_python_bin = os.environ["RUNNER_PYTHON_BIN"]
 molmo_processor_snapshot = Path(os.environ["MOLMO_PROCESSOR_SNAPSHOT"])
@@ -318,7 +336,74 @@ def wait_health(name: str, url: str, process: subprocess.Popen[bytes]) -> None:
     raise TimeoutError(f"{name} health timed out: last_error={last_error}")
 
 
-def run_agent_runner() -> None:
+def sample_source_args() -> list[str]:
+    normalized_sample_id = sample_id.strip()
+    normalized_sample_ids_path = sample_ids_path.strip()
+    normalized_all_samples = all_samples_value.strip()
+    if normalized_all_samples not in ("0", "1"):
+        raise RuntimeError("ALL_SAMPLES must be 0 or 1")
+    all_samples = normalized_all_samples == "1"
+    explicit_sample_id = sample_id_was_set and bool(sample_id_raw.strip())
+    if explicit_sample_id and (all_samples or normalized_sample_ids_path):
+        raise RuntimeError(
+            "SAMPLE_ID cannot be combined with SAMPLE_IDS_PATH or ALL_SAMPLES=1"
+        )
+    if all_samples and normalized_sample_ids_path:
+        raise RuntimeError("ALL_SAMPLES=1 cannot be combined with SAMPLE_IDS_PATH")
+    if all_samples:
+        print("runner sample source: all samples", flush=True)
+        return ["--all-samples"]
+    if normalized_sample_ids_path:
+        _validate_sample_ids_file(Path(normalized_sample_ids_path))
+        print(
+            f"runner sample source: sample_ids_path={normalized_sample_ids_path}",
+            flush=True,
+        )
+        return ["--sample-ids-path", normalized_sample_ids_path]
+    if not normalized_sample_id:
+        raise RuntimeError(
+            "one runner sample source is required: set SAMPLE_ID, "
+            "SAMPLE_IDS_PATH, or ALL_SAMPLES=1"
+        )
+    print(f"runner sample source: sample_id={normalized_sample_id}", flush=True)
+    return ["--sample-id", normalized_sample_id]
+
+
+def _validate_sample_ids_file(path: Path) -> None:
+    if not path.is_file():
+        raise RuntimeError(f"SAMPLE_IDS_PATH must point to a JSON file: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"SAMPLE_IDS_PATH is not valid JSON: {path}") from exc
+    if not isinstance(payload, list):
+        raise RuntimeError(f"SAMPLE_IDS_PATH must contain a JSON array: {path}")
+    if not payload:
+        raise RuntimeError(f"SAMPLE_IDS_PATH must contain at least one sample id: {path}")
+    seen_sample_ids: set[str] = set()
+    for item_index, item in enumerate(payload):
+        if not isinstance(item, str) or not item.strip():
+            raise RuntimeError(
+                "SAMPLE_IDS_PATH entries must be non-empty strings: "
+                f"path={path}; index={item_index}"
+            )
+        normalized_sample_id = item.strip()
+        try:
+            SceneFunc3dSampleId.parse(normalized_sample_id)
+        except SceneFunc3dDataError as exc:
+            raise RuntimeError(
+                "SAMPLE_IDS_PATH entry is not a valid sample id: "
+                f"path={path}; index={item_index}; value={normalized_sample_id!r}"
+            ) from exc
+        if normalized_sample_id in seen_sample_ids:
+            raise RuntimeError(
+                "SAMPLE_IDS_PATH must not contain duplicate sample ids: "
+                f"path={path}; sample_id={normalized_sample_id!r}"
+            )
+        seen_sample_ids.add(normalized_sample_id)
+
+
+def run_agent_runner(sample_args: list[str]) -> None:
     stdout_path = run_root / "runner_stdout.json"
     log_path = logs_dir / "runner.log"
     command = [
@@ -327,8 +412,7 @@ def run_agent_runner() -> None:
         "codex_agent.scenefunc3d.runner",
         "--dataset-root",
         str(dataset_root),
-        "--sample-id",
-        sample_id,
+    ] + sample_args + [
         "--backend-config",
         str(config_path),
         "--output-dir",
@@ -351,6 +435,7 @@ def run_agent_runner() -> None:
 
 
 def main() -> None:
+    runner_sample_args = sample_source_args()
     ensure_codex_home()
     write_backend_config()
     adapter: subprocess.Popen[bytes] | None = None
@@ -408,7 +493,7 @@ def main() -> None:
         )
         wait_health("molmo", "http://127.0.0.1:8711/health", molmo)
         wait_health("sam", "http://127.0.0.1:8712/health", sam)
-        run_agent_runner()
+        run_agent_runner(runner_sample_args)
     finally:
         for process in (sam, molmo, adapter):
             if process is None:

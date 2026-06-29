@@ -22,6 +22,30 @@ def test_agent_e2e_script_runs_runner_with_sidecars_and_scoring() -> None:
     assert "ensure_codex_home()" in script_text
 
 
+def test_agent_e2e_script_supports_batch_runner_sample_sources() -> None:
+    script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
+
+    assert 'SAMPLE_IDS_PATH="${SAMPLE_IDS_PATH:-}"' in script_text
+    assert 'ALL_SAMPLES="${ALL_SAMPLES:-0}"' in script_text
+    assert 'sample_ids_path = os.environ["SAMPLE_IDS_PATH"]' in script_text
+    assert 'all_samples_value = os.environ["ALL_SAMPLES"]' in script_text
+    assert 'sample_id_was_set = os.environ["SAMPLE_ID_WAS_SET"] == "1"' in script_text
+    assert "def sample_source_args() -> list[str]:" in script_text
+    assert '"--sample-ids-path"' in script_text
+    assert '"--all-samples"' in script_text
+
+
+def test_agent_e2e_script_runner_command_uses_one_sample_source_helper() -> None:
+    script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
+
+    assert "sample_source_args()" in script_text
+    assert "command = [" in script_text
+    assert "] + sample_args + [" in script_text
+    assert "runner_sample_args = sample_source_args()" in script_text
+    assert "run_agent_runner(runner_sample_args)" in script_text
+    assert "ALL_SAMPLES=1 cannot be combined with SAMPLE_IDS_PATH" in script_text
+
+
 def test_agent_e2e_script_can_start_project_local_adapter() -> None:
     script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
 
@@ -197,6 +221,329 @@ def test_agent_e2e_script_codex_auth_precheck_only_succeeds(
 
     assert completed.returncode == 0
     assert "codex auth ready:" in completed.stdout
+    assert "precheck complete" in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_precheck_rejects_conflicting_batch_sources(
+    tmp_path: Path,
+) -> None:
+    codex_home = tmp_path / ".codex-home"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
+    (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
+    sample_ids_path = tmp_path / "sample_ids.json"
+    sample_ids_path.write_text('["421254::desc-a"]\n', encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "USE_CODEX_AUTH": "1",
+            "PRECHECK_ONLY": "1",
+            "CODEX_HOME": str(codex_home),
+            "ALL_SAMPLES": "1",
+            "SAMPLE_IDS_PATH": str(sample_ids_path),
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 1
+    assert "ALL_SAMPLES=1 cannot be combined with SAMPLE_IDS_PATH" in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_precheck_rejects_explicit_sample_id_with_all_samples(
+    tmp_path: Path,
+) -> None:
+    codex_home = tmp_path / ".codex-home"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
+    (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "USE_CODEX_AUTH": "1",
+            "PRECHECK_ONLY": "1",
+            "CODEX_HOME": str(codex_home),
+            "ALL_SAMPLES": "1",
+            "SAMPLE_ID": "421254::desc-a",
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 1
+    assert "SAMPLE_ID cannot be combined with SAMPLE_IDS_PATH or ALL_SAMPLES=1" in (
+        completed.stdout
+    )
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_precheck_rejects_missing_sample_ids_path(
+    tmp_path: Path,
+) -> None:
+    codex_home = tmp_path / ".codex-home"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
+    (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "USE_CODEX_AUTH": "1",
+            "PRECHECK_ONLY": "1",
+            "CODEX_HOME": str(codex_home),
+            "SAMPLE_IDS_PATH": str(tmp_path / "missing_sample_ids.json"),
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 1
+    assert "SAMPLE_IDS_PATH must point to a JSON file" in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_precheck_rejects_invalid_all_samples_value(
+    tmp_path: Path,
+) -> None:
+    env = os.environ.copy()
+    env.update(
+        {
+            "HOST_UNAME": "Linux",
+            "ALL_SAMPLES": "true",
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 1
+    assert "ALL_SAMPLES must be 0 or 1" in completed.stdout
+    assert "started adapter:" not in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_codex_auth_precheck_accepts_sample_ids_path(
+    tmp_path: Path,
+) -> None:
+    codex_home = tmp_path / ".codex-home"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
+    (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
+    sample_ids_path = tmp_path / "sample_ids.json"
+    sample_ids_path.write_text('["421254::desc-a"]\n', encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "USE_CODEX_AUTH": "1",
+            "PRECHECK_ONLY": "1",
+            "CODEX_HOME": str(codex_home),
+            "SAMPLE_IDS_PATH": str(sample_ids_path),
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 0
+    assert (
+        f"runner sample source: sample_ids_path={sample_ids_path}" in completed.stdout
+    )
+    assert "precheck complete" in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_precheck_accepts_empty_sample_id_with_sample_ids_path(
+    tmp_path: Path,
+) -> None:
+    codex_home = tmp_path / ".codex-home"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
+    (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
+    sample_ids_path = tmp_path / "sample_ids.json"
+    sample_ids_path.write_text('["421254::desc-a"]\n', encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "USE_CODEX_AUTH": "1",
+            "PRECHECK_ONLY": "1",
+            "CODEX_HOME": str(codex_home),
+            "SAMPLE_ID": "",
+            "SAMPLE_IDS_PATH": str(sample_ids_path),
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 0
+    assert (
+        f"runner sample source: sample_ids_path={sample_ids_path}" in completed.stdout
+    )
+    assert "precheck complete" in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_precheck_rejects_duplicate_sample_ids(
+    tmp_path: Path,
+) -> None:
+    sample_ids_path = tmp_path / "sample_ids.json"
+    sample_ids_path.write_text(
+        '["421254::desc-a", " 421254::desc-a "]\n',
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env.update(
+        {
+            "SAMPLE_IDS_PATH": str(sample_ids_path),
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 1
+    assert "SAMPLE_IDS_PATH must not contain duplicate sample ids" in completed.stdout
+    assert "started adapter:" not in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_precheck_rejects_malformed_sample_id(
+    tmp_path: Path,
+) -> None:
+    sample_ids_path = tmp_path / "sample_ids.json"
+    sample_ids_path.write_text('["not-a-sample-id"]\n', encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "SAMPLE_IDS_PATH": str(sample_ids_path),
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 1
+    assert "SAMPLE_IDS_PATH entry is not a valid sample id" in completed.stdout
+    assert "started adapter:" not in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+
+
+def test_agent_e2e_script_codex_auth_precheck_accepts_all_samples(
+    tmp_path: Path,
+) -> None:
+    codex_home = tmp_path / ".codex-home"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
+    (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "USE_CODEX_AUTH": "1",
+            "PRECHECK_ONLY": "1",
+            "CODEX_HOME": str(codex_home),
+            "ALL_SAMPLES": "1",
+            "RUN_ROOT": str(tmp_path / "run"),
+        }
+    )
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 0
+    assert "runner sample source: all samples" in completed.stdout
     assert "precheck complete" in completed.stdout
     assert "started molmo_server" not in completed.stdout
     assert "started sam_server" not in completed.stdout
