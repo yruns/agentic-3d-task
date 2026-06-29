@@ -516,15 +516,12 @@ class SceneFunc3dMaskTask:
         selected_frame_ids = tuple(decision.selected_frame_ids)
         accepted_fragment_ids = tuple(decision.accepted_fragment_ids)
         self._validate_selected_frame_ids(selected_frame_ids)
-        validated_artifact = validate_final_mask_artifact(
+        validate_final_mask_artifact(
             artifact_path=mask_artifact_path,
             mask_npz_path=mask_npz_path,
             mask_ply_path=mask_ply_path,
             selected_frame_ids=selected_frame_ids,
             accepted_fragment_ids=accepted_fragment_ids,
-        )
-        _validate_multiview_decision_against_tool_events(
-            validated_artifact, self.output_dir / "events.jsonl"
         )
         return SceneFunc3dMaskOutcome(
             mask_artifact_path=mask_artifact_path,
@@ -932,6 +929,11 @@ def _validate_outcome_against_fuse_tool_event(
             artifact_root=_infer_output_root_from_outcome(outcome),
             events_path=events_path,
             fuse_line_number=matching_fuse_event.line_number,
+        )
+        _validate_multiview_decision_against_tool_events(
+            artifact_document.multi_view_decision,
+            events_path,
+            before_line_number=matching_fuse_event.line_number,
         )
         return
     raise CodexResponseError(
@@ -1532,15 +1534,27 @@ def _fuse_fragment_ids(
 
 
 def _validate_multiview_decision_against_tool_events(
-    artifact: ValidatedFinalMaskArtifact, events_path: Path
+    decision: FinalMaskMultiViewDecision,
+    events_path: Path,
+    *,
+    before_line_number: int,
 ) -> None:
     """Validate final multi-view decision against recorded tool suggestions."""
-    if artifact.multi_view_decision.action is not FinalMaskMultiViewAction.STOP:
+    if decision.action is FinalMaskMultiViewAction.EXPAND:
+        _validate_expand_decision_against_tool_events(
+            decision,
+            events_path,
+            before_line_number=before_line_number,
+        )
         return
-    suggested_frame_ids = _expand_suggested_frame_ids_from_events(events_path)
+    suggested_frame_ids = _expand_suggested_frame_ids_from_events(
+        events_path,
+        seed_fragment_id=decision.seed_fragment_id,
+        before_line_number=before_line_number,
+    )
     if not suggested_frame_ids:
         return
-    rejected_frame_ids = set(artifact.multi_view_decision.rejected_suggested_frame_ids)
+    rejected_frame_ids = set(decision.rejected_suggested_frame_ids)
     missing_frame_ids = tuple(
         frame_id
         for frame_id in suggested_frame_ids
@@ -1556,7 +1570,38 @@ def _validate_multiview_decision_against_tool_events(
         )
 
 
-def _expand_suggested_frame_ids_from_events(events_path: Path) -> tuple[str, ...]:
+def _validate_expand_decision_against_tool_events(
+    decision: FinalMaskMultiViewDecision,
+    events_path: Path,
+    *,
+    before_line_number: int,
+) -> None:
+    suggested_frame_ids = _expand_suggested_frame_ids_from_events(
+        events_path,
+        seed_fragment_id=decision.seed_fragment_id,
+        before_line_number=before_line_number,
+    )
+    suggested_frame_id_set = set(suggested_frame_ids)
+    missing_frame_ids = tuple(
+        frame_id
+        for frame_id in decision.suggested_frame_ids
+        if frame_id not in suggested_frame_id_set
+    )
+    if missing_frame_ids:
+        raise CodexResponseError(
+            "multi_view_decision.action='expand' must be backed by a successful "
+            "suggest_additional_views expand result for the seed fragment before "
+            "fuse_accepted_masks: "
+            f"seed_fragment_id={decision.seed_fragment_id}; "
+            f"missing_suggested_frame_ids={missing_frame_ids}; "
+            f"fuse_line={before_line_number}; "
+            f"events_path={events_path}"
+        )
+
+
+def _expand_suggested_frame_ids_from_events(
+    events_path: Path, *, seed_fragment_id: str, before_line_number: int
+) -> tuple[str, ...]:
     """Return unique frames suggested by successful expand recommendations."""
     if not events_path.is_file():
         return ()
@@ -1570,6 +1615,8 @@ def _expand_suggested_frame_ids_from_events(events_path: Path) -> tuple[str, ...
             f"events_path={events_path}; error_type={exc.__class__.__name__}"
         ) from exc
     for line_number, raw_line in enumerate(event_lines, start=1):
+        if line_number >= before_line_number:
+            continue
         line = raw_line.strip()
         if not line:
             continue
@@ -1580,12 +1627,20 @@ def _expand_suggested_frame_ids_from_events(events_path: Path) -> tuple[str, ...
             continue
         if event.get("status") != "success":
             continue
+        if event.get("event_type") != "tool_completed":
+            raise CodexResponseError(
+                "successful suggest_additional_views event must have "
+                "event_type='tool_completed': "
+                f"events_path={events_path}; line={line_number}"
+            )
         result = _require_mapping_field(
             event,
             "result",
             events_path=events_path,
             line_number=line_number,
         )
+        if result.get("seed_fragment_id") != seed_fragment_id:
+            continue
         if (
             result.get("expansion_recommendation")
             != FinalMaskMultiViewAction.EXPAND.value

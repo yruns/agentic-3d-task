@@ -1424,7 +1424,7 @@ def test_run_single_sample_wraps_non_utf8_tool_events(
     _assert_run_rejects_fuse_event(
         tmp_path,
         event_writer=_write_non_utf8_tool_events,
-        match="could not read SceneFunc3D tool events",
+        match="could not read SceneFunc3D tool event",
     )
 
 
@@ -1519,12 +1519,56 @@ def test_run_single_sample_rejects_stop_missing_expand_rejected_frames(
         confidence=0.87,
         uncertainties=("partial occlusion",),
     )
-    executor = _FakeExecutor(
-        outcome,
-        on_execute=lambda: _write_suggest_additional_views_event(
+
+    def write_tool_events() -> None:
+        _write_suggest_additional_views_event(
             sample_output_dir,
             expansion_recommendation="expand",
             frame_ids=("000020", "000030"),
+        )
+        _write_fuse_accepted_masks_event(sample_output_dir)
+
+    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="missing_rejected_suggested"):
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
+
+
+def test_run_single_sample_rejects_expand_without_suggest_event(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_outcome_artifacts(
+        sample_output_dir,
+        accepted_fragment_ids=("frag-a", "frag-b"),
+        accepted_frame_ids=("000010", "000020"),
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010", "000020"),
+        accepted_fragment_ids=("frag-a", "frag-b"),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+    executor = _FakeExecutor(
+        outcome,
+        on_execute=lambda: _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("frag-a", "frag-b"),
+            accepted_frame_ids=("000010", "000020"),
         ),
     )
     config = SceneFunc3dRunnerConfig(
@@ -1533,7 +1577,104 @@ def test_run_single_sample_rejects_stop_missing_expand_rejected_frames(
         backend_config_path=tmp_path / "backends.toml",
     )
 
-    with pytest.raises(CodexResponseError, match="missing_rejected_suggested"):
+    with pytest.raises(CodexResponseError, match="suggest_additional_views"):
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
+
+
+def test_run_single_sample_accepts_expand_with_suggest_event(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_outcome_artifacts(
+        sample_output_dir,
+        accepted_fragment_ids=("frag-a", "frag-b"),
+        accepted_frame_ids=("000010", "000020"),
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010", "000020"),
+        accepted_fragment_ids=("frag-a", "frag-b"),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+
+    def write_tool_events() -> None:
+        _write_suggest_additional_views_event(
+            sample_output_dir,
+            expansion_recommendation="expand",
+            frame_ids=("000020",),
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("frag-a", "frag-b"),
+            accepted_frame_ids=("000010", "000020"),
+        )
+
+    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    result_path = run_single_sample(
+        config,
+        sample_id="421254::desc-a",
+        executor=executor,
+        check_sidecars=False,
+    )
+
+    assert result_path == sample_output_dir / "result.json"
+
+
+def test_run_single_sample_rejects_expand_with_suggest_after_fuse_event(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_outcome_artifacts(
+        sample_output_dir,
+        accepted_fragment_ids=("frag-a", "frag-b"),
+        accepted_frame_ids=("000010", "000020"),
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010", "000020"),
+        accepted_fragment_ids=("frag-a", "frag-b"),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+
+    def write_tool_events() -> None:
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("frag-a", "frag-b"),
+            accepted_frame_ids=("000010", "000020"),
+        )
+        _write_suggest_additional_views_event(
+            sample_output_dir,
+            expansion_recommendation="expand",
+            frame_ids=("000020",),
+        )
+
+    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="before fuse_accepted_masks"):
         run_single_sample(
             config,
             sample_id="421254::desc-a",
@@ -2241,8 +2382,21 @@ def _write_outcome_artifacts(
     from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
 
     root.mkdir(parents=True, exist_ok=True)
-    points_world = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
-    point_indices = np.array([10, 12], dtype=np.int64)
+    fragment_points_world = np.array(
+        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64
+    )
+    if len(accepted_fragment_ids) == 1:
+        points_world = fragment_points_world
+        point_indices = np.array([10, 12], dtype=np.int64)
+    else:
+        points_world = np.array(
+            [
+                [float(index), float(index + 1), float(index + 2)]
+                for index in range(len(accepted_fragment_ids) * 2)
+            ],
+            dtype=np.float64,
+        )
+        point_indices = np.arange(points_world.shape[0], dtype=np.int64) + 10
     mask_npz_path = write_lift_npz(
         root / "mask.npz", points_world, point_indices=point_indices
     )
@@ -2254,7 +2408,7 @@ def _write_outcome_artifacts(
         fragment_payload: dict[str, object] = {
             "fragment_id": fragment_id,
             "frame_id": frame_id,
-            "point_count": int(points_world.shape[0]),
+            "point_count": int(fragment_points_world.shape[0]),
             "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
             "review_artifacts": _write_review_artifacts(
                 root / "review_artifacts" / fragment_id
