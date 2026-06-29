@@ -466,6 +466,42 @@ def test_cli_view_frame_exposes_raw_geometry_paths(
     assert frame_payload["pose_path"] == str(pose_path)
 
 
+def test_cli_view_frame_exposes_scenefuncval_raw_geometry_paths(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    raw_dir = scene_dir / "raw"
+    Image.new("RGB", (12, 10), color=(10, 20, 30)).save(raw_dir / "000000-rgb.png")
+    depth_path = raw_dir / "000000-depth.png"
+    intrinsics_path = raw_dir / "000000-intrinsic.txt"
+    pose_path = raw_dir / "000000.txt"
+    depth_path.write_bytes(b"depth")
+    intrinsics_path.write_text("1 0 0\n0 1 0\n0 0 1\n", encoding="utf-8")
+    pose_path.write_text("1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_ids": ["000000"]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    frame_payload = payload["frames"][0]
+    assert frame_payload["depth_path"] == str(depth_path)
+    assert frame_payload["intrinsics_path"] == str(intrinsics_path)
+    assert frame_payload["pose_path"] == str(pose_path)
+
+
 def test_cli_view_frame_exposes_source_frame_geometry_paths(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

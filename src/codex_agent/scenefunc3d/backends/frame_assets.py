@@ -116,7 +116,9 @@ def _intrinsics_candidates(raw_dir: Path, frame_id: str) -> tuple[Path, ...]:
         raw_dir / "intrinsics.txt",
         raw_dir / "intrinsic.txt",
         raw_dir / f"{frame_id}-intrinsics.txt",
+        raw_dir / f"{frame_id}-intrinsic.txt",
         raw_dir / f"{frame_id}_intrinsics.txt",
+        raw_dir / f"{frame_id}_intrinsic.txt",
         raw_dir / "intrinsics" / f"{frame_id}.txt",
         raw_dir / "intrinsic" / f"{frame_id}.txt",
     )
@@ -131,6 +133,7 @@ def _pose_candidates(raw_dir: Path, frame_id: str) -> tuple[Path, ...]:
         raw_dir / "poses" / f"{frame_id}.txt",
         raw_dir / "extrinsic" / f"{frame_id}.txt",
         raw_dir / "extrinsics" / f"{frame_id}.txt",
+        raw_dir / f"{frame_id}.txt",
     )
 
 

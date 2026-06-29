@@ -268,6 +268,46 @@ def test_resolve_frame_geometry_assets_from_raw_scene(tmp_path: Path) -> None:
     )
 
 
+def test_resolve_frame_geometry_assets_from_scenefuncval_raw_names(
+    tmp_path: Path,
+) -> None:
+    scene = _make_tool_scene(tmp_path)
+    depth_path = scene.raw_dir / "000050-depth.png"
+    intrinsics_path = scene.raw_dir / "000050-intrinsic.txt"
+    pose_path = scene.raw_dir / "000050.txt"
+    depth_path.write_bytes(b"depth")
+    intrinsics_path.write_text("1 0 0\n0 1 0\n0 0 1\n", encoding="utf-8")
+    pose_path.write_text("1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+
+    assets = resolve_frame_geometry_assets(scene, "000050")
+
+    assert assets == FrameGeometryAssets(
+        frame_id="000050",
+        depth_path=depth_path,
+        intrinsics_path=intrinsics_path,
+        pose_path=pose_path,
+    )
+
+
+def test_resolve_frame_geometry_assets_prefers_explicit_pose_dir(
+    tmp_path: Path,
+) -> None:
+    scene = _make_tool_scene(tmp_path)
+    depth_path = scene.raw_dir / "000050-depth.png"
+    intrinsics_path = scene.raw_dir / "000050-intrinsic.txt"
+    bare_pose_path = scene.raw_dir / "000050.txt"
+    pose_dir_path = scene.raw_dir / "pose" / "000050.txt"
+    depth_path.write_bytes(b"depth")
+    intrinsics_path.write_text("1 0 0\n0 1 0\n0 0 1\n", encoding="utf-8")
+    bare_pose_path.write_text("2 0 0 0\n0 2 0 0\n0 0 2 0\n0 0 0 1\n", encoding="utf-8")
+    pose_dir_path.parent.mkdir()
+    pose_dir_path.write_text("1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+
+    assets = resolve_frame_geometry_assets(scene, "000050")
+
+    assert assets.pose_path == pose_dir_path
+
+
 def test_resolve_frame_geometry_assets_reports_missing_asset(tmp_path: Path) -> None:
     scene = _make_tool_scene(tmp_path)
     (scene.raw_dir / "000050-depth.png").write_bytes(b"depth")
