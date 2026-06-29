@@ -136,6 +136,14 @@ def test_playbook_tells_agent_to_review_lift_geometry_summary() -> None:
     )
 
 
+def test_playbook_tells_agent_stop_decision_has_no_suggested_frame_ids() -> None:
+    assert 'When multi_view_decision.action is "stop"' in (SCENEFUNC3D_TOOLS_PLAYBOOK)
+    assert "suggested_frame_ids must be empty" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert 'Use action "expand" when you accepted fragments from later frames' in (
+        SCENEFUNC3D_TOOLS_PLAYBOOK
+    )
+
+
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,

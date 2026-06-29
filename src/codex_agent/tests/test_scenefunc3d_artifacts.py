@@ -964,6 +964,36 @@ def test_fuse_accepted_masks_rejects_stop_decision_for_multiple_frames(
         fuse_accepted_masks(args, out_dir=tmp_path / "out")
 
 
+def test_fuse_accepted_masks_rejects_stop_with_suggested_frame_ids(
+    tmp_path: Path,
+) -> None:
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "frag-a")
+    review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+    args = FuseAcceptedMasksArgs.model_validate(
+        {
+            "fragments": [
+                {
+                    "fragment_id": "frag-a",
+                    "frame_id": "000010",
+                    "mask_npz_path": str(mask_npz_path),
+                    "mask_ply_path": str(mask_ply_path),
+                    "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+                    "review_artifacts": review_artifacts,
+                }
+            ],
+            "multi_view_decision": {
+                "seed_fragment_id": "frag-a",
+                "action": "stop",
+                "reason": "reviewed follow-up frames and found no target evidence",
+                "suggested_frame_ids": ["000020"],
+            },
+        }
+    )
+
+    with pytest.raises(ToolInputError, match="must be empty when action='stop'"):
+        fuse_accepted_masks(args, out_dir=tmp_path / "out")
+
+
 def test_fuse_accepted_masks_rejects_expand_without_accepted_suggested_frame(
     tmp_path: Path,
 ) -> None:

@@ -98,6 +98,12 @@ class FinalMaskArtifactDocument(BaseModel):
                 decision=self.multi_view_decision,
                 accepted_frame_ids=fragment_frame_ids,
             )
+        elif self.multi_view_decision.suggested_frame_ids:
+            raise ValueError(
+                "multi_view_decision.suggested_frame_ids must be empty when "
+                "action='stop': "
+                f"suggested_frame_ids={self.multi_view_decision.suggested_frame_ids}"
+            )
         elif len(fragment_frame_ids) > 1:
             raise ValueError(
                 "multi_view_decision.action must be 'expand' when the final artifact "
