@@ -1118,6 +1118,144 @@ def test_fuse_accepted_masks_rejects_fragment_without_point_indices(
         fuse_accepted_masks(args, out_dir=tmp_path / "out")
 
 
+def test_fuse_accepted_masks_rejects_standard_fragment_review_artifact_mismatch(
+    tmp_path: Path,
+) -> None:
+    fragment_id = "000010_mask_00"
+    out_dir = tmp_path / "out"
+    mask_npz_path, mask_ply_path = _write_points_artifact(
+        out_dir / "fragments" / fragment_id
+    )
+    review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+    args = FuseAcceptedMasksArgs(
+        fragments=(
+            AcceptedFragmentInput(
+                fragment_id=fragment_id,
+                frame_id="000010",
+                mask_npz_path=mask_npz_path,
+                mask_ply_path=mask_ply_path,
+                approval_actions=_APPROVED_FRAGMENT_ACTIONS,
+                review_artifacts=AcceptedFragmentReviewArtifactsInput.model_validate(
+                    review_artifacts
+                ),
+            ),
+        ),
+        multi_view_decision=_single_view_decision_input(seed_fragment_id=fragment_id),
+    )
+
+    with pytest.raises(ToolInputError, match="review_artifacts"):
+        fuse_accepted_masks(args, out_dir=out_dir)
+
+
+def test_fuse_accepted_masks_accepts_standard_fragment_tool_artifacts(
+    tmp_path: Path,
+) -> None:
+    fragment_id = "000010_mask_00"
+    out_dir = tmp_path / "out"
+    mask_npz_path, mask_ply_path = _write_points_artifact(
+        out_dir / "fragments" / fragment_id
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        out_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    args = FuseAcceptedMasksArgs(
+        fragments=(
+            AcceptedFragmentInput(
+                fragment_id=fragment_id,
+                frame_id="000010",
+                mask_npz_path=mask_npz_path,
+                mask_ply_path=mask_ply_path,
+                approval_actions=_APPROVED_FRAGMENT_ACTIONS,
+                review_artifacts=AcceptedFragmentReviewArtifactsInput.model_validate(
+                    review_artifacts
+                ),
+            ),
+        ),
+        multi_view_decision=_single_view_decision_input(seed_fragment_id=fragment_id),
+    )
+
+    result = fuse_accepted_masks(args, out_dir=out_dir)
+
+    assert result.accepted_fragments[0].fragment_id == fragment_id
+    assert result.mask_artifact_path == out_dir / "fused" / "mask_artifact.json"
+
+
+def test_fuse_accepted_masks_rejects_non_utf8_standard_lift_overlay(
+    tmp_path: Path,
+) -> None:
+    fragment_id = "000010_mask_00"
+    out_dir = tmp_path / "out"
+    mask_npz_path, mask_ply_path = _write_points_artifact(
+        out_dir / "fragments" / fragment_id
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        out_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    Path(review_artifacts["lift_overlay_path"]).write_bytes(b"\xff")
+    args = FuseAcceptedMasksArgs(
+        fragments=(
+            AcceptedFragmentInput(
+                fragment_id=fragment_id,
+                frame_id="000010",
+                mask_npz_path=mask_npz_path,
+                mask_ply_path=mask_ply_path,
+                approval_actions=_APPROVED_FRAGMENT_ACTIONS,
+                review_artifacts=AcceptedFragmentReviewArtifactsInput.model_validate(
+                    review_artifacts
+                ),
+            ),
+        ),
+        multi_view_decision=_single_view_decision_input(seed_fragment_id=fragment_id),
+    )
+
+    with pytest.raises(
+        ToolInputError, match="accepted fragment review_artifacts lift_overlay_path"
+    ):
+        fuse_accepted_masks(args, out_dir=out_dir)
+
+
+def test_fuse_accepted_masks_rejects_standard_lift_overlay_candidate_mismatch(
+    tmp_path: Path,
+) -> None:
+    fragment_id = "000010_mask_00"
+    out_dir = tmp_path / "out"
+    mask_npz_path, mask_ply_path = _write_points_artifact(
+        out_dir / "fragments" / fragment_id
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        out_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    _write_lift_overlay(
+        Path(review_artifacts["lift_overlay_path"]),
+        frame_id="000010",
+        candidate_id="mask_01",
+    )
+    args = FuseAcceptedMasksArgs(
+        fragments=(
+            AcceptedFragmentInput(
+                fragment_id=fragment_id,
+                frame_id="000010",
+                mask_npz_path=mask_npz_path,
+                mask_ply_path=mask_ply_path,
+                approval_actions=_APPROVED_FRAGMENT_ACTIONS,
+                review_artifacts=AcceptedFragmentReviewArtifactsInput.model_validate(
+                    review_artifacts
+                ),
+            ),
+        ),
+        multi_view_decision=_single_view_decision_input(seed_fragment_id=fragment_id),
+    )
+
+    with pytest.raises(ToolInputError, match="candidate_id"):
+        fuse_accepted_masks(args, out_dir=out_dir)
+
+
 def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
     tmp_path: Path,
 ) -> None:
@@ -1250,6 +1388,28 @@ def _write_review_artifacts(root: Path) -> dict[str, str]:
         "lift_overlay_path": root / "lift_overlay.txt",
     }
     for path in paths.values():
+        path.write_text("reviewed\n", encoding="utf-8")
+    return {key: str(path) for key, path in paths.items()}
+
+
+def _write_standard_review_artifacts(
+    out_dir: Path, *, frame_id: str, candidate_id: str
+) -> dict[str, str]:
+    fragment_id = f"{frame_id}_{candidate_id}"
+    paths = {
+        "molmo_raw_text_path": out_dir / "molmo" / f"{frame_id}_raw.txt",
+        "molmo_overlay_path": out_dir / "molmo" / f"{frame_id}_points.jpg",
+        "sam_contact_sheet_path": out_dir / "sam" / frame_id / "contact_sheet.jpg",
+        "sam_candidate_overlay_path": (
+            out_dir / "sam" / frame_id / f"{candidate_id}_overlay.jpg"
+        ),
+        "lift_overlay_path": out_dir / "fragments" / fragment_id / "lift_overlay.txt",
+    }
+    for key, path in paths.items():
+        if key == "lift_overlay_path":
+            _write_lift_overlay(path, frame_id=frame_id, candidate_id=candidate_id)
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("reviewed\n", encoding="utf-8")
     return {key: str(path) for key, path in paths.items()}
 

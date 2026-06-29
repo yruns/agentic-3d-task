@@ -776,6 +776,7 @@ def fuse_accepted_masks(
     fragment_points: list[FloatArray] = []
     fragment_point_indices: list[IntArray] = []
     for fragment in args.fragments:
+        _validate_standard_accepted_fragment_artifacts(fragment, out_dir=out_dir)
         _validate_accepted_fragment_approval_actions(
             fragment.fragment_id, fragment.approval_actions
         )
@@ -867,6 +868,123 @@ def _validate_accepted_fragment_approval_actions(
             "accepted fragment approval_actions failed SceneFunc3D approval gate "
             f"replay: fragment_id={fragment_id}; error={exc}"
         ) from exc
+
+
+def _validate_standard_accepted_fragment_artifacts(
+    fragment: AcceptedFragmentInput, *, out_dir: Path
+) -> None:
+    candidate_id = _standard_fragment_candidate_id(
+        fragment.fragment_id,
+        frame_id=fragment.frame_id,
+    )
+    if candidate_id is None:
+        return
+    path_checks = _standard_fragment_artifact_path_checks(
+        fragment,
+        out_dir=out_dir,
+        candidate_id=candidate_id,
+    )
+    for field_name, actual_path, expected_path in path_checks:
+        if actual_path.expanduser().resolve() != expected_path.expanduser().resolve():
+            raise ToolInputError(
+                "accepted standard fragment artifact path must match the "
+                "canonical run-local tool artifact path: "
+                f"fragment_id={fragment.fragment_id}; "
+                f"frame_id={fragment.frame_id}; "
+                f"field={field_name}; expected_path={expected_path}; "
+                f"path={actual_path}"
+            )
+    _validate_accepted_fragment_lift_overlay(
+        fragment,
+        lift_overlay_path=fragment.review_artifacts.lift_overlay_path,
+        candidate_id=candidate_id,
+    )
+
+
+def _standard_fragment_candidate_id(fragment_id: str, *, frame_id: str) -> str | None:
+    expected_prefix = f"{frame_id}_"
+    if not fragment_id.startswith(expected_prefix):
+        return None
+    candidate_id = fragment_id[len(expected_prefix) :]
+    if candidate_id == "":
+        return None
+    return candidate_id
+
+
+def _standard_fragment_artifact_path_checks(
+    fragment: AcceptedFragmentInput,
+    *,
+    out_dir: Path,
+    candidate_id: str,
+) -> tuple[tuple[str, Path, Path], ...]:
+    return (
+        (
+            "mask_npz_path",
+            fragment.mask_npz_path,
+            out_dir / "fragments" / fragment.fragment_id / "mask_data.npz",
+        ),
+        (
+            "mask_ply_path",
+            fragment.mask_ply_path,
+            out_dir / "fragments" / fragment.fragment_id / "lifted_points.ply",
+        ),
+        (
+            "review_artifacts.molmo_raw_text_path",
+            fragment.review_artifacts.molmo_raw_text_path,
+            out_dir / "molmo" / f"{fragment.frame_id}_raw.txt",
+        ),
+        (
+            "review_artifacts.molmo_overlay_path",
+            fragment.review_artifacts.molmo_overlay_path,
+            out_dir / "molmo" / f"{fragment.frame_id}_points.jpg",
+        ),
+        (
+            "review_artifacts.sam_contact_sheet_path",
+            fragment.review_artifacts.sam_contact_sheet_path,
+            out_dir / "sam" / fragment.frame_id / "contact_sheet.jpg",
+        ),
+        (
+            "review_artifacts.sam_candidate_overlay_path",
+            fragment.review_artifacts.sam_candidate_overlay_path,
+            out_dir / "sam" / fragment.frame_id / f"{candidate_id}_overlay.jpg",
+        ),
+        (
+            "review_artifacts.lift_overlay_path",
+            fragment.review_artifacts.lift_overlay_path,
+            out_dir / "fragments" / fragment.fragment_id / "lift_overlay.txt",
+        ),
+    )
+
+
+def _validate_accepted_fragment_lift_overlay(
+    fragment: AcceptedFragmentInput,
+    *,
+    lift_overlay_path: Path,
+    candidate_id: str,
+) -> None:
+    summary = _read_lift_overlay_summary(
+        lift_overlay_path,
+        error_subject="accepted fragment review_artifacts lift_overlay_path",
+        path_field_name="lift_overlay_path",
+    )
+    if summary.frame_id != fragment.frame_id:
+        raise ToolInputError(
+            "accepted fragment review_artifacts lift_overlay_path frame_id must "
+            "match the accepted fragment frame_id: "
+            f"fragment_id={fragment.fragment_id}; "
+            f"frame_id={fragment.frame_id!r}; "
+            f"lift_frame_id={summary.frame_id!r}; "
+            f"path={lift_overlay_path}"
+        )
+    if summary.candidate_id != candidate_id:
+        raise ToolInputError(
+            "accepted fragment review_artifacts lift_overlay_path candidate_id must "
+            "match the accepted fragment candidate_id: "
+            f"fragment_id={fragment.fragment_id}; "
+            f"candidate_id={candidate_id!r}; "
+            f"lift_candidate_id={summary.candidate_id!r}; "
+            f"path={lift_overlay_path}"
+        )
 
 
 def _write_fused_mask_artifact(
@@ -1256,13 +1374,18 @@ def _validate_seed_fragment_paths(
             )
 
 
-def _read_lift_overlay_summary(overlay_path: Path) -> _LiftOverlaySummary:
+def _read_lift_overlay_summary(
+    overlay_path: Path,
+    *,
+    error_subject: str = "seed lift overlay",
+    path_field_name: str = "seed_lift_overlay_path",
+) -> _LiftOverlaySummary:
     try:
         lines = overlay_path.read_text(encoding="utf-8").splitlines()
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         raise ToolInputError(
-            "could not read seed lift overlay summary: "
-            f"seed_lift_overlay_path={overlay_path}; "
+            f"could not read {error_subject} summary: "
+            f"{path_field_name}={overlay_path}; "
             f"error_type={exc.__class__.__name__}"
         ) from exc
     fields: dict[str, str] = {}
