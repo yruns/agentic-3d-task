@@ -45,6 +45,7 @@ SafePathComponentText = Annotated[
     ),
 ]
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+_FRAME_ID_LENGTH = 6
 
 
 class MaskInspectionPayload(TypedDict):
@@ -179,10 +180,32 @@ class SuggestAdditionalViewsArgs(BaseModel):
             values["accepted_frame_id"] = values.pop("seed_frame_id")
         else:
             values.pop("seed_frame_id", None)
+        if "accepted_frame_id" not in values:
+            inferred_frame_id = _infer_frame_id_from_seed_fragment(
+                values.get("seed_fragment_id")
+            )
+            if inferred_frame_id is not None:
+                values["accepted_frame_id"] = inferred_frame_id
         values.pop("task_description", None)
         values.pop("desc_id", None)
         values.pop("annotation_ids", None)
         return values
+
+
+def _infer_frame_id_from_seed_fragment(seed_fragment_id: object) -> str | None:
+    """Infer the accepted frame id from ``<frame_id>_<candidate_id>`` fragments."""
+    if not isinstance(seed_fragment_id, str):
+        return None
+    candidate_frame_id, separator, _candidate_id = seed_fragment_id.partition("_")
+    if separator == "":
+        return None
+    if _candidate_id == "":
+        return None
+    if len(candidate_frame_id) != _FRAME_ID_LENGTH:
+        return None
+    if not candidate_frame_id.isdecimal():
+        return None
+    return candidate_frame_id
 
 
 class AcceptedFragmentInput(BaseModel):

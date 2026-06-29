@@ -446,6 +446,53 @@ def test_suggest_additional_views_args_accept_seed_frame_id_alias(
     assert args.accepted_frame_id == "000050"
 
 
+def test_suggest_additional_views_args_infers_accepted_frame_from_seed_fragment(
+    tmp_path: Path,
+) -> None:
+    seed_dir = tmp_path / "fragments" / "000050_mask_02"
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000050",
+        candidate_id="mask_02",
+    )
+
+    args = SuggestAdditionalViewsArgs.model_validate(
+        {
+            "seed_fragment_id": "000050_mask_02",
+            "seed_mask_npz_path": str(mask_npz_path),
+            "seed_mask_ply_path": str(mask_ply_path),
+            "seed_lift_overlay_path": str(lift_overlay_path),
+        }
+    )
+
+    assert args.accepted_frame_id == "000050"
+
+
+@pytest.mark.parametrize("seed_fragment_id", ["frag-a", "000050_"])
+def test_suggest_additional_views_args_keeps_frame_required_for_unparseable_seed(
+    seed_fragment_id: str,
+    tmp_path: Path,
+) -> None:
+    seed_dir = tmp_path / "fragments" / seed_fragment_id
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000050",
+        candidate_id="mask_02",
+    )
+
+    with pytest.raises(ValueError, match="accepted_frame_id"):
+        SuggestAdditionalViewsArgs.model_validate(
+            {
+                "seed_fragment_id": seed_fragment_id,
+                "seed_mask_npz_path": str(mask_npz_path),
+                "seed_mask_ply_path": str(mask_ply_path),
+                "seed_lift_overlay_path": str(lift_overlay_path),
+            }
+        )
+
+
 def test_fused_mask_payload(tmp_path: Path) -> None:
     review_artifacts = _write_review_artifacts(tmp_path / "review-a")
     result = FusedMaskResult(
