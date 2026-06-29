@@ -146,6 +146,9 @@ class InspectMaskArtifactArgs(BaseModel):
         if not isinstance(payload, Mapping):
             return payload
         values = dict(payload)
+        overlay_path = values.pop("overlay_path", None)
+        if "overlay_paths" not in values and overlay_path is not None:
+            values["overlay_paths"] = [overlay_path]
         values.pop("frame_id", None)
         values.pop("candidate_id", None)
         return values
@@ -266,6 +269,7 @@ class FuseAcceptedMasksArgs(BaseModel):
             values["fragments"] = values.pop("accepted_fragments")
         else:
             values.pop("accepted_fragments", None)
+        values.pop("task_description", None)
         return values
 
 

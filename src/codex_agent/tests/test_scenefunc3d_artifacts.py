@@ -160,6 +160,8 @@ def test_inspect_mask_artifact_ignores_review_only_frame_fields(
     tmp_path: Path,
 ) -> None:
     mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "fragment-a")
+    overlay_path = tmp_path / "overlay.txt"
+    overlay_path.write_text("reviewed\n", encoding="utf-8")
 
     args = InspectMaskArtifactArgs.model_validate(
         {
@@ -167,11 +169,13 @@ def test_inspect_mask_artifact_ignores_review_only_frame_fields(
             "candidate_id": "mask_00",
             "mask_npz_path": str(mask_npz_path),
             "mask_ply_path": str(mask_ply_path),
+            "overlay_path": str(overlay_path),
         }
     )
 
     assert args.mask_npz_path == mask_npz_path
     assert args.mask_ply_path == mask_ply_path
+    assert args.overlay_paths == (overlay_path,)
 
 
 def test_suggested_views_payload() -> None:
@@ -643,6 +647,7 @@ def test_fuse_accepted_masks_args_accept_accepted_fragments_alias(
                 "reason": "first lift is enough",
                 "suggested_frame_ids": ["000112", "000116"],
             },
+            "task_description": "Open the lower drawer by pulling the handle.",
         }
     )
 

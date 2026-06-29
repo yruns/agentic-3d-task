@@ -123,13 +123,19 @@ class KeyframeSelectorArgs(BaseModel):
         if not isinstance(payload, Mapping):
             return payload
         values = dict(payload)
-        if "query" not in values and "task_description" in values:
-            values["query"] = values.pop("task_description")
+        task_description = values.pop("task_description", None)
+        target = values.pop("target", None)
+        if "query" not in values:
+            if task_description is not None:
+                values["query"] = task_description
+            elif target is not None:
+                values["query"] = target
         if "k" not in values and "max_frames" in values:
             values["k"] = values.pop("max_frames")
         else:
             values.pop("max_frames", None)
         values.pop("annotation_ids", None)
+        values.pop("motion_type", None)
         return values
 
 

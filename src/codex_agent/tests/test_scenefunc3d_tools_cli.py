@@ -58,6 +58,30 @@ def test_keyframe_selector_args_accept_task_description_alias() -> None:
     assert args.query == "Open the bottom drawer."
 
 
+def test_keyframe_selector_args_accept_agent_task_context_fields() -> None:
+    args = KeyframeSelectorArgs.model_validate(
+        {
+            "task_description": "Adjust room temperature using the radiator dial.",
+            "target": "radiator dial",
+            "motion_type": "rot",
+            "annotation_ids": ["annotation-a"],
+        }
+    )
+
+    assert args.query == "Adjust room temperature using the radiator dial."
+
+
+def test_keyframe_selector_args_accept_target_alias_when_query_is_absent() -> None:
+    args = KeyframeSelectorArgs.model_validate(
+        {
+            "target": "radiator dial",
+            "motion_type": "rot",
+        }
+    )
+
+    assert args.query == "radiator dial"
+
+
 def test_keyframe_selector_args_accept_max_frames_alias() -> None:
     args = KeyframeSelectorArgs.model_validate(
         {"query": "Open the bottom drawer.", "max_frames": 8}
