@@ -126,6 +126,16 @@ def test_playbook_warns_against_score_only_sam_candidate_choice() -> None:
     assert "broad panel" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_tells_agent_to_review_lift_geometry_summary() -> None:
+    assert "bbox_extent_xyz" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "max_extent_meters" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "too broad for the target affordance" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "do not approve it" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "Change the SAM candidate, crop, point prompt, or frame" in (
+        SCENEFUNC3D_TOOLS_PLAYBOOK
+    )
+
+
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,

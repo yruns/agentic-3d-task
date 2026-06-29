@@ -57,6 +57,11 @@ that tightly covers the operable part; reject a broad panel, radiator body,
 cabinet face, wall patch, pipe run, or shadow even if its SAM score is higher.
 3. After lift_mask_to_3d, inspect the selected mask overlay and artifact
 summary. You must approve the first 3D lift before any multi-view expansion.
+Use inspect_mask_artifact geometry fields bbox_extent_xyz and max_extent_meters
+before approving a 3D lift. A lift can be too broad for the target affordance.
+For small affordances, this usually means SAM captured a panel, body, pipe, wall
+patch, or shadow instead of the operable component; do not approve it.
+Change the SAM candidate, crop, point prompt, or frame before trying again.
 4. Every additional view repeats Molmo point approval, SAM candidates approval,
 and 3D lift approval before fusion.
 
