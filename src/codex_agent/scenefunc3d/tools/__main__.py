@@ -10,6 +10,11 @@ from typing import cast
 
 from ...errors import CodexAgentError
 from .dispatch import TOOL_NAMES, run_tool
+from .mask_artifacts import (
+    SceneFunc3dToolInvocationEvent,
+    ToolEventStatus,
+    append_tool_invocation_event,
+)
 from .models import ToolInputError
 from .scene_context import SceneFunc3dToolScene
 
@@ -49,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     out_dir = args.out_dir if args.out_dir is not None else _DEFAULT_OUT_DIR
     backend_config_path = cast(Path | None, args.backend_config)
+    raw_args: dict[str, object] = {}
     try:
         raw_args = _parse_args_json(args.args)
         tool_scene = SceneFunc3dToolScene.load(args.scene_root)
@@ -59,13 +65,48 @@ def main(argv: list[str] | None = None) -> int:
             out_dir=out_dir,
             backend_config_path=backend_config_path,
         )
+        payload_data = payload.to_payload()
+        _append_tool_event_or_exit(
+            parser,
+            out_dir=out_dir,
+            event=SceneFunc3dToolInvocationEvent(
+                tool_name=args.tool,
+                status=ToolEventStatus.SUCCESS,
+                args=raw_args,
+                result=payload_data,
+                error="",
+            ),
+        )
     except ToolInputError as exc:
+        _append_tool_event_or_exit(
+            parser,
+            out_dir=out_dir,
+            event=SceneFunc3dToolInvocationEvent(
+                tool_name=args.tool,
+                status=ToolEventStatus.FAILED,
+                args=raw_args,
+                result=None,
+                error=str(exc),
+            ),
+        )
         print(json.dumps({"error": str(exc)}, ensure_ascii=False))
         return 0
     except CodexAgentError as exc:
         parser.exit(status=1, message=f"ERROR: {exc}\n")
-    print(json.dumps(payload.to_payload(), ensure_ascii=False))
+    print(json.dumps(payload_data, ensure_ascii=False))
     return 0
+
+
+def _append_tool_event_or_exit(
+    parser: argparse.ArgumentParser,
+    *,
+    out_dir: Path,
+    event: SceneFunc3dToolInvocationEvent,
+) -> None:
+    try:
+        append_tool_invocation_event(out_dir, event)
+    except CodexAgentError as exc:
+        parser.exit(status=1, message=f"ERROR: {exc}\n")
 
 
 def _parse_args_json(raw: str) -> dict[str, object]:

@@ -259,6 +259,137 @@ def test_cli_bad_args_json_is_recoverable(
     assert "must be valid JSON" in payload["error"]
 
 
+def test_cli_writes_tool_completed_event(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            "{}",
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(event_lines) == 1
+    event = json.loads(event_lines[0])
+    assert event["event_type"] == "tool_completed"
+    assert event["tool_name"] == "scene_summary"
+    assert event["status"] == "success"
+    assert event["args"] == {}
+    assert event["error"] == ""
+    assert event["result"]["visit_id"] == payload["visit_id"]
+    assert event["result"]["rgb_frame_ids"] == payload["rgb_frame_ids"]
+
+
+def test_cli_writes_tool_failed_event_for_recoverable_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_source_frame_scene(tmp_path, _source_frame_records())
+    out_dir = tmp_path / "run"
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_ids": ["000000"]}),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(event_lines) == 1
+    event = json.loads(event_lines[0])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "view_frame"
+    assert event["status"] == "failed"
+    assert event["args"] == {"frame_ids": ["000000"]}
+    assert event["result"] is None
+    assert event["error"] == payload["error"]
+
+
+def test_cli_appends_tool_events_for_multiple_invocations(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+
+    first_code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            "{}",
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+    _ = capsys.readouterr()
+    second_code = main(
+        [
+            "frame_objects",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000"}),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+    _ = capsys.readouterr()
+
+    assert first_code == 0
+    assert second_code == 0
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(event_lines) == 2
+    first_event = json.loads(event_lines[0])
+    second_event = json.loads(event_lines[1])
+    assert first_event["event_type"] == "tool_completed"
+    assert first_event["tool_name"] == "scene_summary"
+    assert second_event["event_type"] == "tool_failed"
+    assert second_event["tool_name"] == "frame_objects"
+    assert second_event["args"] == {"frame_id": "000000"}
+
+
+def test_cli_tool_failed_event_write_error_exits_cleanly(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_source_frame_scene(tmp_path, _source_frame_records())
+    out_dir = tmp_path / "not-a-directory"
+    out_dir.write_text("file blocks event directory creation\n", encoding="utf-8")
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(
+            [
+                "view_frame",
+                "--scene-root",
+                str(scene_dir),
+                "--args",
+                json.dumps({"frame_ids": ["000000"]}),
+                "--out-dir",
+                str(out_dir),
+            ]
+        )
+
+    assert excinfo.value.code == 1
+    assert "could not append SceneFunc3D tool event" in capsys.readouterr().err
+
+
 def test_cli_missing_scene_root_exits_nonzero(tmp_path: Path) -> None:
     with pytest.raises(SystemExit) as excinfo:
         main(

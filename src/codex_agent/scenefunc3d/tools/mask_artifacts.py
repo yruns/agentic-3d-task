@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -16,6 +17,13 @@ class ArtifactStatus(str, Enum):
     """Status stored in SceneFunc3D run summaries."""
 
     IN_PROGRESS = "in_progress"
+    SUCCESS = "success"
+    FAILED = "failed"
+
+
+class ToolEventStatus(str, Enum):
+    """Status stored for one SceneFunc3D tool invocation event."""
+
     SUCCESS = "success"
     FAILED = "failed"
 
@@ -73,6 +81,17 @@ class SceneFunc3dRunCompletionEventPayload(TypedDict):
     result_path: str
     summary_path: str
     mask_artifact_path: str
+
+
+class SceneFunc3dToolInvocationEventPayload(TypedDict):
+    """JSONL event payload for one SceneFunc3D tool invocation."""
+
+    event_type: str
+    tool_name: str
+    status: str
+    args: dict[str, object]
+    result: dict[str, object] | None
+    error: str
 
 
 @dataclass(frozen=True)
@@ -192,6 +211,33 @@ class SceneFunc3dRunCompletionEvent:
         }
 
 
+@dataclass(frozen=True)
+class SceneFunc3dToolInvocationEvent:
+    """One JSONL event recording a SceneFunc3D tool invocation."""
+
+    tool_name: str
+    status: ToolEventStatus
+    args: Mapping[str, object]
+    result: Mapping[str, object] | None
+    error: str
+
+    def to_payload(self) -> SceneFunc3dToolInvocationEventPayload:
+        """Return the JSON-ready tool invocation event."""
+        return {
+            "event_type": self._event_type(),
+            "tool_name": self.tool_name,
+            "status": self.status.value,
+            "args": dict(self.args),
+            "result": dict(self.result) if self.result is not None else None,
+            "error": self.error,
+        }
+
+    def _event_type(self) -> str:
+        if self.status == ToolEventStatus.SUCCESS:
+            return "tool_completed"
+        return "tool_failed"
+
+
 def _validate_artifact_path_component(component_name: str, component_value: str) -> str:
     """Return a safe single path component or raise a data error."""
     is_empty_or_whitespace = component_value.strip() == ""
@@ -257,6 +303,23 @@ def append_run_completion_event(
     with paths.events_jsonl.open("a", encoding="utf-8") as event_file:
         event_file.write(json.dumps(event.to_payload(), ensure_ascii=False) + "\n")
     return paths.events_jsonl
+
+
+def append_tool_invocation_event(
+    out_dir: Path, event: SceneFunc3dToolInvocationEvent
+) -> Path:
+    """Append one tool invocation event to ``<out_dir>/events.jsonl``."""
+    events_path = out_dir / "events.jsonl"
+    try:
+        events_path.parent.mkdir(parents=True, exist_ok=True)
+        with events_path.open("a", encoding="utf-8") as event_file:
+            event_file.write(json.dumps(event.to_payload(), ensure_ascii=False) + "\n")
+    except OSError as exc:
+        raise SceneFunc3dDataError(
+            "could not append SceneFunc3D tool event: "
+            f"events_path={events_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    return events_path
 
 
 def _multi_view_decision_payload(
