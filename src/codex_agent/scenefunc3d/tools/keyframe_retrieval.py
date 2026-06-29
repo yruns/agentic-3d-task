@@ -20,6 +20,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from typing_extensions import NotRequired
 
 from .models import ToolInputError
 from .scene_context import SceneFunc3dToolScene
@@ -157,15 +158,15 @@ class KeyframeSelectorArgs(BaseModel):
         return values
 
 
-class KeyframeMatchedObjectPayload(TypedDict, total=False):
+class KeyframeMatchedObjectPayload(TypedDict):
     """JSON-ready object metadata explaining a visible-object frame match."""
 
     object_id: str
     label: str
     score: float
-    bbox_xyxy: list[float]
-    bbox_format: Literal["pixel_xyxy"]
     source: str
+    bbox_xyxy: NotRequired[list[float]]
+    bbox_format: NotRequired[Literal["pixel_xyxy"]]
 
 
 @dataclass(frozen=True)
@@ -192,7 +193,7 @@ class KeyframeSelection:
 
 
 @dataclass(frozen=True)
-class _VisibleObjectFrameScore:
+class VisibleObjectFrameScore:
     """Semantic score for one frame derived from ConceptGraph visible objects."""
 
     frame_id: str
@@ -257,7 +258,7 @@ def keyframe_selector(
             strategy="frame_id_match",
         )
 
-    visible_object_scores = _visible_object_frame_scores(tool_scene, args.query)
+    visible_object_scores = visible_object_frame_scores(tool_scene, args.query)
     if visible_object_scores:
         matched_frame_ids = tuple(score.frame_id for score in visible_object_scores)
         selected_frame_ids = _fill_with_coverage_frames(
@@ -330,7 +331,7 @@ def _selection_for_visible_object_frame(
     frame_id: str,
     *,
     rank: int,
-    visible_object_match: _VisibleObjectFrameScore | None,
+    visible_object_match: VisibleObjectFrameScore | None,
 ) -> KeyframeSelection:
     if visible_object_match is None:
         return KeyframeSelection(
@@ -377,9 +378,10 @@ def _coverage_frame_ids(frame_ids: tuple[str, ...], k: int) -> tuple[str, ...]:
     return tuple(frame_ids[index] for index in selected_indices)
 
 
-def _visible_object_frame_scores(
+def visible_object_frame_scores(
     tool_scene: SceneFunc3dToolScene, query: str
-) -> tuple[_VisibleObjectFrameScore, ...]:
+) -> tuple[VisibleObjectFrameScore, ...]:
+    """Return visible-object query scores for frames in one SceneFunc3D scene."""
     query_terms = _object_query_terms_for_query(query)
     if not query_terms:
         return ()
@@ -389,7 +391,7 @@ def _visible_object_frame_scores(
     object_frame_map = _load_object_frame_map(object_frame_map_path)
     available_frame_ids = set(tool_scene.rgb_frame_ids)
     seen_frame_ids: set[str] = set()
-    scored_frames: list[_VisibleObjectFrameScore] = []
+    scored_frames: list[VisibleObjectFrameScore] = []
     for record_key, frame_record in object_frame_map.frame_to_objects.items():
         frame_id = _frame_id_from_object_frame(record_key, frame_record.frame_name)
         if frame_id is None or frame_id not in available_frame_ids:
@@ -404,7 +406,7 @@ def _visible_object_frame_scores(
         scored_frame = _score_object_frame(frame_record, query_terms)
         if scored_frame.score > 0.0:
             scored_frames.append(
-                _VisibleObjectFrameScore(
+                VisibleObjectFrameScore(
                     frame_id=frame_id,
                     score=scored_frame.score,
                     matched_objects=scored_frame.matched_objects,
@@ -559,5 +561,7 @@ __all__ = [
     "KeyframeSelection",
     "KeyframeSelectorArgs",
     "KeyframeSelectorResult",
+    "VisibleObjectFrameScore",
     "keyframe_selector",
+    "visible_object_frame_scores",
 ]

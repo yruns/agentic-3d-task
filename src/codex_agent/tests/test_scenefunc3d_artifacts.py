@@ -293,6 +293,90 @@ def test_suggest_additional_views_expands_usable_seed_when_views_exist(
     assert "additional candidate views are available" in result.expansion_reason
 
 
+def test_suggest_additional_views_prioritizes_query_visible_object_frames(
+    tmp_path: Path,
+) -> None:
+    scene_dir = tmp_path / "421393"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    object_frame_map_path.parent.mkdir(parents=True)
+    for frame_id in ("000010", "000020", "000040"):
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    _write_geometry_assets(raw_dir, "000010", x_translation=0.0)
+    _write_geometry_assets(raw_dir, "000020", x_translation=1.0)
+    _write_geometry_assets(raw_dir, "000040", x_translation=3.0)
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000020-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 3,
+                                "class_name": "heater",
+                                "score": 0.8,
+                                "bbox_xyxy": [120, 700, 560, 1500],
+                            }
+                        ],
+                    },
+                    "1": {
+                        "view_id": 1,
+                        "frame_name": "000040-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 4,
+                                "class_name": "wall",
+                                "score": 0.9,
+                            }
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    seed_dir = tmp_path / "fragments" / "000010_mask_00"
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    tool_scene = SceneFunc3dToolScene.load(scene_dir)
+    args = SuggestAdditionalViewsArgs(
+        seed_fragment_id="000010_mask_00",
+        accepted_frame_id="000010",
+        seed_mask_npz_path=mask_npz_path,
+        seed_mask_ply_path=mask_ply_path,
+        seed_lift_overlay_path=lift_overlay_path,
+        candidate_frame_ids=("000020", "000040"),
+        task_description="Adjust room temperature using the radiator dial",
+        min_seed_point_count=1,
+        k=2,
+    )
+
+    result = suggest_additional_views(tool_scene, args)
+    payload = cast(SuggestedViewsPayload, result.to_payload())
+
+    assert tuple(view.frame_id for view in result.views) == ("000020", "000040")
+    assert "visible_object_query_match" in result.views[0].reason
+    assert payload["views"][0]["matched_objects"] == [
+        {
+            "object_id": "3",
+            "label": "heater",
+            "score": 0.8,
+            "bbox_xyxy": [120.0, 700.0, 560.0, 1500.0],
+            "bbox_format": "pixel_xyxy",
+            "source": "object_frame_map",
+        }
+    ]
+
+
 def test_suggest_additional_views_stops_when_only_accepted_frame_exists(
     tmp_path: Path,
 ) -> None:
@@ -444,6 +528,33 @@ def test_suggest_additional_views_args_accept_seed_frame_id_alias(
     )
 
     assert args.accepted_frame_id == "000050"
+
+
+def test_suggest_additional_views_args_accept_seed_candidate_id_context(
+    tmp_path: Path,
+) -> None:
+    seed_dir = tmp_path / "fragments" / "000050_mask_02"
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000050",
+        candidate_id="mask_02",
+    )
+
+    args = SuggestAdditionalViewsArgs.model_validate(
+        {
+            "seed_fragment_id": "000050_mask_02",
+            "seed_frame_id": "000050",
+            "seed_candidate_id": "mask_02",
+            "seed_mask_npz_path": str(mask_npz_path),
+            "seed_mask_ply_path": str(mask_ply_path),
+            "seed_lift_overlay_path": str(lift_overlay_path),
+            "task_description": "Adjust room temperature using the radiator dial.",
+        }
+    )
+
+    assert args.accepted_frame_id == "000050"
+    assert args.task_description == "Adjust room temperature using the radiator dial."
 
 
 def test_suggest_additional_views_args_infers_accepted_frame_from_seed_fragment(

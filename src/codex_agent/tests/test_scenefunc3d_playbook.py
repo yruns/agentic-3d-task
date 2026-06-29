@@ -86,6 +86,8 @@ def test_playbook_tells_agent_to_pass_seed_artifact_to_multiview_suggestion() ->
     assert "seed_mask_npz_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "seed_mask_ply_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "seed_lift_overlay_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "task_description" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "matched_objects" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
 def test_playbook_tells_agent_to_target_pinch_pull_affordance_points() -> None:

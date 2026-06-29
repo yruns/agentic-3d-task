@@ -19,6 +19,7 @@ from pydantic import (
     ValidationError,
     model_validator,
 )
+from typing_extensions import NotRequired
 
 from ...errors import CodexResponseError, SceneFunc3dDataError
 from ..final_mask_artifacts import (
@@ -30,6 +31,11 @@ from ..final_mask_artifacts import (
     validate_points_world_npz,
 )
 from ..task import ApprovalAction, validate_fragment_approval_actions
+from .keyframe_retrieval import (
+    KeyframeMatchedObjectPayload,
+    VisibleObjectFrameScore,
+    visible_object_frame_scores,
+)
 from .models import ToolInputError
 from .scene_context import SceneFunc3dToolScene
 
@@ -67,6 +73,7 @@ class SuggestedViewPayload(TypedDict):
     has_intrinsics: bool
     has_pose: bool
     view_diversity_score: float
+    matched_objects: NotRequired[list[KeyframeMatchedObjectPayload]]
 
 
 class SuggestedViewsPayload(TypedDict):
@@ -166,6 +173,7 @@ class SuggestAdditionalViewsArgs(BaseModel):
     seed_mask_ply_path: FilePath
     seed_lift_overlay_path: FilePath
     candidate_frame_ids: tuple[SafePathComponentText, ...] = ()
+    task_description: NonEmptyText | None = None
     min_seed_point_count: int = Field(default=256, ge=1, strict=True)
     k: int = Field(default=4, ge=1, le=8, strict=True)
 
@@ -186,7 +194,7 @@ class SuggestAdditionalViewsArgs(BaseModel):
             )
             if inferred_frame_id is not None:
                 values["accepted_frame_id"] = inferred_frame_id
-        values.pop("task_description", None)
+        values.pop("seed_candidate_id", None)
         values.pop("desc_id", None)
         values.pop("annotation_ids", None)
         return values
@@ -333,6 +341,7 @@ class SuggestedView:
     has_intrinsics: bool
     has_pose: bool
     view_diversity_score: float
+    matched_objects: tuple[KeyframeMatchedObjectPayload, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate domain invariants for one suggested view."""
@@ -351,7 +360,7 @@ class SuggestedView:
 
     def to_payload(self) -> SuggestedViewPayload:
         """Return the JSON-ready suggested view."""
-        return {
+        payload: SuggestedViewPayload = {
             "frame_id": self.frame_id,
             "reason": self.reason,
             "rank": self.rank,
@@ -360,6 +369,9 @@ class SuggestedView:
             "has_pose": self.has_pose,
             "view_diversity_score": self.view_diversity_score,
         }
+        if self.matched_objects:
+            payload["matched_objects"] = list(self.matched_objects)
+        return payload
 
 
 class SeedLiftStatus(str, Enum):
@@ -408,6 +420,8 @@ class _CandidateViewGeometry:
     has_intrinsics: bool
     has_pose: bool
     view_diversity_score: float
+    visible_object_score: float
+    matched_objects: tuple[KeyframeMatchedObjectPayload, ...]
 
 
 @dataclass(frozen=True)
@@ -584,12 +598,16 @@ def suggest_additional_views(
     accepted_camera_center = _camera_center_for_frame(
         tool_scene, args.accepted_frame_id
     )
+    visible_score_by_frame_id = _visible_object_scores_by_frame_id(
+        tool_scene, args.task_description
+    )
     candidate_geometries = tuple(
         _candidate_view_geometry(
             tool_scene,
             frame_id=frame_id,
             accepted_frame_id=args.accepted_frame_id,
             accepted_camera_center=accepted_camera_center,
+            visible_object_match=visible_score_by_frame_id.get(frame_id),
         )
         for frame_id in candidate_frame_ids
         if frame_id != args.accepted_frame_id
@@ -800,6 +818,7 @@ def _candidate_view_geometry(
     frame_id: str,
     accepted_frame_id: str,
     accepted_camera_center: tuple[float, float, float] | None,
+    visible_object_match: VisibleObjectFrameScore | None,
 ) -> _CandidateViewGeometry:
     from codex_agent.scenefunc3d.backends.frame_assets import (
         resolve_available_frame_geometry_assets,
@@ -820,17 +839,26 @@ def _candidate_view_geometry(
         view_diversity_score=_view_diversity_score(
             accepted_camera_center, candidate_camera_center
         ),
+        visible_object_score=(
+            visible_object_match.score if visible_object_match is not None else 0.0
+        ),
+        matched_objects=(
+            visible_object_match.matched_objects
+            if visible_object_match is not None
+            else ()
+        ),
     )
 
 
 def _candidate_rank_key(
     candidate: _CandidateViewGeometry,
-) -> tuple[int, float, int, str]:
+) -> tuple[int, float, float, int, str]:
     complete_geometry_score = int(
         candidate.has_depth and candidate.has_intrinsics and candidate.has_pose
     )
     return (
         -complete_geometry_score,
+        -candidate.visible_object_score,
         -candidate.view_diversity_score,
         candidate.temporal_distance,
         candidate.frame_id,
@@ -858,7 +886,19 @@ def _suggested_view_from_geometry(
         has_intrinsics=candidate.has_intrinsics,
         has_pose=candidate.has_pose,
         view_diversity_score=candidate.view_diversity_score,
+        matched_objects=candidate.matched_objects,
     )
+
+
+def _visible_object_scores_by_frame_id(
+    tool_scene: SceneFunc3dToolScene, task_description: str | None
+) -> dict[str, VisibleObjectFrameScore]:
+    if task_description is None:
+        return {}
+    return {
+        frame_score.frame_id: frame_score
+        for frame_score in visible_object_frame_scores(tool_scene, task_description)
+    }
 
 
 def _temporal_distance(frame_id: str, accepted_frame_id: str) -> int:
@@ -927,25 +967,44 @@ def _suggested_view_reason(
     seed_lift_status: SeedLiftStatus,
 ) -> str:
     geometry_reason = _candidate_geometry_reason(candidate)
+    visible_object_reason = _candidate_visible_object_reason(candidate)
     view_reason = f"view_diversity_score={candidate.view_diversity_score:.3f}"
     temporal_reason = f"temporal_distance={candidate.temporal_distance}"
     if seed_lift_status is SeedLiftStatus.SPARSE:
+        middle_reasons = _join_suggestion_reasons(
+            visible_object_reason,
+            geometry_reason,
+            view_reason,
+            temporal_reason,
+        )
         return (
             "seed_geometry_sparse: "
             f"point_count={seed_lift_point_count} below "
             f"min_seed_point_count={min_seed_point_count}; "
-            f"{geometry_reason}; "
-            f"{view_reason}; "
-            f"{temporal_reason}"
+            f"{middle_reasons}"
         )
+    middle_reasons = _join_suggestion_reasons(
+        visible_object_reason,
+        geometry_reason,
+        view_reason,
+        temporal_reason,
+    )
     return (
         "seed_geometry_usable: "
         f"point_count={seed_lift_point_count} meets "
         f"min_seed_point_count={min_seed_point_count}; "
-        f"{geometry_reason}; "
-        f"{view_reason}; "
-        f"{temporal_reason}"
+        f"{middle_reasons}"
     )
+
+
+def _candidate_visible_object_reason(candidate: _CandidateViewGeometry) -> str | None:
+    if not candidate.matched_objects:
+        return None
+    return f"visible_object_query_match: score={candidate.visible_object_score:.3f}"
+
+
+def _join_suggestion_reasons(*reasons: str | None) -> str:
+    return "; ".join(reason for reason in reasons if reason is not None)
 
 
 def _candidate_geometry_reason(candidate: _CandidateViewGeometry) -> str:

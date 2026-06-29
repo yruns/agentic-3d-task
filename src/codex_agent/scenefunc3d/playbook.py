@@ -56,12 +56,15 @@ and 3D lift approval before fusion.
 
 When calling suggest_additional_views after approving the first 3D lift, pass
 the approved seed's seed_mask_npz_path, seed_mask_ply_path, and
-seed_lift_overlay_path from the lift_mask_to_3d output. If you already called
+seed_lift_overlay_path from the lift_mask_to_3d output, and include the original
+task_description so the tool can prioritize follow-up frames whose
+matched_objects still show the target object. If you already called
 inspect_mask_artifact, reuse the same NPZ/PLY paths you inspected. The tool
 validates that the seed lift overlay matches the accepted frame and seed
-fragment, then returns seed_lift_point_count, seed_lift_status, and an
-expand/stop recommendation so you can decide whether the target part needs more
-views.
+fragment, then returns seed_lift_point_count, seed_lift_status, suggested
+views, and an expand/stop recommendation so you can decide whether the target
+part needs more views. When suggested views include views[].matched_objects with
+bbox_xyxy, crop those object bboxes before any follow-up Molmo call.
 Use lift_mask_to_3d.mask_npz_path as seed_mask_npz_path,
 lift_mask_to_3d.mask_ply_path as seed_mask_ply_path, lift_mask_to_3d.overlay_path
 as seed_lift_overlay_path, and build seed_fragment_id as
