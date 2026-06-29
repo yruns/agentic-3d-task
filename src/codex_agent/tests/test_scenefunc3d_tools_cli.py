@@ -1715,6 +1715,72 @@ def test_cli_keyframe_selector_maps_radiator_query_to_heater_objects(
     assert payload["frames"][0]["reason"] == "visible_object_query_match"
 
 
+def test_cli_keyframe_selector_returns_matched_object_bbox_metadata(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421393"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    (raw_dir / "000010-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "1": {
+                        "view_id": 1,
+                        "frame_name": "000010-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 2,
+                                "class_name": "heater",
+                                "score": 0.8,
+                                "bbox_xyxy": [59, 733, 888, 1668],
+                            }
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "query": "Adjust room temperature using the radiator dial",
+                    "k": 1,
+                }
+            ),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    selected_frame = payload["frames"][0]
+    assert selected_frame["frame_id"] == "000010"
+    assert selected_frame["matched_objects"] == [
+        {
+            "object_id": "2",
+            "label": "heater",
+            "score": 0.8,
+            "bbox_xyxy": [59.0, 733.0, 888.0, 1668.0],
+            "bbox_format": "pixel_xyxy",
+            "source": "object_frame_map",
+        }
+    ]
+
+
 @pytest.mark.parametrize(
     ("query", "visible_label"),
     [

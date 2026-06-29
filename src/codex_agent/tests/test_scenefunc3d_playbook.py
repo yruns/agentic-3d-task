@@ -95,6 +95,13 @@ def test_playbook_tells_agent_to_target_pinch_pull_affordance_points() -> None:
     assert "not the drawer front panel center" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_tells_agent_to_crop_from_matched_object_bboxes() -> None:
+    assert "matched_objects" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "bbox_xyxy" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "object bbox" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "right/lower" in SCENEFUNC3D_TOOLS_PLAYBOOK
+
+
 def test_playbook_requires_nearby_frame_sweep_before_accepting_drawer_seams() -> None:
     assert "nearby frames" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "+/- 8" in SCENEFUNC3D_TOOLS_PLAYBOOK

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal, TypedDict
 
 from pydantic import (
     BaseModel,
@@ -16,6 +17,7 @@ from pydantic import (
     Field,
     StringConstraints,
     ValidationError,
+    field_validator,
     model_validator,
 )
 
@@ -88,6 +90,18 @@ class _ObjectFrameMapObject(BaseModel):
     object_id: int | str
     class_name: str = Field(min_length=1)
     score: float = Field(ge=0.0, allow_inf_nan=False)
+    bbox_xyxy: tuple[float, float, float, float] | None = None
+
+    @field_validator("bbox_xyxy")
+    @classmethod
+    def validate_bbox_xyxy(
+        cls, bbox_xyxy: tuple[float, float, float, float] | None
+    ) -> tuple[float, float, float, float] | None:
+        """Validate optional pixel-space object bounds."""
+        if bbox_xyxy is None:
+            return None
+        _validate_pixel_bbox(bbox_xyxy)
+        return bbox_xyxy
 
 
 class _ObjectFrameMapFrame(BaseModel):
@@ -143,6 +157,17 @@ class KeyframeSelectorArgs(BaseModel):
         return values
 
 
+class KeyframeMatchedObjectPayload(TypedDict, total=False):
+    """JSON-ready object metadata explaining a visible-object frame match."""
+
+    object_id: str
+    label: str
+    score: float
+    bbox_xyxy: list[float]
+    bbox_format: Literal["pixel_xyxy"]
+    source: str
+
+
 @dataclass(frozen=True)
 class KeyframeSelection:
     """One ranked SceneFunc3D frame candidate."""
@@ -151,15 +176,19 @@ class KeyframeSelection:
     rank: int
     score: float
     reason: str
+    matched_objects: tuple[KeyframeMatchedObjectPayload, ...] = ()
 
     def to_payload(self) -> dict[str, object]:
         """Return this selection as a JSON-ready mapping."""
-        return {
+        payload: dict[str, object] = {
             "frame_id": self.frame_id,
             "rank": self.rank,
             "score": self.score,
             "reason": self.reason,
         }
+        if self.matched_objects:
+            payload["matched_objects"] = list(self.matched_objects)
+        return payload
 
 
 @dataclass(frozen=True)
@@ -168,6 +197,15 @@ class _VisibleObjectFrameScore:
 
     frame_id: str
     score: float
+    matched_objects: tuple[KeyframeMatchedObjectPayload, ...]
+
+
+@dataclass(frozen=True)
+class _ScoredObjectFrame:
+    """Score and matched-object evidence for one visible-object frame."""
+
+    score: float
+    matched_objects: tuple[KeyframeMatchedObjectPayload, ...]
 
 
 @dataclass(frozen=True)
@@ -228,14 +266,13 @@ def keyframe_selector(
             k=args.k,
         )
         score_by_frame_id = {
-            frame_score.frame_id: frame_score.score
-            for frame_score in visible_object_scores
+            frame_score.frame_id: frame_score for frame_score in visible_object_scores
         }
         frames = tuple(
             _selection_for_visible_object_frame(
                 frame_id,
                 rank=rank,
-                visible_object_score=score_by_frame_id.get(frame_id),
+                visible_object_match=score_by_frame_id.get(frame_id),
             )
             for rank, frame_id in enumerate(selected_frame_ids, start=1)
         )
@@ -293,9 +330,9 @@ def _selection_for_visible_object_frame(
     frame_id: str,
     *,
     rank: int,
-    visible_object_score: float | None,
+    visible_object_match: _VisibleObjectFrameScore | None,
 ) -> KeyframeSelection:
-    if visible_object_score is None:
+    if visible_object_match is None:
         return KeyframeSelection(
             frame_id=frame_id,
             rank=rank,
@@ -305,8 +342,9 @@ def _selection_for_visible_object_frame(
     return KeyframeSelection(
         frame_id=frame_id,
         rank=rank,
-        score=visible_object_score,
+        score=visible_object_match.score,
         reason="visible_object_query_match",
+        matched_objects=visible_object_match.matched_objects,
     )
 
 
@@ -363,10 +401,14 @@ def _visible_object_frame_scores(
                 f"path={object_frame_map_path}"
             )
         seen_frame_ids.add(frame_id)
-        score = _score_object_frame(frame_record, query_terms)
-        if score > 0.0:
+        scored_frame = _score_object_frame(frame_record, query_terms)
+        if scored_frame.score > 0.0:
             scored_frames.append(
-                _VisibleObjectFrameScore(frame_id=frame_id, score=score)
+                _VisibleObjectFrameScore(
+                    frame_id=frame_id,
+                    score=scored_frame.score,
+                    matched_objects=scored_frame.matched_objects,
+                )
             )
     return tuple(
         sorted(
@@ -436,28 +478,66 @@ def _frame_id_from_frame_name(frame_name: str) -> str | None:
 
 def _score_object_frame(
     frame_record: _ObjectFrameMapFrame, query_terms: tuple[_ObjectQueryTerm, ...]
-) -> float:
+) -> _ScoredObjectFrame:
     score = 0.0
     matched_term_count = 0
+    matched_objects_by_id: dict[str, KeyframeMatchedObjectPayload] = {}
     for query_term in query_terms:
-        term_score = _score_query_term_in_frame(frame_record, query_term)
+        term_score = 0.0
+        for visible_object in frame_record.objects:
+            if not _object_matches_query_term(visible_object, query_term):
+                continue
+            term_score += query_term.weight * max(
+                visible_object.score, _MIN_OBJECT_SCORE
+            )
+            object_id = str(visible_object.object_id)
+            if object_id not in matched_objects_by_id:
+                matched_objects_by_id[object_id] = _matched_object_payload(
+                    visible_object
+                )
         if term_score > 0.0:
             matched_term_count += 1
             score += term_score
     if matched_term_count > 1:
         score += _CO_OCCURRENCE_BONUS * (matched_term_count - 1)
-    return score
+    return _ScoredObjectFrame(
+        score=score,
+        matched_objects=tuple(matched_objects_by_id.values()),
+    )
 
 
-def _score_query_term_in_frame(
-    frame_record: _ObjectFrameMapFrame, query_term: _ObjectQueryTerm
-) -> float:
-    score = 0.0
-    for visible_object in frame_record.objects:
-        object_label = visible_object.class_name.lower()
-        if any(alias in object_label for alias in query_term.label_aliases):
-            score += query_term.weight * max(visible_object.score, _MIN_OBJECT_SCORE)
-    return score
+def _object_matches_query_term(
+    visible_object: _ObjectFrameMapObject, query_term: _ObjectQueryTerm
+) -> bool:
+    object_label = visible_object.class_name.lower()
+    return any(alias in object_label for alias in query_term.label_aliases)
+
+
+def _matched_object_payload(
+    visible_object: _ObjectFrameMapObject,
+) -> KeyframeMatchedObjectPayload:
+    payload: KeyframeMatchedObjectPayload = {
+        "object_id": str(visible_object.object_id),
+        "label": visible_object.class_name,
+        "score": visible_object.score,
+        "source": "object_frame_map",
+    }
+    if visible_object.bbox_xyxy is not None:
+        payload["bbox_xyxy"] = [
+            float(coordinate) for coordinate in visible_object.bbox_xyxy
+        ]
+        payload["bbox_format"] = "pixel_xyxy"
+    return payload
+
+
+def _validate_pixel_bbox(bbox: tuple[float, float, float, float]) -> None:
+    left, top, right, bottom = bbox
+    if any(not math.isfinite(value) for value in bbox):
+        raise ValueError("pixel_xyxy bbox coordinates must be finite")
+    if any(value < 0.0 for value in bbox):
+        raise ValueError("pixel_xyxy bbox coordinates must be non-negative")
+    if left >= right or top >= bottom:
+        raise ValueError("pixel_xyxy bbox must satisfy left < right and top < bottom")
 
 
 def _numeric_frame_sort_key(frame_id: str) -> int:
@@ -475,6 +555,7 @@ def _format_validation_error(exc: ValidationError) -> str:
 
 
 __all__ = [
+    "KeyframeMatchedObjectPayload",
     "KeyframeSelection",
     "KeyframeSelectorArgs",
     "KeyframeSelectorResult",

@@ -27,7 +27,9 @@ visual evidence for the task.
 
 Tool catalog
 - scene_summary: summarize available scene assets and task context.
-- keyframe_selector: retrieve task-relevant first-person frames.
+- keyframe_selector: retrieve task-relevant first-person frames. When it returns
+  matched_objects, use each object's bbox_xyxy and bbox_format as object bbox
+  evidence for view_crop.
 - view_frame: inspect selected raw frames.
 - view_crop: zoom into a frame region before judging small affordances.
 - view_bev: inspect the top-down scene layout.
@@ -67,12 +69,17 @@ as seed_lift_overlay_path, and build seed_fragment_id as
 
 For small knobs, handles, dials, switches, buttons, and pinch_pull annotations,
 first identify the affordance concept, then use a complete task-constrained
-Molmo point prompt. For drawer or cabinet pull tasks, inspect nearby frames
-around the best drawer/cabinet view (+/- 8 frame ids when available) before the
-first Molmo call. Prefer a visible knob, handle, pull tab, or recessed grip; use
-a seam or lip only after the nearby frames do not show a distinct small
-operable component. The target is not the drawer front panel center or the broad
-cabinet body.
+Molmo point prompt. If keyframe_selector returns matched_objects with
+bbox_xyxy, inspect the full frame and at least one view_crop around the matched
+object bbox before calling molmo_point. For tiny affordances on large objects,
+try object-bbox subcrops at the likely extremities before accepting a point:
+right/lower end for radiator dials or valves, edge/center-line regions for
+handles, and the visible control panel area for switches or buttons. For drawer
+or cabinet pull tasks, inspect nearby frames around the best drawer/cabinet view
+(+/- 8 frame ids when available) before the first Molmo call. Prefer a visible
+knob, handle, pull tab, or recessed grip; use a seam or lip only after the
+nearby frames do not show a distinct small operable component. The target is
+not the drawer front panel center or the broad cabinet body.
 Never repeat an expensive Molmo or SAM call with identical arguments after a
 model-quality failure. Change crop, prompt, or frame.
 
