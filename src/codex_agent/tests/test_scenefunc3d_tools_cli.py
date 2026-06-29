@@ -133,6 +133,27 @@ def test_view_crop_args_accept_xyxy_coordinate_aliases() -> None:
     assert args.bbox_format == "pixel_xyxy"
 
 
+def test_view_crop_args_accept_bbox_xyxy_alias_and_infer_pixel_format() -> None:
+    args = ViewCropArgs.model_validate(
+        {
+            "frame_id": "000011",
+            "bbox_xyxy": [900.0, 1500.0, 1100.0, 1730.0],
+        }
+    )
+
+    assert args.bbox == (900.0, 1500.0, 1100.0, 1730.0)
+    assert args.bbox_format == "pixel_xyxy"
+
+
+def test_view_crop_args_infer_pixel_format_for_canonical_pixel_bbox() -> None:
+    args = ViewCropArgs.model_validate(
+        {"frame_id": "000011", "bbox": [900.0, 1500.0, 1100.0, 1730.0]}
+    )
+
+    assert args.bbox == (900.0, 1500.0, 1100.0, 1730.0)
+    assert args.bbox_format == "pixel_xyxy"
+
+
 def test_view_crop_args_keep_canonical_bbox_default_strict() -> None:
     with pytest.raises(ValidationError):
         ViewCropArgs.model_validate(

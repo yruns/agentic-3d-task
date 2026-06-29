@@ -28,6 +28,7 @@ _RAW_RGB_SUFFIXES: tuple[str, ...] = (".png", ".jpg", ".jpeg")
 _ERROR_FRAME_ID_PREVIEW = 8
 _JPEG_QUALITY = 90
 _CROP_HASH_LENGTH = 12
+_PIXEL_BBOX_INFERENCE_MIN_ABS_COORDINATE = 2.0
 
 BboxFormat = Literal["normalized", "pixel_xyxy"]
 
@@ -187,9 +188,12 @@ class ViewCropArgs(BaseModel):
             return payload
         values = dict(payload)
         used_box_alias = "bbox" not in values and "box" in values
+        used_bbox_xyxy_alias = "bbox" not in values and "bbox_xyxy" in values
         used_xyxy_alias = "bbox" not in values and _has_xyxy_aliases(values)
         if "bbox" not in values and "box" in values:
             values["bbox"] = values.pop("box")
+        if "bbox" not in values and "bbox_xyxy" in values:
+            values["bbox"] = values.pop("bbox_xyxy")
         if used_xyxy_alias:
             values["bbox"] = (
                 values.pop("x1"),
@@ -197,8 +201,10 @@ class ViewCropArgs(BaseModel):
                 values.pop("x2"),
                 values.pop("y2"),
             )
+        if used_bbox_xyxy_alias and "bbox_format" not in values:
+            values["bbox_format"] = "pixel_xyxy"
         if (
-            (used_box_alias or used_xyxy_alias)
+            (used_box_alias or used_xyxy_alias or "bbox" in values)
             and "bbox_format" not in values
             and _raw_bbox_looks_like_pixels(values.get("bbox"))
         ):
@@ -570,7 +576,10 @@ def _raw_bbox_looks_like_pixels(raw_bbox: object) -> bool:
         if isinstance(coordinate, bool) or not isinstance(coordinate, int | float):
             return False
         coordinates.append(float(coordinate))
-    return any(abs(coordinate) > 1.0 for coordinate in coordinates)
+    return any(
+        abs(coordinate) >= _PIXEL_BBOX_INFERENCE_MIN_ABS_COORDINATE
+        for coordinate in coordinates
+    )
 
 
 def _has_xyxy_aliases(values: Mapping[str, object]) -> bool:
