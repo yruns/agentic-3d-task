@@ -52,6 +52,19 @@ summary. You must approve the first 3D lift before any multi-view expansion.
 4. Every additional view repeats Molmo point approval, SAM candidates approval,
 and 3D lift approval before fusion.
 
+When calling suggest_additional_views after approving the first 3D lift, pass
+the approved seed's seed_mask_npz_path, seed_mask_ply_path, and
+seed_lift_overlay_path from the lift_mask_to_3d output. If you already called
+inspect_mask_artifact, reuse the same NPZ/PLY paths you inspected. The tool
+validates that the seed lift overlay matches the accepted frame and seed
+fragment, then returns seed_lift_point_count, seed_lift_status, and an
+expand/stop recommendation so you can decide whether the target part needs more
+views.
+Use lift_mask_to_3d.mask_npz_path as seed_mask_npz_path,
+lift_mask_to_3d.mask_ply_path as seed_mask_ply_path, lift_mask_to_3d.overlay_path
+as seed_lift_overlay_path, and build seed_fragment_id as
+<frame_id>_<candidate_id> from that same lift result.
+
 For small knobs, handles, dials, switches, and buttons, first identify the
 affordance concept, then use a complete task-constrained Molmo point prompt.
 Never repeat an expensive Molmo or SAM call with identical arguments after a

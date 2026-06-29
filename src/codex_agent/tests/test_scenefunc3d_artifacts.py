@@ -30,6 +30,7 @@ from codex_agent.scenefunc3d.tools.mask_inspection import (
     MaskInspectionResult,
     MultiViewDecisionInput,
     MultiViewDecisionPayload,
+    SeedLiftStatus,
     SuggestAdditionalViewsArgs,
     SuggestedView,
     SuggestedViewsPayload,
@@ -158,33 +159,208 @@ def test_inspect_mask_artifact_validates_npz_and_ply(tmp_path: Path) -> None:
 def test_suggested_views_payload() -> None:
     result = SuggestedViewsResult(
         seed_fragment_id="000050_mask_00",
+        seed_lift_point_count=42,
+        seed_lift_status=SeedLiftStatus.USABLE,
+        expansion_recommendation=FinalMaskMultiViewAction.STOP,
+        expansion_reason="seed has enough lifted points",
         views=(
-            SuggestedView(frame_id="000060", reason="different view angle", rank=1),
+            SuggestedView(
+                frame_id="000060",
+                reason="different view angle",
+                rank=1,
+                has_depth=True,
+                has_intrinsics=True,
+                has_pose=True,
+                view_diversity_score=0.5,
+            ),
         ),
     )
 
     payload = cast(SuggestedViewsPayload, result.to_payload())
 
     assert payload["views"][0]["reason"] == "different view angle"
+    assert payload["expansion_recommendation"] == "stop"
+    assert payload["views"][0]["has_pose"] is True
 
 
-def test_suggest_additional_views_ranks_temporal_neighbors(tmp_path: Path) -> None:
+def test_suggest_additional_views_ranks_geometry_ready_views(
+    tmp_path: Path,
+) -> None:
     scene_dir = tmp_path / "421254"
     raw_dir = scene_dir / "raw"
     raw_dir.mkdir(parents=True)
-    for frame_id in ("000000", "000010", "000020", "000040"):
+    for frame_id in ("000010", "000020", "000040"):
         (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    _write_pose(raw_dir / "pose" / "000010.txt", x_translation=0.0)
+    _write_geometry_assets(raw_dir, "000040", x_translation=2.0)
+    seed_dir = tmp_path / "fragments" / "000010_mask_00"
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
     tool_scene = SceneFunc3dToolScene.load(scene_dir)
     args = SuggestAdditionalViewsArgs(
-        seed_fragment_id="frag-a",
+        seed_fragment_id="000010_mask_00",
         accepted_frame_id="000010",
+        seed_mask_npz_path=mask_npz_path,
+        seed_mask_ply_path=mask_ply_path,
+        seed_lift_overlay_path=lift_overlay_path,
+        candidate_frame_ids=("000020", "000040"),
+        min_seed_point_count=4,
         k=2,
     )
 
     result = suggest_additional_views(tool_scene, args)
 
-    assert result.seed_fragment_id == "frag-a"
-    assert tuple(view.frame_id for view in result.views) == ("000000", "000020")
+    assert result.seed_fragment_id == "000010_mask_00"
+    assert result.seed_lift_point_count == 2
+    assert result.seed_lift_status == "sparse"
+    assert result.expansion_recommendation is FinalMaskMultiViewAction.EXPAND
+    assert tuple(view.frame_id for view in result.views) == ("000040", "000020")
+    assert result.views[0].reason == (
+        "seed_geometry_sparse: point_count=2 below min_seed_point_count=4; "
+        "candidate has depth, intrinsics, and pose; "
+        "view_diversity_score=2.000; "
+        "temporal_distance=30"
+    )
+    assert result.views[0].has_depth is True
+    assert result.views[0].has_intrinsics is True
+    assert result.views[0].has_pose is True
+    assert result.views[0].view_diversity_score == 2.0
+    assert result.views[1].has_depth is False
+    payload = cast(SuggestedViewsPayload, result.to_payload())
+    assert payload["seed_lift_point_count"] == 2
+    assert payload["seed_lift_status"] == "sparse"
+    assert payload["expansion_recommendation"] == "expand"
+
+
+def test_suggest_additional_views_stops_for_usable_seed(tmp_path: Path) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    for frame_id in ("000010", "000020"):
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    seed_dir = tmp_path / "fragments" / "000010_mask_00"
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    tool_scene = SceneFunc3dToolScene.load(scene_dir)
+    args = SuggestAdditionalViewsArgs(
+        seed_fragment_id="000010_mask_00",
+        accepted_frame_id="000010",
+        seed_mask_npz_path=mask_npz_path,
+        seed_mask_ply_path=mask_ply_path,
+        seed_lift_overlay_path=lift_overlay_path,
+        min_seed_point_count=1,
+        k=1,
+    )
+
+    result = suggest_additional_views(tool_scene, args)
+
+    assert result.seed_lift_status is SeedLiftStatus.USABLE
+    assert result.expansion_recommendation is FinalMaskMultiViewAction.STOP
+    assert result.views == ()
+    assert "meets min_seed_point_count=1" in result.expansion_reason
+
+
+def test_suggest_additional_views_rejects_seed_artifact_mismatch(
+    tmp_path: Path,
+) -> None:
+    seed_dir = tmp_path / "fragments" / "000010_mask_00"
+    mask_npz_path, _mask_ply_path = _write_points_artifact(seed_dir)
+    mismatched_ply_path = _write_one_point_ply(seed_dir / "bad.ply")
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    (raw_dir / "000010-rgb.png").write_bytes(b"not-a-real-image")
+    tool_scene = SceneFunc3dToolScene.load(scene_dir)
+    args = SuggestAdditionalViewsArgs(
+        seed_fragment_id="000010_mask_00",
+        accepted_frame_id="000010",
+        seed_mask_npz_path=mask_npz_path,
+        seed_mask_ply_path=mismatched_ply_path,
+        seed_lift_overlay_path=lift_overlay_path,
+    )
+
+    with pytest.raises(ToolInputError, match="mask npz point count"):
+        suggest_additional_views(tool_scene, args)
+
+
+def test_suggest_additional_views_rejects_lift_overlay_frame_mismatch(
+    tmp_path: Path,
+) -> None:
+    seed_dir = tmp_path / "fragments" / "000010_mask_00"
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000020",
+        candidate_id="mask_00",
+    )
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    (raw_dir / "000010-rgb.png").write_bytes(b"not-a-real-image")
+    tool_scene = SceneFunc3dToolScene.load(scene_dir)
+    args = SuggestAdditionalViewsArgs(
+        seed_fragment_id="000010_mask_00",
+        accepted_frame_id="000010",
+        seed_mask_npz_path=mask_npz_path,
+        seed_mask_ply_path=mask_ply_path,
+        seed_lift_overlay_path=lift_overlay_path,
+    )
+
+    with pytest.raises(ToolInputError, match="seed lift overlay"):
+        suggest_additional_views(tool_scene, args)
+
+
+def test_suggest_additional_views_rejects_seed_npz_from_different_fragment(
+    tmp_path: Path,
+) -> None:
+    seed_dir = tmp_path / "fragments" / "000010_mask_00"
+    other_dir = tmp_path / "fragments" / "000020_mask_01"
+    _seed_npz_path, _seed_ply_path = _write_points_artifact(seed_dir)
+    other_npz_path, other_ply_path = _write_points_artifact(other_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    (raw_dir / "000010-rgb.png").write_bytes(b"not-a-real-image")
+    tool_scene = SceneFunc3dToolScene.load(scene_dir)
+    args = SuggestAdditionalViewsArgs(
+        seed_fragment_id="000010_mask_00",
+        accepted_frame_id="000010",
+        seed_mask_npz_path=other_npz_path,
+        seed_mask_ply_path=other_ply_path,
+        seed_lift_overlay_path=lift_overlay_path,
+    )
+
+    with pytest.raises(ToolInputError, match="same seed fragment directory"):
+        suggest_additional_views(tool_scene, args)
+
+
+def test_suggest_additional_views_requires_seed_artifact() -> None:
+    with pytest.raises(ValueError, match="seed_mask_npz_path"):
+        SuggestAdditionalViewsArgs.model_validate(
+            {
+                "seed_fragment_id": "frag-a",
+                "accepted_frame_id": "000010",
+                "k": 2,
+            }
+        )
 
 
 def test_fused_mask_payload(tmp_path: Path) -> None:
@@ -583,6 +759,48 @@ def _write_points_artifact(
     )
     mask_ply_path = write_lift_ply(root / "lifted_points.ply", points_world)
     return mask_npz_path, mask_ply_path
+
+
+def _write_one_point_ply(path: Path) -> Path:
+    import numpy as np
+
+    from codex_agent.scenefunc3d.backends.lift_3d import write_lift_ply
+
+    return write_lift_ply(
+        path,
+        np.array([[1.0, 2.0, 3.0]], dtype=np.float64),
+    )
+
+
+def _write_lift_overlay(path: Path, *, frame_id: str, candidate_id: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"frame_id={frame_id}\n"
+        f"candidate_id={candidate_id}\n"
+        "lifted_point_count=2\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_geometry_assets(
+    raw_dir: Path, frame_id: str, *, x_translation: float
+) -> None:
+    (raw_dir / "depth").mkdir(parents=True, exist_ok=True)
+    (raw_dir / "depth" / f"{frame_id}.png").write_bytes(b"depth")
+    (raw_dir / f"{frame_id}-intrinsics.txt").write_text(
+        "1 0 0\n0 1 0\n0 0 1\n",
+        encoding="utf-8",
+    )
+    _write_pose(raw_dir / "pose" / f"{frame_id}.txt", x_translation=x_translation)
+
+
+def _write_pose(path: Path, *, x_translation: float) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"1 0 0 {x_translation}\n" "0 1 0 0\n" "0 0 1 0\n" "0 0 0 1\n",
+        encoding="utf-8",
+    )
 
 
 def _write_points_world_only_artifact(root: Path) -> tuple[Path, Path]:

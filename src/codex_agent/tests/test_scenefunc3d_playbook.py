@@ -81,6 +81,13 @@ def test_playbook_tells_agent_to_record_fragment_review_artifacts() -> None:
     assert "lift_overlay_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_tells_agent_to_pass_seed_artifact_to_multiview_suggestion() -> None:
+    assert "suggest_additional_views" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "seed_mask_npz_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "seed_mask_ply_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "seed_lift_overlay_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
+
+
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,

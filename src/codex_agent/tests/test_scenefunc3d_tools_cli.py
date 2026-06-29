@@ -1457,6 +1457,13 @@ def test_cli_suggest_additional_views_returns_scene_neighbors(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     scene_dir = _write_raw_rgb_scene(tmp_path)
+    seed_dir = tmp_path / "fragments" / "000000_mask_00"
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000000",
+        candidate_id="mask_00",
+    )
 
     code = main(
         [
@@ -1466,8 +1473,12 @@ def test_cli_suggest_additional_views_returns_scene_neighbors(
             "--args",
             json.dumps(
                 {
-                    "seed_fragment_id": "frag-a",
+                    "seed_fragment_id": "000000_mask_00",
                     "accepted_frame_id": "000000",
+                    "seed_mask_npz_path": str(mask_npz_path),
+                    "seed_mask_ply_path": str(mask_ply_path),
+                    "seed_lift_overlay_path": str(lift_overlay_path),
+                    "min_seed_point_count": 4,
                     "k": 1,
                 }
             ),
@@ -1476,12 +1487,22 @@ def test_cli_suggest_additional_views_returns_scene_neighbors(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert payload["seed_fragment_id"] == "frag-a"
+    assert payload["seed_fragment_id"] == "000000_mask_00"
+    assert payload["expansion_recommendation"] == "expand"
     assert payload["views"] == [
         {
             "frame_id": "000010",
-            "reason": "nearest temporal neighbor to accepted_frame_id=000000",
+            "reason": (
+                "seed_geometry_sparse: point_count=2 below min_seed_point_count=4; "
+                "candidate is missing depth, intrinsics, and pose; "
+                "view_diversity_score=0.000; "
+                "temporal_distance=10"
+            ),
             "rank": 1,
+            "has_depth": False,
+            "has_intrinsics": False,
+            "has_pose": False,
+            "view_diversity_score": 0.0,
         }
     ]
 
@@ -1501,6 +1522,17 @@ def _write_points_artifact(root: Path) -> tuple[Path, Path]:
     )
     mask_ply_path = write_lift_ply(root / "lifted_points.ply", points_world)
     return mask_npz_path, mask_ply_path
+
+
+def _write_lift_overlay(path: Path, *, frame_id: str, candidate_id: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"frame_id={frame_id}\n"
+        f"candidate_id={candidate_id}\n"
+        "lifted_point_count=2\n",
+        encoding="utf-8",
+    )
+    return path
 
 
 def _write_review_artifacts(root: Path) -> dict[str, str]:

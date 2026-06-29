@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, TypedDict, cast
 
@@ -58,12 +60,20 @@ class SuggestedViewPayload(TypedDict):
     frame_id: str
     reason: str
     rank: int
+    has_depth: bool
+    has_intrinsics: bool
+    has_pose: bool
+    view_diversity_score: float
 
 
 class SuggestedViewsPayload(TypedDict):
     """JSON-ready suggested view result."""
 
     seed_fragment_id: str
+    seed_lift_point_count: int
+    seed_lift_status: str
+    expansion_recommendation: str
+    expansion_reason: str
     views: list[SuggestedViewPayload]
 
 
@@ -135,7 +145,11 @@ class SuggestAdditionalViewsArgs(BaseModel):
 
     seed_fragment_id: SafePathComponentText
     accepted_frame_id: SafePathComponentText
+    seed_mask_npz_path: FilePath
+    seed_mask_ply_path: FilePath
+    seed_lift_overlay_path: FilePath
     candidate_frame_ids: tuple[SafePathComponentText, ...] = ()
+    min_seed_point_count: int = Field(default=256, ge=1, strict=True)
     k: int = Field(default=4, ge=1, le=8, strict=True)
 
 
@@ -236,16 +250,44 @@ class SuggestedView:
     frame_id: str
     reason: str
     rank: int
+    has_depth: bool
+    has_intrinsics: bool
+    has_pose: bool
+    view_diversity_score: float
 
     def __post_init__(self) -> None:
         """Validate domain invariants for one suggested view."""
         _validate_non_empty_text("frame_id", self.frame_id)
         _validate_non_empty_text("reason", self.reason)
         _validate_positive_int("rank", self.rank)
+        if not math.isfinite(self.view_diversity_score):
+            raise ValueError(
+                "view_diversity_score must be finite: " f"{self.view_diversity_score!r}"
+            )
+        if self.view_diversity_score < 0.0:
+            raise ValueError(
+                "view_diversity_score must be non-negative: "
+                f"{self.view_diversity_score!r}"
+            )
 
     def to_payload(self) -> SuggestedViewPayload:
         """Return the JSON-ready suggested view."""
-        return {"frame_id": self.frame_id, "reason": self.reason, "rank": self.rank}
+        return {
+            "frame_id": self.frame_id,
+            "reason": self.reason,
+            "rank": self.rank,
+            "has_depth": self.has_depth,
+            "has_intrinsics": self.has_intrinsics,
+            "has_pose": self.has_pose,
+            "view_diversity_score": self.view_diversity_score,
+        }
+
+
+class SeedLiftStatus(str, Enum):
+    """Coarse geometry status for the first accepted 3D seed."""
+
+    SPARSE = "sparse"
+    USABLE = "usable"
 
 
 @dataclass(frozen=True)
@@ -253,18 +295,48 @@ class SuggestedViewsResult:
     """Additional views suggested for multi-view expansion."""
 
     seed_fragment_id: str
+    seed_lift_point_count: int
+    seed_lift_status: SeedLiftStatus
+    expansion_recommendation: FinalMaskMultiViewAction
+    expansion_reason: str
     views: tuple[SuggestedView, ...]
 
     def __post_init__(self) -> None:
         """Validate domain invariants for a suggested view set."""
         _validate_non_empty_text("seed_fragment_id", self.seed_fragment_id)
+        _validate_positive_int("seed_lift_point_count", self.seed_lift_point_count)
+        _validate_non_empty_text("expansion_reason", self.expansion_reason)
 
     def to_payload(self) -> dict[str, object]:
         """Return the JSON-ready suggested view set."""
         return {
             "seed_fragment_id": self.seed_fragment_id,
+            "seed_lift_point_count": self.seed_lift_point_count,
+            "seed_lift_status": self.seed_lift_status.value,
+            "expansion_recommendation": self.expansion_recommendation.value,
+            "expansion_reason": self.expansion_reason,
             "views": [view.to_payload() for view in self.views],
         }
+
+
+@dataclass(frozen=True)
+class _CandidateViewGeometry:
+    """Geometry signals used to rank one candidate follow-up frame."""
+
+    frame_id: str
+    temporal_distance: int
+    has_depth: bool
+    has_intrinsics: bool
+    has_pose: bool
+    view_diversity_score: float
+
+
+@dataclass(frozen=True)
+class _LiftOverlaySummary:
+    """Parsed key fields from a lift overlay summary artifact."""
+
+    frame_id: str
+    candidate_id: str
 
 
 @dataclass(frozen=True)
@@ -392,6 +464,31 @@ def suggest_additional_views(
     tool_scene: SceneFunc3dToolScene, args: SuggestAdditionalViewsArgs
 ) -> SuggestedViewsResult:
     """Suggest nearby views after a first accepted 3D fragment."""
+    seed_lift_point_count = _validate_mask_pair(
+        mask_npz_path=args.seed_mask_npz_path,
+        mask_ply_path=args.seed_mask_ply_path,
+    )
+    _validate_seed_lift_overlay(
+        args.seed_lift_overlay_path,
+        seed_fragment_id=args.seed_fragment_id,
+        accepted_frame_id=args.accepted_frame_id,
+    )
+    _validate_seed_fragment_paths(
+        seed_mask_npz_path=args.seed_mask_npz_path,
+        seed_mask_ply_path=args.seed_mask_ply_path,
+        seed_lift_overlay_path=args.seed_lift_overlay_path,
+        seed_fragment_id=args.seed_fragment_id,
+    )
+    seed_lift_status = _seed_lift_status(
+        seed_lift_point_count,
+        min_seed_point_count=args.min_seed_point_count,
+    )
+    expansion_recommendation = _expansion_recommendation(seed_lift_status)
+    expansion_reason = _expansion_reason(
+        seed_lift_point_count=seed_lift_point_count,
+        min_seed_point_count=args.min_seed_point_count,
+        seed_lift_status=seed_lift_status,
+    )
     available_frame_ids = set(tool_scene.rgb_frame_ids)
     if args.accepted_frame_id not in available_frame_ids:
         raise ToolInputError(
@@ -414,23 +511,48 @@ def suggest_additional_views(
             "candidate_frame_ids must exist in the SceneFunc3D scene: "
             f"missing={missing_candidate_ids}; scene_root={tool_scene.scene_root}"
         )
-    ranked_frame_ids = sorted(
-        (
-            frame_id
-            for frame_id in candidate_frame_ids
-            if frame_id != args.accepted_frame_id
-        ),
-        key=lambda frame_id: _view_rank_key(frame_id, args.accepted_frame_id),
-    )
-    views = tuple(
-        SuggestedView(
-            frame_id=frame_id,
-            reason=f"nearest temporal neighbor to accepted_frame_id={args.accepted_frame_id}",
-            rank=rank,
+    if expansion_recommendation is FinalMaskMultiViewAction.STOP:
+        return SuggestedViewsResult(
+            seed_fragment_id=args.seed_fragment_id,
+            seed_lift_point_count=seed_lift_point_count,
+            seed_lift_status=seed_lift_status,
+            expansion_recommendation=expansion_recommendation,
+            expansion_reason=expansion_reason,
+            views=(),
         )
-        for rank, frame_id in enumerate(ranked_frame_ids[: args.k], start=1)
+
+    accepted_camera_center = _camera_center_for_frame(
+        tool_scene, args.accepted_frame_id
     )
-    return SuggestedViewsResult(seed_fragment_id=args.seed_fragment_id, views=views)
+    candidate_geometries = tuple(
+        _candidate_view_geometry(
+            tool_scene,
+            frame_id=frame_id,
+            accepted_frame_id=args.accepted_frame_id,
+            accepted_camera_center=accepted_camera_center,
+        )
+        for frame_id in candidate_frame_ids
+        if frame_id != args.accepted_frame_id
+    )
+    ranked_candidates = sorted(candidate_geometries, key=_candidate_rank_key)
+    views = tuple(
+        _suggested_view_from_geometry(
+            candidate,
+            rank=rank,
+            seed_lift_point_count=seed_lift_point_count,
+            min_seed_point_count=args.min_seed_point_count,
+            seed_lift_status=seed_lift_status,
+        )
+        for rank, candidate in enumerate(ranked_candidates[: args.k], start=1)
+    )
+    return SuggestedViewsResult(
+        seed_fragment_id=args.seed_fragment_id,
+        seed_lift_point_count=seed_lift_point_count,
+        seed_lift_status=seed_lift_status,
+        expansion_recommendation=expansion_recommendation,
+        expansion_reason=expansion_reason,
+        views=views,
+    )
 
 
 def fuse_accepted_masks(
@@ -588,12 +710,297 @@ def _accepted_frame_ids(
     return tuple(accepted_frame_ids)
 
 
-def _view_rank_key(frame_id: str, accepted_frame_id: str) -> tuple[int, str]:
+def _candidate_view_geometry(
+    tool_scene: SceneFunc3dToolScene,
+    *,
+    frame_id: str,
+    accepted_frame_id: str,
+    accepted_camera_center: tuple[float, float, float] | None,
+) -> _CandidateViewGeometry:
+    from codex_agent.scenefunc3d.backends.frame_assets import (
+        resolve_available_frame_geometry_assets,
+    )
+
+    available_assets = resolve_available_frame_geometry_assets(tool_scene, frame_id)
+    candidate_camera_center = (
+        _load_camera_center(available_assets.pose_path)
+        if available_assets.pose_path is not None
+        else None
+    )
+    return _CandidateViewGeometry(
+        frame_id=frame_id,
+        temporal_distance=_temporal_distance(frame_id, accepted_frame_id),
+        has_depth=available_assets.depth_path is not None,
+        has_intrinsics=available_assets.intrinsics_path is not None,
+        has_pose=available_assets.pose_path is not None,
+        view_diversity_score=_view_diversity_score(
+            accepted_camera_center, candidate_camera_center
+        ),
+    )
+
+
+def _candidate_rank_key(
+    candidate: _CandidateViewGeometry,
+) -> tuple[int, float, int, str]:
+    complete_geometry_score = int(
+        candidate.has_depth and candidate.has_intrinsics and candidate.has_pose
+    )
+    return (
+        -complete_geometry_score,
+        -candidate.view_diversity_score,
+        candidate.temporal_distance,
+        candidate.frame_id,
+    )
+
+
+def _suggested_view_from_geometry(
+    candidate: _CandidateViewGeometry,
+    *,
+    rank: int,
+    seed_lift_point_count: int,
+    min_seed_point_count: int,
+    seed_lift_status: SeedLiftStatus,
+) -> SuggestedView:
+    return SuggestedView(
+        frame_id=candidate.frame_id,
+        reason=_suggested_view_reason(
+            candidate=candidate,
+            seed_lift_point_count=seed_lift_point_count,
+            min_seed_point_count=min_seed_point_count,
+            seed_lift_status=seed_lift_status,
+        ),
+        rank=rank,
+        has_depth=candidate.has_depth,
+        has_intrinsics=candidate.has_intrinsics,
+        has_pose=candidate.has_pose,
+        view_diversity_score=candidate.view_diversity_score,
+    )
+
+
+def _temporal_distance(frame_id: str, accepted_frame_id: str) -> int:
     frame_number = _frame_number(frame_id)
     accepted_number = _frame_number(accepted_frame_id)
     if frame_number is None or accepted_number is None:
-        return (10**12, frame_id)
-    return (abs(frame_number - accepted_number), frame_id)
+        return 10**12
+    return abs(frame_number - accepted_number)
+
+
+def _seed_lift_status(
+    seed_lift_point_count: int, *, min_seed_point_count: int
+) -> SeedLiftStatus:
+    if seed_lift_point_count < min_seed_point_count:
+        return SeedLiftStatus.SPARSE
+    return SeedLiftStatus.USABLE
+
+
+def _expansion_recommendation(
+    seed_lift_status: SeedLiftStatus,
+) -> FinalMaskMultiViewAction:
+    if seed_lift_status is SeedLiftStatus.SPARSE:
+        return FinalMaskMultiViewAction.EXPAND
+    return FinalMaskMultiViewAction.STOP
+
+
+def _expansion_reason(
+    *,
+    seed_lift_point_count: int,
+    min_seed_point_count: int,
+    seed_lift_status: SeedLiftStatus,
+) -> str:
+    if seed_lift_status is SeedLiftStatus.SPARSE:
+        return (
+            "seed_geometry_sparse: "
+            f"point_count={seed_lift_point_count} below "
+            f"min_seed_point_count={min_seed_point_count}; "
+            "additional views are recommended"
+        )
+    return (
+        "seed_geometry_usable: "
+        f"point_count={seed_lift_point_count} meets "
+        f"min_seed_point_count={min_seed_point_count}; "
+        "no additional views are recommended by default"
+    )
+
+
+def _suggested_view_reason(
+    *,
+    candidate: _CandidateViewGeometry,
+    seed_lift_point_count: int,
+    min_seed_point_count: int,
+    seed_lift_status: SeedLiftStatus,
+) -> str:
+    geometry_reason = _candidate_geometry_reason(candidate)
+    view_reason = f"view_diversity_score={candidate.view_diversity_score:.3f}"
+    temporal_reason = f"temporal_distance={candidate.temporal_distance}"
+    if seed_lift_status is SeedLiftStatus.SPARSE:
+        return (
+            "seed_geometry_sparse: "
+            f"point_count={seed_lift_point_count} below "
+            f"min_seed_point_count={min_seed_point_count}; "
+            f"{geometry_reason}; "
+            f"{view_reason}; "
+            f"{temporal_reason}"
+        )
+    return (
+        "seed_geometry_usable: "
+        f"point_count={seed_lift_point_count} meets "
+        f"min_seed_point_count={min_seed_point_count}; "
+        f"{geometry_reason}; "
+        f"{view_reason}; "
+        f"{temporal_reason}"
+    )
+
+
+def _candidate_geometry_reason(candidate: _CandidateViewGeometry) -> str:
+    fields = (
+        ("depth", candidate.has_depth),
+        ("intrinsics", candidate.has_intrinsics),
+        ("pose", candidate.has_pose),
+    )
+    available_fields = tuple(field_name for field_name, exists in fields if exists)
+    missing_fields = tuple(field_name for field_name, exists in fields if not exists)
+    if not missing_fields:
+        return "candidate has depth, intrinsics, and pose"
+    if not available_fields:
+        return "candidate is missing depth, intrinsics, and pose"
+    return (
+        "candidate has "
+        f"{_join_field_names(available_fields)}; "
+        f"missing {_join_field_names(missing_fields)}"
+    )
+
+
+def _join_field_names(field_names: tuple[str, ...]) -> str:
+    if len(field_names) == 1:
+        return field_names[0]
+    if len(field_names) == 2:
+        return f"{field_names[0]} and {field_names[1]}"
+    return f"{', '.join(field_names[:-1])}, and {field_names[-1]}"
+
+
+def _camera_center_for_frame(
+    tool_scene: SceneFunc3dToolScene, frame_id: str
+) -> tuple[float, float, float] | None:
+    from codex_agent.scenefunc3d.backends.frame_assets import (
+        resolve_available_frame_geometry_assets,
+    )
+
+    available_assets = resolve_available_frame_geometry_assets(tool_scene, frame_id)
+    if available_assets.pose_path is None:
+        return None
+    return _load_camera_center(available_assets.pose_path)
+
+
+def _load_camera_center(pose_path: Path) -> tuple[float, float, float]:
+    try:
+        raw_values = tuple(
+            float(value) for value in pose_path.read_text(encoding="utf-8").split()
+        )
+    except OSError as exc:
+        raise ToolInputError(
+            "could not read camera pose for view suggestion: "
+            f"pose_path={pose_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    except ValueError as exc:
+        raise ToolInputError(
+            "could not parse camera pose for view suggestion: "
+            f"pose_path={pose_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    if len(raw_values) != 16:
+        raise ToolInputError(
+            "camera pose for view suggestion must contain 16 values: "
+            f"pose_path={pose_path}; actual={len(raw_values)}"
+        )
+    return (raw_values[3], raw_values[7], raw_values[11])
+
+
+def _view_diversity_score(
+    accepted_camera_center: tuple[float, float, float] | None,
+    candidate_camera_center: tuple[float, float, float] | None,
+) -> float:
+    if accepted_camera_center is None or candidate_camera_center is None:
+        return 0.0
+    return float(math.dist(accepted_camera_center, candidate_camera_center))
+
+
+def _validate_seed_lift_overlay(
+    overlay_path: Path, *, seed_fragment_id: str, accepted_frame_id: str
+) -> None:
+    summary = _read_lift_overlay_summary(overlay_path)
+    if summary.frame_id != accepted_frame_id:
+        raise ToolInputError(
+            "seed lift overlay frame_id must match accepted_frame_id: "
+            f"seed_lift_overlay_path={overlay_path}; "
+            f"overlay_frame_id={summary.frame_id!r}; "
+            f"accepted_frame_id={accepted_frame_id!r}"
+        )
+    expected_seed_fragment_id = f"{summary.frame_id}_{summary.candidate_id}"
+    if summary.candidate_id == "" or seed_fragment_id != expected_seed_fragment_id:
+        raise ToolInputError(
+            "seed lift overlay candidate_id must match seed_fragment_id: "
+            f"seed_lift_overlay_path={overlay_path}; "
+            f"candidate_id={summary.candidate_id!r}; "
+            f"seed_fragment_id={seed_fragment_id!r}; "
+            f"expected_seed_fragment_id={expected_seed_fragment_id!r}"
+        )
+
+
+def _validate_seed_fragment_paths(
+    *,
+    seed_mask_npz_path: Path,
+    seed_mask_ply_path: Path,
+    seed_lift_overlay_path: Path,
+    seed_fragment_id: str,
+) -> None:
+    if (
+        seed_mask_npz_path.parent != seed_mask_ply_path.parent
+        or seed_mask_npz_path.parent != seed_lift_overlay_path.parent
+    ):
+        raise ToolInputError(
+            "seed_mask_npz_path, seed_mask_ply_path, and seed_lift_overlay_path "
+            "must come from the same seed fragment directory: "
+            f"seed_mask_npz_path={seed_mask_npz_path}; "
+            f"seed_mask_ply_path={seed_mask_ply_path}; "
+            f"seed_lift_overlay_path={seed_lift_overlay_path}"
+        )
+    if seed_mask_npz_path.parent.name != seed_fragment_id:
+        raise ToolInputError(
+            "seed artifact directory name must match seed_fragment_id: "
+            f"seed_fragment_id={seed_fragment_id!r}; "
+            f"artifact_dir={seed_mask_npz_path.parent}"
+        )
+    expected_names = (
+        ("seed_mask_npz_path", seed_mask_npz_path, "mask_data.npz"),
+        ("seed_mask_ply_path", seed_mask_ply_path, "lifted_points.ply"),
+        ("seed_lift_overlay_path", seed_lift_overlay_path, "lift_overlay.txt"),
+    )
+    for field_name, path, expected_name in expected_names:
+        if path.name != expected_name:
+            raise ToolInputError(
+                f"{field_name} must use the standard lift artifact filename "
+                f"{expected_name!r}: path={path}"
+            )
+
+
+def _read_lift_overlay_summary(overlay_path: Path) -> _LiftOverlaySummary:
+    try:
+        lines = overlay_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise ToolInputError(
+            "could not read seed lift overlay summary: "
+            f"seed_lift_overlay_path={overlay_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+    fields: dict[str, str] = {}
+    for line in lines:
+        if "=" not in line:
+            continue
+        key, value = line.split("=", maxsplit=1)
+        fields[key.strip()] = value.strip()
+    return _LiftOverlaySummary(
+        frame_id=fields.get("frame_id", ""),
+        candidate_id=fields.get("candidate_id", ""),
+    )
 
 
 def _frame_number(frame_id: str) -> int | None:
@@ -634,6 +1041,7 @@ __all__ = [
     "MultiViewDecision",
     "MultiViewDecisionInput",
     "MultiViewDecisionPayload",
+    "SeedLiftStatus",
     "SuggestAdditionalViewsArgs",
     "SuggestedView",
     "SuggestedViewPayload",
