@@ -245,6 +245,7 @@ class ViewCropArgs(BaseModel):
             and _raw_bbox_looks_like_pixels(values.get("bbox"))
         ):
             values["bbox_format"] = "pixel_xyxy"
+        values.pop("purpose", None)
         return values
 
     @field_validator("bbox")

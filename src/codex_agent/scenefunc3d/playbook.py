@@ -64,7 +64,10 @@ validates that the seed lift overlay matches the accepted frame and seed
 fragment, then returns seed_lift_point_count, seed_lift_status, suggested
 views, and an expand/stop recommendation so you can decide whether the target
 part needs more views. When suggested views include views[].matched_objects with
-bbox_xyxy, crop those object bboxes before any follow-up Molmo call.
+bbox_xyxy, crop those object bboxes before any follow-up Molmo call. Prefer
+views[].recommended_crops when present; these include the full matched object
+bbox and a targeted right/lower affordance crop for small dials, valves,
+knobs, handles, switches, or buttons.
 Use lift_mask_to_3d.mask_npz_path as seed_mask_npz_path,
 lift_mask_to_3d.mask_ply_path as seed_mask_ply_path, lift_mask_to_3d.overlay_path
 as seed_lift_overlay_path, and build seed_fragment_id as

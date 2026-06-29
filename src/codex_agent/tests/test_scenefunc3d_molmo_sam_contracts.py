@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import struct
 import threading
 from http.server import ThreadingHTTPServer
@@ -114,6 +115,24 @@ def test_molmo_point_args_derive_frame_id_from_view_crop_image_path(
     assert args.frame_id == "000056"
 
 
+def test_molmo_point_args_ignore_task_description_context(tmp_path: Path) -> None:
+    image_path = tmp_path / "000073_crop_pixel_xyxy_f8b77abedbc2.jpg"
+    image_path.write_bytes(b"image")
+
+    args = MolmoPointArgs.model_validate(
+        {
+            "frame_id": "000073",
+            "image_path": str(image_path),
+            "prompt": "Point to the radiator dial used to adjust room temperature.",
+            "task_description": "Adjust room temperature using the radiator dial.",
+            "image_width": 160,
+            "image_height": 230,
+        }
+    )
+
+    assert args.prompt == "Point to the radiator dial used to adjust room temperature."
+
+
 def test_sam_mask_args_rejects_missing_image_path(tmp_path: Path) -> None:
     payload: dict[str, object] = {
         "frame_id": "000050",
@@ -154,6 +173,60 @@ def test_sam_mask_args_accept_single_point_alias_and_redundant_image_size(
     assert len(args.points) == 1
     assert args.points[0].x_px == 613.18
     assert args.points[0].label == "bottom drawer handle"
+
+
+def test_sam_mask_args_accept_point_xy_alias(tmp_path: Path) -> None:
+    image_path = tmp_path / "000073_crop_pixel_xyxy_f8b77abedbc2.jpg"
+    image_path.write_bytes(b"image")
+
+    args = SamMaskArgs.model_validate(
+        {
+            "frame_id": "000073",
+            "image_path": str(image_path),
+            "point_xy": [84.0, 112.5],
+            "point_label": "radiator dial",
+            "point_source": "molmo",
+        }
+    )
+
+    assert len(args.points) == 1
+    assert args.points[0].x_px == 84.0
+    assert args.points[0].y_px == 112.5
+    assert args.points[0].label == "radiator dial"
+    assert args.points[0].source == "molmo"
+
+
+def test_sam_mask_args_rejects_non_finite_direct_point(tmp_path: Path) -> None:
+    image_path = tmp_path / "000073_crop_pixel_xyxy_f8b77abedbc2.jpg"
+    image_path.write_bytes(b"image")
+
+    with pytest.raises(ValidationError):
+        SamMaskArgs.model_validate(
+            {
+                "frame_id": "000073",
+                "image_path": str(image_path),
+                "points": (
+                    {
+                        "x_px": math.inf,
+                        "y_px": 112.5,
+                    },
+                ),
+            }
+        )
+
+
+def test_sam_mask_args_rejects_non_finite_point_xy_alias(tmp_path: Path) -> None:
+    image_path = tmp_path / "000073_crop_pixel_xyxy_f8b77abedbc2.jpg"
+    image_path.write_bytes(b"image")
+
+    with pytest.raises(ValidationError):
+        SamMaskArgs.model_validate(
+            {
+                "frame_id": "000073",
+                "image_path": str(image_path),
+                "point_xy": [math.inf, 112.5],
+            }
+        )
 
 
 def test_sam_mask_args_accept_agent_point_review_context(

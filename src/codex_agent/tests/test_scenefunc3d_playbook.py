@@ -102,6 +102,7 @@ def test_playbook_tells_agent_to_crop_from_matched_object_bboxes() -> None:
     assert "bbox_xyxy" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "object bbox" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "right/lower" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "recommended_crops" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
 def test_playbook_requires_nearby_frame_sweep_before_accepting_drawer_seams() -> None:

@@ -33,6 +33,7 @@ _QUERY_FRAME_ID_RE = re.compile(
 _OBJECT_FRAME_MAP_PATH = Path("indices") / "object_frame_map.json"
 _MIN_OBJECT_SCORE = 0.1
 _CO_OCCURRENCE_BONUS = 2.0
+_PRIMARY_OBJECT_BONUS = 2.0
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,7 @@ class _ObjectQueryTerm:
     query_triggers: tuple[str, ...]
     label_aliases: tuple[str, ...]
     weight: float
+    is_primary_object: bool = False
 
 
 _OBJECT_QUERY_TERMS: tuple[_ObjectQueryTerm, ...] = (
@@ -49,16 +51,19 @@ _OBJECT_QUERY_TERMS: tuple[_ObjectQueryTerm, ...] = (
         query_triggers=("drawer", "drawers"),
         label_aliases=("drawer",),
         weight=3.0,
+        is_primary_object=True,
     ),
     _ObjectQueryTerm(
         query_triggers=("cabinet", "cabinets"),
         label_aliases=("cabinet",),
         weight=2.0,
+        is_primary_object=True,
     ),
     _ObjectQueryTerm(
         query_triggers=("tv", "television"),
         label_aliases=("television", "tv", "screen"),
         weight=2.0,
+        is_primary_object=True,
     ),
     _ObjectQueryTerm(
         query_triggers=("handle", "knob", "pull"),
@@ -69,6 +74,7 @@ _OBJECT_QUERY_TERMS: tuple[_ObjectQueryTerm, ...] = (
         query_triggers=("radiator", "radiators", "heater", "heaters", "temperature"),
         label_aliases=("radiator", "heater"),
         weight=3.0,
+        is_primary_object=True,
     ),
     _ObjectQueryTerm(
         query_triggers=("button", "buttons", "switch", "switches"),
@@ -148,10 +154,13 @@ class KeyframeSelectorArgs(BaseModel):
                 values["query"] = target
             elif object_hint is not None:
                 values["query"] = object_hint
-        if "k" not in values and "max_frames" in values:
-            values["k"] = values.pop("max_frames")
-        else:
-            values.pop("max_frames", None)
+        if "k" not in values:
+            if "max_frames" in values:
+                values["k"] = values.pop("max_frames")
+            elif "top_k" in values:
+                values["k"] = values.pop("top_k")
+        values.pop("max_frames", None)
+        values.pop("top_k", None)
         values.pop("annotation_ids", None)
         values.pop("motion_type", None)
         values.pop("motion_hints", None)
@@ -199,6 +208,7 @@ class VisibleObjectFrameScore:
     frame_id: str
     score: float
     matched_objects: tuple[KeyframeMatchedObjectPayload, ...]
+    primary_object_match_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -207,6 +217,7 @@ class _ScoredObjectFrame:
 
     score: float
     matched_objects: tuple[KeyframeMatchedObjectPayload, ...]
+    primary_object_match_count: int
 
 
 @dataclass(frozen=True)
@@ -410,12 +421,16 @@ def visible_object_frame_scores(
                     frame_id=frame_id,
                     score=scored_frame.score,
                     matched_objects=scored_frame.matched_objects,
+                    primary_object_match_count=(
+                        scored_frame.primary_object_match_count
+                    ),
                 )
             )
     return tuple(
         sorted(
             scored_frames,
             key=lambda frame_score: (
+                -frame_score.primary_object_match_count,
                 -frame_score.score,
                 _numeric_frame_sort_key(frame_score.frame_id),
                 frame_score.frame_id,
@@ -483,6 +498,7 @@ def _score_object_frame(
 ) -> _ScoredObjectFrame:
     score = 0.0
     matched_term_count = 0
+    matched_primary_object_count = 0
     matched_objects_by_id: dict[str, KeyframeMatchedObjectPayload] = {}
     for query_term in query_terms:
         term_score = 0.0
@@ -499,12 +515,17 @@ def _score_object_frame(
                 )
         if term_score > 0.0:
             matched_term_count += 1
+            if query_term.is_primary_object:
+                matched_primary_object_count += 1
             score += term_score
     if matched_term_count > 1:
         score += _CO_OCCURRENCE_BONUS * (matched_term_count - 1)
+    if matched_primary_object_count > 0:
+        score += _PRIMARY_OBJECT_BONUS * matched_primary_object_count
     return _ScoredObjectFrame(
         score=score,
         matched_objects=tuple(matched_objects_by_id.values()),
+        primary_object_match_count=matched_primary_object_count,
     )
 
 

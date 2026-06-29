@@ -117,6 +117,7 @@ class MolmoPointArgs(BaseModel):
             frame_id = _frame_id_from_image_path(values.get("image_path"))
             if frame_id is not None:
                 values["frame_id"] = frame_id
+        values.pop("task_description", None)
         return values
 
 

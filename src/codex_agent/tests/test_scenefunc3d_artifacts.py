@@ -377,6 +377,81 @@ def test_suggest_additional_views_prioritizes_query_visible_object_frames(
     ]
 
 
+def test_suggest_additional_views_recommends_crops_from_matched_object_bboxes(
+    tmp_path: Path,
+) -> None:
+    scene_dir = tmp_path / "421393"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    object_frame_map_path.parent.mkdir(parents=True)
+    for frame_id in ("000010", "000073"):
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    _write_geometry_assets(raw_dir, "000010", x_translation=0.0)
+    _write_geometry_assets(raw_dir, "000073", x_translation=2.0)
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000073-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 8,
+                                "class_name": "heater",
+                                "score": 0.86,
+                                "bbox_xyxy": [100, 200, 500, 1000],
+                            }
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    seed_dir = tmp_path / "fragments" / "000010_mask_00"
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    tool_scene = SceneFunc3dToolScene.load(scene_dir)
+    args = SuggestAdditionalViewsArgs(
+        seed_fragment_id="000010_mask_00",
+        accepted_frame_id="000010",
+        seed_mask_npz_path=mask_npz_path,
+        seed_mask_ply_path=mask_ply_path,
+        seed_lift_overlay_path=lift_overlay_path,
+        task_description="Adjust room temperature using the radiator dial",
+        min_seed_point_count=1,
+        k=1,
+    )
+
+    result = suggest_additional_views(tool_scene, args)
+    payload = cast(SuggestedViewsPayload, result.to_payload())
+
+    assert payload["views"][0]["recommended_crops"] == [
+        {
+            "bbox_xyxy": [100.0, 200.0, 500.0, 1000.0],
+            "bbox_format": "pixel_xyxy",
+            "reason": "matched_object_full_bbox",
+            "source_object_id": "8",
+            "source_object_label": "heater",
+        },
+        {
+            "bbox_xyxy": [360.0, 760.0, 540.0, 1040.0],
+            "bbox_format": "pixel_xyxy",
+            "reason": "right_lower_affordance_crop_from_matched_object_bbox",
+            "source_object_id": "8",
+            "source_object_label": "heater",
+        },
+    ]
+
+
 def test_suggest_additional_views_stops_when_only_accepted_frame_exists(
     tmp_path: Path,
 ) -> None:

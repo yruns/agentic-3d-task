@@ -123,6 +123,22 @@ def test_keyframe_selector_args_accept_max_frames_alias() -> None:
     assert args.k == 8
 
 
+def test_keyframe_selector_args_accept_top_k_alias() -> None:
+    args = KeyframeSelectorArgs.model_validate(
+        {"query": "Open the bottom drawer.", "top_k": 6}
+    )
+
+    assert args.k == 6
+
+
+def test_keyframe_selector_args_keep_k_priority_over_top_k_alias() -> None:
+    args = KeyframeSelectorArgs.model_validate(
+        {"query": "Open the bottom drawer.", "k": 3, "top_k": 6}
+    )
+
+    assert args.k == 3
+
+
 def test_view_frame_args_accept_single_frame_id_alias() -> None:
     args = ViewFrameArgs.model_validate({"frame_id": "000056"})
 
@@ -158,6 +174,7 @@ def test_view_crop_args_accept_bbox_xyxy_alias_and_infer_pixel_format() -> None:
         {
             "frame_id": "000011",
             "bbox_xyxy": [900.0, 1500.0, 1100.0, 1730.0],
+            "purpose": "crop the radiator dial",
         }
     )
 
@@ -1713,6 +1730,147 @@ def test_cli_keyframe_selector_maps_radiator_query_to_heater_objects(
     assert payload["strategy"] == "visible_object_query_match"
     assert selected_frame_ids == ["000010", "000000"]
     assert payload["frames"][0]["reason"] == "visible_object_query_match"
+
+
+def test_cli_keyframe_selector_prioritizes_primary_object_over_generic_affordance(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421393"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    for frame_id in ("000058", "000073"):
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000058-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 10,
+                                "class_name": "door handle",
+                                "score": 0.76,
+                            }
+                        ],
+                    },
+                    "1": {
+                        "view_id": 1,
+                        "frame_name": "000073-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 11,
+                                "class_name": "heater",
+                                "score": 0.86,
+                                "bbox_xyxy": [380, 291, 940, 1440],
+                            }
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "query": (
+                        "radiator dial valve thermostat knob temperature control"
+                    ),
+                    "k": 2,
+                }
+            ),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    selected_frame_ids = [frame["frame_id"] for frame in payload["frames"]]
+    assert payload["strategy"] == "visible_object_query_match"
+    assert selected_frame_ids == ["000073", "000058"]
+    assert payload["frames"][0]["matched_objects"][0]["label"] == "heater"
+
+
+def test_cli_keyframe_selector_primary_object_is_ranking_tier(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421393"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    for frame_id in ("000058", "000073"):
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000058-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 10,
+                                "class_name": "door handle",
+                                "score": 1.0,
+                            }
+                        ],
+                    },
+                    "1": {
+                        "view_id": 1,
+                        "frame_name": "000073-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 11,
+                                "class_name": "heater",
+                                "score": 0.1,
+                            }
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "query": (
+                        "radiator dial valve thermostat knob temperature control"
+                    ),
+                    "k": 2,
+                }
+            ),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    selected_frame_ids = [frame["frame_id"] for frame in payload["frames"]]
+    assert selected_frame_ids == ["000073", "000058"]
 
 
 def test_cli_keyframe_selector_returns_matched_object_bbox_metadata(

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import math
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from re import Pattern
@@ -40,7 +41,9 @@ SafePathComponentText = Annotated[
         pattern=r"^[A-Za-z0-9_-]+$",
     ),
 ]
-StrictPixelCoordinate = Annotated[float, Field(ge=0.0, strict=True)]
+StrictPixelCoordinate = Annotated[
+    float, Field(ge=0.0, strict=True, allow_inf_nan=False)
+]
 _SAFE_PATH_COMPONENT_RE: Pattern[str] = re.compile(r"^[A-Za-z0-9_-]+$")
 _MASK_OVERLAY_ALPHA = 96
 _CONTACT_LABEL_HEIGHT_PX = 24
@@ -77,6 +80,15 @@ class SamMaskArgsPayload(TypedDict):
 
 class SamPointInputPayload(TypedDict):
     """JSON-ready payload for one SAM point prompt."""
+
+    x_px: float
+    y_px: float
+    source: str
+    label: str
+
+
+class _SamPointAliasPayload(TypedDict):
+    """Strict point payload built from compact agent aliases."""
 
     x_px: float
     y_px: float
@@ -122,6 +134,16 @@ class SamMaskArgs(BaseModel):
         values = dict(payload)
         if "points" not in values and "point" in values:
             values["points"] = (values.pop("point"),)
+        if "points" not in values and "point_xy" in values:
+            values["points"] = (
+                _point_alias_payload_from_xy(
+                    values.pop("point_xy"),
+                    raw_source=values.get("point_source"),
+                    raw_label=values.get("point_label"),
+                ),
+            )
+        else:
+            values.pop("point_xy", None)
         values.pop("image_width", None)
         values.pop("image_height", None)
         values.pop("point_label", None)
@@ -136,6 +158,33 @@ class SamMaskArgs(BaseModel):
             "image_path": str(self.image_path),
             "points": [point.to_payload() for point in self.points],
         }
+
+
+def _point_alias_payload_from_xy(
+    raw_point_xy: object,
+    *,
+    raw_source: object,
+    raw_label: object,
+) -> _SamPointAliasPayload:
+    if not isinstance(raw_point_xy, Sequence) or isinstance(raw_point_xy, str | bytes):
+        raise ValueError("point_xy must be a two-item numeric sequence")
+    if len(raw_point_xy) != 2:
+        raise ValueError("point_xy must contain exactly two coordinates")
+    return {
+        "x_px": _coerce_point_coordinate(raw_point_xy[0], "point_xy[0]"),
+        "y_px": _coerce_point_coordinate(raw_point_xy[1], "point_xy[1]"),
+        "source": raw_source if isinstance(raw_source, str) else "",
+        "label": raw_label if isinstance(raw_label, str) else "",
+    }
+
+
+def _coerce_point_coordinate(raw_coordinate: object, field_name: str) -> float:
+    if isinstance(raw_coordinate, bool) or not isinstance(raw_coordinate, int | float):
+        raise ValueError(f"{field_name} must be numeric")
+    coordinate = float(raw_coordinate)
+    if not math.isfinite(coordinate):
+        raise ValueError(f"{field_name} must be finite")
+    return coordinate
 
 
 @dataclass(frozen=True)
