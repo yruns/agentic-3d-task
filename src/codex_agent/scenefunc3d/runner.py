@@ -246,6 +246,31 @@ class _ToolPointPayload(BaseModel):
     label: str = ""
 
 
+class _EvidenceImageFrameResult(BaseModel):
+    """One evidence image returned by ``view_frame`` or ``view_crop``."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    frame_id: NonEmptyString
+    image_path: NonEmptyString
+
+
+class _EvidenceImageToolResult(BaseModel):
+    """Fields needed to prove one Molmo call used a viewed evidence image."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    frames: tuple[_EvidenceImageFrameResult, ...] = Field(min_length=1)
+
+
+class _MolmoPointToolArgs(BaseModel):
+    """Fields needed to prove one Molmo call used a prior evidence image."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    image_path: NonEmptyString
+
+
 class _MolmoPointToolResult(BaseModel):
     """Fields needed to prove one accepted fragment's Molmo provenance."""
 
@@ -283,6 +308,7 @@ class _SamMaskToolArgs(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     frame_id: NonEmptyString
+    image_path: NonEmptyString
     points: tuple[_ToolPointPayload, ...] = Field(min_length=1)
 
     @model_validator(mode="before")
@@ -342,7 +368,17 @@ class _ParsedMolmoPointToolEvent:
     """A validated Molmo point event with source location for diagnostics."""
 
     line_number: int
+    args: _MolmoPointToolArgs
     result: _MolmoPointToolResult
+
+
+@dataclass(frozen=True)
+class _ParsedEvidenceImageToolEvent:
+    """A validated evidence-image event with source location."""
+
+    line_number: int
+    tool_name: str
+    result: _EvidenceImageToolResult
 
 
 @dataclass(frozen=True)
@@ -1170,6 +1206,7 @@ def _validate_standard_fragment_upstream_tool_events(
     events_path: Path,
     fuse_line_number: int,
 ) -> None:
+    evidence_image_events = _successful_evidence_image_tool_events(events_path)
     molmo_events = _successful_molmo_point_tool_events(events_path)
     sam_events = _successful_sam_mask_tool_events(events_path)
     lift_events = _successful_lift_mask_tool_events(events_path)
@@ -1180,6 +1217,7 @@ def _validate_standard_fragment_upstream_tool_events(
         _require_matching_standard_fragment_tool_chain(
             fragment,
             candidate_id=candidate_id,
+            evidence_image_events=evidence_image_events,
             molmo_events=molmo_events,
             sam_events=sam_events,
             lift_events=lift_events,
@@ -1193,6 +1231,7 @@ def _require_matching_standard_fragment_tool_chain(
     fragment: FinalMaskAcceptedFragment,
     *,
     candidate_id: str,
+    evidence_image_events: tuple[_ParsedEvidenceImageToolEvent, ...],
     molmo_events: tuple[_ParsedMolmoPointToolEvent, ...],
     sam_events: tuple[_ParsedSamMaskToolEvent, ...],
     lift_events: tuple[_ParsedLiftMaskToolEvent, ...],
@@ -1202,7 +1241,8 @@ def _require_matching_standard_fragment_tool_chain(
 ) -> None:
     matching_molmo_events = _matching_molmo_point_events(
         fragment,
-        molmo_events,
+        evidence_image_events=evidence_image_events,
+        molmo_events=molmo_events,
         events_path=events_path,
         before_line_number=fuse_line_number,
     )
@@ -1216,6 +1256,7 @@ def _require_matching_standard_fragment_tool_chain(
         sam_event = _matching_sam_mask_event(
             fragment,
             candidate_id=candidate_id,
+            molmo_image_path=molmo_event.args.image_path,
             molmo_points=molmo_event.result.points,
             sam_events=sam_events,
             events_path=events_path,
@@ -1271,8 +1312,9 @@ def _standard_fragment_candidate_id(
 
 def _matching_molmo_point_events(
     fragment: FinalMaskAcceptedFragment,
-    molmo_events: tuple[_ParsedMolmoPointToolEvent, ...],
     *,
+    evidence_image_events: tuple[_ParsedEvidenceImageToolEvent, ...],
+    molmo_events: tuple[_ParsedMolmoPointToolEvent, ...],
     events_path: Path,
     before_line_number: int,
 ) -> tuple[_ParsedMolmoPointToolEvent, ...]:
@@ -1280,8 +1322,17 @@ def _matching_molmo_point_events(
     for parsed_event in molmo_events:
         if parsed_event.line_number >= before_line_number:
             continue
+        args = parsed_event.args
         result = parsed_event.result
         if result.frame_id != fragment.frame_id:
+            continue
+        if not _molmo_uses_prior_evidence_image(
+            args,
+            frame_id=result.frame_id,
+            evidence_image_events=evidence_image_events,
+            events_path=events_path,
+            molmo_line_number=parsed_event.line_number,
+        ):
             continue
         if not _tool_event_path_matches(
             result.raw_text_path,
@@ -1313,7 +1364,8 @@ def _raise_missing_molmo_point_event(
 ) -> NoReturn:
     raise CodexResponseError(
         "accepted standard fragment must be backed by a successful molmo_point "
-        "tool event from this run before fuse_accepted_masks in the required "
+        "tool event from this run, using an image_path returned earlier by "
+        "view_frame or view_crop, before fuse_accepted_masks in the required "
         "Molmo point -> SAM mask -> lift_mask_to_3d order: "
         f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
         f"molmo_raw_text_path={fragment.review_artifacts.molmo_raw_text_path}; "
@@ -1323,10 +1375,37 @@ def _raise_missing_molmo_point_event(
     )
 
 
+def _molmo_uses_prior_evidence_image(
+    molmo_args: _MolmoPointToolArgs,
+    *,
+    frame_id: str,
+    evidence_image_events: tuple[_ParsedEvidenceImageToolEvent, ...],
+    events_path: Path,
+    molmo_line_number: int,
+) -> bool:
+    for evidence_event in evidence_image_events:
+        if evidence_event.line_number >= molmo_line_number:
+            continue
+        for frame in evidence_event.result.frames:
+            if frame.frame_id != frame_id:
+                continue
+            if _tool_event_path_matches(
+                molmo_args.image_path,
+                Path(frame.image_path),
+                tool_name="molmo_point",
+                field_name="args.image_path",
+                events_path=events_path,
+                line_number=molmo_line_number,
+            ):
+                return True
+    return False
+
+
 def _matching_sam_mask_event(
     fragment: FinalMaskAcceptedFragment,
     *,
     candidate_id: str,
+    molmo_image_path: str,
     molmo_points: tuple[_ToolPointPayload, ...],
     sam_events: tuple[_ParsedSamMaskToolEvent, ...],
     events_path: Path,
@@ -1342,6 +1421,15 @@ def _matching_sam_mask_event(
         args = parsed_event.args
         result = parsed_event.result
         if args.frame_id != fragment.frame_id:
+            continue
+        if not _tool_event_path_matches(
+            args.image_path,
+            Path(molmo_image_path),
+            tool_name="sam_mask",
+            field_name="args.image_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
             continue
         if not _sam_points_match_molmo_points(args.points, molmo_points):
             continue
@@ -1382,7 +1470,7 @@ def _raise_missing_sam_mask_event(
         "accepted standard fragment must be backed by a successful sam_mask "
         "tool event from this run before fuse_accepted_masks in the required "
         "Molmo point -> SAM mask -> lift_mask_to_3d order, and the SAM point "
-        "prompt must come from the matched Molmo point output: "
+        "prompt and image_path must come from the matched Molmo point output: "
         f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
         f"candidate_id={candidate_id}; "
         f"sam_contact_sheet_path={fragment.review_artifacts.sam_contact_sheet_path}; "
@@ -1576,15 +1664,44 @@ def _successful_molmo_point_tool_events(
         events_path, tool_names={"molmo_point"}
     ):
         try:
+            args = _MolmoPointToolArgs.model_validate(event.args)
             result = _MolmoPointToolResult.model_validate(event.result)
         except ValidationError as exc:
             raise CodexResponseError(
                 "successful molmo_point tool event does not match the expected "
-                "result schema: "
+                "args/result schema: "
                 f"events_path={events_path}; line={event.line_number}; error={exc}"
             ) from exc
         events.append(
-            _ParsedMolmoPointToolEvent(line_number=event.line_number, result=result)
+            _ParsedMolmoPointToolEvent(
+                line_number=event.line_number, args=args, result=result
+            )
+        )
+    return tuple(events)
+
+
+def _successful_evidence_image_tool_events(
+    events_path: Path,
+) -> tuple[_ParsedEvidenceImageToolEvent, ...]:
+    events: list[_ParsedEvidenceImageToolEvent] = []
+    for event in _successful_tool_result_events(
+        events_path, tool_names={"view_frame", "view_crop"}
+    ):
+        try:
+            result = _EvidenceImageToolResult.model_validate(event.result)
+        except ValidationError as exc:
+            raise CodexResponseError(
+                "successful evidence image tool event does not match the expected "
+                "result schema: "
+                f"tool_name={event.tool_name}; events_path={events_path}; "
+                f"line={event.line_number}; error={exc}"
+            ) from exc
+        events.append(
+            _ParsedEvidenceImageToolEvent(
+                line_number=event.line_number,
+                tool_name=event.tool_name,
+                result=result,
+            )
         )
     return tuple(events)
 

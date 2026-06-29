@@ -1198,6 +1198,30 @@ def test_run_single_sample_rejects_standard_fragment_with_wrong_sam_point(
     )
 
 
+def test_run_single_sample_rejects_standard_fragment_without_evidence_view_event(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
+        tmp_path,
+        tool_name="view_frame",
+        event_mutator=_set_failed_tool_event_status,
+        result_mutator=_keep_tool_result,
+        match="view_frame or view_crop",
+    )
+
+
+def test_run_single_sample_rejects_standard_fragment_with_wrong_sam_image_path(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
+        tmp_path,
+        tool_name="sam_mask",
+        args_mutator=_set_wrong_sam_image_path,
+        result_mutator=_keep_tool_result,
+        match="sam_mask",
+    )
+
+
 def test_run_single_sample_rejects_standard_fragment_with_wrong_lift_event_path(
     tmp_path: Path,
 ) -> None:
@@ -1479,6 +1503,68 @@ def test_run_single_sample_accepts_standard_fragment_with_sam_point_xy_alias(
             args_mutator=lambda args: _set_sam_point_xy_alias_with_different_text(
                 args, sample_output_dir
             ),
+            event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
+            result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00",),
+            accepted_frame_ids=("000010",),
+        )
+
+    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
+        tmp_path,
+        write_tool_events,
+    )
+
+    assert result_path == sample_output_dir / "result.json"
+
+
+def test_run_single_sample_accepts_standard_fragment_with_crop_evidence_image(
+    tmp_path: Path,
+) -> None:
+    def write_tool_events(sample_output_dir: Path) -> None:
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _rewrite_first_tool_result(
+            sample_output_dir,
+            tool_name="view_frame",
+            args_mutator=lambda args: _keep_tool_args(args, sample_output_dir),
+            event_mutator=lambda event: _set_view_crop_tool_event(
+                event, sample_output_dir
+            ),
+            result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00",),
+            accepted_frame_ids=("000010",),
+        )
+
+    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
+        tmp_path,
+        write_tool_events,
+    )
+
+    assert result_path == sample_output_dir / "result.json"
+
+
+def test_run_single_sample_accepts_standard_fragment_with_molmo_frame_inferred(
+    tmp_path: Path,
+) -> None:
+    def write_tool_events(sample_output_dir: Path) -> None:
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _rewrite_first_tool_result(
+            sample_output_dir,
+            tool_name="molmo_point",
+            args_mutator=lambda args: _remove_frame_id_arg(args, sample_output_dir),
             event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
             result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
         )
@@ -2627,13 +2713,40 @@ def _write_standard_upstream_tool_events(
     root: Path, *, frame_id: str, candidate_id: str
 ) -> None:
     fragment_id = f"{frame_id}_{candidate_id}"
+    evidence_image_path = root / "421254" / f"{frame_id}.jpg"
+    _append_event_payload(
+        root,
+        {
+            "event_type": "tool_completed",
+            "tool_name": "view_frame",
+            "status": "success",
+            "args": {"frame_id": frame_id},
+            "result": {
+                "frames": [
+                    {
+                        "frame_id": frame_id,
+                        "image_path": str(evidence_image_path),
+                        "image_width": 1280,
+                        "image_height": 720,
+                    }
+                ]
+            },
+            "error": "",
+        },
+    )
     _append_event_payload(
         root,
         {
             "event_type": "tool_completed",
             "tool_name": "molmo_point",
             "status": "success",
-            "args": {"frame_id": frame_id},
+            "args": {
+                "frame_id": frame_id,
+                "image_path": str(evidence_image_path),
+                "prompt": "point to the target handle",
+                "image_width": 1280,
+                "image_height": 720,
+            },
             "result": {
                 "frame_id": frame_id,
                 "prompt": "point to the target handle",
@@ -2659,6 +2772,7 @@ def _write_standard_upstream_tool_events(
             "status": "success",
             "args": {
                 "frame_id": frame_id,
+                "image_path": str(evidence_image_path),
                 "points": [
                     {
                         "x_px": 12.5,
@@ -2922,6 +3036,15 @@ def _set_wrong_sam_point_prompt(args: dict[str, object], root: Path) -> None:
     point["x_px"] = 98.0
 
 
+def _set_wrong_sam_image_path(args: dict[str, object], root: Path) -> None:
+    args["image_path"] = str(root / "421254" / "000011.jpg")
+
+
+def _remove_frame_id_arg(args: dict[str, object], root: Path) -> None:
+    _ = root
+    args.pop("frame_id", None)
+
+
 def _set_stale_molmo_point_prompt(result: dict[str, object], root: Path) -> None:
     _ = root
     point = _copy_first_tool_point(result)
@@ -2980,6 +3103,18 @@ def _set_wrong_lift_mask_input_path(args: dict[str, object], root: Path) -> None
 def _set_non_completed_tool_event_type(event: dict[str, object], root: Path) -> None:
     _ = root
     event["event_type"] = "manual_success"
+
+
+def _set_failed_tool_event_status(event: dict[str, object], root: Path) -> None:
+    _ = root
+    event["event_type"] = "tool_failed"
+    event["status"] = "failed"
+    event["error"] = "test failed event"
+
+
+def _set_view_crop_tool_event(event: dict[str, object], root: Path) -> None:
+    _ = root
+    event["tool_name"] = "view_crop"
 
 
 def _rewrite_first_tool_result(
