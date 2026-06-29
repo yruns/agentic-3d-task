@@ -1477,6 +1477,151 @@ def test_cli_keyframe_selector_prioritizes_visible_query_objects(
     assert payload["frames"][0]["reason"] == "visible_object_query_match"
 
 
+def test_cli_keyframe_selector_maps_radiator_query_to_heater_objects(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421393"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    for frame_id in ("000000", "000010", "000020"):
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000000-rgb.jpg",
+                        "objects": [
+                            {"object_id": 1, "class_name": "wall", "score": 0.9}
+                        ],
+                    },
+                    "1": {
+                        "view_id": 1,
+                        "frame_name": "000010-rgb.jpg",
+                        "objects": [
+                            {"object_id": 2, "class_name": "heater", "score": 0.8}
+                        ],
+                    },
+                    "2": {
+                        "view_id": 2,
+                        "frame_name": "000020-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 3,
+                                "class_name": "light switch",
+                                "score": 0.95,
+                            }
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "query": "Adjust room temperature using the radiator dial",
+                    "k": 2,
+                }
+            ),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    selected_frame_ids = [frame["frame_id"] for frame in payload["frames"]]
+    assert payload["strategy"] == "visible_object_query_match"
+    assert selected_frame_ids == ["000010", "000000"]
+    assert payload["frames"][0]["reason"] == "visible_object_query_match"
+
+
+@pytest.mark.parametrize(
+    ("query", "visible_label"),
+    [
+        ("Find the small dial for the cabinet control", "round knob"),
+        ("Press the wall switch near the door", "button panel"),
+    ],
+)
+def test_cli_keyframe_selector_maps_functional_part_aliases(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    query: str,
+    visible_label: str,
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    for frame_id in ("000000", "000010"):
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000000-rgb.jpg",
+                        "objects": [
+                            {"object_id": 1, "class_name": "wall", "score": 0.9}
+                        ],
+                    },
+                    "1": {
+                        "view_id": 1,
+                        "frame_name": "000010-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 2,
+                                "class_name": visible_label,
+                                "score": 0.8,
+                            }
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": query, "k": 1}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["strategy"] == "visible_object_query_match"
+    assert len(payload["frames"]) == 1
+    selected_frame = payload["frames"][0]
+    assert selected_frame["frame_id"] == "000010"
+    assert selected_frame["rank"] == 1
+    assert selected_frame["score"] > 0.0
+    assert selected_frame["reason"] == "visible_object_query_match"
+
+
 def test_cli_keyframe_selector_validates_visible_object_index_schema(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

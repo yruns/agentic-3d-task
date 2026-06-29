@@ -62,6 +62,21 @@ _OBJECT_QUERY_TERMS: tuple[_ObjectQueryTerm, ...] = (
         label_aliases=("handle", "knob", "pull"),
         weight=4.0,
     ),
+    _ObjectQueryTerm(
+        query_triggers=("radiator", "radiators", "heater", "heaters", "temperature"),
+        label_aliases=("radiator", "heater"),
+        weight=3.0,
+    ),
+    _ObjectQueryTerm(
+        query_triggers=("button", "buttons", "switch", "switches"),
+        label_aliases=("button", "switch"),
+        weight=4.0,
+    ),
+    _ObjectQueryTerm(
+        query_triggers=("dial", "dials", "valve", "valves", "control", "controls"),
+        label_aliases=("dial", "valve", "knob", "control"),
+        weight=4.0,
+    ),
 )
 
 
