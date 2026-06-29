@@ -288,6 +288,7 @@ def _validate_result_file_final_artifact(
             mask_ply_path=mask_ply_path,
             selected_frame_ids=selected_frame_ids,
             accepted_fragment_ids=accepted_fragment_ids,
+            allow_copied_artifact_members=True,
         )
     except CodexResponseError as exc:
         raise SceneFunc3dDataError(

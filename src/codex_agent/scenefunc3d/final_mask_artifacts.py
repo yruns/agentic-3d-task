@@ -133,18 +133,23 @@ def validate_final_mask_artifact(
     mask_ply_path: Path,
     selected_frame_ids: tuple[str, ...],
     accepted_fragment_ids: tuple[str, ...],
+    allow_copied_artifact_members: bool = False,
 ) -> ValidatedFinalMaskArtifact:
     """Validate final artifact JSON, NPZ points, and PLY vertex consistency."""
     artifact_document = _load_final_mask_artifact_document(artifact_path)
     _require_matching_artifact_path(
         artifact_document.mask_npz_path,
+        artifact_path=artifact_path,
         expected_path=mask_npz_path,
         field_name="mask_npz_path",
+        allow_copied_artifact_members=allow_copied_artifact_members,
     )
     _require_matching_artifact_path(
         artifact_document.mask_ply_path,
+        artifact_path=artifact_path,
         expected_path=mask_ply_path,
         field_name="mask_ply_path",
+        allow_copied_artifact_members=allow_copied_artifact_members,
     )
     artifact_fragment_ids = tuple(
         fragment.fragment_id for fragment in artifact_document.accepted_fragments
@@ -391,16 +396,81 @@ def _load_final_mask_artifact_document(
 def _require_matching_artifact_path(
     raw_path: str,
     *,
+    artifact_path: Path,
     expected_path: Path,
     field_name: str,
+    allow_copied_artifact_members: bool,
 ) -> None:
-    actual_path = Path(raw_path).expanduser().resolve()
+    raw_actual_path = Path(raw_path).expanduser()
+    actual_path = raw_actual_path.resolve()
     resolved_expected_path = expected_path.expanduser().resolve()
     if actual_path != resolved_expected_path:
+        copied_actual_path = _resolve_copied_final_artifact_member_path(
+            artifact_path=artifact_path,
+            stale_member_path=raw_actual_path,
+            enabled=allow_copied_artifact_members,
+        )
+        if copied_actual_path == resolved_expected_path:
+            return
         raise CodexResponseError(
             f"mask_artifact_path {field_name} must match final response: "
             f"artifact={actual_path}; response={resolved_expected_path}"
         )
+
+
+def _resolve_copied_final_artifact_member_path(
+    *,
+    artifact_path: Path,
+    stale_member_path: Path,
+    enabled: bool,
+) -> Path | None:
+    if (
+        not enabled
+        or not stale_member_path.is_absolute()
+        or stale_member_path.is_file()
+    ):
+        return None
+    candidates = _existing_copied_final_artifact_member_candidates(
+        search_root=artifact_path.parent,
+        stale_member_path=stale_member_path,
+    )
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        raise CodexResponseError(
+            "copied final artifact member path is ambiguous: "
+            f"artifact_path={artifact_path}; "
+            f"stale_member_path={stale_member_path}; "
+            f"candidates={tuple(str(path) for path in candidates)}"
+        )
+    return None
+
+
+def _existing_copied_final_artifact_member_candidates(
+    *,
+    search_root: Path,
+    stale_member_path: Path,
+) -> tuple[Path, ...]:
+    parent_name = stale_member_path.parent.name
+    candidate_paths = [
+        search_root / stale_member_path.name,
+        search_root / parent_name / stale_member_path.name,
+    ]
+    return _deduplicate_existing_paths(candidate_paths)
+
+
+def _deduplicate_existing_paths(candidate_paths: list[Path]) -> tuple[Path, ...]:
+    resolved_candidates: list[Path] = []
+    seen_paths: set[Path] = set()
+    for candidate_path in candidate_paths:
+        if not candidate_path.is_file():
+            continue
+        resolved_path = candidate_path.resolve()
+        if resolved_path in seen_paths:
+            continue
+        resolved_candidates.append(resolved_path)
+        seen_paths.add(resolved_path)
+    return tuple(sorted(resolved_candidates))
 
 
 def _accepted_frame_ids_from_fragments(
