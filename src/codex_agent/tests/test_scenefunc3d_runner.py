@@ -127,6 +127,30 @@ def test_mask_task_parses_strict_final_json(
     assert outcome.to_payload() == payload
 
 
+def test_mask_task_rejects_artifact_without_multi_view_decision(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir)
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload.pop("multi_view_decision", None)
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+
+    with pytest.raises(CodexResponseError, match="multi_view_decision"):
+        task.parse_response(json.dumps(_outcome_payload(output_dir)))
+
+
 def test_mask_task_rejects_nonexistent_final_artifacts(
     tmp_path: Path,
 ) -> None:
@@ -781,9 +805,19 @@ def _write_outcome_artifacts(
             accepted_fragment_ids, accepted_frame_ids, strict=True
         )
     ]
+    unique_frame_ids = _unique_frame_ids(accepted_frame_ids)
+    multi_view_action = "expand" if len(unique_frame_ids) > 1 else "stop"
     artifact_payload: dict[str, object] = {
         "accepted_frame_ids": list(accepted_frame_ids),
         "accepted_fragments": accepted_fragments,
+        "multi_view_decision": {
+            "seed_fragment_id": accepted_fragment_ids[0],
+            "action": multi_view_action,
+            "reason": "test artifact records the first-lift multi-view decision",
+            "suggested_frame_ids": (
+                list(unique_frame_ids[1:]) if multi_view_action == "expand" else []
+            ),
+        },
         "mask_npz_path": str(mask_npz_path),
         "mask_ply_path": str(mask_ply_path),
     }
@@ -804,6 +838,16 @@ def _write_review_artifacts(root: Path) -> dict[str, str]:
     for path in paths.values():
         path.write_text("reviewed\n", encoding="utf-8")
     return {key: str(path) for key, path in paths.items()}
+
+
+def _unique_frame_ids(frame_ids: tuple[str, ...]) -> tuple[str, ...]:
+    seen_frame_ids: set[str] = set()
+    unique_frame_ids: list[str] = []
+    for frame_id in frame_ids:
+        if frame_id not in seen_frame_ids:
+            unique_frame_ids.append(frame_id)
+            seen_frame_ids.add(frame_id)
+    return tuple(unique_frame_ids)
 
 
 def _write_backend_config(

@@ -449,6 +449,12 @@ def _write_scoring_mask_artifact(artifact_path: Path, *, mask_npz_path: Path) ->
                         },
                     }
                 ],
+                "multi_view_decision": {
+                    "seed_fragment_id": "frag-a",
+                    "action": "stop",
+                    "reason": "first lift covers the target part for this fixture",
+                    "suggested_frame_ids": [],
+                },
                 "mask_npz_path": str(mask_npz_path),
                 "mask_ply_path": "/tmp/lifted_points.ply",
             }

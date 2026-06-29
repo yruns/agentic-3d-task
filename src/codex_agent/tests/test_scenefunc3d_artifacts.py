@@ -9,6 +9,7 @@ from typing import cast
 import pytest
 
 from codex_agent.errors import SceneFunc3dDataError
+from codex_agent.scenefunc3d.final_mask_artifacts import FinalMaskMultiViewAction
 from codex_agent.scenefunc3d.task import ApprovalAction
 from codex_agent.scenefunc3d.tools.mask_artifacts import (
     ArtifactStatus,
@@ -27,6 +28,8 @@ from codex_agent.scenefunc3d.tools.mask_inspection import (
     InspectMaskArtifactArgs,
     MaskInspectionPayload,
     MaskInspectionResult,
+    MultiViewDecisionInput,
+    MultiViewDecisionPayload,
     SuggestAdditionalViewsArgs,
     SuggestedView,
     SuggestedViewsPayload,
@@ -206,6 +209,7 @@ def test_fused_mask_payload(tmp_path: Path) -> None:
                 ),
             ),
         ),
+        multi_view_decision=_single_view_decision_input("000050_mask_00").to_domain(),
         mask_artifact_path=Path("/tmp/fused/mask_artifact.json"),
         mask_npz_path=Path("/tmp/fused/mask_data.npz"),
         mask_ply_path=Path("/tmp/fused/lifted_points.ply"),
@@ -220,6 +224,7 @@ def test_fused_mask_payload(tmp_path: Path) -> None:
     )
     assert payload["accepted_fragments"][0]["review_artifacts"] == review_artifacts
     assert payload["accepted_frame_ids"] == ["000050"]
+    assert payload["multi_view_decision"]["action"] == "stop"
     assert payload["mask_artifact_path"] == "/tmp/fused/mask_artifact.json"
 
 
@@ -275,7 +280,10 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
                     second_review_artifacts
                 ),
             ),
-        )
+        ),
+        multi_view_decision=MultiViewDecisionInput.model_validate(
+            _expand_decision_payload()
+        ),
     )
 
     result = fuse_accepted_masks(args, out_dir=tmp_path / "out")
@@ -309,6 +317,93 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
     assert result.mask_ply_path.read_text(encoding="ascii").startswith("ply\n")
 
 
+def test_fuse_accepted_masks_records_multi_view_decision(tmp_path: Path) -> None:
+    first_npz_path, first_ply_path = _write_points_artifact(
+        tmp_path / "frag-a", point_indices=(10, 12)
+    )
+    second_npz_path, second_ply_path = _write_points_artifact(
+        tmp_path / "frag-b", point_indices=(20, 22)
+    )
+    first_review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+    second_review_artifacts = _write_review_artifacts(tmp_path / "review-b")
+    multi_view_decision = {
+        "seed_fragment_id": "frag-a",
+        "action": "expand",
+        "reason": "first lift is sparse and the handle side may be occluded",
+        "suggested_frame_ids": ["000020"],
+    }
+    args = FuseAcceptedMasksArgs.model_validate(
+        {
+            "fragments": [
+                {
+                    "fragment_id": "frag-a",
+                    "frame_id": "000010",
+                    "mask_npz_path": str(first_npz_path),
+                    "mask_ply_path": str(first_ply_path),
+                    "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+                    "review_artifacts": first_review_artifacts,
+                },
+                {
+                    "fragment_id": "frag-b",
+                    "frame_id": "000020",
+                    "mask_npz_path": str(second_npz_path),
+                    "mask_ply_path": str(second_ply_path),
+                    "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+                    "review_artifacts": second_review_artifacts,
+                },
+            ],
+            "multi_view_decision": multi_view_decision,
+        }
+    )
+
+    result = fuse_accepted_masks(args, out_dir=tmp_path / "out")
+
+    payload = json.loads(result.mask_artifact_path.read_text(encoding="utf-8"))
+    assert payload["multi_view_decision"] == multi_view_decision
+    assert result.to_payload()["multi_view_decision"] == multi_view_decision
+
+
+def test_fuse_accepted_masks_rejects_multi_view_seed_mismatch(
+    tmp_path: Path,
+) -> None:
+    args = _two_fragment_fuse_args(
+        tmp_path,
+        multi_view_decision=_expand_decision_payload(seed_fragment_id="frag-b"),
+    )
+
+    with pytest.raises(ToolInputError, match="seed_fragment_id"):
+        fuse_accepted_masks(args, out_dir=tmp_path / "out")
+
+
+def test_fuse_accepted_masks_rejects_stop_decision_for_multiple_frames(
+    tmp_path: Path,
+) -> None:
+    args = _two_fragment_fuse_args(
+        tmp_path,
+        multi_view_decision={
+            "seed_fragment_id": "frag-a",
+            "action": FinalMaskMultiViewAction.STOP.value,
+            "reason": "incorrectly stops despite accepting a follow-up frame",
+            "suggested_frame_ids": [],
+        },
+    )
+
+    with pytest.raises(ToolInputError, match="action must be 'expand'"):
+        fuse_accepted_masks(args, out_dir=tmp_path / "out")
+
+
+def test_fuse_accepted_masks_rejects_expand_without_accepted_suggested_frame(
+    tmp_path: Path,
+) -> None:
+    args = _two_fragment_fuse_args(
+        tmp_path,
+        multi_view_decision=_expand_decision_payload(suggested_frame_ids=("000030",)),
+    )
+
+    with pytest.raises(ToolInputError, match="accepted follow-up frame"):
+        fuse_accepted_masks(args, out_dir=tmp_path / "out")
+
+
 def test_fuse_accepted_masks_rejects_fragment_without_point_indices(
     tmp_path: Path,
 ) -> None:
@@ -328,7 +423,8 @@ def test_fuse_accepted_masks_rejects_fragment_without_point_indices(
                     review_artifacts
                 ),
             ),
-        )
+        ),
+        multi_view_decision=_single_view_decision_input(),
     )
 
     with pytest.raises(ToolInputError, match="point_indices"):
@@ -364,7 +460,8 @@ def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
                     second_review_artifacts
                 ),
             ),
-        )
+        ),
+        multi_view_decision=_single_view_decision_input(),
     )
 
     result = fuse_accepted_masks(args, out_dir=tmp_path / "out")
@@ -392,6 +489,67 @@ def test_fuse_accepted_masks_deduplicates_accepted_frame_ids(
 
 def _action_values(actions: tuple[ApprovalAction, ...]) -> list[str]:
     return [action.value for action in actions]
+
+
+def _single_view_decision_input(
+    seed_fragment_id: str = "frag-a",
+) -> MultiViewDecisionInput:
+    return MultiViewDecisionInput(
+        seed_fragment_id=seed_fragment_id,
+        action=FinalMaskMultiViewAction.STOP,
+        reason="first lift covers the target part in the accepted frame",
+    )
+
+
+def _expand_decision_payload(
+    *,
+    seed_fragment_id: str = "frag-a",
+    suggested_frame_ids: tuple[str, ...] = ("000020",),
+) -> MultiViewDecisionPayload:
+    return {
+        "seed_fragment_id": seed_fragment_id,
+        "action": FinalMaskMultiViewAction.EXPAND.value,
+        "reason": "first lift is sparse and the target part needs another view",
+        "suggested_frame_ids": list(suggested_frame_ids),
+    }
+
+
+def _two_fragment_fuse_args(
+    tmp_path: Path,
+    *,
+    multi_view_decision: MultiViewDecisionPayload,
+) -> FuseAcceptedMasksArgs:
+    first_npz_path, first_ply_path = _write_points_artifact(
+        tmp_path / "frag-a", point_indices=(10, 12)
+    )
+    second_npz_path, second_ply_path = _write_points_artifact(
+        tmp_path / "frag-b", point_indices=(20, 22)
+    )
+    first_review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+    second_review_artifacts = _write_review_artifacts(tmp_path / "review-b")
+    return FuseAcceptedMasksArgs.model_validate(
+        {
+            "fragments": [
+                {
+                    "fragment_id": "frag-a",
+                    "frame_id": "000010",
+                    "mask_npz_path": str(first_npz_path),
+                    "mask_ply_path": str(first_ply_path),
+                    "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+                    "review_artifacts": first_review_artifacts,
+                },
+                {
+                    "fragment_id": "frag-b",
+                    "frame_id": "000020",
+                    "mask_npz_path": str(second_npz_path),
+                    "mask_ply_path": str(second_ply_path),
+                    "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+                    "review_artifacts": second_review_artifacts,
+                },
+            ],
+            "multi_view_decision": multi_view_decision,
+        }
+    )
 
 
 def _write_review_artifacts(root: Path) -> dict[str, str]:

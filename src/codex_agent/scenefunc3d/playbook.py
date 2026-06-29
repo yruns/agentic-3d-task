@@ -70,6 +70,11 @@ molmo_overlay_path, sam_contact_sheet_path, sam_candidate_overlay_path, and
 lift_overlay_path. These paths must point to the actual Molmo raw output,
 Molmo point overlay, SAM contact sheet, selected SAM candidate overlay, and
 lift inspection artifact you reviewed.
+Also include multi_view_decision when calling fuse_accepted_masks. Use action
+"stop" only when the accepted fragments all come from the first accepted frame.
+Use action "expand" when you accepted fragments from later frames; in that case,
+suggested_frame_ids must include at least one accepted follow-up frame. The
+seed_fragment_id must be the first accepted fragment.
 Set selected_frame_ids to the accepted_frame_ids returned by fuse_accepted_masks.
 """
 

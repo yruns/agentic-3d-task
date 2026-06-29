@@ -7,10 +7,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, TypedDict, cast
 
-from pydantic import BaseModel, ConfigDict, Field, FilePath, StringConstraints
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FilePath,
+    StringConstraints,
+    ValidationError,
+)
 
 from ...errors import CodexResponseError, SceneFunc3dDataError
 from ..final_mask_artifacts import (
+    FinalMaskArtifactDocument,
+    FinalMaskMultiViewAction,
     load_point_indices_npz,
     load_points_world_npz,
     validate_ascii_points_ply,
@@ -31,6 +40,7 @@ SafePathComponentText = Annotated[
         pattern=r"^[A-Za-z0-9_-]+$",
     ),
 ]
+NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class MaskInspectionPayload(TypedDict):
@@ -77,11 +87,21 @@ class AcceptedFragmentReviewArtifactsPayload(TypedDict):
     lift_overlay_path: str
 
 
+class MultiViewDecisionPayload(TypedDict):
+    """JSON-ready first-lift multi-view decision."""
+
+    seed_fragment_id: str
+    action: str
+    reason: str
+    suggested_frame_ids: list[str]
+
+
 class FusedMaskPayload(TypedDict):
     """JSON-ready fused mask result."""
 
     accepted_frame_ids: list[str]
     accepted_fragments: list[AcceptedFragmentPayload]
+    multi_view_decision: MultiViewDecisionPayload
     mask_artifact_path: str
     mask_npz_path: str
     mask_ply_path: str
@@ -92,6 +112,7 @@ class FusedMaskArtifactFilePayload(TypedDict):
 
     accepted_frame_ids: list[str]
     accepted_fragments: list[AcceptedFragmentPayload]
+    multi_view_decision: MultiViewDecisionPayload
     mask_npz_path: str
     mask_ply_path: str
 
@@ -153,12 +174,33 @@ class AcceptedFragmentReviewArtifactsInput(BaseModel):
         )
 
 
+class MultiViewDecisionInput(BaseModel):
+    """Agent decision after inspecting the first lifted 3D seed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    seed_fragment_id: SafePathComponentText
+    action: FinalMaskMultiViewAction
+    reason: NonEmptyText
+    suggested_frame_ids: tuple[SafePathComponentText, ...] = ()
+
+    def to_domain(self) -> MultiViewDecision:
+        """Return an immutable domain value for persisted fusion provenance."""
+        return MultiViewDecision(
+            seed_fragment_id=self.seed_fragment_id,
+            action=self.action,
+            reason=self.reason,
+            suggested_frame_ids=self.suggested_frame_ids,
+        )
+
+
 class FuseAcceptedMasksArgs(BaseModel):
     """Arguments for fusing accepted 3D mask fragments."""
 
     model_config = ConfigDict(extra="forbid")
 
     fragments: tuple[AcceptedFragmentInput, ...] = Field(min_length=1)
+    multi_view_decision: MultiViewDecisionInput
 
 
 @dataclass(frozen=True)
@@ -283,10 +325,37 @@ class AcceptedFragment:
 
 
 @dataclass(frozen=True)
+class MultiViewDecision:
+    """Agent's first-lift decision about whether to add more views."""
+
+    seed_fragment_id: str
+    action: FinalMaskMultiViewAction
+    reason: str
+    suggested_frame_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        """Validate domain invariants for a multi-view decision."""
+        _validate_non_empty_text("seed_fragment_id", self.seed_fragment_id)
+        _validate_non_empty_text("reason", self.reason)
+        for frame_id in self.suggested_frame_ids:
+            _validate_non_empty_text("suggested_frame_id", frame_id)
+
+    def to_payload(self) -> MultiViewDecisionPayload:
+        """Return the JSON-ready multi-view decision."""
+        return {
+            "seed_fragment_id": self.seed_fragment_id,
+            "action": self.action.value,
+            "reason": self.reason,
+            "suggested_frame_ids": list(self.suggested_frame_ids),
+        }
+
+
+@dataclass(frozen=True)
 class FusedMaskResult:
     """Fused mask artifact result."""
 
     accepted_fragments: tuple[AcceptedFragment, ...]
+    multi_view_decision: MultiViewDecision
     mask_artifact_path: Path
     mask_npz_path: Path
     mask_ply_path: Path
@@ -298,6 +367,7 @@ class FusedMaskResult:
             "accepted_fragments": [
                 fragment.to_payload() for fragment in self.accepted_fragments
             ],
+            "multi_view_decision": self.multi_view_decision.to_payload(),
             "mask_artifact_path": str(self.mask_artifact_path),
             "mask_npz_path": str(self.mask_npz_path),
             "mask_ply_path": str(self.mask_ply_path),
@@ -400,6 +470,7 @@ def fuse_accepted_masks(
             )
         )
 
+    multi_view_decision = args.multi_view_decision.to_domain()
     fused_points = cast("FloatArray", np.concatenate(fragment_points, axis=0))
     fused_point_indices = cast(
         "IntArray", np.concatenate(fragment_point_indices, axis=0)
@@ -414,11 +485,13 @@ def fuse_accepted_masks(
     mask_artifact_path = _write_fused_mask_artifact(
         fused_dir / "mask_artifact.json",
         accepted_fragments=tuple(accepted_fragments),
+        multi_view_decision=multi_view_decision,
         mask_npz_path=mask_npz_path,
         mask_ply_path=mask_ply_path,
     )
     return FusedMaskResult(
         accepted_fragments=tuple(accepted_fragments),
+        multi_view_decision=multi_view_decision,
         mask_artifact_path=mask_artifact_path,
         mask_npz_path=mask_npz_path,
         mask_ply_path=mask_ply_path,
@@ -469,6 +542,7 @@ def _write_fused_mask_artifact(
     artifact_path: Path,
     *,
     accepted_fragments: tuple[AcceptedFragment, ...],
+    multi_view_decision: MultiViewDecision,
     mask_npz_path: Path,
     mask_ply_path: Path,
 ) -> Path:
@@ -477,9 +551,17 @@ def _write_fused_mask_artifact(
         "accepted_fragments": [
             fragment.to_payload() for fragment in accepted_fragments
         ],
+        "multi_view_decision": multi_view_decision.to_payload(),
         "mask_npz_path": str(mask_npz_path),
         "mask_ply_path": str(mask_ply_path),
     }
+    try:
+        FinalMaskArtifactDocument.model_validate(payload)
+    except ValidationError as exc:
+        raise ToolInputError(
+            "fused mask artifact payload failed final schema validation: "
+            f"artifact_path={artifact_path}; error={exc}"
+        ) from exc
     try:
         artifact_path.parent.mkdir(parents=True, exist_ok=True)
         artifact_path.write_text(
@@ -549,6 +631,9 @@ __all__ = [
     "InspectMaskArtifactArgs",
     "MaskInspectionPayload",
     "MaskInspectionResult",
+    "MultiViewDecision",
+    "MultiViewDecisionInput",
+    "MultiViewDecisionPayload",
     "SuggestAdditionalViewsArgs",
     "SuggestedView",
     "SuggestedViewPayload",

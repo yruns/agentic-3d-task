@@ -1197,7 +1197,13 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
                             "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
                             "review_artifacts": second_review_artifacts,
                         },
-                    ]
+                    ],
+                    "multi_view_decision": {
+                        "seed_fragment_id": "frag-a",
+                        "action": "expand",
+                        "reason": "first lift is sparse and needs another view",
+                        "suggested_frame_ids": ["000010"],
+                    },
                 }
             ),
             "--out-dir",
@@ -1211,6 +1217,8 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
     assert Path(payload["mask_npz_path"]).exists()
     assert Path(payload["mask_ply_path"]).exists()
     assert payload["accepted_frame_ids"] == ["000000", "000010"]
+    assert payload["multi_view_decision"]["action"] == "expand"
+    assert payload["multi_view_decision"]["suggested_frame_ids"] == ["000010"]
     assert [fragment["fragment_id"] for fragment in payload["accepted_fragments"]] == [
         "frag-a",
         "frag-b",
@@ -1254,7 +1262,13 @@ def test_cli_fuse_accepted_masks_requires_fragment_approval_actions(
                             "mask_npz_path": str(mask_npz_path),
                             "mask_ply_path": str(mask_ply_path),
                         },
-                    ]
+                    ],
+                    "multi_view_decision": {
+                        "seed_fragment_id": "frag-a",
+                        "action": "stop",
+                        "reason": "first lift covers the target part",
+                        "suggested_frame_ids": [],
+                    },
                 }
             ),
             "--out-dir",
@@ -1289,7 +1303,13 @@ def test_cli_fuse_accepted_masks_requires_fragment_review_artifacts(
                             "mask_ply_path": str(mask_ply_path),
                             "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
                         },
-                    ]
+                    ],
+                    "multi_view_decision": {
+                        "seed_fragment_id": "frag-a",
+                        "action": "stop",
+                        "reason": "first lift covers the target part",
+                        "suggested_frame_ids": [],
+                    },
                 }
             ),
             "--out-dir",

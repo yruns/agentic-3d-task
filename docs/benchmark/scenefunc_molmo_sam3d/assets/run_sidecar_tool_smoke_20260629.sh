@@ -344,7 +344,13 @@ def main() -> None:
                             "lift_overlay_path": lift_payload["overlay_path"],
                         },
                     }
-                ]
+                ],
+                "multi_view_decision": {
+                    "seed_fragment_id": "000050_seed",
+                    "action": "stop",
+                    "reason": "single accepted seed isolates the target knob in this smoke case",
+                    "suggested_frame_ids": [],
+                },
             },
             run_root / "fuse_accepted_masks.json",
         )

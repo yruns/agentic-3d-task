@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 import math
 from dataclasses import dataclass
+from enum import Enum
 from json import JSONDecodeError
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, TypeAlias, cast
 from zipfile import BadZipFile
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from pydantic.types import StringConstraints
 
 from ..errors import CodexResponseError, SceneFunc3dDataError
@@ -48,6 +49,24 @@ class FinalMaskReviewArtifacts(BaseModel):
     lift_overlay_path: NonEmptyString
 
 
+class FinalMaskMultiViewAction(str, Enum):
+    """Agent decision after reviewing the first lifted 3D seed."""
+
+    STOP = "stop"
+    EXPAND = "expand"
+
+
+class FinalMaskMultiViewDecision(BaseModel):
+    """Recorded decision about whether first-lift evidence needed more views."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    seed_fragment_id: NonEmptyString
+    action: FinalMaskMultiViewAction
+    reason: NonEmptyString
+    suggested_frame_ids: tuple[NonEmptyString, ...] = ()
+
+
 class FinalMaskArtifactDocument(BaseModel):
     """Strict JSON contract for one fused SceneFunc3D mask artifact."""
 
@@ -55,8 +74,37 @@ class FinalMaskArtifactDocument(BaseModel):
 
     accepted_frame_ids: tuple[NonEmptyString, ...] = Field(min_length=1)
     accepted_fragments: tuple[FinalMaskAcceptedFragment, ...] = Field(min_length=1)
+    multi_view_decision: FinalMaskMultiViewDecision
     mask_npz_path: NonEmptyString
     mask_ply_path: NonEmptyString
+
+    @model_validator(mode="after")
+    def validate_multi_view_decision_contract(self) -> FinalMaskArtifactDocument:
+        """Validate that the recorded multi-view decision matches final fragments."""
+        fragment_ids = tuple(
+            fragment.fragment_id for fragment in self.accepted_fragments
+        )
+        if self.multi_view_decision.seed_fragment_id != fragment_ids[0]:
+            raise ValueError(
+                "multi_view_decision.seed_fragment_id must match the first accepted "
+                "fragment_id: "
+                f"seed_fragment_id={self.multi_view_decision.seed_fragment_id}; "
+                f"first_fragment_id={fragment_ids[0]}"
+            )
+
+        fragment_frame_ids = _accepted_frame_ids_from_fragments(self.accepted_fragments)
+        if self.multi_view_decision.action == FinalMaskMultiViewAction.EXPAND:
+            _validate_expand_multi_view_decision(
+                decision=self.multi_view_decision,
+                accepted_frame_ids=fragment_frame_ids,
+            )
+        elif len(fragment_frame_ids) > 1:
+            raise ValueError(
+                "multi_view_decision.action must be 'expand' when the final artifact "
+                "contains accepted fragments from multiple frames: "
+                f"accepted_frame_ids={fragment_frame_ids}"
+            )
+        return self
 
 
 @dataclass(frozen=True)
@@ -358,6 +406,33 @@ def _accepted_frame_ids_from_fragments(
     return tuple(accepted_frame_ids)
 
 
+def _validate_expand_multi_view_decision(
+    *,
+    decision: FinalMaskMultiViewDecision,
+    accepted_frame_ids: tuple[str, ...],
+) -> None:
+    if len(accepted_frame_ids) <= 1:
+        raise ValueError(
+            "multi_view_decision.action='expand' requires accepted fragments from "
+            "multiple frames: "
+            f"accepted_frame_ids={accepted_frame_ids}"
+        )
+    if not decision.suggested_frame_ids:
+        raise ValueError(
+            "multi_view_decision.suggested_frame_ids must be non-empty when "
+            "action='expand'"
+        )
+    accepted_followup_frame_ids = set(accepted_frame_ids[1:])
+    suggested_frame_ids = set(decision.suggested_frame_ids)
+    if not accepted_followup_frame_ids.intersection(suggested_frame_ids):
+        raise ValueError(
+            "multi_view_decision.suggested_frame_ids must include at least one "
+            "accepted follow-up frame: "
+            f"suggested_frame_ids={decision.suggested_frame_ids}; "
+            f"accepted_followup_frame_ids={tuple(sorted(accepted_followup_frame_ids))}"
+        )
+
+
 def _validate_fragment_review_artifacts(fragment: FinalMaskAcceptedFragment) -> None:
     for field_name, raw_path in _review_artifact_path_items(fragment.review_artifacts):
         artifact_path = Path(raw_path).expanduser().resolve()
@@ -446,6 +521,8 @@ def _validate_ply_vertex_line(
 __all__ = [
     "FinalMaskAcceptedFragment",
     "FinalMaskArtifactDocument",
+    "FinalMaskMultiViewAction",
+    "FinalMaskMultiViewDecision",
     "FinalMaskReviewArtifacts",
     "ValidatedFinalMaskArtifact",
     "load_point_indices_npz",
