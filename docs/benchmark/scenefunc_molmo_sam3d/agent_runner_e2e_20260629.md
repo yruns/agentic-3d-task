@@ -193,6 +193,72 @@ Result: exit code `0`; the tool returned `seed_lift_status="usable"` and
 suggested frame `000101`. This verifies the missing-`accepted_frame_id` path on
 the real E2E artifact.
 
+## B200 Rerun Attempt After Initial Crop Recommendations
+
+A later working-tree rerun attempted to evaluate the query-aware keyframe crop
+recommendation change on Merlin worker `976077` (`NVIDIA-B200`).
+
+Run root:
+
+```text
+/tmp/scenefunc_agent_runner_e2e_421393_keyframe_crops_20260629
+```
+
+The initial command intentionally used `USE_CODEX_AUTH=1`, which forced the
+Codex SDK onto the direct OpenAI provider path:
+
+```text
+https://chatgpt.com/backend-api/codex/responses
+```
+
+MolmoPoint and SAM both loaded successfully before the agent runner started:
+
+- Molmo health: `model_name="MolmoPoint-8B"`, `model_loaded=True`
+- SAM health: `model_name="SAM2.1-Hiera-L"`, `model_loaded=True`
+
+The runner then failed in the model-call layer, not in the visual sidecars:
+
+```text
+CodexTurnError: Codex turn completed without a final_response;
+status=failed;
+message="stream disconnected before completion: error sending request for url
+(https://chatgpt.com/backend-api/codex/responses)"
+```
+
+The same worker was then checked with the project-local ModelHub adapter path.
+The adapter selected the expected Linux endpoint:
+
+```text
+https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online
+```
+
+but stopped during preflight because neither
+`codex_modelhub_adapter/.env` nor
+`codex_modelhub_adapter/.modelhub_upstreams.toml` existed in the worktree:
+
+```text
+status="degraded"
+has_upstream_ak=False
+agent runner E2E failed: Codex ModelHub adapter is reachable but has no private
+upstream credential configured. Set its gitignored .env or upstream TOML.
+```
+
+This means the B200 rerun is blocked on private ModelHub credentials, not on
+MolmoPoint, SAM2.1-Hiera-L, 2D mask generation, or 3D lifting. The Linux launcher
+now defaults to starting the project-local adapter so future runs fail at this
+preflight boundary before loading GPU sidecars when credentials are missing.
+
+With credentials present, the intended B200 invocation is:
+
+```bash
+NO_COLOR=1 TERM=dumb mlx worker login 976077 -- tmux new-session -d \
+  -s scenefunc_e2e_keyframe_crops \
+  -c /mlx_devbox/users/yueshuhao/playground/repos/agentic-3d-task/.worktrees/scenefunc3d-agent-tools \
+  -e SAMPLE_ID=421393::729dc0d8-571c-44e5-9dc4-05045524dcf5 \
+  -e RUN_ROOT=/tmp/scenefunc_agent_runner_e2e_421393_keyframe_crops_20260629 \
+  docs/benchmark/scenefunc_molmo_sam3d/assets/run_agent_runner_e2e_20260629.sh
+```
+
 ## Quality Gate
 
 Before this E2E launch, the following current-commit checks passed:

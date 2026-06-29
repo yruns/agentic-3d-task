@@ -25,7 +25,9 @@ def test_agent_e2e_script_runs_runner_with_sidecars_and_scoring() -> None:
 def test_agent_e2e_script_can_start_project_local_adapter() -> None:
     script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
 
-    assert 'START_ADAPTER="${START_ADAPTER:-0}"' in script_text
+    assert 'HOST_UNAME="${HOST_UNAME:-$(uname -s)}"' in script_text
+    assert 'if [[ "${HOST_UNAME}" == "Linux" ]]; then' in script_text
+    assert 'START_ADAPTER="${START_ADAPTER:-${DEFAULT_START_ADAPTER}}"' in script_text
     assert "ADAPTER_UPSTREAMS_TOML_PATH" in script_text
     assert "AIDP_MODELHUB_UPSTREAMS_TOML" in script_text
     assert 'adapter_python_bin = os.environ["ADAPTER_PYTHON_BIN"]' in script_text
@@ -87,6 +89,45 @@ def test_agent_e2e_script_preflight_stops_before_gpu_sidecars(
 
     assert completed.returncode == 1
     assert "started adapter:" in completed.stdout
+    assert "has no private upstream credential configured" in completed.stdout
+    assert "started molmo_server" not in completed.stdout
+    assert "started sam_server" not in completed.stdout
+    assert not _port_is_open(port)
+
+
+def test_agent_e2e_script_linux_defaults_to_project_local_adapter(
+    tmp_path: Path,
+) -> None:
+    _skip_without_adapter_runtime()
+    port = _unused_port()
+    run_root = tmp_path / "run"
+    env = os.environ.copy()
+    env.update(
+        {
+            "HOST_UNAME": "Linux",
+            "ADAPTER_PORT": str(port),
+            "ADAPTER_HEALTH_URL": f"http://127.0.0.1:{port}/health",
+            "ADAPTER_ENV_PATH": str(tmp_path / "missing.env"),
+            "ADAPTER_UPSTREAMS_TOML_PATH": str(tmp_path / "missing.toml"),
+            "RUN_ROOT": str(run_root),
+        }
+    )
+    env.pop("START_ADAPTER", None)
+
+    completed = subprocess.run(
+        ["bash", str(_agent_e2e_script_path())],
+        cwd=Path.cwd(),
+        env=env,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 1
+    assert "started adapter:" in completed.stdout
+    assert "https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online" in completed.stdout
     assert "has no private upstream credential configured" in completed.stdout
     assert "started molmo_server" not in completed.stdout
     assert "started sam_server" not in completed.stdout

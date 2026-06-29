@@ -105,6 +105,11 @@ def test_playbook_tells_agent_to_crop_from_matched_object_bboxes() -> None:
     assert "recommended_crops" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_tells_agent_to_prefer_initial_keyframe_recommended_crops() -> None:
+    assert "keyframe_selector returns recommended_crops" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "before making any manual crop guess" in SCENEFUNC3D_TOOLS_PLAYBOOK
+
+
 def test_playbook_requires_nearby_frame_sweep_before_accepting_drawer_seams() -> None:
     assert "nearby frames" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "+/- 8" in SCENEFUNC3D_TOOLS_PLAYBOOK
