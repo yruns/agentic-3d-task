@@ -20,6 +20,7 @@ from pydantic import (
     model_validator,
 )
 
+from .crop_metadata import CropMetadata, write_crop_metadata
 from .models import ToolInputError
 from .scene_context import SceneFunc3dToolScene
 
@@ -271,6 +272,13 @@ class ViewFrame:
     depth_path: Path | None = None
     intrinsics_path: Path | None = None
     pose_path: Path | None = None
+    source_image_path: Path | None = None
+    source_image_width: int | None = None
+    source_image_height: int | None = None
+    crop_image_width: int | None = None
+    crop_image_height: int | None = None
+    crop_bbox_xyxy: tuple[int, int, int, int] | None = None
+    crop_metadata_path: Path | None = None
 
     def to_payload(self) -> dict[str, object]:
         """Return this frame as a JSON-ready mapping."""
@@ -288,6 +296,20 @@ class ViewFrame:
             payload["intrinsics_path"] = str(self.intrinsics_path)
         if self.pose_path is not None:
             payload["pose_path"] = str(self.pose_path)
+        if self.source_image_path is not None:
+            payload["source_image_path"] = str(self.source_image_path)
+        if self.source_image_width is not None:
+            payload["source_image_width"] = self.source_image_width
+        if self.source_image_height is not None:
+            payload["source_image_height"] = self.source_image_height
+        if self.crop_image_width is not None:
+            payload["crop_image_width"] = self.crop_image_width
+        if self.crop_image_height is not None:
+            payload["crop_image_height"] = self.crop_image_height
+        if self.crop_bbox_xyxy is not None:
+            payload["crop_bbox_xyxy"] = list(self.crop_bbox_xyxy)
+        if self.crop_metadata_path is not None:
+            payload["crop_metadata_path"] = str(self.crop_metadata_path)
         return payload
 
 
@@ -358,6 +380,7 @@ def view_crop(
             bbox=args.bbox,
             bbox_format=args.bbox_format,
         ),
+        frame_id=args.frame_id,
         bbox=args.bbox,
         bbox_format=args.bbox_format,
     )
@@ -368,6 +391,13 @@ def view_crop(
                 image_path=rendered_crop.image_path,
                 image_width=rendered_crop.image_width,
                 image_height=rendered_crop.image_height,
+                source_image_path=rendered_crop.source_image_path,
+                source_image_width=rendered_crop.source_image_width,
+                source_image_height=rendered_crop.source_image_height,
+                crop_image_width=rendered_crop.image_width,
+                crop_image_height=rendered_crop.image_height,
+                crop_bbox_xyxy=rendered_crop.crop_bbox_xyxy,
+                crop_metadata_path=rendered_crop.crop_metadata_path,
             ),
         )
     )
@@ -604,6 +634,20 @@ class _RenderedImage:
     image_height: int
 
 
+@dataclass(frozen=True)
+class _RenderedCrop:
+    """A rendered evidence crop and its full-frame coordinate mapping."""
+
+    image_path: Path
+    image_width: int
+    image_height: int
+    source_image_path: Path
+    source_image_width: int
+    source_image_height: int
+    crop_bbox_xyxy: tuple[int, int, int, int]
+    crop_metadata_path: Path
+
+
 def _write_jpeg_copy(source_path: Path, destination_path: Path) -> _RenderedImage:
     try:
         from PIL import Image
@@ -635,9 +679,10 @@ def _write_crop_jpeg(
     source_path: Path,
     destination_path: Path,
     *,
+    frame_id: str,
     bbox: tuple[float, float, float, float],
     bbox_format: BboxFormat,
-) -> _RenderedImage:
+) -> _RenderedCrop:
     try:
         from PIL import Image
     except ImportError as exc:
@@ -664,16 +709,35 @@ def _write_crop_jpeg(
             )
             image_width = crop_image.width
             image_height = crop_image.height
+            source_image_width = rgb_image.width
+            source_image_height = rgb_image.height
     except OSError as exc:
         raise ToolInputError(
             "could not render RGB crop: "
             f"source_path={source_path}; destination_path={destination_path}; "
             f"error_type={exc.__class__.__name__}"
         ) from exc
-    return _RenderedImage(
+    crop_metadata_path = write_crop_metadata(
+        CropMetadata(
+            frame_id=frame_id,
+            crop_image_path=destination_path,
+            source_image_path=source_path,
+            source_image_width=source_image_width,
+            source_image_height=source_image_height,
+            crop_image_width=image_width,
+            crop_image_height=image_height,
+            crop_bbox_xyxy=crop_box,
+        )
+    )
+    return _RenderedCrop(
         image_path=destination_path,
         image_width=image_width,
         image_height=image_height,
+        source_image_path=source_path,
+        source_image_width=source_image_width,
+        source_image_height=source_image_height,
+        crop_bbox_xyxy=crop_box,
+        crop_metadata_path=crop_metadata_path,
     )
 
 

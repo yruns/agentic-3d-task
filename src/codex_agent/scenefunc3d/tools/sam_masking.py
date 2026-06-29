@@ -20,6 +20,10 @@ from pydantic import (
 )
 
 from ...errors import SceneFunc3dDataError
+from .crop_metadata import (
+    expand_crop_mask_to_source_frame,
+    load_crop_metadata_for_image,
+)
 from .models import ToolInputError
 
 if TYPE_CHECKING:
@@ -245,6 +249,11 @@ def sam_mask(
         field_name="out_dir",
     )
     frame_artifact_dir = artifact_out_dir / "sam" / args.frame_id
+    crop_metadata = load_crop_metadata_for_image(
+        args.image_path,
+        expected_frame_id=args.frame_id,
+        allowed_image_roots=settings.allowed_image_roots,
+    )
     staging_dir = frame_artifact_dir / "candidates"
     try:
         staging_dir.mkdir(parents=True, exist_ok=True)
@@ -271,6 +280,19 @@ def sam_mask(
             field_name="mask_npz_path",
         )
         boolean_mask = _load_boolean_mask(mask_npz_path)
+        candidate_mask_npz_path = mask_npz_path
+        candidate_pixel_count = candidate_response.pixel_count
+        candidate_coverage_percent = candidate_response.coverage_percent
+        if crop_metadata is not None:
+            full_frame_mask = expand_crop_mask_to_source_frame(
+                boolean_mask, crop_metadata
+            )
+            candidate_mask_npz_path = _write_boolean_mask_npz(
+                staging_dir / f"{safe_candidate_id}_full_frame.npz",
+                full_frame_mask,
+            )
+            candidate_pixel_count = _mask_pixel_count(full_frame_mask)
+            candidate_coverage_percent = _mask_coverage_percent(full_frame_mask)
         overlay_path = _write_candidate_overlay(
             image_path=args.image_path,
             mask=boolean_mask,
@@ -286,9 +308,9 @@ def sam_mask(
             SamCandidate(
                 candidate_id=candidate_response.candidate_id,
                 score=candidate_response.score,
-                pixel_count=candidate_response.pixel_count,
-                coverage_percent=candidate_response.coverage_percent,
-                mask_npz_path=mask_npz_path,
+                pixel_count=candidate_pixel_count,
+                coverage_percent=candidate_coverage_percent,
+                mask_npz_path=candidate_mask_npz_path,
                 overlay_path=overlay_path,
             )
         )
@@ -342,6 +364,36 @@ def _load_boolean_mask(mask_npz_path: Path) -> npt.NDArray[np.bool_]:
             "SAM mask array could not be converted to boolean: "
             f"path={mask_npz_path}; error_type={exc.__class__.__name__}"
         ) from exc
+
+
+def _write_boolean_mask_npz(mask_npz_path: Path, mask: npt.NDArray[np.bool_]) -> Path:
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise ToolInputError(
+            "numpy is required to write SAM mask npz artifacts; install the "
+            "'vision' extra"
+        ) from exc
+
+    try:
+        mask_npz_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(mask_npz_path, mask=mask.astype(np.bool_, copy=False))
+    except OSError as exc:
+        raise ToolInputError(
+            "could not write SAM full-frame mask npz artifact: "
+            f"path={mask_npz_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    return mask_npz_path
+
+
+def _mask_pixel_count(mask: npt.NDArray[np.bool_]) -> int:
+    return int(mask.sum())
+
+
+def _mask_coverage_percent(mask: npt.NDArray[np.bool_]) -> float:
+    if mask.size <= 0:
+        raise ToolInputError("SAM mask coverage is undefined for an empty mask array")
+    return float(_mask_pixel_count(mask) * 100.0 / mask.size)
 
 
 def _write_candidate_overlay(

@@ -4,14 +4,24 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 import pytest
 from pydantic import ValidationError
 
 from codex_agent.scenefunc3d.task import ApprovalAction
 from codex_agent.scenefunc3d.tools.__main__ import main
-from codex_agent.scenefunc3d.tools.frame_views import ViewCropArgs, ViewFrameArgs
+from codex_agent.scenefunc3d.tools.frame_views import (
+    ViewCropArgs,
+    ViewFrameArgs,
+    view_crop,
+)
 from codex_agent.scenefunc3d.tools.keyframe_retrieval import KeyframeSelectorArgs
+from codex_agent.scenefunc3d.tools.scene_context import (
+    SceneFunc3dToolScene,
+    SourceFrameIndex,
+    SourceFrameRecord,
+)
 
 _APPROVED_FRAGMENT_ACTIONS = (
     ApprovalAction.SELECT_EVIDENCE.value,
@@ -701,6 +711,89 @@ def test_cli_view_frame_uses_source_frame_raw_path(
     payload = json.loads(capsys.readouterr().out.strip())
     assert payload["frames"][0]["frame_id"] == "000000"
     assert Path(payload["frames"][0]["image_path"]).exists()
+
+
+def test_cli_view_crop_exposes_full_frame_mapping_metadata(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    Image.new("RGB", (100, 80), color=(10, 20, 30)).save(
+        scene_dir / "raw" / "000000-rgb.png"
+    )
+
+    code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000", "bbox": [0.1, 0.25, 0.5, 0.75]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    frame_payload = payload["frames"][0]
+    metadata_path = Path(frame_payload["crop_metadata_path"])
+    assert metadata_path.exists()
+    assert frame_payload["source_image_path"] == str(
+        scene_dir / "raw" / "000000-rgb.png"
+    )
+    assert frame_payload["source_image_width"] == 100
+    assert frame_payload["source_image_height"] == 80
+    assert frame_payload["crop_image_width"] == 40
+    assert frame_payload["crop_image_height"] == 40
+    assert frame_payload["crop_bbox_xyxy"] == [10, 20, 50, 60]
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata["crop_image_width"] == 40
+    assert metadata["crop_image_height"] == 40
+    assert metadata["crop_bbox_xyxy"] == [10, 20, 50, 60]
+
+
+def test_view_crop_metadata_preserves_frame_id_with_underscores(
+    tmp_path: Path,
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    source_image_path = raw_dir / "frame_with_under_score-rgb.png"
+    Image.new("RGB", (100, 80), color=(10, 20, 30)).save(source_image_path)
+    tool_scene = SceneFunc3dToolScene(
+        visit_id="421254",
+        scene_root=scene_dir,
+        rgb_frame_ids=("frame_with_under_score",),
+        source_frame_index=SourceFrameIndex(
+            records=(
+                SourceFrameRecord(
+                    frame_id="frame_with_under_score",
+                    raw_rgb_path=source_image_path,
+                ),
+            )
+        ),
+    )
+
+    result = view_crop(
+        tool_scene,
+        ViewCropArgs.model_validate(
+            {"frame_id": "frame_with_under_score", "bbox": [0.1, 0.25, 0.5, 0.75]}
+        ),
+        out_dir=tmp_path / "scratch",
+    )
+
+    payload = result.to_payload()
+    frame_payloads = cast(list[dict[str, object]], payload["frames"])
+    frame_payload = frame_payloads[0]
+    metadata_path = Path(cast(str, frame_payload["crop_metadata_path"]))
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata["frame_id"] == "frame_with_under_score"
 
 
 def test_cli_view_frame_prefers_conceptgraph_over_source_frame_raw_path(

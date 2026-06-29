@@ -602,6 +602,498 @@ def test_cli_sam_mask_uses_configured_fake_backend(
     assert Path(payload["contact_sheet_path"]).exists()
 
 
+def test_cli_sam_mask_expands_crop_mask_to_full_frame(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    scene_dir, _image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    crop_code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000", "bbox": [0.1, 0.25, 0.5, 0.75]}),
+            "--out-dir",
+            str(output_root),
+        ]
+    )
+    assert crop_code == 0
+    crop_payload = json.loads(capsys.readouterr().out.strip())
+    crop_image_path = Path(crop_payload["frames"][0]["image_path"])
+
+    server_mask_path = output_root / "server_masks" / "mask_00.npz"
+    server_mask_path.parent.mkdir(parents=True)
+    crop_mask = np.zeros((40, 40), dtype=np.uint8)
+    crop_mask[0, 0] = 1
+    crop_mask[39, 39] = 1
+    np.savez(server_mask_path, mask=crop_mask)
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(server_mask_path),
+                        "pixel_count": 2,
+                        "coverage_percent": 0.125,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    try:
+        sam_code = main(
+            [
+                "sam_mask",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(crop_image_path),
+                        "points": [
+                            {
+                                "x_px": 1.0,
+                                "y_px": 1.0,
+                                "source": '<point x="1" y="1">handle</point>',
+                                "label": "handle",
+                            }
+                        ],
+                    }
+                ),
+                "--out-dir",
+                str(output_root),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert sam_code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    candidate_payload = payload["candidates"][0]
+    expanded_mask_path = Path(candidate_payload["mask_npz_path"])
+    assert expanded_mask_path != server_mask_path
+    with np.load(expanded_mask_path) as archive:
+        expanded_mask = archive["mask"]
+    assert expanded_mask.shape == (80, 100)
+    assert bool(expanded_mask[20, 10]) is True
+    assert bool(expanded_mask[59, 49]) is True
+    assert int(expanded_mask.sum()) == 2
+    assert candidate_payload["pixel_count"] == 2
+    assert candidate_payload["coverage_percent"] == pytest.approx(0.025)
+
+
+def test_cli_sam_mask_rejects_crop_metadata_frame_id_mismatch(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    scene_dir, _image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    crop_code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000", "bbox": [0.1, 0.25, 0.5, 0.75]}),
+            "--out-dir",
+            str(output_root),
+        ]
+    )
+    assert crop_code == 0
+    crop_payload = json.loads(capsys.readouterr().out.strip())
+    crop_image_path = Path(crop_payload["frames"][0]["image_path"])
+
+    server_mask_path = output_root / "server_masks" / "mask_00.npz"
+    server_mask_path.parent.mkdir(parents=True)
+    np.savez(server_mask_path, mask=np.ones((40, 40), dtype=np.uint8))
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(server_mask_path),
+                        "pixel_count": 1600,
+                        "coverage_percent": 100.0,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    try:
+        sam_code = main(
+            [
+                "sam_mask",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000001",
+                        "image_path": str(crop_image_path),
+                        "points": [
+                            {
+                                "x_px": 1.0,
+                                "y_px": 1.0,
+                                "source": '<point x="1" y="1">handle</point>',
+                                "label": "handle",
+                            }
+                        ],
+                    }
+                ),
+                "--out-dir",
+                str(output_root),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert sam_code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "frame_id mismatch" in payload["error"]
+
+
+def test_cli_sam_mask_validates_crop_metadata_before_backend_call(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    scene_dir, _image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    crop_code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000", "bbox": [0.1, 0.25, 0.5, 0.75]}),
+            "--out-dir",
+            str(output_root),
+        ]
+    )
+    assert crop_code == 0
+    crop_payload = json.loads(capsys.readouterr().out.strip())
+    frame_payload = crop_payload["frames"][0]
+    crop_image_path = Path(frame_payload["image_path"])
+    metadata_path = Path(frame_payload["crop_metadata_path"])
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["frame_id"] = "000999"
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    server_mask_path = output_root / "server_masks" / "mask_00.npz"
+    server_mask_path.parent.mkdir(parents=True)
+    np.savez(server_mask_path, mask=np.ones((40, 40), dtype=np.uint8))
+    backend_requests: list[dict[str, object]] = []
+
+    def record_backend_request(payload: dict[str, object]) -> dict[str, object]:
+        backend_requests.append(payload)
+        return {
+            "request_id": payload["request_id"],
+            "model_name": "SAM2.1-Hiera-L",
+            "candidates": [
+                {
+                    "candidate_id": "mask_00",
+                    "score": 0.91,
+                    "mask_npz_path": str(server_mask_path),
+                    "pixel_count": 1600,
+                    "coverage_percent": 100.0,
+                }
+            ],
+            "latency_ms": 1.0,
+        }
+
+    server = _start_json_server({"/v1/masks": record_backend_request})
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    try:
+        sam_code = main(
+            [
+                "sam_mask",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(crop_image_path),
+                        "points": [
+                            {
+                                "x_px": 1.0,
+                                "y_px": 1.0,
+                                "source": '<point x="1" y="1">handle</point>',
+                                "label": "handle",
+                            }
+                        ],
+                    }
+                ),
+                "--out-dir",
+                str(output_root),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert sam_code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "frame_id mismatch" in payload["error"]
+    assert backend_requests == []
+
+
+def test_cli_sam_mask_rejects_crop_metadata_source_outside_image_roots(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir, _image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    crop_code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000", "bbox": [0.1, 0.25, 0.5, 0.75]}),
+            "--out-dir",
+            str(output_root),
+        ]
+    )
+    assert crop_code == 0
+    crop_payload = json.loads(capsys.readouterr().out.strip())
+    frame_payload = crop_payload["frames"][0]
+    crop_image_path = Path(frame_payload["image_path"])
+    metadata_path = Path(frame_payload["crop_metadata_path"])
+    outside_source_path = tmp_path.parent / f"{tmp_path.name}_outside_source.png"
+    Image.new("RGB", (100, 80), color=(20, 30, 40)).save(outside_source_path)
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["source_image_path"] = str(outside_source_path)
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    server_mask_path = output_root / "server_masks" / "mask_00.npz"
+    server_mask_path.parent.mkdir(parents=True)
+    np.savez(server_mask_path, mask=np.ones((40, 40), dtype=np.uint8))
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(server_mask_path),
+                        "pixel_count": 1600,
+                        "coverage_percent": 100.0,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    try:
+        sam_code = main(
+            [
+                "sam_mask",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(crop_image_path),
+                        "points": [
+                            {
+                                "x_px": 1.0,
+                                "y_px": 1.0,
+                                "source": '<point x="1" y="1">handle</point>',
+                                "label": "handle",
+                            }
+                        ],
+                    }
+                ),
+                "--out-dir",
+                str(output_root),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert sam_code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "source_image_path is outside configured roots" in payload["error"]
+
+
+def test_cli_sam_crop_candidate_lifts_against_full_frame_depth(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir, _image_path = _write_cli_scene_with_real_image(tmp_path)
+    _write_binary_scene_mesh(
+        scene_dir / "conceptgraph" / "mesh.ply",
+        points=((10.0, 20.0, 1.0),),
+    )
+    output_root = tmp_path / "out"
+    crop_code = main(
+        [
+            "view_crop",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000", "bbox": [0.1, 0.25, 0.5, 0.75]}),
+            "--out-dir",
+            str(output_root),
+        ]
+    )
+    assert crop_code == 0
+    crop_payload = json.loads(capsys.readouterr().out.strip())
+    crop_image_path = Path(crop_payload["frames"][0]["image_path"])
+
+    server_mask_path = output_root / "server_masks" / "mask_00.npz"
+    server_mask_path.parent.mkdir(parents=True)
+    crop_mask = np.zeros((40, 40), dtype=np.uint8)
+    crop_mask[0, 0] = 1
+    np.savez(server_mask_path, mask=crop_mask)
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(server_mask_path),
+                        "pixel_count": 1,
+                        "coverage_percent": 0.0625,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    try:
+        sam_code = main(
+            [
+                "sam_mask",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(crop_image_path),
+                        "points": [
+                            {
+                                "x_px": 1.0,
+                                "y_px": 1.0,
+                                "source": '<point x="1" y="1">handle</point>',
+                                "label": "handle",
+                            }
+                        ],
+                    }
+                ),
+                "--out-dir",
+                str(output_root),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+    assert sam_code == 0
+    sam_payload = json.loads(capsys.readouterr().out.strip())
+    candidate_payload = sam_payload["candidates"][0]
+
+    depth_path = tmp_path / "depth.png"
+    intrinsics_path = tmp_path / "intrinsics.txt"
+    pose_path = tmp_path / "pose.txt"
+    depth_pixels = np.zeros((80, 100), dtype=np.uint16)
+    depth_pixels[20, 10] = 1000
+    Image.fromarray(depth_pixels).save(depth_path)
+    intrinsics_path.write_text("1 0 0\n0 1 0\n0 0 1\n", encoding="utf-8")
+    pose_path.write_text("1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+
+    lift_code = main(
+        [
+            "lift_mask_to_3d",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "frame_id": "000000",
+                    "candidate_id": candidate_payload["candidate_id"],
+                    "mask_npz_path": candidate_payload["mask_npz_path"],
+                    "depth_path": str(depth_path),
+                    "intrinsics_path": str(intrinsics_path),
+                    "pose_path": str(pose_path),
+                }
+            ),
+            "--out-dir",
+            str(output_root),
+        ]
+    )
+
+    assert lift_code == 0
+    lift_payload = json.loads(capsys.readouterr().out.strip())
+    assert lift_payload["lifted_point_count"] == 1
+    with np.load(Path(lift_payload["mask_npz_path"])) as archive:
+        np.testing.assert_array_equal(
+            archive["point_indices"], np.array([0], dtype=np.int64)
+        )
+
+
 def test_cli_sam_mask_contact_sheet_shows_all_candidate_labels(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
