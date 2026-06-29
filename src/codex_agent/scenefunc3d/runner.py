@@ -9,7 +9,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Annotated, TypeAlias, TypedDict
+from typing import Annotated, Literal, TypeAlias, TypedDict
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -25,7 +25,10 @@ from .backends.config import load_backend_settings
 from .evaluation.payloads import SceneFunc3dScorePayload, score_to_payload
 from .evaluation.scorer import score_result_file
 from .final_mask_artifacts import (
+    FinalMaskAcceptedFragment,
+    FinalMaskArtifactDocument,
     FinalMaskMultiViewAction,
+    FinalMaskMultiViewDecision,
     ValidatedFinalMaskArtifact,
     validate_final_mask_artifact,
 )
@@ -121,6 +124,62 @@ class SceneFunc3dMaskDecision(BaseModel):
     accepted_fragment_ids: tuple[NonEmptyString, ...] = Field(min_length=1)
     confidence: float = Field(ge=0.0, le=1.0)
     uncertainties: tuple[str, ...]
+
+
+class _FuseToolResult(BaseModel):
+    """Strict result payload for a successful ``fuse_accepted_masks`` event."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    accepted_frame_ids: tuple[NonEmptyString, ...] = Field(min_length=1)
+    accepted_fragments: tuple[FinalMaskAcceptedFragment, ...] = Field(min_length=1)
+    multi_view_decision: FinalMaskMultiViewDecision
+    mask_artifact_path: NonEmptyString
+    mask_npz_path: NonEmptyString
+    mask_ply_path: NonEmptyString
+
+    def model_post_init(self, __context: object) -> None:
+        """Validate the fused-result contract shared with final artifacts."""
+        fragment_frame_ids = _accepted_frame_ids_from_fuse_fragments(
+            self.accepted_fragments
+        )
+        if self.accepted_frame_ids != fragment_frame_ids:
+            raise ValueError(
+                "accepted_frame_ids must match accepted_fragments frame_id "
+                "provenance: "
+                f"accepted_frame_ids={self.accepted_frame_ids}; "
+                f"fragment_frame_ids={fragment_frame_ids}"
+            )
+        FinalMaskArtifactDocument.model_validate(
+            {
+                "accepted_frame_ids": self.accepted_frame_ids,
+                "accepted_fragments": self.accepted_fragments,
+                "multi_view_decision": self.multi_view_decision,
+                "mask_npz_path": self.mask_npz_path,
+                "mask_ply_path": self.mask_ply_path,
+            }
+        )
+
+
+class _FuseToolEvent(BaseModel):
+    """Strict JSONL event for a completed ``fuse_accepted_masks`` call."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    event_type: Literal["tool_completed"]
+    tool_name: Literal["fuse_accepted_masks"]
+    status: Literal["success"]
+    args: Mapping[str, object]
+    result: _FuseToolResult
+    error: str
+
+
+@dataclass(frozen=True)
+class _ParsedFuseToolEvent:
+    """A validated fuse event with source location for diagnostics."""
+
+    line_number: int
+    event: _FuseToolEvent
 
 
 @dataclass(frozen=True)
@@ -271,7 +330,13 @@ class SceneFunc3dMaskTask:
         self, outcome: SceneFunc3dMaskOutcome
     ) -> SceneFunc3dMaskOutcome:
         """Revalidate a runtime outcome before writing durable result metadata."""
-        return self.parse_response(json.dumps(outcome.to_payload(), ensure_ascii=False))
+        validated_outcome = self.parse_response(
+            json.dumps(outcome.to_payload(), ensure_ascii=False)
+        )
+        _validate_outcome_against_fuse_tool_event(
+            validated_outcome, self.output_dir / "events.jsonl"
+        )
+        return validated_outcome
 
     def _parse_decision(self, response_text: str) -> SceneFunc3dMaskDecision:
         payload = extract_json_object(response_text)
@@ -485,6 +550,201 @@ def _validate_outcome_artifact(
     )
 
 
+def _validate_outcome_against_fuse_tool_event(
+    outcome: SceneFunc3dMaskOutcome, events_path: Path
+) -> None:
+    """Ensure the final mask outcome was produced by this run's fuse tool call."""
+    artifact_document = _load_mask_artifact_document_for_provenance(
+        outcome.mask_artifact_path
+    )
+    if any(
+        _fuse_event_matches_outcome(
+            parsed_event,
+            outcome,
+            artifact_document=artifact_document,
+            events_path=events_path,
+        )
+        for parsed_event in _successful_fuse_tool_events(events_path)
+    ):
+        return
+    raise CodexResponseError(
+        "final SceneFunc3D mask outcome must match a successful "
+        "fuse_accepted_masks tool event from this run: "
+        f"mask_artifact_path={outcome.mask_artifact_path}; "
+        f"mask_npz_path={outcome.mask_npz_path}; "
+        f"mask_ply_path={outcome.mask_ply_path}; "
+        f"selected_frame_ids={outcome.selected_frame_ids}; "
+        f"accepted_fragment_ids={outcome.accepted_fragment_ids}; "
+        f"events_path={events_path}"
+    )
+
+
+def _load_mask_artifact_document_for_provenance(
+    artifact_path: Path,
+) -> FinalMaskArtifactDocument:
+    try:
+        artifact_text = artifact_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise CodexResponseError(
+            "could not read mask_artifact_path while validating fuse provenance: "
+            f"mask_artifact_path={artifact_path}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+    try:
+        artifact_payload: object = json.loads(artifact_text)
+    except JSONDecodeError as exc:
+        raise CodexResponseError(
+            "mask_artifact_path is not valid JSON while validating fuse "
+            f"provenance: mask_artifact_path={artifact_path}; error={exc}"
+        ) from exc
+    try:
+        return FinalMaskArtifactDocument.model_validate(artifact_payload)
+    except ValidationError as exc:
+        raise CodexResponseError(
+            "mask_artifact_path does not match final mask artifact schema while "
+            f"validating fuse provenance: mask_artifact_path={artifact_path}; "
+            f"error={exc}"
+        ) from exc
+
+
+def _successful_fuse_tool_events(events_path: Path) -> tuple[_ParsedFuseToolEvent, ...]:
+    if not events_path.is_file():
+        raise CodexResponseError(
+            "SceneFunc3D tool event log is missing while validating final artifact "
+            f"provenance: events_path={events_path}; "
+            "tool_name=fuse_accepted_masks"
+        )
+    try:
+        event_lines = events_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as exc:
+        raise CodexResponseError(
+            "could not read SceneFunc3D tool event log while validating final "
+            "artifact provenance: "
+            f"events_path={events_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    events: list[_ParsedFuseToolEvent] = []
+    for line_number, raw_line in enumerate(event_lines, start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        event = _load_event_payload(
+            line, events_path=events_path, line_number=line_number
+        )
+        if event.get("tool_name") != "fuse_accepted_masks":
+            continue
+        if event.get("status") != "success":
+            continue
+        events.append(
+            _parse_fuse_tool_event(
+                event,
+                events_path=events_path,
+                line_number=line_number,
+            )
+        )
+    return tuple(events)
+
+
+def _parse_fuse_tool_event(
+    event: Mapping[object, object], *, events_path: Path, line_number: int
+) -> _ParsedFuseToolEvent:
+    try:
+        fuse_event = _FuseToolEvent.model_validate(event)
+    except ValidationError as exc:
+        raise CodexResponseError(
+            "successful fuse_accepted_masks tool event does not match the expected "
+            "tool_completed result schema: "
+            f"events_path={events_path}; line={line_number}; error={exc}"
+        ) from exc
+    return _ParsedFuseToolEvent(line_number=line_number, event=fuse_event)
+
+
+def _fuse_event_matches_outcome(
+    parsed_event: _ParsedFuseToolEvent,
+    outcome: SceneFunc3dMaskOutcome,
+    *,
+    artifact_document: FinalMaskArtifactDocument,
+    events_path: Path,
+) -> bool:
+    event_result = parsed_event.event.result
+    return (
+        _event_path_matches(
+            event_result.mask_artifact_path,
+            outcome.mask_artifact_path,
+            field_name="mask_artifact_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        )
+        and _event_path_matches(
+            event_result.mask_npz_path,
+            outcome.mask_npz_path,
+            field_name="mask_npz_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        )
+        and _event_path_matches(
+            event_result.mask_ply_path,
+            outcome.mask_ply_path,
+            field_name="mask_ply_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        )
+        and event_result.accepted_frame_ids == outcome.selected_frame_ids
+        and _fuse_fragment_ids(event_result.accepted_fragments)
+        == outcome.accepted_fragment_ids
+        and _fuse_event_matches_artifact_document(event_result, artifact_document)
+    )
+
+
+def _fuse_event_matches_artifact_document(
+    event_result: _FuseToolResult,
+    artifact_document: FinalMaskArtifactDocument,
+) -> bool:
+    return (
+        event_result.accepted_frame_ids == artifact_document.accepted_frame_ids
+        and event_result.accepted_fragments == artifact_document.accepted_fragments
+        and event_result.multi_view_decision == artifact_document.multi_view_decision
+        and event_result.mask_npz_path == artifact_document.mask_npz_path
+        and event_result.mask_ply_path == artifact_document.mask_ply_path
+    )
+
+
+def _event_path_matches(
+    raw_path: str,
+    expected_path: Path,
+    *,
+    field_name: str,
+    events_path: Path,
+    line_number: int,
+) -> bool:
+    try:
+        event_path = Path(raw_path).expanduser().resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise CodexResponseError(
+            "successful fuse_accepted_masks tool event contains an invalid path: "
+            f"field={field_name}; events_path={events_path}; line={line_number}; "
+            f"error_type={exc.__class__.__name__}"
+        ) from exc
+    return event_path == expected_path.expanduser().resolve()
+
+
+def _accepted_frame_ids_from_fuse_fragments(
+    accepted_fragments: tuple[FinalMaskAcceptedFragment, ...],
+) -> tuple[str, ...]:
+    seen_frame_ids: set[str] = set()
+    accepted_frame_ids: list[str] = []
+    for fragment in accepted_fragments:
+        if fragment.frame_id not in seen_frame_ids:
+            accepted_frame_ids.append(fragment.frame_id)
+            seen_frame_ids.add(fragment.frame_id)
+    return tuple(accepted_frame_ids)
+
+
+def _fuse_fragment_ids(
+    accepted_fragments: tuple[FinalMaskAcceptedFragment, ...],
+) -> tuple[str, ...]:
+    return tuple(fragment.fragment_id for fragment in accepted_fragments)
+
+
 def _validate_multiview_decision_against_tool_events(
     artifact: ValidatedFinalMaskArtifact, events_path: Path
 ) -> None:
@@ -518,7 +778,7 @@ def _expand_suggested_frame_ids_from_events(events_path: Path) -> tuple[str, ...
     seen_frame_ids: set[str] = set()
     try:
         event_lines = events_path.read_text(encoding="utf-8").splitlines()
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         raise CodexResponseError(
             "could not read SceneFunc3D tool events for multi-view validation: "
             f"events_path={events_path}; error_type={exc.__class__.__name__}"

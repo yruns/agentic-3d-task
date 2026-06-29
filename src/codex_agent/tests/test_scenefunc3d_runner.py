@@ -6,7 +6,7 @@ import json
 import os
 import subprocess
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -967,13 +967,18 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
         confidence=0.87,
         uncertainties=("partial occlusion",),
     )
-    executor = _FakeExecutor(
-        outcome,
-        on_execute=lambda: _write_suggest_additional_views_event(
+
+    def write_tool_events() -> None:
+        _write_suggest_additional_views_event(
             sample_output_dir,
             expansion_recommendation="expand",
             frame_ids=("000020", "000030"),
-        ),
+        )
+        _write_fuse_accepted_masks_event(sample_output_dir)
+
+    executor = _FakeExecutor(
+        outcome,
+        on_execute=write_tool_events,
     )
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path / "data",
@@ -1047,7 +1052,7 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
     event_lines = (
         (sample_output_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
     )
-    assert len(event_lines) == 2
+    assert len(event_lines) == 3
     completion_event = json.loads(event_lines[-1])
     assert completion_event == {
         "event_type": "run_completed",
@@ -1057,6 +1062,158 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
         "summary_path": str(summary_path),
         "mask_artifact_path": str(sample_output_dir / "mask_artifact.json"),
     }
+
+
+def test_run_single_sample_rejects_final_artifact_without_fuse_tool_event(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_outcome_artifacts(sample_output_dir)
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("frag-a",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+    executor = _FakeExecutor(outcome)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="fuse_accepted_masks"):
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
+
+
+def test_run_single_sample_rejects_incomplete_fuse_tool_event(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_fuse_event(
+        tmp_path,
+        event_writer=_write_minimal_fuse_accepted_masks_event,
+        match="fuse_accepted_masks",
+    )
+
+
+def test_run_single_sample_rejects_non_completed_fuse_success_event(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_fuse_event(
+        tmp_path,
+        event_writer=lambda root: _write_fuse_accepted_masks_event(
+            root, event_type="run_completed"
+        ),
+        match="tool_completed",
+    )
+
+
+def test_run_single_sample_rejects_malformed_fuse_path(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_fuse_event(
+        tmp_path,
+        event_writer=lambda root: _write_fuse_accepted_masks_event(
+            root,
+            result_overrides={"mask_npz_path": f"{root}/bad\u0000path.npz"},
+        ),
+        match="mask_npz_path",
+    )
+
+
+def test_run_single_sample_wraps_non_utf8_tool_events(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_fuse_event(
+        tmp_path,
+        event_writer=_write_non_utf8_tool_events,
+        match="could not read SceneFunc3D tool events",
+    )
+
+
+def test_fuse_provenance_reader_wraps_non_utf8_tool_events(
+    tmp_path: Path,
+) -> None:
+    events_path = tmp_path / "events.jsonl"
+    events_path.write_bytes(b"\xff")
+
+    with pytest.raises(
+        CodexResponseError, match="could not read SceneFunc3D tool event log"
+    ):
+        runner._successful_fuse_tool_events(events_path)
+
+
+def test_run_single_sample_rejects_artifact_mutated_after_fuse_event(
+    tmp_path: Path,
+) -> None:
+    _assert_run_rejects_fuse_event(
+        tmp_path,
+        event_writer=_write_fuse_event_then_mutate_artifact,
+        match="mask_artifact",
+    )
+
+
+@pytest.mark.parametrize(
+    ("event_writer", "match"),
+    [
+        (
+            lambda root: _write_fuse_accepted_masks_event(
+                root,
+                result_overrides={
+                    "mask_artifact_path": str(root / "other_mask_artifact.json")
+                },
+            ),
+            "mask_artifact_path",
+        ),
+        (
+            lambda root: _write_fuse_accepted_masks_event(
+                root,
+                result_overrides={"mask_npz_path": str(root / "other_mask.npz")},
+            ),
+            "mask_npz_path",
+        ),
+        (
+            lambda root: _write_fuse_accepted_masks_event(
+                root,
+                result_overrides={"mask_ply_path": str(root / "other_mask.ply")},
+            ),
+            "mask_ply_path",
+        ),
+        (
+            lambda root: _write_fuse_accepted_masks_event(
+                root,
+                accepted_frame_ids=("000020",),
+            ),
+            "selected_frame_ids",
+        ),
+        (
+            lambda root: _write_fuse_accepted_masks_event(
+                root,
+                accepted_fragment_ids=("frag-b",),
+            ),
+            "accepted_fragment_ids",
+        ),
+    ],
+)
+def test_run_single_sample_rejects_fuse_tool_event_mismatches(
+    tmp_path: Path,
+    event_writer: Callable[[Path], None],
+    match: str,
+) -> None:
+    _assert_run_rejects_fuse_event(
+        tmp_path,
+        event_writer=event_writer,
+        match=match,
+    )
 
 
 def test_run_single_sample_rejects_stop_missing_expand_rejected_frames(
@@ -1117,7 +1274,10 @@ def test_run_single_sample_ignores_stale_expand_events_from_previous_run(
         confidence=0.87,
         uncertainties=("partial occlusion",),
     )
-    executor = _FakeExecutor(outcome)
+    executor = _FakeExecutor(
+        outcome,
+        on_execute=lambda: _write_fuse_accepted_masks_event(sample_output_dir),
+    )
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path / "data",
         output_dir=tmp_path / "out",
@@ -1134,8 +1294,9 @@ def test_run_single_sample_ignores_stale_expand_events_from_previous_run(
     event_lines = (
         (sample_output_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
     )
-    assert len(event_lines) == 1
-    assert json.loads(event_lines[0])["event_type"] == "run_completed"
+    assert len(event_lines) == 2
+    assert json.loads(event_lines[0])["tool_name"] == "fuse_accepted_masks"
+    assert json.loads(event_lines[1])["event_type"] == "run_completed"
     assert result_path == sample_output_dir / "result.json"
 
 
@@ -1290,6 +1451,43 @@ def test_run_single_sample_revalidates_executor_outcome(
 
 def _do_nothing() -> None:
     return None
+
+
+def _assert_run_rejects_fuse_event(
+    tmp_path: Path,
+    *,
+    event_writer: Callable[[Path], None],
+    match: str,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_outcome_artifacts(sample_output_dir)
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("frag-a",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+    executor = _FakeExecutor(
+        outcome,
+        on_execute=lambda: event_writer(sample_output_dir),
+    )
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match=match):
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
 
 
 class _FakeExecutor:
@@ -1504,6 +1702,113 @@ def _write_suggest_additional_views_event(
     events_path.parent.mkdir(parents=True, exist_ok=True)
     with events_path.open("a", encoding="utf-8") as event_file:
         event_file.write(json.dumps(event_payload, ensure_ascii=False) + "\n")
+
+
+def _write_fuse_accepted_masks_event(
+    root: Path,
+    *,
+    accepted_fragment_ids: tuple[str, ...] = ("frag-a",),
+    accepted_frame_ids: tuple[str, ...] = ("000010",),
+    event_type: str = "tool_completed",
+    result_overrides: dict[str, object] | None = None,
+) -> None:
+    result_payload = _fuse_event_result_payload(
+        root,
+        accepted_fragment_ids=accepted_fragment_ids,
+        accepted_frame_ids=accepted_frame_ids,
+    )
+    if result_overrides is not None:
+        result_payload.update(result_overrides)
+    event_payload = {
+        "event_type": event_type,
+        "tool_name": "fuse_accepted_masks",
+        "status": "success",
+        "args": {},
+        "result": result_payload,
+        "error": "",
+    }
+    _append_event_payload(root, event_payload)
+
+
+def _write_minimal_fuse_accepted_masks_event(root: Path) -> None:
+    event_payload = {
+        "event_type": "tool_completed",
+        "tool_name": "fuse_accepted_masks",
+        "status": "success",
+        "args": {},
+        "result": {
+            "accepted_frame_ids": ["000010"],
+            "accepted_fragments": [
+                {
+                    "fragment_id": "frag-a",
+                    "frame_id": "000010",
+                }
+            ],
+            "multi_view_decision": {
+                "seed_fragment_id": "frag-a",
+                "action": "stop",
+                "reason": "test minimal fuse event",
+                "suggested_frame_ids": [],
+                "rejected_suggested_frame_ids": [],
+            },
+            "mask_artifact_path": str(root / "mask_artifact.json"),
+            "mask_npz_path": str(root / "mask.npz"),
+            "mask_ply_path": str(root / "mask.ply"),
+        },
+        "error": "",
+    }
+    _append_event_payload(root, event_payload)
+
+
+def _fuse_event_result_payload(
+    root: Path,
+    *,
+    accepted_fragment_ids: tuple[str, ...],
+    accepted_frame_ids: tuple[str, ...],
+) -> dict[str, object]:
+    artifact_payload = json.loads(
+        (root / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    result_payload = cast(dict[str, object], artifact_payload)
+    result_payload["mask_artifact_path"] = str(root / "mask_artifact.json")
+    result_payload["accepted_frame_ids"] = list(accepted_frame_ids)
+    accepted_fragments = result_payload.get("accepted_fragments")
+    if not isinstance(accepted_fragments, list):
+        raise AssertionError("test artifact must contain accepted_fragments")
+    for fragment, fragment_id, frame_id in zip(
+        accepted_fragments,
+        accepted_fragment_ids,
+        accepted_frame_ids,
+        strict=True,
+    ):
+        if not isinstance(fragment, dict):
+            raise AssertionError("test accepted fragment must be a JSON object")
+        fragment["fragment_id"] = fragment_id
+        fragment["frame_id"] = frame_id
+    multi_view_decision = result_payload.get("multi_view_decision")
+    if not isinstance(multi_view_decision, dict):
+        raise AssertionError("test artifact must contain multi_view_decision")
+    multi_view_decision["seed_fragment_id"] = accepted_fragment_ids[0]
+    return result_payload
+
+
+def _append_event_payload(root: Path, event_payload: Mapping[str, object]) -> None:
+    events_path = root / "events.jsonl"
+    events_path.parent.mkdir(parents=True, exist_ok=True)
+    with events_path.open("a", encoding="utf-8") as event_file:
+        event_file.write(json.dumps(event_payload, ensure_ascii=False) + "\n")
+
+
+def _write_non_utf8_tool_events(root: Path) -> None:
+    (root / "events.jsonl").write_bytes(b"\xff")
+
+
+def _write_fuse_event_then_mutate_artifact(root: Path) -> None:
+    _write_fuse_accepted_masks_event(root)
+    artifact_path = root / "mask_artifact.json"
+    artifact_payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    artifact_payload["multi_view_decision"]["reason"] = "mutated after fuse"
+    artifact_path.write_text(json.dumps(artifact_payload), encoding="utf-8")
 
 
 def _write_review_artifacts(root: Path) -> dict[str, str]:
