@@ -145,6 +145,57 @@ def test_view_crop_args_accept_bbox_xyxy_alias_and_infer_pixel_format() -> None:
     assert args.bbox_format == "pixel_xyxy"
 
 
+def test_view_crop_args_accept_xywh_aliases_and_infer_pixel_format() -> None:
+    args = ViewCropArgs.model_validate(
+        {
+            "frame_id": "000011",
+            "x": 900.0,
+            "y": 1500.0,
+            "width": 220.0,
+            "height": 220.0,
+        }
+    )
+
+    assert args.bbox == (900.0, 1500.0, 1120.0, 1720.0)
+    assert args.bbox_format == "pixel_xyxy"
+
+
+def test_view_crop_args_reject_duplicate_bbox_alias_shapes() -> None:
+    with pytest.raises(ValidationError):
+        ViewCropArgs.model_validate(
+            {
+                "frame_id": "000011",
+                "bbox_xyxy": [900.0, 1500.0, 1100.0, 1730.0],
+                "x": 900.0,
+                "y": 1500.0,
+                "width": 220.0,
+                "height": 220.0,
+            }
+        )
+    with pytest.raises(ValidationError):
+        ViewCropArgs.model_validate(
+            {
+                "frame_id": "000011",
+                "bbox_xyxy": [900.0, 1500.0, 1100.0, 1730.0],
+                "x1": 900.0,
+                "y1": 1500.0,
+                "x2": 1120.0,
+                "y2": 1720.0,
+            }
+        )
+    with pytest.raises(ValidationError):
+        ViewCropArgs.model_validate(
+            {
+                "frame_id": "000011",
+                "box": [900.0, 1500.0, 1100.0, 1730.0],
+                "x1": 900.0,
+                "y1": 1500.0,
+                "x2": 1120.0,
+                "y2": 1720.0,
+            }
+        )
+
+
 def test_view_crop_args_infer_pixel_format_for_canonical_pixel_bbox() -> None:
     args = ViewCropArgs.model_validate(
         {"frame_id": "000011", "bbox": [900.0, 1500.0, 1100.0, 1730.0]}

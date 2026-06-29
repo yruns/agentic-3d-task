@@ -189,7 +189,19 @@ class ViewCropArgs(BaseModel):
         values = dict(payload)
         used_box_alias = "bbox" not in values and "box" in values
         used_bbox_xyxy_alias = "bbox" not in values and "bbox_xyxy" in values
-        used_xyxy_alias = "bbox" not in values and _has_xyxy_aliases(values)
+        used_xyxy_alias = (
+            "bbox" not in values
+            and "box" not in values
+            and "bbox_xyxy" not in values
+            and _has_xyxy_aliases(values)
+        )
+        used_xywh_alias = (
+            "bbox" not in values
+            and "box" not in values
+            and "bbox_xyxy" not in values
+            and not _has_xyxy_aliases(values)
+            and _has_xywh_aliases(values)
+        )
         if "bbox" not in values and "box" in values:
             values["bbox"] = values.pop("box")
         if "bbox" not in values and "bbox_xyxy" in values:
@@ -201,10 +213,14 @@ class ViewCropArgs(BaseModel):
                 values.pop("x2"),
                 values.pop("y2"),
             )
-        if used_bbox_xyxy_alias and "bbox_format" not in values:
+        if used_xywh_alias:
+            values["bbox"] = _bbox_from_xywh_aliases(values)
+            for alias_name in ("x", "y", "width", "height"):
+                values.pop(alias_name)
+        if (used_bbox_xyxy_alias or used_xywh_alias) and "bbox_format" not in values:
             values["bbox_format"] = "pixel_xyxy"
         if (
-            (used_box_alias or used_xyxy_alias or "bbox" in values)
+            (used_box_alias or used_xyxy_alias or used_xywh_alias or "bbox" in values)
             and "bbox_format" not in values
             and _raw_bbox_looks_like_pixels(values.get("bbox"))
         ):
@@ -586,6 +602,28 @@ def _has_xyxy_aliases(values: Mapping[str, object]) -> bool:
     return all(
         coordinate_name in values for coordinate_name in ("x1", "y1", "x2", "y2")
     )
+
+
+def _has_xywh_aliases(values: Mapping[str, object]) -> bool:
+    return all(
+        coordinate_name in values for coordinate_name in ("x", "y", "width", "height")
+    )
+
+
+def _bbox_from_xywh_aliases(
+    values: Mapping[str, object],
+) -> tuple[float, float, float, float]:
+    left = _xywh_alias_number(values["x"], field_name="x")
+    top = _xywh_alias_number(values["y"], field_name="y")
+    width = _xywh_alias_number(values["width"], field_name="width")
+    height = _xywh_alias_number(values["height"], field_name="height")
+    return (left, top, left + width, top + height)
+
+
+def _xywh_alias_number(value: object, *, field_name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{field_name} must be a numeric crop coordinate")
+    return float(value)
 
 
 def _format_validation_error(exc: ValidationError) -> str:
