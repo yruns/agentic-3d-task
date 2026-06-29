@@ -26,6 +26,7 @@ from codex_agent.scenefunc3d.runner import (
     build_arg_parser,
     check_sidecar_health,
     main,
+    run_samples,
     run_single_sample,
 )
 from codex_agent.scenefunc3d.sample import SceneFunc3dSample, SceneFuncMotionHint
@@ -71,6 +72,32 @@ def test_build_arg_parser_accepts_single_case_runtime_options(
     assert args.sample_id == "421254::desc-a"
     assert args.backend_config == tmp_path / "backends.toml"
     assert args.output_dir == tmp_path / "out"
+
+
+def test_build_arg_parser_accepts_all_samples_batch_runtime_options(
+    tmp_path: Path,
+) -> None:
+    parser = build_arg_parser()
+
+    args = parser.parse_args(
+        [
+            "--dataset-root",
+            str(tmp_path / "data"),
+            "--all-samples",
+            "--backend-config",
+            str(tmp_path / "backends.toml"),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--score",
+        ]
+    )
+
+    assert args.dataset_root == tmp_path / "data"
+    assert args.all_samples is True
+    assert args.sample_id is None
+    assert args.backend_config == tmp_path / "backends.toml"
+    assert args.output_dir == tmp_path / "out"
+    assert args.score is True
 
 
 def test_mask_task_prompt_inlines_tools_without_attachments(
@@ -1300,6 +1327,55 @@ def test_run_single_sample_ignores_stale_expand_events_from_previous_run(
     assert result_path == sample_output_dir / "result.json"
 
 
+def test_run_samples_writes_batch_evaluation_summary(
+    tmp_path: Path,
+) -> None:
+    _write_two_sample_scene(tmp_path / "data")
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+    executor = _DynamicSceneFuncExecutor()
+
+    summary = run_samples(
+        config,
+        sample_ids=("421254::desc-a", "421254::desc-b"),
+        executor=executor,
+        check_sidecars=False,
+        score=True,
+    )
+
+    assert executor.sample_output_dirs == (
+        tmp_path / "out" / "421254" / "desc-a",
+        tmp_path / "out" / "421254" / "desc-b",
+    )
+    assert summary.sample_count == 2
+    assert summary.completed_count == 2
+    assert summary.failed_count == 0
+    assert summary.mean_iou == pytest.approx((2.0 / 3.0 + 0.5) / 2.0)
+    assert summary.mean_precision == pytest.approx((1.0 + 0.5) / 2.0)
+    assert summary.mean_recall == pytest.approx((2.0 / 3.0 + 1.0) / 2.0)
+    assert summary.mean_f1 == pytest.approx((0.8 + 2.0 / 3.0) / 2.0)
+
+    summary_path = tmp_path / "out" / "evaluation_summary.json"
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert payload["task_name"] == "scenefunc3d_mask_generation"
+    assert payload["sample_count"] == 2
+    assert payload["completed_count"] == 2
+    assert payload["failed_count"] == 0
+    assert payload["mean_metrics"]["iou"] == pytest.approx(summary.mean_iou)
+    assert [item["sample_id"] for item in payload["results"]] == [
+        "421254::desc-a",
+        "421254::desc-b",
+    ]
+    assert payload["results"][0]["result_path"] == str(
+        tmp_path / "out" / "421254" / "desc-a" / "result.json"
+    )
+    assert payload["results"][0]["score"]["metrics"]["predicted_count"] == 2
+    assert payload["results"][0]["score"]["metrics"]["gt_count"] == 3
+
+
 def test_main_with_score_prints_result_path_and_score(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1364,6 +1440,136 @@ def test_main_with_score_prints_result_path_and_score(
     assert score["metrics"]["iou"] == 0.0
     assert score["metrics"]["predicted_count"] == 2
     assert score["metrics"]["gt_count"] == 3
+
+
+def test_main_all_samples_prints_batch_summary_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_two_sample_scene(tmp_path / "data")
+    captured_sample_ids: list[str] = []
+
+    def fake_run_samples(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_ids: tuple[str, ...],
+        executor: CodexExecutor,
+        check_sidecars: bool = True,
+        score: bool = True,
+        continue_on_error: bool = True,
+    ) -> runner.SceneFunc3dBatchRunSummary:
+        _ = executor
+        _ = continue_on_error
+        assert config.dataset_root == tmp_path / "data"
+        assert config.output_dir == tmp_path / "out"
+        assert config.backend_config_path == tmp_path / "backends.toml"
+        assert check_sidecars is False
+        assert score is True
+        captured_sample_ids.extend(sample_ids)
+        return runner.SceneFunc3dBatchRunSummary(
+            sample_count=2,
+            completed_count=2,
+            failed_count=0,
+            mean_iou=0.25,
+            mean_precision=0.5,
+            mean_recall=0.75,
+            mean_f1=0.6,
+            results=(),
+        )
+
+    def fake_build_executor() -> CodexExecutor:
+        return _UnusedExecutor()
+
+    monkeypatch.setattr(runner, "run_samples", fake_run_samples)
+    monkeypatch.setattr(runner, "_build_executor", fake_build_executor)
+
+    exit_code = main(
+        [
+            "--dataset-root",
+            str(tmp_path / "data"),
+            "--all-samples",
+            "--backend-config",
+            str(tmp_path / "backends.toml"),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--skip-sidecar-health-check",
+            "--score",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured_sample_ids == ["421254::desc-a", "421254::desc-b"]
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["summary_path"] == str(tmp_path / "out" / "evaluation_summary.json")
+    assert payload["summary"]["sample_count"] == 2
+    assert payload["summary"]["mean_metrics"]["iou"] == 0.25
+
+
+def test_main_sample_ids_path_strips_file_entries_before_batch_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_two_sample_scene(tmp_path / "data")
+    sample_ids_path = tmp_path / "sample_ids.json"
+    sample_ids_path.write_text(
+        json.dumps([" 421254::desc-b ", "421254::desc-a"]),
+        encoding="utf-8",
+    )
+    captured_sample_ids: list[str] = []
+
+    def fake_run_samples(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_ids: tuple[str, ...],
+        executor: CodexExecutor,
+        check_sidecars: bool = True,
+        score: bool = True,
+        continue_on_error: bool = True,
+    ) -> runner.SceneFunc3dBatchRunSummary:
+        _ = config
+        _ = executor
+        _ = check_sidecars
+        _ = score
+        _ = continue_on_error
+        captured_sample_ids.extend(sample_ids)
+        return runner.SceneFunc3dBatchRunSummary(
+            sample_count=2,
+            completed_count=2,
+            failed_count=0,
+            mean_iou=0.25,
+            mean_precision=0.5,
+            mean_recall=0.75,
+            mean_f1=0.6,
+            results=(),
+        )
+
+    def fake_build_executor() -> CodexExecutor:
+        return _UnusedExecutor()
+
+    monkeypatch.setattr(runner, "run_samples", fake_run_samples)
+    monkeypatch.setattr(runner, "_build_executor", fake_build_executor)
+
+    exit_code = main(
+        [
+            "--dataset-root",
+            str(tmp_path / "data"),
+            "--sample-ids-path",
+            str(sample_ids_path),
+            "--backend-config",
+            str(tmp_path / "backends.toml"),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--skip-sidecar-health-check",
+            "--score",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured_sample_ids == ["421254::desc-b", "421254::desc-a"]
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["summary_path"] == str(tmp_path / "out" / "evaluation_summary.json")
 
 
 def test_build_executor_uses_tool_writable_runtime_defaults(
@@ -1512,6 +1718,36 @@ class _FakeExecutor:
             outcome=cast(ResultT, self._outcome),
             turn=CodexTurnResult(
                 final_response=json.dumps(self._outcome.to_payload()),
+                metadata=CodexTurnMetadata(turn_id="fake-turn", status="completed"),
+            ),
+        )
+
+
+class _DynamicSceneFuncExecutor:
+    def __init__(self) -> None:
+        self.sample_output_dirs: tuple[Path, ...] = ()
+
+    def execute(self, task: CodexTask[ResultT]) -> CodexTaskResult[ResultT]:
+        if not isinstance(task, SceneFunc3dMaskTask):
+            raise AssertionError("expected SceneFunc3dMaskTask")
+        sample_output_dir = task.output_dir
+        _write_outcome_artifacts(sample_output_dir)
+        _write_fuse_accepted_masks_event(sample_output_dir)
+        self.sample_output_dirs = (*self.sample_output_dirs, sample_output_dir)
+        outcome = SceneFunc3dMaskOutcome(
+            mask_artifact_path=sample_output_dir / "mask_artifact.json",
+            mask_npz_path=sample_output_dir / "mask.npz",
+            mask_ply_path=sample_output_dir / "mask.ply",
+            selected_frame_ids=("000010",),
+            accepted_fragment_ids=("frag-a",),
+            confidence=0.87,
+            uncertainties=("partial occlusion",),
+        )
+        return CodexTaskResult(
+            task_name=task.task_name,
+            outcome=cast(ResultT, outcome),
+            turn=CodexTurnResult(
+                final_response=json.dumps(outcome.to_payload()),
                 metadata=CodexTurnMetadata(turn_id="fake-turn", status="completed"),
             ),
         )
@@ -1958,6 +2194,73 @@ def _write_scene(root: Path) -> None:
                         "label": "pinch_pull",
                         "indices": [3, 5, 8],
                     }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_two_sample_scene(root: Path) -> None:
+    scene_dir = root / "421254"
+    _write_scene_root(scene_dir)
+    (scene_dir / "421254_descriptions.json").write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "descriptions": [
+                    {
+                        "desc_id": "desc-a",
+                        "annot_id": ["annot-a"],
+                        "description": "Open the lower drawer.",
+                    },
+                    {
+                        "desc_id": "desc-b",
+                        "annot_id": ["annot-b"],
+                        "description": "Press the lower button.",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (scene_dir / "421254_motions.json").write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "motions": [
+                    {
+                        "motion_id": "motion-a",
+                        "annot_id": "annot-a",
+                        "motion_type": "trans",
+                        "motion_dir": [1.0, 0.0, 0.0],
+                    },
+                    {
+                        "motion_id": "motion-b",
+                        "annot_id": "annot-b",
+                        "motion_type": "press",
+                        "motion_dir": [0.0, 0.0, -1.0],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (scene_dir / "421254_annotations.json").write_text(
+        json.dumps(
+            {
+                "visit_id": "421254",
+                "annotations": [
+                    {
+                        "annot_id": "annot-a",
+                        "label": "pinch_pull",
+                        "indices": [10, 12, 99],
+                    },
+                    {
+                        "annot_id": "annot-b",
+                        "label": "press",
+                        "indices": [10],
+                    },
                 ],
             }
         ),

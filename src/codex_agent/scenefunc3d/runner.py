@@ -23,7 +23,7 @@ from ..models import CodexTurnMetadata, CodexTurnRequest
 from ..tasks.base import CodexExecutor
 from .backends.config import load_backend_settings
 from .evaluation.payloads import SceneFunc3dScorePayload, score_to_payload
-from .evaluation.scorer import score_result_file
+from .evaluation.scorer import SceneFunc3dScore, score_result_file
 from .final_mask_artifacts import (
     FinalMaskAcceptedFragment,
     FinalMaskArtifactDocument,
@@ -33,7 +33,7 @@ from .final_mask_artifacts import (
     validate_final_mask_artifact,
 )
 from .playbook import SCENEFUNC3D_TOOL_NAMES, SCENEFUNC3D_TOOLS_PLAYBOOK
-from .sample import SceneFunc3dSample, load_sample, scene_dir_for
+from .sample import SceneFunc3dSample, list_sample_ids, load_sample, scene_dir_for
 from .servers.schemas import HealthResponse
 from .tools.mask_artifacts import (
     SceneFunc3dCompletedRunSummary,
@@ -110,6 +110,46 @@ class SceneFunc3dCliRunAndScorePayload(TypedDict):
 
     result_path: str
     score: SceneFunc3dScorePayload
+
+
+class SceneFunc3dBatchMeanMetricsPayload(TypedDict):
+    """JSON-ready aggregate metrics over a SceneFunc3D batch."""
+
+    iou: float
+    precision: float
+    recall: float
+    f1: float
+
+
+class SceneFunc3dBatchSampleResultPayload(TypedDict):
+    """JSON-ready result row for one SceneFunc3D batch sample."""
+
+    sample_id: str
+    status: str
+    result_path: str | None
+    score: SceneFunc3dScorePayload | None
+    error: str
+
+
+class SceneFunc3dBatchRunSummaryPayload(TypedDict):
+    """JSON-ready summary for a SceneFunc3D batch run."""
+
+    task_name: str
+    sample_count: int
+    completed_count: int
+    failed_count: int
+    mean_metrics: SceneFunc3dBatchMeanMetricsPayload
+    results: list[SceneFunc3dBatchSampleResultPayload]
+
+
+class SceneFunc3dCliBatchRunPayload(TypedDict):
+    """CLI payload after running a SceneFunc3D batch."""
+
+    summary_path: str
+    summary: SceneFunc3dBatchRunSummaryPayload
+
+
+SceneFunc3dBatchSampleStatus: TypeAlias = Literal["completed", "failed"]
 
 
 class SceneFunc3dMaskDecision(BaseModel):
@@ -247,6 +287,59 @@ class SceneFunc3dRunnerConfig:
         object.__setattr__(self, "dataset_root", Path(self.dataset_root))
         object.__setattr__(self, "output_dir", Path(self.output_dir))
         object.__setattr__(self, "backend_config_path", Path(self.backend_config_path))
+
+
+@dataclass(frozen=True)
+class SceneFunc3dBatchSampleResult:
+    """The run and score status for one SceneFunc3D batch sample."""
+
+    sample_id: str
+    status: SceneFunc3dBatchSampleStatus
+    result_path: Path | None
+    score: SceneFunc3dScore | None
+    error: str = ""
+
+    def to_payload(self) -> SceneFunc3dBatchSampleResultPayload:
+        """Return a JSON-serializable batch result row."""
+        return {
+            "sample_id": self.sample_id,
+            "status": self.status,
+            "result_path": (
+                str(self.result_path) if self.result_path is not None else None
+            ),
+            "score": score_to_payload(self.score) if self.score is not None else None,
+            "error": self.error,
+        }
+
+
+@dataclass(frozen=True)
+class SceneFunc3dBatchRunSummary:
+    """Aggregate metrics over one SceneFunc3D batch run."""
+
+    sample_count: int
+    completed_count: int
+    failed_count: int
+    mean_iou: float
+    mean_precision: float
+    mean_recall: float
+    mean_f1: float
+    results: tuple[SceneFunc3dBatchSampleResult, ...]
+
+    def to_payload(self) -> SceneFunc3dBatchRunSummaryPayload:
+        """Return the JSON-ready representation stored in ``evaluation_summary``."""
+        return {
+            "task_name": TASK_NAME,
+            "sample_count": self.sample_count,
+            "completed_count": self.completed_count,
+            "failed_count": self.failed_count,
+            "mean_metrics": {
+                "iou": self.mean_iou,
+                "precision": self.mean_precision,
+                "recall": self.mean_recall,
+                "f1": self.mean_f1,
+            },
+            "results": [result.to_payload() for result in self.results],
+        }
 
 
 class SceneFunc3dMaskTask:
@@ -524,6 +617,134 @@ def run_single_sample(
         ),
     )
     return result_path
+
+
+def run_samples(
+    config: SceneFunc3dRunnerConfig,
+    *,
+    sample_ids: Sequence[str],
+    executor: CodexExecutor,
+    check_sidecars: bool = True,
+    score: bool = True,
+    continue_on_error: bool = True,
+) -> SceneFunc3dBatchRunSummary:
+    """Run and optionally score multiple SceneFunc3D samples sequentially."""
+    normalized_sample_ids = _normalized_batch_sample_ids(sample_ids)
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    if check_sidecars:
+        check_sidecar_health(config.backend_config_path)
+
+    results: list[SceneFunc3dBatchSampleResult] = []
+    for sample_id in normalized_sample_ids:
+        try:
+            result_path = run_single_sample(
+                config,
+                sample_id=sample_id,
+                executor=executor,
+                check_sidecars=False,
+            )
+            sample_score = (
+                score_result_file(
+                    data_root=config.dataset_root, result_path=result_path
+                )
+                if score
+                else None
+            )
+            results.append(
+                SceneFunc3dBatchSampleResult(
+                    sample_id=sample_id,
+                    status="completed",
+                    result_path=result_path,
+                    score=sample_score,
+                )
+            )
+        except Exception as exc:
+            if not continue_on_error:
+                raise
+            results.append(
+                SceneFunc3dBatchSampleResult(
+                    sample_id=sample_id,
+                    status="failed",
+                    result_path=None,
+                    score=None,
+                    error=_format_batch_error(exc),
+                )
+            )
+
+    summary = _summarize_batch_results(tuple(results))
+    _write_batch_summary(config.output_dir / "evaluation_summary.json", summary)
+    return summary
+
+
+def _normalized_batch_sample_ids(sample_ids: Sequence[str]) -> tuple[str, ...]:
+    normalized_sample_ids = tuple(sample_id.strip() for sample_id in sample_ids)
+    if not normalized_sample_ids:
+        raise ValueError("sample_ids must not be empty")
+    if any(not sample_id for sample_id in normalized_sample_ids):
+        raise ValueError("sample_ids must not contain empty values")
+    seen_sample_ids: set[str] = set()
+    duplicate_sample_ids: list[str] = []
+    for sample_id in normalized_sample_ids:
+        if sample_id in seen_sample_ids:
+            duplicate_sample_ids.append(sample_id)
+        seen_sample_ids.add(sample_id)
+    if duplicate_sample_ids:
+        raise ValueError(
+            f"duplicate SceneFunc3D sample ids: {tuple(duplicate_sample_ids)}"
+        )
+    return normalized_sample_ids
+
+
+def _summarize_batch_results(
+    results: tuple[SceneFunc3dBatchSampleResult, ...],
+) -> SceneFunc3dBatchRunSummary:
+    sample_count = len(results)
+    denominator = max(sample_count, 1)
+    completed_count = sum(1 for result in results if result.status == "completed")
+    failed_count = sample_count - completed_count
+    return SceneFunc3dBatchRunSummary(
+        sample_count=sample_count,
+        completed_count=completed_count,
+        failed_count=failed_count,
+        mean_iou=sum(_score_iou(result.score) for result in results) / denominator,
+        mean_precision=(
+            sum(_score_precision(result.score) for result in results) / denominator
+        ),
+        mean_recall=sum(_score_recall(result.score) for result in results)
+        / denominator,
+        mean_f1=sum(_score_f1(result.score) for result in results) / denominator,
+        results=results,
+    )
+
+
+def _write_batch_summary(
+    summary_path: Path, summary: SceneFunc3dBatchRunSummary
+) -> Path:
+    summary_path.write_text(
+        json.dumps(summary.to_payload(), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return summary_path
+
+
+def _score_iou(score: SceneFunc3dScore | None) -> float:
+    return score.metrics.iou if score is not None else 0.0
+
+
+def _score_precision(score: SceneFunc3dScore | None) -> float:
+    return score.metrics.precision if score is not None else 0.0
+
+
+def _score_recall(score: SceneFunc3dScore | None) -> float:
+    return score.metrics.recall if score is not None else 0.0
+
+
+def _score_f1(score: SceneFunc3dScore | None) -> float:
+    return score.metrics.f1 if score is not None else 0.0
+
+
+def _format_batch_error(exc: Exception) -> str:
+    return f"{exc.__class__.__name__}: {str(exc)[:480]}"
 
 
 def _initialize_run_events(events_path: Path) -> None:
@@ -928,10 +1149,10 @@ def _artifact_payload(
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    """Build the SceneFunc3D single-case runner CLI parser."""
+    """Build the SceneFunc3D runner CLI parser."""
     parser = argparse.ArgumentParser(
         prog="codex_agent.scenefunc3d.runner",
-        description="Run one SceneFunc3D mask-generation case with Codex.",
+        description="Run SceneFunc3D mask-generation cases with Codex.",
     )
     parser.add_argument(
         "--dataset-root",
@@ -939,10 +1160,20 @@ def build_arg_parser() -> argparse.ArgumentParser:
         type=Path,
         help="SceneFunc3D dataset root containing per-visit scene directories.",
     )
-    parser.add_argument(
+    sample_source = parser.add_mutually_exclusive_group(required=True)
+    sample_source.add_argument(
         "--sample-id",
-        required=True,
         help="SceneFunc3D sample id in '<visit_id>::<desc_id>' form.",
+    )
+    sample_source.add_argument(
+        "--sample-ids-path",
+        type=Path,
+        help="JSON file containing a list of SceneFunc3D sample ids.",
+    )
+    sample_source.add_argument(
+        "--all-samples",
+        action="store_true",
+        help="Run all samples discovered under --dataset-root.",
     )
     parser.add_argument(
         "--backend-config",
@@ -970,7 +1201,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run one SceneFunc3D sample from the command line."""
+    """Run SceneFunc3D samples from the command line."""
     parser = build_arg_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
     config = SceneFunc3dRunnerConfig(
@@ -979,22 +1210,75 @@ def main(argv: Sequence[str] | None = None) -> int:
         backend_config_path=args.backend_config,
     )
     executor = _build_executor()
-    result_path = run_single_sample(
-        config,
-        sample_id=args.sample_id,
-        executor=executor,
-        check_sidecars=not args.skip_sidecar_health_check,
-    )
-    if _namespace_bool(args, "score"):
-        payload: SceneFunc3dCliRunPayload | SceneFunc3dCliRunAndScorePayload = (
-            _run_and_score_payload(
+    sample_ids = _sample_ids_from_args(args, data_root=config.dataset_root)
+    if len(sample_ids) == 1 and _namespace_optional_str(args, "sample_id") is not None:
+        result_path = run_single_sample(
+            config,
+            sample_id=sample_ids[0],
+            executor=executor,
+            check_sidecars=not args.skip_sidecar_health_check,
+        )
+        if _namespace_bool(args, "score"):
+            payload: (
+                SceneFunc3dCliRunPayload
+                | SceneFunc3dCliRunAndScorePayload
+                | SceneFunc3dCliBatchRunPayload
+            ) = _run_and_score_payload(
                 data_root=config.dataset_root, result_path=result_path
             )
-        )
+        else:
+            payload = _run_payload(result_path)
     else:
-        payload = _run_payload(result_path)
+        summary = run_samples(
+            config,
+            sample_ids=sample_ids,
+            executor=executor,
+            check_sidecars=not args.skip_sidecar_health_check,
+            score=_namespace_bool(args, "score"),
+        )
+        payload = _batch_run_payload(
+            config.output_dir / "evaluation_summary.json", summary
+        )
     print(json.dumps(payload, ensure_ascii=False))
     return 0
+
+
+def _sample_ids_from_args(
+    args: argparse.Namespace, *, data_root: Path
+) -> tuple[str, ...]:
+    sample_id = _namespace_optional_str(args, "sample_id")
+    if sample_id is not None:
+        return (sample_id,)
+    sample_ids_path = _namespace_optional_path(args, "sample_ids_path")
+    if sample_ids_path is not None:
+        return _load_sample_ids_file(sample_ids_path)
+    if _namespace_bool(args, "all_samples"):
+        return list_sample_ids(data_root)
+    raise SceneFunc3dDataError("one SceneFunc3D sample source is required")
+
+
+def _load_sample_ids_file(path: Path) -> tuple[str, ...]:
+    if not path.is_file():
+        raise SceneFunc3dDataError(f"SceneFunc3D sample ids file is missing: {path}")
+    try:
+        payload: object = json.loads(path.read_text(encoding="utf-8"))
+    except JSONDecodeError as exc:
+        raise SceneFunc3dDataError(
+            f"SceneFunc3D sample ids file is not valid JSON: {path}"
+        ) from exc
+    if not isinstance(payload, list):
+        raise SceneFunc3dDataError(
+            f"SceneFunc3D sample ids file must contain a JSON array: {path}"
+        )
+    sample_ids: list[str] = []
+    for item_index, item in enumerate(payload):
+        if not isinstance(item, str) or not item.strip():
+            raise SceneFunc3dDataError(
+                "SceneFunc3D sample ids file entries must be non-empty strings: "
+                f"path={path}; index={item_index}"
+            )
+        sample_ids.append(item.strip())
+    return tuple(sample_ids)
 
 
 def _build_executor() -> CodexExecutor:
@@ -1022,6 +1306,15 @@ def _run_and_score_payload(
         "score": score_to_payload(
             score_result_file(data_root=data_root, result_path=result_path)
         ),
+    }
+
+
+def _batch_run_payload(
+    summary_path: Path, summary: SceneFunc3dBatchRunSummary
+) -> SceneFunc3dCliBatchRunPayload:
+    return {
+        "summary_path": str(summary_path),
+        "summary": summary.to_payload(),
     }
 
 
@@ -1112,6 +1405,24 @@ def _namespace_bool(args: argparse.Namespace, name: str) -> bool:
     return value
 
 
+def _namespace_optional_path(args: argparse.Namespace, name: str) -> Path | None:
+    value: object = getattr(args, name)
+    if value is None:
+        return None
+    if not isinstance(value, Path):
+        raise TypeError(f"argparse field {name!r} must be a Path or None")
+    return value
+
+
+def _namespace_optional_str(args: argparse.Namespace, name: str) -> str | None:
+    value: object = getattr(args, name)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise TypeError(f"argparse field {name!r} must be a string or None")
+    return value
+
+
 def _require_non_empty_string_tuple(
     values: tuple[str, ...],
     *,
@@ -1135,6 +1446,10 @@ __all__ = [
     "SceneFunc3dMaskOutcomePayload",
     "SceneFunc3dMaskTask",
     "SceneFunc3dRunnerConfig",
+    "SceneFunc3dBatchSampleResult",
+    "SceneFunc3dBatchSampleResultPayload",
+    "SceneFunc3dBatchRunSummary",
+    "SceneFunc3dBatchRunSummaryPayload",
     "SceneFunc3dRunArtifactPayload",
     "SceneFunc3dRunResultPayload",
     "build_arg_parser",
@@ -1142,6 +1457,7 @@ __all__ = [
     "check_sidecar_health",
     "load_runner_sample",
     "main",
+    "run_samples",
     "run_single_sample",
 ]
 
