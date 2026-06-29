@@ -163,6 +163,7 @@ def validate_final_mask_artifact(
             f"response={selected_frame_ids}; "
             f"artifact={artifact_document.accepted_frame_ids}"
         )
+    artifact_root = _infer_final_artifact_root(artifact_path)
     for fragment in artifact_document.accepted_fragments:
         try:
             validate_fragment_approval_actions(
@@ -174,7 +175,7 @@ def validate_final_mask_artifact(
                 f"gate replay: fragment_id={fragment.fragment_id}; "
                 f"frame_id={fragment.frame_id}; error={exc}"
             ) from exc
-        _validate_fragment_review_artifacts(fragment)
+        _validate_fragment_review_artifacts(fragment, artifact_root=artifact_root)
 
     npz_point_count = validate_points_world_npz(mask_npz_path)
     load_point_indices_npz(mask_npz_path, expected_count=npz_point_count)
@@ -408,6 +409,17 @@ def _accepted_frame_ids_from_fragments(
     return tuple(accepted_frame_ids)
 
 
+def _infer_final_artifact_root(artifact_path: Path) -> Path:
+    resolved_artifact_path = artifact_path.expanduser().resolve()
+    artifact_parent = resolved_artifact_path.parent
+    if (
+        resolved_artifact_path.name == "mask_artifact.json"
+        and artifact_parent.name == "fused"
+    ):
+        return artifact_parent.parent
+    return artifact_parent
+
+
 def _validate_expand_multi_view_decision(
     *,
     decision: FinalMaskMultiViewDecision,
@@ -435,7 +447,10 @@ def _validate_expand_multi_view_decision(
         )
 
 
-def _validate_fragment_review_artifacts(fragment: FinalMaskAcceptedFragment) -> None:
+def _validate_fragment_review_artifacts(
+    fragment: FinalMaskAcceptedFragment, *, artifact_root: Path
+) -> None:
+    standard_candidate_id = _candidate_id_from_standard_fragment(fragment)
     for field_name, raw_path in _review_artifact_path_items(fragment.review_artifacts):
         artifact_path = Path(raw_path).expanduser().resolve()
         if not artifact_path.is_file():
@@ -447,6 +462,74 @@ def _validate_fragment_review_artifacts(fragment: FinalMaskAcceptedFragment) -> 
             )
         if field_name == "lift_overlay_path":
             _validate_lift_overlay_provenance(fragment, artifact_path)
+        if standard_candidate_id is not None:
+            _validate_standard_review_artifact_provenance(
+                fragment,
+                artifact_path,
+                field_name=field_name,
+                candidate_id=standard_candidate_id,
+                artifact_root=artifact_root,
+            )
+
+
+def _candidate_id_from_standard_fragment(
+    fragment: FinalMaskAcceptedFragment,
+) -> str | None:
+    expected_prefix = f"{fragment.frame_id}_"
+    if not fragment.fragment_id.startswith(expected_prefix):
+        return None
+    candidate_id = fragment.fragment_id[len(expected_prefix) :]
+    if candidate_id == "":
+        return None
+    return candidate_id
+
+
+def _validate_standard_review_artifact_provenance(
+    fragment: FinalMaskAcceptedFragment,
+    artifact_path: Path,
+    *,
+    field_name: str,
+    candidate_id: str,
+    artifact_root: Path,
+) -> None:
+    expected_path = _expected_standard_review_artifact_path(
+        artifact_root,
+        fragment,
+        field_name=field_name,
+        candidate_id=candidate_id,
+    )
+    if expected_path is None:
+        return
+    resolved_expected_path = expected_path.expanduser().resolve()
+    if artifact_path != resolved_expected_path:
+        raise CodexResponseError(
+            "accepted fragment review_artifacts path must match the canonical "
+            "run-local tool artifact path: "
+            f"fragment_id={fragment.fragment_id}; "
+            f"frame_id={fragment.frame_id}; "
+            f"field={field_name}; expected_path={resolved_expected_path}; "
+            f"path={artifact_path}"
+        )
+
+
+def _expected_standard_review_artifact_path(
+    artifact_root: Path,
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    field_name: str,
+    candidate_id: str,
+) -> Path | None:
+    if field_name == "molmo_raw_text_path":
+        return artifact_root / "molmo" / f"{fragment.frame_id}_raw.txt"
+    if field_name == "molmo_overlay_path":
+        return artifact_root / "molmo" / f"{fragment.frame_id}_points.jpg"
+    if field_name == "sam_contact_sheet_path":
+        return artifact_root / "sam" / fragment.frame_id / "contact_sheet.jpg"
+    if field_name == "sam_candidate_overlay_path":
+        return artifact_root / "sam" / fragment.frame_id / f"{candidate_id}_overlay.jpg"
+    if field_name == "lift_overlay_path":
+        return artifact_root / "fragments" / fragment.fragment_id / "lift_overlay.txt"
+    return None
 
 
 def _validate_lift_overlay_provenance(

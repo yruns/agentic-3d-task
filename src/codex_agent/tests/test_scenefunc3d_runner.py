@@ -522,6 +522,179 @@ def test_mask_task_rejects_lift_overlay_with_nonstandard_filename(
         task.parse_response(json.dumps(_outcome_payload(output_dir)))
 
 
+def test_mask_task_rejects_molmo_raw_text_from_wrong_frame(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(
+        output_dir,
+        accepted_fragment_ids=("000010_mask_00",),
+        accepted_frame_ids=("000010",),
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    wrong_raw_text_path = output_dir / "molmo" / "000011_raw.txt"
+    wrong_raw_text_path.parent.mkdir(parents=True, exist_ok=True)
+    wrong_raw_text_path.write_text("wrong frame\n", encoding="utf-8")
+    review_artifacts["molmo_raw_text_path"] = str(wrong_raw_text_path)
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="molmo_raw_text_path"):
+        task.parse_response(
+            json.dumps(
+                _outcome_payload(
+                    output_dir,
+                    accepted_fragment_ids=("000010_mask_00",),
+                )
+            )
+        )
+
+
+def test_mask_task_rejects_sam_contact_sheet_from_wrong_frame(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(
+        output_dir,
+        accepted_fragment_ids=("000010_mask_00",),
+        accepted_frame_ids=("000010",),
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    wrong_contact_sheet_path = output_dir / "sam" / "000011" / "contact_sheet.jpg"
+    wrong_contact_sheet_path.parent.mkdir(parents=True, exist_ok=True)
+    wrong_contact_sheet_path.write_text("wrong frame\n", encoding="utf-8")
+    review_artifacts["sam_contact_sheet_path"] = str(wrong_contact_sheet_path)
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="sam_contact_sheet_path"):
+        task.parse_response(
+            json.dumps(
+                _outcome_payload(
+                    output_dir,
+                    accepted_fragment_ids=("000010_mask_00",),
+                )
+            )
+        )
+
+
+def test_mask_task_rejects_sam_candidate_overlay_from_wrong_candidate(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(
+        output_dir,
+        accepted_fragment_ids=("000010_mask_00",),
+        accepted_frame_ids=("000010",),
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    wrong_candidate_overlay_path = output_dir / "sam" / "000010" / "mask_01_overlay.jpg"
+    wrong_candidate_overlay_path.parent.mkdir(parents=True, exist_ok=True)
+    wrong_candidate_overlay_path.write_text("wrong candidate\n", encoding="utf-8")
+    review_artifacts["sam_candidate_overlay_path"] = str(wrong_candidate_overlay_path)
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="sam_candidate_overlay_path"):
+        task.parse_response(
+            json.dumps(
+                _outcome_payload(
+                    output_dir,
+                    accepted_fragment_ids=("000010_mask_00",),
+                )
+            )
+        )
+
+
+def test_mask_task_rejects_standard_review_artifacts_from_other_run(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    other_output_dir = tmp_path / "other-out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(
+        output_dir,
+        accepted_fragment_ids=("000010_mask_00",),
+        accepted_frame_ids=("000010",),
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        other_output_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="expected_path"):
+        task.parse_response(
+            json.dumps(
+                _outcome_payload(
+                    output_dir,
+                    accepted_fragment_ids=("000010_mask_00",),
+                )
+            )
+        )
+
+
 def test_check_sidecar_health_passes_for_healthy_fake_servers(
     tmp_path: Path,
 ) -> None:
@@ -933,13 +1106,14 @@ def _outcome_payload(
     root: Path,
     *,
     selected_frame_ids: tuple[str, ...] = ("000010",),
+    accepted_fragment_ids: tuple[str, ...] = ("frag-a",),
 ) -> dict[str, object]:
     return {
         "mask_artifact_path": str(root / "mask_artifact.json"),
         "mask_npz_path": str(root / "mask.npz"),
         "mask_ply_path": str(root / "mask.ply"),
         "selected_frame_ids": list(selected_frame_ids),
-        "accepted_fragment_ids": ["frag-a"],
+        "accepted_fragment_ids": list(accepted_fragment_ids),
         "confidence": 0.87,
         "uncertainties": ["partial occlusion"],
     }
@@ -1005,6 +1179,25 @@ def _write_review_artifacts(root: Path) -> dict[str, str]:
         "lift_overlay_path": root / "lift_overlay.txt",
     }
     for path in paths.values():
+        path.write_text("reviewed\n", encoding="utf-8")
+    return {key: str(path) for key, path in paths.items()}
+
+
+def _write_standard_review_artifacts(
+    root: Path, *, frame_id: str, candidate_id: str
+) -> dict[str, str]:
+    fragment_id = f"{frame_id}_{candidate_id}"
+    paths = {
+        "molmo_raw_text_path": root / "molmo" / f"{frame_id}_raw.txt",
+        "molmo_overlay_path": root / "molmo" / f"{frame_id}_points.jpg",
+        "sam_contact_sheet_path": root / "sam" / frame_id / "contact_sheet.jpg",
+        "sam_candidate_overlay_path": (
+            root / "sam" / frame_id / f"{candidate_id}_overlay.jpg"
+        ),
+        "lift_overlay_path": root / "fragments" / fragment_id / "lift_overlay.txt",
+    }
+    for path in paths.values():
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("reviewed\n", encoding="utf-8")
     return {key: str(path) for key, path in paths.items()}
 
