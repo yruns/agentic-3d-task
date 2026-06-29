@@ -297,6 +297,14 @@ class _ParsedSamMaskToolEvent:
 
 
 @dataclass(frozen=True)
+class _MatchedSamMaskToolEvent:
+    """A matched SAM event and the accepted candidate's 2D mask path."""
+
+    line_number: int
+    candidate_mask_npz_path: str
+
+
+@dataclass(frozen=True)
 class _ParsedLiftMaskToolEvent:
     """A validated 3D lift event with source location for diagnostics."""
 
@@ -913,20 +921,17 @@ def _validate_outcome_against_fuse_tool_event(
     artifact_document = _load_mask_artifact_document_for_provenance(
         outcome.mask_artifact_path
     )
-    has_matching_fuse_event = any(
-        _fuse_event_matches_outcome(
-            parsed_event,
-            outcome,
-            artifact_document=artifact_document,
-            events_path=events_path,
-        )
-        for parsed_event in _successful_fuse_tool_events(events_path)
+    matching_fuse_event = _last_matching_fuse_tool_event(
+        outcome,
+        artifact_document=artifact_document,
+        events_path=events_path,
     )
-    if has_matching_fuse_event:
+    if matching_fuse_event is not None:
         _validate_standard_fragment_upstream_tool_events(
             artifact_document,
             artifact_root=_infer_output_root_from_outcome(outcome),
             events_path=events_path,
+            fuse_line_number=matching_fuse_event.line_number,
         )
         return
     raise CodexResponseError(
@@ -939,6 +944,24 @@ def _validate_outcome_against_fuse_tool_event(
         f"accepted_fragment_ids={outcome.accepted_fragment_ids}; "
         f"events_path={events_path}"
     )
+
+
+def _last_matching_fuse_tool_event(
+    outcome: SceneFunc3dMaskOutcome,
+    *,
+    artifact_document: FinalMaskArtifactDocument,
+    events_path: Path,
+) -> _ParsedFuseToolEvent | None:
+    matching_event: _ParsedFuseToolEvent | None = None
+    for parsed_event in _successful_fuse_tool_events(events_path):
+        if _fuse_event_matches_outcome(
+            parsed_event,
+            outcome,
+            artifact_document=artifact_document,
+            events_path=events_path,
+        ):
+            matching_event = parsed_event
+    return matching_event
 
 
 def _infer_output_root_from_outcome(outcome: SceneFunc3dMaskOutcome) -> Path:
@@ -1085,6 +1108,7 @@ def _validate_standard_fragment_upstream_tool_events(
     *,
     artifact_root: Path,
     events_path: Path,
+    fuse_line_number: int,
 ) -> None:
     molmo_events = _successful_molmo_point_tool_events(events_path)
     sam_events = _successful_sam_mask_tool_events(events_path)
@@ -1093,24 +1117,29 @@ def _validate_standard_fragment_upstream_tool_events(
         candidate_id = _standard_fragment_candidate_id(fragment)
         if candidate_id is None:
             continue
-        _require_matching_molmo_point_event(
+        molmo_event = _require_matching_molmo_point_event(
             fragment,
             molmo_events,
             events_path=events_path,
+            before_line_number=fuse_line_number,
         )
-        sam_candidate_mask_npz_path = _require_matching_sam_mask_event(
+        sam_event = _require_matching_sam_mask_event(
             fragment,
             candidate_id=candidate_id,
             sam_events=sam_events,
             events_path=events_path,
+            after_line_number=molmo_event.line_number,
+            before_line_number=fuse_line_number,
         )
         _require_matching_lift_mask_event(
             fragment,
             candidate_id=candidate_id,
-            sam_candidate_mask_npz_path=sam_candidate_mask_npz_path,
+            sam_candidate_mask_npz_path=sam_event.candidate_mask_npz_path,
             lift_events=lift_events,
             artifact_root=artifact_root,
             events_path=events_path,
+            after_line_number=sam_event.line_number,
+            before_line_number=fuse_line_number,
         )
 
 
@@ -1131,8 +1160,11 @@ def _require_matching_molmo_point_event(
     molmo_events: tuple[_ParsedMolmoPointToolEvent, ...],
     *,
     events_path: Path,
-) -> None:
+    before_line_number: int,
+) -> _ParsedMolmoPointToolEvent:
     for parsed_event in molmo_events:
+        if parsed_event.line_number >= before_line_number:
+            continue
         result = parsed_event.result
         if result.frame_id != fragment.frame_id:
             continue
@@ -1154,13 +1186,15 @@ def _require_matching_molmo_point_event(
             line_number=parsed_event.line_number,
         ):
             continue
-        return
+        return parsed_event
     raise CodexResponseError(
         "accepted standard fragment must be backed by a successful molmo_point "
-        "tool event from this run: "
+        "tool event from this run before fuse_accepted_masks in the required "
+        "Molmo point -> SAM mask -> lift_mask_to_3d order: "
         f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
         f"molmo_raw_text_path={fragment.review_artifacts.molmo_raw_text_path}; "
         f"molmo_overlay_path={fragment.review_artifacts.molmo_overlay_path}; "
+        f"fuse_line={before_line_number}; "
         f"events_path={events_path}"
     )
 
@@ -1171,8 +1205,15 @@ def _require_matching_sam_mask_event(
     candidate_id: str,
     sam_events: tuple[_ParsedSamMaskToolEvent, ...],
     events_path: Path,
-) -> str:
+    after_line_number: int,
+    before_line_number: int,
+) -> _MatchedSamMaskToolEvent:
     for parsed_event in sam_events:
+        if (
+            parsed_event.line_number <= after_line_number
+            or parsed_event.line_number >= before_line_number
+        ):
+            continue
         result = parsed_event.result
         if result.frame_id != fragment.frame_id:
             continue
@@ -1192,15 +1233,20 @@ def _require_matching_sam_mask_event(
             events_path=events_path,
         )
         if candidate_mask_npz_path is not None:
-            return candidate_mask_npz_path
+            return _MatchedSamMaskToolEvent(
+                line_number=parsed_event.line_number,
+                candidate_mask_npz_path=candidate_mask_npz_path,
+            )
     raise CodexResponseError(
         "accepted standard fragment must be backed by a successful sam_mask "
-        "tool event from this run: "
+        "tool event from this run before fuse_accepted_masks in the required "
+        "Molmo point -> SAM mask -> lift_mask_to_3d order: "
         f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
         f"candidate_id={candidate_id}; "
         f"sam_contact_sheet_path={fragment.review_artifacts.sam_contact_sheet_path}; "
         f"sam_candidate_overlay_path="
         f"{fragment.review_artifacts.sam_candidate_overlay_path}; "
+        f"after_line={after_line_number}; fuse_line={before_line_number}; "
         f"events_path={events_path}"
     )
 
@@ -1235,7 +1281,9 @@ def _require_matching_lift_mask_event(
     lift_events: tuple[_ParsedLiftMaskToolEvent, ...],
     artifact_root: Path,
     events_path: Path,
-) -> None:
+    after_line_number: int,
+    before_line_number: int,
+) -> _ParsedLiftMaskToolEvent:
     expected_mask_npz_path = (
         artifact_root / "fragments" / fragment.fragment_id / ("mask_data.npz")
     )
@@ -1243,6 +1291,11 @@ def _require_matching_lift_mask_event(
         artifact_root / "fragments" / fragment.fragment_id / "lifted_points.ply"
     )
     for parsed_event in lift_events:
+        if (
+            parsed_event.line_number <= after_line_number
+            or parsed_event.line_number >= before_line_number
+        ):
+            continue
         args = parsed_event.args
         result = parsed_event.result
         if result.frame_id != fragment.frame_id or result.candidate_id != candidate_id:
@@ -1285,15 +1338,17 @@ def _require_matching_lift_mask_event(
             line_number=parsed_event.line_number,
         ):
             continue
-        return
+        return parsed_event
     raise CodexResponseError(
         "accepted standard fragment must be backed by a successful "
-        "lift_mask_to_3d tool event from this run: "
+        "lift_mask_to_3d tool event from this run before fuse_accepted_masks in "
+        "the required Molmo point -> SAM mask -> lift_mask_to_3d order: "
         f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
         f"candidate_id={candidate_id}; mask_npz_path={expected_mask_npz_path}; "
         f"mask_ply_path={expected_mask_ply_path}; "
         f"sam_candidate_mask_npz_path={sam_candidate_mask_npz_path}; "
         f"lift_overlay_path={fragment.review_artifacts.lift_overlay_path}; "
+        f"after_line={after_line_number}; fuse_line={before_line_number}; "
         f"events_path={events_path}"
     )
 
