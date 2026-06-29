@@ -419,6 +419,95 @@ def test_score_result_file_falls_back_to_copied_artifact_document_members(
     )
 
 
+def test_score_result_file_falls_back_to_copied_standard_fragment_final_mask(
+    tmp_path: Path,
+) -> None:
+    _write_scoring_scene(tmp_path)
+    result_dir = tmp_path / "copied_case"
+    fused_dir = result_dir / "fused"
+    fused_dir.mkdir(parents=True)
+    mask_npz_path = fused_dir / "mask_data.npz"
+    mask_ply_path = fused_dir / "lifted_points.ply"
+    artifact_path = fused_dir / "mask_artifact.json"
+    stale_run_root = tmp_path / "missing_run" / "agent_outputs" / "421254" / "desc-a"
+    stale_mask_npz_path = stale_run_root / "fused" / "mask_data.npz"
+    stale_mask_ply_path = stale_run_root / "fused" / "lifted_points.ply"
+    point_indices = (3, 5, 8, 13, 21)
+    _write_scoring_mask_members(
+        mask_npz_path,
+        mask_ply_path=mask_ply_path,
+        point_indices=point_indices,
+    )
+    review_artifacts = _write_standard_review_artifacts(
+        result_dir,
+        frame_id="000010",
+        candidate_id="mask_00",
+    )
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "accepted_frame_ids": ["000010"],
+                "accepted_fragments": [
+                    {
+                        "fragment_id": "000010_mask_00",
+                        "frame_id": "000010",
+                        "point_count": len(point_indices),
+                        "lift_geometry": _lift_geometry_payload_for_point_count(
+                            len(point_indices)
+                        ),
+                        "approval_actions": [
+                            action.value for action in FRAGMENT_APPROVAL_ACTIONS
+                        ],
+                        "review_artifacts": review_artifacts,
+                    }
+                ],
+                "multi_view_decision": {
+                    "seed_fragment_id": "000010_mask_00",
+                    "action": "stop",
+                    "reason": "first lift covers the target part for this fixture",
+                    "suggested_frame_ids": [],
+                },
+                "mask_npz_path": str(stale_mask_npz_path),
+                "mask_ply_path": str(stale_mask_ply_path),
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_path = result_dir / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "task_name": "scenefunc3d_mask_generation",
+                "sample_id": "421254::desc-a",
+                "outcome": {
+                    "mask_artifact_path": str(
+                        stale_run_root / "fused" / "mask_artifact.json"
+                    ),
+                    "mask_npz_path": str(stale_mask_npz_path),
+                    "mask_ply_path": str(stale_mask_ply_path),
+                    "selected_frame_ids": ["000010"],
+                    "accepted_fragment_ids": ["000010_mask_00"],
+                    "confidence": 0.9,
+                    "uncertainties": [],
+                },
+                "turn": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    score = score_result_file(data_root=tmp_path, result_path=result_path)
+
+    assert score.metrics == MaskMetrics(
+        iou=1.0,
+        precision=1.0,
+        recall=1.0,
+        f1=1.0,
+        predicted_count=5,
+        gt_count=5,
+    )
+
+
 def test_score_result_file_rejects_ambiguous_copied_artifact_member(
     tmp_path: Path,
 ) -> None:
@@ -795,6 +884,7 @@ def _write_scoring_mask_artifact(artifact_path: Path, *, mask_npz_path: Path) ->
                         "fragment_id": "frag-a",
                         "frame_id": "000010",
                         "point_count": 5,
+                        "lift_geometry": _lift_geometry_payload_for_point_count(5),
                         "approval_actions": [
                             action.value for action in FRAGMENT_APPROVAL_ACTIONS
                         ],
@@ -847,18 +937,11 @@ def _write_valid_scoring_mask_artifact_with_recorded_paths(
     recorded_mask_npz_path: Path,
     recorded_mask_ply_path: Path,
 ) -> None:
-    from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
-
-    points_world = np.array(
-        [
-            [float(index), float(index + 1), float(index + 2)]
-            for index, _point_id in enumerate(point_indices)
-        ],
-        dtype=np.float64,
+    _write_scoring_mask_members(
+        mask_npz_path,
+        mask_ply_path=mask_ply_path,
+        point_indices=point_indices,
     )
-    point_indices_array = np.array(point_indices, dtype=np.int64)
-    write_lift_npz(mask_npz_path, points_world, point_indices=point_indices_array)
-    write_lift_ply(mask_ply_path, points_world)
     review_artifacts = _write_existing_review_artifacts(artifact_path.parent / "frag-a")
     artifact_path.write_text(
         json.dumps(
@@ -869,6 +952,9 @@ def _write_valid_scoring_mask_artifact_with_recorded_paths(
                         "fragment_id": "frag-a",
                         "frame_id": "000010",
                         "point_count": len(point_indices),
+                        "lift_geometry": _lift_geometry_payload_for_point_count(
+                            len(point_indices)
+                        ),
                         "approval_actions": [
                             action.value for action in FRAGMENT_APPROVAL_ACTIONS
                         ],
@@ -887,6 +973,26 @@ def _write_valid_scoring_mask_artifact_with_recorded_paths(
         ),
         encoding="utf-8",
     )
+
+
+def _write_scoring_mask_members(
+    mask_npz_path: Path,
+    *,
+    mask_ply_path: Path,
+    point_indices: tuple[int, ...],
+) -> None:
+    from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
+
+    points_world = np.array(
+        [
+            [float(index), float(index + 1), float(index + 2)]
+            for index, _point_id in enumerate(point_indices)
+        ],
+        dtype=np.float64,
+    )
+    point_indices_array = np.array(point_indices, dtype=np.int64)
+    write_lift_npz(mask_npz_path, points_world, point_indices=point_indices_array)
+    write_lift_ply(mask_ply_path, points_world)
 
 
 def _write_scoring_npz(path: Path, *, point_indices: tuple[int, ...]) -> None:
@@ -915,6 +1021,45 @@ def _write_existing_review_artifacts(root: Path) -> dict[str, str]:
     for path in paths.values():
         path.write_text("reviewed\n", encoding="utf-8")
     return {key: str(path) for key, path in paths.items()}
+
+
+def _write_standard_review_artifacts(
+    artifact_root: Path, *, frame_id: str, candidate_id: str
+) -> dict[str, str]:
+    fragment_id = f"{frame_id}_{candidate_id}"
+    paths = {
+        "molmo_raw_text_path": artifact_root / "molmo" / f"{frame_id}_raw.txt",
+        "molmo_overlay_path": artifact_root / "molmo" / f"{frame_id}_points.jpg",
+        "sam_contact_sheet_path": (
+            artifact_root / "sam" / frame_id / "contact_sheet.jpg"
+        ),
+        "sam_candidate_overlay_path": (
+            artifact_root / "sam" / frame_id / f"{candidate_id}_overlay.jpg"
+        ),
+        "lift_overlay_path": (
+            artifact_root / "fragments" / fragment_id / "lift_overlay.txt"
+        ),
+    }
+    for field_name, path in paths.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if field_name == "lift_overlay_path":
+            path.write_text(
+                f"frame_id={frame_id}\ncandidate_id={candidate_id}\n",
+                encoding="utf-8",
+            )
+        else:
+            path.write_text("reviewed\n", encoding="utf-8")
+    return {key: str(path) for key, path in paths.items()}
+
+
+def _lift_geometry_payload_for_point_count(point_count: int) -> dict[str, object]:
+    max_index = float(max(point_count - 1, 0))
+    return {
+        "bbox_min_xyz": [0.0, 1.0, 2.0],
+        "bbox_max_xyz": [max_index, max_index + 1.0, max_index + 2.0],
+        "bbox_extent_xyz": [max_index, max_index, max_index],
+        "max_extent_meters": max_index,
+    }
 
 
 def _write_scoring_result_file(

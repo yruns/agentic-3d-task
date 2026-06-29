@@ -115,6 +115,11 @@ molmo_overlay_path, sam_contact_sheet_path, sam_candidate_overlay_path, and
 lift_overlay_path. These paths must point to the actual Molmo raw output,
 Molmo point overlay, SAM contact sheet, selected SAM candidate overlay, and
 lift inspection artifact you reviewed.
+The fuse_accepted_masks tool records lift_geometry for every accepted fragment.
+lift_geometry is recorded in the final artifact from the actual fragment NPZ.
+This is the durable audit record for bbox_extent_xyz and max_extent_meters, so
+approve a fragment only after those geometry fields are appropriate for the
+target part.
 Also include multi_view_decision when calling fuse_accepted_masks. Use action
 "stop" only when the accepted fragments all come from the first accepted frame.
 When multi_view_decision.action is "stop", suggested_frame_ids must be empty.

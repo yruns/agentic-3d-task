@@ -2580,6 +2580,22 @@ def test_cli_fuse_accepted_masks_writes_final_artifact(
         "000010",
     ]
     assert [
+        fragment["lift_geometry"] for fragment in payload["accepted_fragments"]
+    ] == [
+        {
+            "bbox_min_xyz": [1.0, 2.0, 3.0],
+            "bbox_max_xyz": [4.0, 5.0, 6.0],
+            "bbox_extent_xyz": [3.0, 3.0, 3.0],
+            "max_extent_meters": 3.0,
+        },
+        {
+            "bbox_min_xyz": [1.0, 2.0, 3.0],
+            "bbox_max_xyz": [4.0, 5.0, 6.0],
+            "bbox_extent_xyz": [3.0, 3.0, 3.0],
+            "max_extent_meters": 3.0,
+        },
+    ]
+    assert [
         fragment["approval_actions"] for fragment in payload["accepted_fragments"]
     ] == [
         list(_APPROVED_FRAGMENT_ACTIONS),

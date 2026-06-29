@@ -129,6 +129,8 @@ def test_playbook_warns_against_score_only_sam_candidate_choice() -> None:
 def test_playbook_tells_agent_to_review_lift_geometry_summary() -> None:
     assert "bbox_extent_xyz" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "max_extent_meters" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "lift_geometry" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "recorded in the final artifact" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "too broad for the target affordance" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "do not approve it" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "Change the SAM candidate, crop, point prompt, or frame" in (

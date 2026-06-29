@@ -25,6 +25,56 @@ NonEmptyString: TypeAlias = Annotated[
 ]
 
 
+class FinalMaskLiftGeometry(BaseModel):
+    """3D geometry summary the agent reviewed before accepting a fragment."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    bbox_min_xyz: tuple[float, float, float]
+    bbox_max_xyz: tuple[float, float, float]
+    bbox_extent_xyz: tuple[float, float, float]
+    max_extent_meters: float
+
+    @model_validator(mode="after")
+    def validate_geometry_consistency(self) -> FinalMaskLiftGeometry:
+        """Validate finite bbox geometry and derived extent fields."""
+        _validate_xyz_values("bbox_min_xyz", self.bbox_min_xyz)
+        _validate_xyz_values("bbox_max_xyz", self.bbox_max_xyz)
+        _validate_xyz_values("bbox_extent_xyz", self.bbox_extent_xyz)
+        expected_extent = _extent_xyz_tuple(self.bbox_min_xyz, self.bbox_max_xyz)
+        if any(extent_value < 0.0 for extent_value in expected_extent):
+            raise ValueError(
+                "lift_geometry.bbox_extent_xyz must be non-negative: "
+                f"bbox_min_xyz={self.bbox_min_xyz}; "
+                f"bbox_max_xyz={self.bbox_max_xyz}; "
+                f"expected={expected_extent}"
+            )
+        if not _xyz_values_close(self.bbox_extent_xyz, expected_extent):
+            raise ValueError(
+                "lift_geometry.bbox_extent_xyz must match bbox_max_xyz - "
+                "bbox_min_xyz: "
+                f"bbox_extent_xyz={self.bbox_extent_xyz}; "
+                f"expected={expected_extent}"
+            )
+        expected_max_extent = max(expected_extent)
+        if (
+            not math.isfinite(self.max_extent_meters)
+            or self.max_extent_meters < 0.0
+            or not math.isclose(
+                self.max_extent_meters,
+                expected_max_extent,
+                rel_tol=1e-9,
+                abs_tol=1e-9,
+            )
+        ):
+            raise ValueError(
+                "lift_geometry.max_extent_meters must match max(bbox_extent_xyz): "
+                f"max_extent_meters={self.max_extent_meters}; "
+                f"expected={expected_max_extent}"
+            )
+        return self
+
+
 class FinalMaskAcceptedFragment(BaseModel):
     """One accepted 3D fragment recorded in the final mask artifact."""
 
@@ -33,6 +83,7 @@ class FinalMaskAcceptedFragment(BaseModel):
     fragment_id: NonEmptyString
     frame_id: NonEmptyString
     point_count: int = Field(gt=0, strict=True)
+    lift_geometry: FinalMaskLiftGeometry
     approval_actions: tuple[ApprovalAction, ...] = Field(min_length=1)
     review_artifacts: FinalMaskReviewArtifacts
 
@@ -193,7 +244,18 @@ def validate_final_mask_artifact(
                 f"gate replay: fragment_id={fragment.fragment_id}; "
                 f"frame_id={fragment.frame_id}; error={exc}"
             ) from exc
-        _validate_fragment_review_artifacts(fragment, artifact_root=artifact_root)
+        _validate_fragment_review_artifacts(
+            fragment,
+            artifact_root=artifact_root,
+            allow_copied_artifact_members=allow_copied_artifact_members,
+        )
+        _validate_fragment_lift_geometry(
+            fragment,
+            artifact_root=artifact_root,
+            final_mask_npz_path=mask_npz_path,
+            accepted_fragment_count=len(artifact_document.accepted_fragments),
+            allow_copied_artifact_members=allow_copied_artifact_members,
+        )
 
     npz_point_count = validate_points_world_npz(mask_npz_path)
     load_point_indices_npz(mask_npz_path, expected_count=npz_point_count)
@@ -492,6 +554,130 @@ def _accepted_frame_ids_from_fragments(
     return tuple(accepted_frame_ids)
 
 
+def _validate_xyz_values(field_name: str, values: tuple[float, float, float]) -> None:
+    if not all(math.isfinite(value) for value in values):
+        raise ValueError(f"lift_geometry.{field_name} must contain finite values")
+
+
+def _extent_xyz_tuple(
+    bbox_min_xyz: tuple[float, float, float],
+    bbox_max_xyz: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    return (
+        bbox_max_xyz[0] - bbox_min_xyz[0],
+        bbox_max_xyz[1] - bbox_min_xyz[1],
+        bbox_max_xyz[2] - bbox_min_xyz[2],
+    )
+
+
+def _xyz_values_close(
+    actual_values: tuple[float, float, float],
+    expected_values: tuple[float, float, float],
+) -> bool:
+    return all(
+        math.isclose(
+            actual_value,
+            expected_value,
+            rel_tol=1e-9,
+            abs_tol=1e-9,
+        )
+        for actual_value, expected_value in zip(
+            actual_values, expected_values, strict=True
+        )
+    )
+
+
+def _validate_fragment_lift_geometry(
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    artifact_root: Path,
+    final_mask_npz_path: Path,
+    accepted_fragment_count: int,
+    allow_copied_artifact_members: bool,
+) -> None:
+    source_npz_path = _fragment_geometry_source_npz_path(
+        fragment,
+        artifact_root=artifact_root,
+        final_mask_npz_path=final_mask_npz_path,
+        accepted_fragment_count=accepted_fragment_count,
+        allow_copied_artifact_members=allow_copied_artifact_members,
+    )
+    if source_npz_path is None:
+        return
+    expected_geometry = _mask_lift_geometry_from_npz(source_npz_path)
+    if not _lift_geometry_matches(fragment.lift_geometry, expected_geometry):
+        raise CodexResponseError(
+            "accepted fragment lift_geometry must match the validated fragment "
+            "mask geometry: "
+            f"fragment_id={fragment.fragment_id}; "
+            f"source_npz_path={source_npz_path}; "
+            f"lift_geometry={fragment.lift_geometry.model_dump(mode='json')}; "
+            f"expected={expected_geometry.model_dump(mode='json')}"
+        )
+
+
+def _fragment_geometry_source_npz_path(
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    artifact_root: Path,
+    final_mask_npz_path: Path,
+    accepted_fragment_count: int,
+    allow_copied_artifact_members: bool,
+) -> Path | None:
+    standard_candidate_id = _candidate_id_from_standard_fragment(fragment)
+    if standard_candidate_id is not None:
+        standard_npz_path = (
+            artifact_root / "fragments" / fragment.fragment_id / "mask_data.npz"
+        )
+        if standard_npz_path.is_file() or not allow_copied_artifact_members:
+            return standard_npz_path
+        if accepted_fragment_count == 1:
+            return final_mask_npz_path
+        return None
+    if accepted_fragment_count == 1:
+        return final_mask_npz_path
+    return None
+
+
+def _mask_lift_geometry_from_npz(mask_npz_path: Path) -> FinalMaskLiftGeometry:
+    points_world = load_points_world_npz(mask_npz_path)
+    bbox_min_xyz = _xyz_tuple(cast("FloatArray", points_world.min(axis=0)))
+    bbox_max_xyz = _xyz_tuple(cast("FloatArray", points_world.max(axis=0)))
+    bbox_extent_xyz = _extent_xyz_tuple(bbox_min_xyz, bbox_max_xyz)
+    return FinalMaskLiftGeometry(
+        bbox_min_xyz=bbox_min_xyz,
+        bbox_max_xyz=bbox_max_xyz,
+        bbox_extent_xyz=bbox_extent_xyz,
+        max_extent_meters=max(bbox_extent_xyz),
+    )
+
+
+def _xyz_tuple(values: FloatArray) -> tuple[float, float, float]:
+    return (float(values[0]), float(values[1]), float(values[2]))
+
+
+def _lift_geometry_matches(
+    actual_geometry: FinalMaskLiftGeometry,
+    expected_geometry: FinalMaskLiftGeometry,
+) -> bool:
+    return (
+        _xyz_values_close(actual_geometry.bbox_min_xyz, expected_geometry.bbox_min_xyz)
+        and _xyz_values_close(
+            actual_geometry.bbox_max_xyz, expected_geometry.bbox_max_xyz
+        )
+        and _xyz_values_close(
+            actual_geometry.bbox_extent_xyz,
+            expected_geometry.bbox_extent_xyz,
+        )
+        and math.isclose(
+            actual_geometry.max_extent_meters,
+            expected_geometry.max_extent_meters,
+            rel_tol=1e-9,
+            abs_tol=1e-9,
+        )
+    )
+
+
 def _infer_final_artifact_root(artifact_path: Path) -> Path:
     resolved_artifact_path = artifact_path.expanduser().resolve()
     artifact_parent = resolved_artifact_path.parent
@@ -531,7 +717,10 @@ def _validate_expand_multi_view_decision(
 
 
 def _validate_fragment_review_artifacts(
-    fragment: FinalMaskAcceptedFragment, *, artifact_root: Path
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    artifact_root: Path,
+    allow_copied_artifact_members: bool,
 ) -> None:
     standard_candidate_id = _candidate_id_from_standard_fragment(fragment)
     for field_name, raw_path in _review_artifact_path_items(fragment.review_artifacts):
@@ -562,6 +751,7 @@ def _validate_fragment_review_artifacts(
                 _validate_standard_fragment_mask_artifacts(
                     fragment,
                     artifact_root=artifact_root,
+                    allow_copied_artifact_members=allow_copied_artifact_members,
                 )
 
 
@@ -677,11 +867,20 @@ def _validate_standard_lift_overlay_summary(
 
 
 def _validate_standard_fragment_mask_artifacts(
-    fragment: FinalMaskAcceptedFragment, *, artifact_root: Path
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    artifact_root: Path,
+    allow_copied_artifact_members: bool,
 ) -> None:
     fragment_dir = artifact_root / "fragments" / fragment.fragment_id
     mask_npz_path = fragment_dir / "mask_data.npz"
     mask_ply_path = fragment_dir / "lifted_points.ply"
+    if (
+        allow_copied_artifact_members
+        and not mask_npz_path.is_file()
+        and not mask_ply_path.is_file()
+    ):
+        return
     fragment_npz_point_count = validate_points_world_npz(mask_npz_path)
     load_point_indices_npz(mask_npz_path, expected_count=fragment_npz_point_count)
     fragment_ply_vertex_count = validate_ascii_points_ply(mask_ply_path)
@@ -800,6 +999,7 @@ def _validate_ply_vertex_line(
 __all__ = [
     "FinalMaskAcceptedFragment",
     "FinalMaskArtifactDocument",
+    "FinalMaskLiftGeometry",
     "FinalMaskMultiViewAction",
     "FinalMaskMultiViewDecision",
     "FinalMaskReviewArtifacts",

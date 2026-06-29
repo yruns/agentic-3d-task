@@ -99,12 +99,22 @@ class SuggestedViewsPayload(TypedDict):
     views: list[SuggestedViewPayload]
 
 
+class LiftGeometryPayload(TypedDict):
+    """JSON-ready 3D geometry summary for one accepted fragment."""
+
+    bbox_min_xyz: list[float]
+    bbox_max_xyz: list[float]
+    bbox_extent_xyz: list[float]
+    max_extent_meters: float
+
+
 class AcceptedFragmentPayload(TypedDict):
     """JSON-ready accepted mask fragment."""
 
     fragment_id: str
     frame_id: str
     point_count: int
+    lift_geometry: LiftGeometryPayload
     approval_actions: list[str]
     review_artifacts: AcceptedFragmentReviewArtifactsPayload
 
@@ -497,6 +507,7 @@ class AcceptedFragment:
     fragment_id: str
     frame_id: str
     point_count: int
+    lift_geometry: LiftGeometrySummary
     approval_actions: tuple[ApprovalAction, ...]
     review_artifacts: AcceptedFragmentReviewArtifacts
 
@@ -521,6 +532,7 @@ class AcceptedFragment:
             "fragment_id": self.fragment_id,
             "frame_id": self.frame_id,
             "point_count": self.point_count,
+            "lift_geometry": self.lift_geometry.to_payload(),
             "approval_actions": [action.value for action in self.approval_actions],
             "review_artifacts": self.review_artifacts.to_payload(),
         }
@@ -600,21 +612,30 @@ def inspect_mask_artifact(args: InspectMaskArtifactArgs) -> MaskInspectionResult
 
 
 @dataclass(frozen=True)
-class _MaskGeometrySummary:
-    """Axis-aligned 3D extent summary for an inspected mask."""
+class LiftGeometrySummary:
+    """Axis-aligned 3D extent summary for an inspected or accepted mask."""
 
     bbox_min_xyz: tuple[float, float, float]
     bbox_max_xyz: tuple[float, float, float]
     bbox_extent_xyz: tuple[float, float, float]
     max_extent_meters: float
 
+    def to_payload(self) -> LiftGeometryPayload:
+        """Return JSON-ready geometry metadata."""
+        return {
+            "bbox_min_xyz": list(self.bbox_min_xyz),
+            "bbox_max_xyz": list(self.bbox_max_xyz),
+            "bbox_extent_xyz": list(self.bbox_extent_xyz),
+            "max_extent_meters": self.max_extent_meters,
+        }
 
-def _mask_geometry_summary(mask_npz_path: Path) -> _MaskGeometrySummary:
+
+def _mask_geometry_summary(mask_npz_path: Path) -> LiftGeometrySummary:
     points_world = load_points_world_npz(mask_npz_path)
     bbox_min_xyz = _xyz_tuple(cast("FloatArray", points_world.min(axis=0)))
     bbox_max_xyz = _xyz_tuple(cast("FloatArray", points_world.max(axis=0)))
     bbox_extent_xyz = _extent_xyz_tuple(bbox_min_xyz, bbox_max_xyz)
-    return _MaskGeometrySummary(
+    return LiftGeometrySummary(
         bbox_min_xyz=bbox_min_xyz,
         bbox_max_xyz=bbox_max_xyz,
         bbox_extent_xyz=bbox_extent_xyz,
@@ -774,6 +795,7 @@ def fuse_accepted_masks(
                 fragment_id=fragment.fragment_id,
                 frame_id=fragment.frame_id,
                 point_count=point_count,
+                lift_geometry=_mask_geometry_summary(fragment.mask_npz_path),
                 approval_actions=fragment.approval_actions,
                 review_artifacts=fragment.review_artifacts.to_domain(),
             )
@@ -1295,6 +1317,8 @@ __all__ = [
     "FusedMaskPayload",
     "FusedMaskResult",
     "InspectMaskArtifactArgs",
+    "LiftGeometryPayload",
+    "LiftGeometrySummary",
     "MaskInspectionPayload",
     "MaskInspectionResult",
     "MultiViewDecision",

@@ -162,6 +162,49 @@ def test_mask_task_rejects_artifact_without_multi_view_decision(
         task.parse_response(json.dumps(_outcome_payload(output_dir)))
 
 
+def test_mask_task_rejects_artifact_without_fragment_lift_geometry(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir, include_fragment_lift_geometry=False)
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="lift_geometry"):
+        task.parse_response(json.dumps(_outcome_payload(output_dir)))
+
+
+def test_mask_task_rejects_fragment_lift_geometry_mismatch(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir, include_fragment_lift_geometry=True)
+    artifact_payload = json.loads(
+        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
+    )
+    artifact_payload["accepted_fragments"][0]["lift_geometry"][
+        "max_extent_meters"
+    ] = 0.1
+    (output_dir / "mask_artifact.json").write_text(
+        json.dumps(artifact_payload), encoding="utf-8"
+    )
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="lift_geometry.*must match"):
+        task.parse_response(json.dumps(_outcome_payload(output_dir)))
+
+
 def test_mask_task_rejects_nonexistent_final_artifacts(
     tmp_path: Path,
 ) -> None:
@@ -308,6 +351,7 @@ def test_mask_task_rejects_fragment_point_count_sum_mismatch(
             "fragment_id": "frag-a",
             "frame_id": "000010",
             "point_count": 1,
+            "lift_geometry": _test_lift_geometry_payload(),
             "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
             "review_artifacts": _write_review_artifacts(
                 output_dir / "review_artifacts" / "frag-a"
@@ -1363,6 +1407,7 @@ def _write_outcome_artifacts(
     accepted_fragment_ids: tuple[str, ...] = ("frag-a",),
     accepted_frame_ids: tuple[str, ...] = ("000010",),
     rejected_suggested_frame_ids: tuple[str, ...] = (),
+    include_fragment_lift_geometry: bool = True,
 ) -> None:
     from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
 
@@ -1373,8 +1418,11 @@ def _write_outcome_artifacts(
         root / "mask.npz", points_world, point_indices=point_indices
     )
     mask_ply_path = write_lift_ply(root / "mask.ply", points_world)
-    accepted_fragments = [
-        {
+    accepted_fragments: list[dict[str, object]] = []
+    for fragment_id, frame_id in zip(
+        accepted_fragment_ids, accepted_frame_ids, strict=True
+    ):
+        fragment_payload: dict[str, object] = {
             "fragment_id": fragment_id,
             "frame_id": frame_id,
             "point_count": int(points_world.shape[0]),
@@ -1383,10 +1431,9 @@ def _write_outcome_artifacts(
                 root / "review_artifacts" / fragment_id
             ),
         }
-        for fragment_id, frame_id in zip(
-            accepted_fragment_ids, accepted_frame_ids, strict=True
-        )
-    ]
+        if include_fragment_lift_geometry:
+            fragment_payload["lift_geometry"] = _test_lift_geometry_payload()
+        accepted_fragments.append(fragment_payload)
     unique_frame_ids = _unique_frame_ids(accepted_frame_ids)
     multi_view_action = "expand" if len(unique_frame_ids) > 1 else "stop"
     artifact_payload: dict[str, object] = {
@@ -1407,6 +1454,15 @@ def _write_outcome_artifacts(
     (root / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
+
+
+def _test_lift_geometry_payload() -> dict[str, object]:
+    return {
+        "bbox_min_xyz": [1.0, 2.0, 3.0],
+        "bbox_max_xyz": [4.0, 5.0, 6.0],
+        "bbox_extent_xyz": [3.0, 3.0, 3.0],
+        "max_extent_meters": 3.0,
+    }
 
 
 def _write_suggest_additional_views_event(
@@ -1493,13 +1549,16 @@ def _write_fragment_points_artifact(root: Path, *, point_count: int) -> None:
     from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
 
     root.mkdir(parents=True, exist_ok=True)
-    points_world = np.array(
-        [
-            [float(index), float(index + 1), float(index + 2)]
-            for index in range(point_count)
-        ],
-        dtype=np.float64,
-    )
+    if point_count == 2:
+        points_world = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
+    else:
+        points_world = np.array(
+            [
+                [float(index), float(index + 1), float(index + 2)]
+                for index in range(point_count)
+            ],
+            dtype=np.float64,
+        )
     point_indices = np.arange(point_count, dtype=np.int64)
     write_lift_npz(root / "mask_data.npz", points_world, point_indices=point_indices)
     write_lift_ply(root / "lifted_points.ply", points_world)

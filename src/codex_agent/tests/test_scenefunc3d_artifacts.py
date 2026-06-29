@@ -7,9 +7,13 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from pydantic import ValidationError
 
 from codex_agent.errors import SceneFunc3dDataError
-from codex_agent.scenefunc3d.final_mask_artifacts import FinalMaskMultiViewAction
+from codex_agent.scenefunc3d.final_mask_artifacts import (
+    FinalMaskLiftGeometry,
+    FinalMaskMultiViewAction,
+)
 from codex_agent.scenefunc3d.task import ApprovalAction
 from codex_agent.scenefunc3d.tools.mask_artifacts import (
     ArtifactStatus,
@@ -26,6 +30,7 @@ from codex_agent.scenefunc3d.tools.mask_inspection import (
     FusedMaskPayload,
     FusedMaskResult,
     InspectMaskArtifactArgs,
+    LiftGeometrySummary,
     MaskInspectionPayload,
     MaskInspectionResult,
     MultiViewDecisionInput,
@@ -691,6 +696,16 @@ def test_suggest_additional_views_args_keeps_frame_required_for_unparseable_seed
         )
 
 
+def test_final_mask_lift_geometry_rejects_negative_extent() -> None:
+    with pytest.raises(ValidationError, match="non-negative"):
+        FinalMaskLiftGeometry(
+            bbox_min_xyz=(2.0, 2.0, 2.0),
+            bbox_max_xyz=(1.0, 3.0, 3.0),
+            bbox_extent_xyz=(-1.0, 1.0, 1.0),
+            max_extent_meters=1.0,
+        )
+
+
 def test_fused_mask_payload(tmp_path: Path) -> None:
     review_artifacts = _write_review_artifacts(tmp_path / "review-a")
     result = FusedMaskResult(
@@ -699,6 +714,12 @@ def test_fused_mask_payload(tmp_path: Path) -> None:
                 fragment_id="000050_mask_00",
                 frame_id="000050",
                 point_count=1119,
+                lift_geometry=LiftGeometrySummary(
+                    bbox_min_xyz=(1.0, 2.0, 3.0),
+                    bbox_max_xyz=(4.0, 5.0, 6.0),
+                    bbox_extent_xyz=(3.0, 3.0, 3.0),
+                    max_extent_meters=3.0,
+                ),
                 approval_actions=_APPROVED_FRAGMENT_ACTIONS,
                 review_artifacts=AcceptedFragmentReviewArtifacts(
                     molmo_raw_text_path=Path(review_artifacts["molmo_raw_text_path"]),
@@ -723,6 +744,12 @@ def test_fused_mask_payload(tmp_path: Path) -> None:
 
     assert payload["accepted_fragments"][0]["fragment_id"] == "000050_mask_00"
     assert payload["accepted_fragments"][0]["frame_id"] == "000050"
+    assert payload["accepted_fragments"][0]["lift_geometry"] == {
+        "bbox_min_xyz": [1.0, 2.0, 3.0],
+        "bbox_max_xyz": [4.0, 5.0, 6.0],
+        "bbox_extent_xyz": [3.0, 3.0, 3.0],
+        "max_extent_meters": 3.0,
+    }
     assert payload["accepted_fragments"][0]["approval_actions"] == _action_values(
         _APPROVED_FRAGMENT_ACTIONS
     )
@@ -738,6 +765,12 @@ def test_accepted_fragment_rejects_invalid_approval_actions() -> None:
             fragment_id="000050_mask_00",
             frame_id="000050",
             point_count=1119,
+            lift_geometry=LiftGeometrySummary(
+                bbox_min_xyz=(1.0, 2.0, 3.0),
+                bbox_max_xyz=(4.0, 5.0, 6.0),
+                bbox_extent_xyz=(3.0, 3.0, 3.0),
+                max_extent_meters=3.0,
+            ),
             approval_actions=(
                 ApprovalAction.SELECT_EVIDENCE,
                 ApprovalAction.PROPOSE_SAM_CANDIDATES,
@@ -799,6 +832,12 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
             "fragment_id": "frag-a",
             "frame_id": "000010",
             "point_count": 2,
+            "lift_geometry": {
+                "bbox_min_xyz": [1.0, 2.0, 3.0],
+                "bbox_max_xyz": [4.0, 5.0, 6.0],
+                "bbox_extent_xyz": [3.0, 3.0, 3.0],
+                "max_extent_meters": 3.0,
+            },
             "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
             "review_artifacts": first_review_artifacts,
         },
@@ -806,6 +845,12 @@ def test_fuse_accepted_masks_writes_valid_final_artifact(tmp_path: Path) -> None
             "fragment_id": "frag-b",
             "frame_id": "000020",
             "point_count": 2,
+            "lift_geometry": {
+                "bbox_min_xyz": [1.0, 2.0, 3.0],
+                "bbox_max_xyz": [4.0, 5.0, 6.0],
+                "bbox_extent_xyz": [3.0, 3.0, 3.0],
+                "max_extent_meters": 3.0,
+            },
             "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
             "review_artifacts": second_review_artifacts,
         },
