@@ -318,12 +318,26 @@ def main() -> None:
             },
             run_root / "inspect_mask_artifact.json",
         )
+        fragment_id = f"000050_{candidate['candidate_id']}"
+        suggest_payload = run_tool(
+            "suggest_additional_views",
+            {
+                "seed_fragment_id": fragment_id,
+                "accepted_frame_id": "000050",
+                "seed_mask_npz_path": lift_payload["mask_npz_path"],
+                "seed_mask_ply_path": lift_payload["mask_ply_path"],
+                "seed_lift_overlay_path": lift_payload["overlay_path"],
+                "min_seed_point_count": 1,
+                "k": 3,
+            },
+            run_root / "suggest_additional_views.json",
+        )
         fuse_payload = run_tool(
             "fuse_accepted_masks",
             {
                 "fragments": [
                     {
-                        "fragment_id": "000050_seed",
+                        "fragment_id": fragment_id,
                         "frame_id": "000050",
                         "mask_npz_path": lift_payload["mask_npz_path"],
                         "mask_ply_path": lift_payload["mask_ply_path"],
@@ -346,10 +360,12 @@ def main() -> None:
                     }
                 ],
                 "multi_view_decision": {
-                    "seed_fragment_id": "000050_seed",
-                    "action": "stop",
-                    "reason": "single accepted seed isolates the target knob in this smoke case",
-                    "suggested_frame_ids": [],
+                    "seed_fragment_id": fragment_id,
+                    "action": suggest_payload["expansion_recommendation"],
+                    "reason": suggest_payload["expansion_reason"],
+                    "suggested_frame_ids": [
+                        view["frame_id"] for view in suggest_payload["views"]
+                    ],
                 },
             },
             run_root / "fuse_accepted_masks.json",
@@ -362,6 +378,7 @@ def main() -> None:
             "selected_candidate": candidate,
             "lift": lift_payload,
             "inspect": inspect_payload,
+            "suggest": suggest_payload,
             "fuse": fuse_payload,
         }
         (run_root / "sidecar_tool_smoke_summary.json").write_text(
