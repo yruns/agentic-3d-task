@@ -13,8 +13,11 @@ from zipfile import BadZipFile
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic.types import StringConstraints
 
-from codex_agent.errors import SceneFunc3dDataError
-from codex_agent.scenefunc3d.final_mask_artifacts import FinalMaskArtifactDocument
+from codex_agent.errors import CodexResponseError, SceneFunc3dDataError
+from codex_agent.scenefunc3d.final_mask_artifacts import (
+    FinalMaskArtifactDocument,
+    validate_final_mask_artifact,
+)
 from codex_agent.scenefunc3d.sample import load_sample, scene_dir_for
 
 from .metrics import MaskMetrics, compute_mask_metrics
@@ -51,6 +54,10 @@ class _ScoringResultOutcome(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     mask_artifact_path: NonEmptyString
+    mask_npz_path: NonEmptyString
+    mask_ply_path: NonEmptyString
+    selected_frame_ids: tuple[NonEmptyString, ...] = Field(min_length=1)
+    accepted_fragment_ids: tuple[NonEmptyString, ...] = Field(min_length=1)
 
 
 class _ScoringResultFile(BaseModel):
@@ -237,15 +244,56 @@ def score_result_file(
             "runner result task_name is not a SceneFunc3D mask task: "
             f"task_name={result_file.task_name!r}; result_path={result_path}"
         )
-    return score_mask_artifact(
+    mask_artifact_path = _resolve_artifact_member_path(
+        artifact_path=result_path,
+        raw_member_path=result_file.outcome.mask_artifact_path,
+    )
+    mask_npz_path = _resolve_artifact_member_path(
+        artifact_path=result_path,
+        raw_member_path=result_file.outcome.mask_npz_path,
+    )
+    mask_ply_path = _resolve_artifact_member_path(
+        artifact_path=result_path,
+        raw_member_path=result_file.outcome.mask_ply_path,
+    )
+    _validate_result_file_final_artifact(
+        result_path=result_path,
+        mask_artifact_path=mask_artifact_path,
+        mask_npz_path=mask_npz_path,
+        mask_ply_path=mask_ply_path,
+        selected_frame_ids=result_file.outcome.selected_frame_ids,
+        accepted_fragment_ids=result_file.outcome.accepted_fragment_ids,
+    )
+    return score_mask_npz(
         data_root=data_root,
         sample_id=result_file.sample_id,
-        mask_artifact_path=_resolve_artifact_member_path(
-            artifact_path=result_path,
-            raw_member_path=result_file.outcome.mask_artifact_path,
-        ),
+        mask_npz_path=mask_npz_path,
         failure_type=failure_type,
     )
+
+
+def _validate_result_file_final_artifact(
+    *,
+    result_path: Path,
+    mask_artifact_path: Path,
+    mask_npz_path: Path,
+    mask_ply_path: Path,
+    selected_frame_ids: tuple[str, ...],
+    accepted_fragment_ids: tuple[str, ...],
+) -> None:
+    try:
+        validate_final_mask_artifact(
+            artifact_path=mask_artifact_path,
+            mask_npz_path=mask_npz_path,
+            mask_ply_path=mask_ply_path,
+            selected_frame_ids=selected_frame_ids,
+            accepted_fragment_ids=accepted_fragment_ids,
+        )
+    except CodexResponseError as exc:
+        raise SceneFunc3dDataError(
+            "runner result final mask artifact failed validation before scoring: "
+            f"result_path={result_path}; error={exc}"
+        ) from exc
 
 
 def _load_scoring_annotations(
