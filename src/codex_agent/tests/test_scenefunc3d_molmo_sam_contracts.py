@@ -97,6 +97,23 @@ def test_molmo_point_args_rejects_missing_image_path(tmp_path: Path) -> None:
         MolmoPointArgs.model_validate(payload)
 
 
+def test_molmo_point_args_derive_frame_id_from_view_crop_image_path(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "000056_crop_normalized_b7296fba91db.jpg"
+    image_path.write_bytes(b"image")
+    args = MolmoPointArgs.model_validate(
+        {
+            "image_path": str(image_path),
+            "prompt": "drawer handle",
+            "image_width": 640,
+            "image_height": 480,
+        }
+    )
+
+    assert args.frame_id == "000056"
+
+
 def test_sam_mask_args_rejects_missing_image_path(tmp_path: Path) -> None:
     payload: dict[str, object] = {
         "frame_id": "000050",
@@ -113,6 +130,30 @@ def test_sam_mask_args_rejects_missing_image_path(tmp_path: Path) -> None:
 
     with pytest.raises(ValidationError):
         SamMaskArgs.model_validate(payload)
+
+
+def test_sam_mask_args_accept_single_point_alias_and_redundant_image_size(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "000056.jpg"
+    image_path.write_bytes(b"image")
+    args = SamMaskArgs.model_validate(
+        {
+            "frame_id": "000056",
+            "image_path": str(image_path),
+            "image_width": 1440,
+            "image_height": 1920,
+            "point": {
+                "x_px": 613.18,
+                "y_px": 1075.68,
+                "label": "bottom drawer handle",
+            },
+        }
+    )
+
+    assert len(args.points) == 1
+    assert args.points[0].x_px == 613.18
+    assert args.points[0].label == "bottom drawer handle"
 
 
 def test_cli_molmo_point_returns_recoverable_backend_error(

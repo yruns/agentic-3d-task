@@ -6,9 +6,12 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from codex_agent.scenefunc3d.task import ApprovalAction
 from codex_agent.scenefunc3d.tools.__main__ import main
+from codex_agent.scenefunc3d.tools.frame_views import ViewCropArgs, ViewFrameArgs
+from codex_agent.scenefunc3d.tools.keyframe_retrieval import KeyframeSelectorArgs
 
 _APPROVED_FRAGMENT_ACTIONS = (
     ApprovalAction.SELECT_EVIDENCE.value,
@@ -19,6 +22,39 @@ _APPROVED_FRAGMENT_ACTIONS = (
     ApprovalAction.CREATE_FIRST_LIFT.value,
     ApprovalAction.APPROVE_FIRST_LIFT.value,
 )
+
+
+def test_keyframe_selector_args_accept_task_description_alias() -> None:
+    args = KeyframeSelectorArgs.model_validate(
+        {
+            "task_description": "Open the bottom drawer.",
+            "annotation_ids": ["annotation-a"],
+        }
+    )
+
+    assert args.query == "Open the bottom drawer."
+
+
+def test_view_frame_args_accept_single_frame_id_alias() -> None:
+    args = ViewFrameArgs.model_validate({"frame_id": "000056"})
+
+    assert args.frame_ids == ("000056",)
+
+
+def test_view_crop_args_accept_box_alias_and_infer_pixel_format() -> None:
+    args = ViewCropArgs.model_validate(
+        {"frame_id": "000056", "box": [500.0, 850.0, 790.0, 1190.0]}
+    )
+
+    assert args.bbox == (500.0, 850.0, 790.0, 1190.0)
+    assert args.bbox_format == "pixel_xyxy"
+
+
+def test_view_crop_args_keep_canonical_bbox_default_strict() -> None:
+    with pytest.raises(ValidationError):
+        ViewCropArgs.model_validate(
+            {"frame_id": "000056", "bbox": [0.1, 0.2, 1.1, 0.8]}
+        )
 
 
 def _write_raw_rgb_scene(root: Path) -> Path:

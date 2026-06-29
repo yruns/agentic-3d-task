@@ -10,7 +10,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, FilePath, StringConstraints
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FilePath,
+    StringConstraints,
+    model_validator,
+)
 
 from ...errors import SceneFunc3dDataError
 from ..servers.schemas import MolmoImagePoint
@@ -31,6 +38,7 @@ _POINT_TAG_RE = re.compile(
     flags=re.IGNORECASE | re.DOTALL,
 )
 _POINT_START_RE = re.compile(r"<point\b", flags=re.IGNORECASE)
+_IMAGE_FRAME_ID_RE = re.compile(r"^(?P<frame_id>\d{6})(?:[_.-]|$)")
 _POINT_ATTR_RE = re.compile(
     r"(?P<name>[A-Za-z_:][\w:.-]*)\s*=\s*(?P<quote>['\"])(?P<value>.*?)(?P=quote)",
     flags=re.DOTALL,
@@ -97,6 +105,19 @@ class MolmoPointArgs(BaseModel):
     prompt: NonEmptyText
     image_width: int = Field(gt=0, strict=True)
     image_height: int = Field(gt=0, strict=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_frame_id_from_image_path(cls, payload: object) -> object:
+        """Infer frame_id from standard view_frame/view_crop image filenames."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        if "frame_id" not in values:
+            frame_id = _frame_id_from_image_path(values.get("image_path"))
+            if frame_id is not None:
+                values["frame_id"] = frame_id
+        return values
 
 
 @dataclass(frozen=True)
@@ -308,6 +329,15 @@ def _validate_image_dimensions(*, image_width: int, image_height: int) -> None:
         raise SceneFunc3dDataError(
             f"image_height must be positive; got {image_height!r}"
         )
+
+
+def _frame_id_from_image_path(raw_path: object) -> str | None:
+    if not isinstance(raw_path, str):
+        return None
+    match = _IMAGE_FRAME_ID_RE.match(Path(raw_path).name)
+    if match is None:
+        return None
+    return match.group("frame_id")
 
 
 def _parse_point_attributes(raw_attributes: str) -> dict[str, str]:

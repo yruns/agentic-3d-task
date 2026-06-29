@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from re import Pattern
@@ -15,6 +16,7 @@ from pydantic import (
     Field,
     FilePath,
     StringConstraints,
+    model_validator,
 )
 
 from ...errors import SceneFunc3dDataError
@@ -59,6 +61,16 @@ class LiftMaskArgs(BaseModel):
     depth_path: FilePath
     intrinsics_path: FilePath
     pose_path: FilePath
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_review_artifact_fields(cls, payload: object) -> object:
+        """Ignore review-only fields that do not affect deterministic lifting."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        values.pop("mask_overlay_path", None)
+        return values
 
 
 @dataclass(frozen=True)

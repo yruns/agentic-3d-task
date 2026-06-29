@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from .scene_context import SceneFunc3dToolScene
 
@@ -25,6 +26,18 @@ class KeyframeSelectorArgs(BaseModel):
 
     query: QueryText
     k: int = Field(default=4, ge=1, le=8, strict=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_agent_aliases(cls, payload: object) -> object:
+        """Accept common task-context names emitted by the agent."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        if "query" not in values and "task_description" in values:
+            values["query"] = values.pop("task_description")
+        values.pop("annotation_ids", None)
+        return values
 
 
 @dataclass(frozen=True)

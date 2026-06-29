@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from json import JSONDecodeError
 from pathlib import Path
@@ -111,6 +112,17 @@ class ViewFrameArgs(BaseModel):
 
     frame_ids: tuple[str, ...] = Field(min_length=1)
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_single_frame_id(cls, payload: object) -> object:
+        """Accept a single ``frame_id`` as a one-item ``frame_ids`` request."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        if "frame_ids" not in values and "frame_id" in values:
+            values["frame_ids"] = (values.pop("frame_id"),)
+        return values
+
 
 class FrameObjectPayload(TypedDict, total=False):
     """JSON-ready visible object metadata for one frame."""
@@ -151,6 +163,24 @@ class ViewCropArgs(BaseModel):
     frame_id: str = Field(min_length=1)
     bbox: tuple[float, float, float, float]
     bbox_format: BboxFormat = "normalized"
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_crop_aliases(cls, payload: object) -> object:
+        """Accept common crop box aliases and infer obvious pixel coordinates."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        used_box_alias = "bbox" not in values and "box" in values
+        if "bbox" not in values and "box" in values:
+            values["bbox"] = values.pop("box")
+        if (
+            used_box_alias
+            and "bbox_format" not in values
+            and _raw_bbox_looks_like_pixels(values.get("bbox"))
+        ):
+            values["bbox_format"] = "pixel_xyxy"
+        return values
 
     @field_validator("bbox")
     @classmethod
@@ -476,6 +506,19 @@ def _validate_pixel_bbox(bbox: tuple[float, float, float, float]) -> None:
         raise ValueError("pixel_xyxy bbox coordinates must be non-negative")
     if left >= right or top >= bottom:
         raise ValueError("pixel_xyxy bbox must satisfy left < right and top < bottom")
+
+
+def _raw_bbox_looks_like_pixels(raw_bbox: object) -> bool:
+    if not isinstance(raw_bbox, Sequence) or isinstance(raw_bbox, str):
+        return False
+    if len(raw_bbox) != 4:
+        return False
+    coordinates: list[float] = []
+    for coordinate in raw_bbox:
+        if isinstance(coordinate, bool) or not isinstance(coordinate, int | float):
+            return False
+        coordinates.append(float(coordinate))
+    return any(abs(coordinate) > 1.0 for coordinate in coordinates)
 
 
 def _format_validation_error(exc: ValidationError) -> str:

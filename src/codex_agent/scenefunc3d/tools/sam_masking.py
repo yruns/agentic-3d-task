@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from re import Pattern
@@ -15,6 +16,7 @@ from pydantic import (
     FilePath,
     StrictStr,
     StringConstraints,
+    model_validator,
 )
 
 from ...errors import SceneFunc3dDataError
@@ -106,6 +108,19 @@ class SamMaskArgs(BaseModel):
     frame_id: SafePathComponentText
     image_path: FilePath
     points: tuple[SamPointInput, ...] = Field(min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_agent_aliases(cls, payload: object) -> object:
+        """Accept common single-point payloads emitted by the agent."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        if "points" not in values and "point" in values:
+            values["points"] = (values.pop("point"),)
+        values.pop("image_width", None)
+        values.pop("image_height", None)
+        return values
 
     def to_payload(self) -> SamMaskArgsPayload:
         """Return this request as a JSON-ready mapping."""

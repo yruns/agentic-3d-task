@@ -292,6 +292,15 @@ def test_lift_mask_args_accepts_sam_candidate_mask_npz_path(
     assert args.mask_path == mask_path
 
 
+def test_lift_mask_args_ignore_redundant_mask_overlay_path(tmp_path: Path) -> None:
+    payload = _lift_mask_args_payload(tmp_path)
+    payload["mask_overlay_path"] = str(tmp_path / "mask_00_overlay.jpg")
+
+    args = LiftMaskArgs.model_validate(payload)
+
+    assert args.mask_path == payload["mask_path"]
+
+
 def test_lift_mask_args_rejects_nonexistent_input_file(tmp_path: Path) -> None:
     payload = _lift_mask_args_payload(tmp_path)
     payload["mask_path"] = tmp_path / "missing-mask.npz"
