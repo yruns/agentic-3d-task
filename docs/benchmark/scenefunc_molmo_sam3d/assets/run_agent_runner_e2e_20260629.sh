@@ -16,7 +16,13 @@ MOLMO_MODEL_PATH="${MOLMO_MODEL_PATH:-${RUN_ROOT}/molmopoint_merged_model}"
 SAM_MODEL_PATH="${SAM_MODEL_PATH:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home/transformers/models--facebook--sam2.1-hiera-large/snapshots/665f8e2ad61cf5f53d65644ff27c8ee525124610}"
 HF_HOME="${HF_HOME:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home}"
 CODEX_HOME="${CODEX_HOME:-${REPO_ROOT}/.codex-home}"
-ADAPTER_HEALTH_URL="${ADAPTER_HEALTH_URL:-http://127.0.0.1:8787/health}"
+START_ADAPTER="${START_ADAPTER:-0}"
+ADAPTER_PYTHON_BIN="${ADAPTER_PYTHON_BIN:-/usr/bin/python}"
+ADAPTER_HOST="${ADAPTER_HOST:-127.0.0.1}"
+ADAPTER_PORT="${ADAPTER_PORT:-8787}"
+ADAPTER_ENV_PATH="${ADAPTER_ENV_PATH:-${REPO_ROOT}/codex_modelhub_adapter/.env}"
+ADAPTER_UPSTREAMS_TOML_PATH="${ADAPTER_UPSTREAMS_TOML_PATH:-${REPO_ROOT}/codex_modelhub_adapter/.modelhub_upstreams.toml}"
+ADAPTER_HEALTH_URL="${ADAPTER_HEALTH_URL:-http://${ADAPTER_HOST}:${ADAPTER_PORT}/health}"
 
 export REPO_ROOT
 export DATASET_ROOT
@@ -30,6 +36,12 @@ export MOLMO_MODEL_PATH
 export SAM_MODEL_PATH
 export HF_HOME
 export CODEX_HOME
+export START_ADAPTER
+export ADAPTER_PYTHON_BIN
+export ADAPTER_HOST
+export ADAPTER_PORT
+export ADAPTER_ENV_PATH
+export ADAPTER_UPSTREAMS_TOML_PATH
 export ADAPTER_HEALTH_URL
 export HF_HUB_CACHE="${HF_HOME}/hub"
 export TRANSFORMERS_CACHE="${HF_HOME}/transformers"
@@ -50,6 +62,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shlex
 import subprocess
 import sys
 import time
@@ -69,10 +83,17 @@ molmo_model_path = Path(os.environ["MOLMO_MODEL_PATH"])
 sam_model_path = Path(os.environ["SAM_MODEL_PATH"])
 codex_home = Path(os.environ["CODEX_HOME"])
 adapter_health_url = os.environ["ADAPTER_HEALTH_URL"]
+start_adapter = os.environ["START_ADAPTER"] == "1"
+adapter_python_bin = os.environ["ADAPTER_PYTHON_BIN"]
+adapter_host = os.environ["ADAPTER_HOST"]
+adapter_port = os.environ["ADAPTER_PORT"]
+adapter_env_path = Path(os.environ["ADAPTER_ENV_PATH"])
+adapter_upstreams_toml_path = Path(os.environ["ADAPTER_UPSTREAMS_TOML_PATH"])
 logs_dir = run_root / "logs"
 output_dir = run_root / "agent_outputs"
 config_path = run_root / "scenefunc3d_backends.toml"
 default_merged_molmo_path = run_root / "molmopoint_merged_model"
+_ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def ensure_codex_home() -> None:
@@ -89,6 +110,73 @@ def ensure_codex_home() -> None:
         cwd=repo_root,
         check=True,
     )
+
+
+def load_adapter_env() -> dict[str, str]:
+    env = os.environ.copy()
+    adapter_dir = repo_root / "codex_modelhub_adapter"
+    env["PYTHONPATH"] = f"{adapter_dir}{os.pathsep}{env.get('PYTHONPATH', '')}"
+    if adapter_env_path.is_file():
+        for raw_line in adapter_env_path.read_text(encoding="utf-8").splitlines():
+            parsed = _parse_env_line(raw_line)
+            if parsed is None:
+                continue
+            key, value = parsed
+            env[key] = value
+    if (
+        adapter_upstreams_toml_path.is_file()
+        and not env.get("AIDP_MODELHUB_UPSTREAMS_TOML")
+    ):
+        env["AIDP_MODELHUB_UPSTREAMS_TOML"] = str(adapter_upstreams_toml_path)
+    return env
+
+
+def _parse_env_line(raw_line: str) -> tuple[str, str] | None:
+    line = raw_line.strip()
+    if not line or line.startswith("#"):
+        return None
+    if line.startswith("export "):
+        line = line[len("export ") :].strip()
+    if "=" not in line:
+        return None
+    key, raw_value = line.split("=", 1)
+    key = key.strip()
+    if not _ENV_KEY_PATTERN.fullmatch(key):
+        return None
+    value = raw_value.strip()
+    try:
+        split_value = shlex.split(value, comments=False, posix=True)
+    except ValueError:
+        split_value = ()
+    if len(split_value) == 1:
+        value = split_value[0]
+    return key, value
+
+
+def start_adapter_if_requested() -> subprocess.Popen[bytes] | None:
+    if not start_adapter:
+        return None
+    adapter_dir = repo_root / "codex_modelhub_adapter"
+    log_path = logs_dir / "adapter_server.log"
+    log_handle = log_path.open("wb")
+    process = subprocess.Popen(
+        [
+            adapter_python_bin,
+            "-m",
+            "uvicorn",
+            "adapter.app:app",
+            "--host",
+            adapter_host,
+            "--port",
+            adapter_port,
+        ],
+        cwd=adapter_dir,
+        stdout=log_handle,
+        stderr=subprocess.STDOUT,
+        env=load_adapter_env(),
+    )
+    print(f"started adapter: pid={process.pid} log={log_path}", flush=True)
+    return process
 
 
 def check_adapter_ready() -> None:
@@ -220,53 +308,61 @@ def run_agent_runner() -> None:
 
 def main() -> None:
     ensure_codex_home()
-    check_adapter_ready()
-    prepare_molmo_model_dir()
     write_backend_config()
-    molmo = start_process(
-        "molmo_server",
-        [
-            sidecar_python_bin,
-            "-u",
-            "-m",
-            "codex_agent.scenefunc3d.servers.molmo_point_server",
-            "--port",
-            "8711",
-            "--model-name",
-            "MolmoPoint-8B",
-            "--model-path",
-            str(molmo_model_path),
-            "--device",
-            "cuda:0",
-        ],
-    )
-    sam = start_process(
-        "sam_server",
-        [
-            sidecar_python_bin,
-            "-u",
-            "-m",
-            "codex_agent.scenefunc3d.servers.sam2_mask_server",
-            "--port",
-            "8712",
-            "--model-name",
-            "SAM2.1-Hiera-L",
-            "--backend",
-            "transformers",
-            "--model-path",
-            str(sam_model_path),
-            "--staging-root",
-            str(run_root),
-            "--device",
-            "cuda:0",
-        ],
-    )
+    adapter: subprocess.Popen[bytes] | None = None
+    molmo: subprocess.Popen[bytes] | None = None
+    sam: subprocess.Popen[bytes] | None = None
     try:
+        adapter = start_adapter_if_requested()
+        if adapter is not None:
+            wait_health("adapter", adapter_health_url, adapter)
+        check_adapter_ready()
+        prepare_molmo_model_dir()
+        molmo = start_process(
+            "molmo_server",
+            [
+                sidecar_python_bin,
+                "-u",
+                "-m",
+                "codex_agent.scenefunc3d.servers.molmo_point_server",
+                "--port",
+                "8711",
+                "--model-name",
+                "MolmoPoint-8B",
+                "--model-path",
+                str(molmo_model_path),
+                "--device",
+                "cuda:0",
+            ],
+        )
+        sam = start_process(
+            "sam_server",
+            [
+                sidecar_python_bin,
+                "-u",
+                "-m",
+                "codex_agent.scenefunc3d.servers.sam2_mask_server",
+                "--port",
+                "8712",
+                "--model-name",
+                "SAM2.1-Hiera-L",
+                "--backend",
+                "transformers",
+                "--model-path",
+                str(sam_model_path),
+                "--staging-root",
+                str(run_root),
+                "--device",
+                "cuda:0",
+            ],
+        )
         wait_health("molmo", "http://127.0.0.1:8711/health", molmo)
         wait_health("sam", "http://127.0.0.1:8712/health", sam)
         run_agent_runner()
     finally:
-        for process in (sam, molmo):
+        for process in (sam, molmo, adapter):
+            if process is None:
+                continue
             if process.poll() is None:
                 process.terminate()
                 try:

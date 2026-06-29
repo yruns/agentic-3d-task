@@ -27,5 +27,11 @@ from TASA is intentionally out of scope for this smoke.
   transformers backend debug runner for one point prompt on `421254/000050`.
 - `assets/run_sidecar_tool_smoke_20260629.sh` — H100 worker smoke for the
   repo-integrated sidecars and tools: MolmoPoint, SAM, lift, inspect, and fuse.
+- `assets/run_agent_runner_e2e_20260629.sh` — intended real E2E driver for one
+  scored SceneFunc3D agent case. It can start the project-local ModelHub adapter
+  with `START_ADAPTER=1`, loading private adapter credentials from the
+  gitignored `codex_modelhub_adapter/.env` or
+  `codex_modelhub_adapter/.modelhub_upstreams.toml` before launching MolmoPoint,
+  SAM2.1-Hiera-L, and `codex_agent.scenefunc3d.runner --score`.
 - `assets/test_molmo_sam3d_smoke.py` — unit tests for point parsing, SAM
   candidate selection, success assessment, and Molmo remote-code patching.
