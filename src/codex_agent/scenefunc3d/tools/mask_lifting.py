@@ -8,7 +8,14 @@ from pathlib import Path
 from re import Pattern
 from typing import TYPE_CHECKING, Annotated, TypedDict
 
-from pydantic import BaseModel, ConfigDict, FilePath, StringConstraints
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    FilePath,
+    StringConstraints,
+)
 
 from ...errors import SceneFunc3dDataError
 from .models import ToolInputError
@@ -46,7 +53,9 @@ class LiftMaskArgs(BaseModel):
 
     frame_id: SafePathComponentText
     candidate_id: SafePathComponentText
-    mask_path: FilePath
+    mask_path: FilePath = Field(
+        validation_alias=AliasChoices("mask_path", "mask_npz_path")
+    )
     depth_path: FilePath
     intrinsics_path: FilePath
     pose_path: FilePath

@@ -280,6 +280,18 @@ def test_lift_mask_args_accepts_existing_input_files(tmp_path: Path) -> None:
     assert args.mask_path == payload["mask_path"]
 
 
+def test_lift_mask_args_accepts_sam_candidate_mask_npz_path(
+    tmp_path: Path,
+) -> None:
+    payload = _lift_mask_args_payload(tmp_path)
+    mask_path = payload.pop("mask_path")
+    payload["mask_npz_path"] = mask_path
+
+    args = LiftMaskArgs.model_validate(payload)
+
+    assert args.mask_path == mask_path
+
+
 def test_lift_mask_args_rejects_nonexistent_input_file(tmp_path: Path) -> None:
     payload = _lift_mask_args_payload(tmp_path)
     payload["mask_path"] = tmp_path / "missing-mask.npz"
