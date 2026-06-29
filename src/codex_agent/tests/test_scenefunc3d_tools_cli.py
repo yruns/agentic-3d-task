@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from codex_agent.scenefunc3d.task import ApprovalAction
 from codex_agent.scenefunc3d.tools.__main__ import main
 from codex_agent.scenefunc3d.tools.frame_views import (
+    SceneSummaryArgs,
     ViewCropArgs,
     ViewFrameArgs,
     view_crop,
@@ -34,6 +35,18 @@ _APPROVED_FRAGMENT_ACTIONS = (
 )
 
 
+def test_scene_summary_args_ignore_task_context_fields() -> None:
+    args = SceneSummaryArgs.model_validate(
+        {
+            "task_description": "Open the lower drawer.",
+            "desc_id": "desc-a",
+            "annotation_ids": ["annotation-a"],
+        }
+    )
+
+    assert isinstance(args, SceneSummaryArgs)
+
+
 def test_keyframe_selector_args_accept_task_description_alias() -> None:
     args = KeyframeSelectorArgs.model_validate(
         {
@@ -45,6 +58,14 @@ def test_keyframe_selector_args_accept_task_description_alias() -> None:
     assert args.query == "Open the bottom drawer."
 
 
+def test_keyframe_selector_args_accept_max_frames_alias() -> None:
+    args = KeyframeSelectorArgs.model_validate(
+        {"query": "Open the bottom drawer.", "max_frames": 8}
+    )
+
+    assert args.k == 8
+
+
 def test_view_frame_args_accept_single_frame_id_alias() -> None:
     args = ViewFrameArgs.model_validate({"frame_id": "000056"})
 
@@ -54,6 +75,21 @@ def test_view_frame_args_accept_single_frame_id_alias() -> None:
 def test_view_crop_args_accept_box_alias_and_infer_pixel_format() -> None:
     args = ViewCropArgs.model_validate(
         {"frame_id": "000056", "box": [500.0, 850.0, 790.0, 1190.0]}
+    )
+
+    assert args.bbox == (500.0, 850.0, 790.0, 1190.0)
+    assert args.bbox_format == "pixel_xyxy"
+
+
+def test_view_crop_args_accept_xyxy_coordinate_aliases() -> None:
+    args = ViewCropArgs.model_validate(
+        {
+            "frame_id": "000056",
+            "x1": 500.0,
+            "y1": 850.0,
+            "x2": 790.0,
+            "y2": 1190.0,
+        }
     )
 
     assert args.bbox == (500.0, 850.0, 790.0, 1190.0)
@@ -1359,6 +1395,399 @@ def test_cli_keyframe_selector_uses_coverage_fallback_without_query_match(
             "score": 0.0,
             "reason": "coverage_fallback_no_query_match",
         }
+    ]
+
+
+def test_cli_keyframe_selector_prioritizes_visible_query_objects(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    for frame_id in ("000000", "000050", "000056", "000098"):
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000000-rgb.jpg",
+                        "objects": [
+                            {"object_id": 1, "class_name": "wall", "score": 0.9}
+                        ],
+                    },
+                    "1": {
+                        "view_id": 1,
+                        "frame_name": "000056-rgb.jpg",
+                        "objects": [
+                            {"object_id": 2, "class_name": "drawer", "score": 0.9}
+                        ],
+                    },
+                    "2": {
+                        "view_id": 2,
+                        "frame_name": "000050-rgb.jpg",
+                        "objects": [
+                            {"object_id": 3, "class_name": "drawer", "score": 0.6},
+                            {"object_id": 4, "class_name": "screen", "score": 0.4},
+                        ],
+                    },
+                    "3": {
+                        "view_id": 3,
+                        "frame_name": "000098-rgb.jpg",
+                        "objects": [
+                            {"object_id": 5, "class_name": "drawer", "score": 0.5},
+                            {"object_id": 6, "class_name": "screen", "score": 0.5},
+                            {"object_id": 7, "class_name": "cabinet", "score": 0.2},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "query": "Open the bottom drawer of the cabinet left of the TV",
+                    "k": 3,
+                }
+            ),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    selected_frame_ids = [frame["frame_id"] for frame in payload["frames"]]
+    assert payload["strategy"] == "visible_object_query_match"
+    assert selected_frame_ids == ["000098", "000050", "000056"]
+    assert payload["frames"][0]["score"] > payload["frames"][1]["score"]
+    assert payload["frames"][0]["reason"] == "visible_object_query_match"
+
+
+def test_cli_keyframe_selector_validates_visible_object_index_schema(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    (raw_dir / "000050-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000050-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 3,
+                                "class_name": "drawer",
+                            }
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": "Open the bottom drawer.", "k": 1}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "visible-object index failed validation" in payload["error"]
+    assert "score" in payload["error"]
+
+
+def test_cli_keyframe_selector_rejects_invalid_visible_object_index_json(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    (raw_dir / "000050-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text("{not-json", encoding="utf-8")
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": "Open the bottom drawer.", "k": 1}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "visible-object index is not valid JSON" in payload["error"]
+
+
+@pytest.mark.parametrize("missing_field", ["view_id", "object_id"])
+def test_cli_keyframe_selector_validates_visible_object_index_identity_fields(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], missing_field: str
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    (raw_dir / "000050-rgb.png").write_bytes(b"not-a-real-image")
+    frame_payload: dict[str, object] = {
+        "view_id": 0,
+        "frame_name": "000050-rgb.jpg",
+        "objects": [
+            {
+                "object_id": 3,
+                "class_name": "drawer",
+                "score": 0.6,
+            }
+        ],
+    }
+    object_payload = frame_payload["objects"]
+    assert isinstance(object_payload, list)
+    if missing_field == "view_id":
+        frame_payload.pop("view_id")
+    else:
+        first_object = object_payload[0]
+        assert isinstance(first_object, dict)
+        first_object.pop("object_id")
+    object_frame_map_path.write_text(
+        json.dumps({"frame_to_objects": {"0": frame_payload}}),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": "Open the bottom drawer.", "k": 1}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "visible-object index failed validation" in payload["error"]
+    assert missing_field in payload["error"]
+
+
+def test_cli_keyframe_selector_frame_id_match_skips_invalid_visible_object_index(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    (raw_dir / "000050-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text("{not-json", encoding="utf-8")
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": "drawer handle in frame 000050", "k": 1}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["strategy"] == "frame_id_match"
+    assert payload["frames"][0]["frame_id"] == "000050"
+
+
+def test_cli_keyframe_selector_falls_back_when_visible_objects_do_not_match(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    for frame_id in ("000000", "000010"):
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000000-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 1,
+                                "class_name": "wall",
+                                "score": 0.9,
+                            }
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": "Open the bottom drawer.", "k": 1}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["strategy"] == "coverage_fallback_no_query_match"
+    assert payload["frames"][0]["frame_id"] == "000010"
+
+
+def test_cli_keyframe_selector_rejects_duplicate_visible_object_frame_ids(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    object_frame_map_path = (
+        scene_dir / "conceptgraph" / "indices" / "object_frame_map.json"
+    )
+    raw_dir.mkdir(parents=True)
+    object_frame_map_path.parent.mkdir(parents=True)
+    (raw_dir / "000050-rgb.png").write_bytes(b"not-a-real-image")
+    object_frame_map_path.write_text(
+        json.dumps(
+            {
+                "frame_to_objects": {
+                    "0": {
+                        "view_id": 0,
+                        "frame_name": "000050-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 1,
+                                "class_name": "drawer",
+                                "score": 0.6,
+                            }
+                        ],
+                    },
+                    "1": {
+                        "view_id": 1,
+                        "frame_name": "000050-rgb.jpg",
+                        "objects": [
+                            {
+                                "object_id": 2,
+                                "class_name": "screen",
+                                "score": 0.5,
+                            }
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": "Open the bottom drawer near the TV.", "k": 1}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "visible-object index contains duplicate frame id" in payload["error"]
+    assert "000050" in payload["error"]
+
+
+def test_cli_keyframe_selector_max_frames_alias_expands_coverage_candidates(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = tmp_path / "421254"
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir(parents=True)
+    for frame_index in range(170):
+        frame_id = f"{frame_index:06d}"
+        (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"not-a-real-image")
+    (scene_dir / "conceptgraph").mkdir()
+
+    code = main(
+        [
+            "keyframe_selector",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"query": "Open the bottom drawer.", "max_frames": 8}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    selected_frame_ids = [frame["frame_id"] for frame in payload["frames"]]
+    assert selected_frame_ids == [
+        "000000",
+        "000024",
+        "000048",
+        "000072",
+        "000097",
+        "000121",
+        "000145",
+        "000169",
     ]
 
 

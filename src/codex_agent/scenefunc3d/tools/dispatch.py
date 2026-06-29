@@ -84,7 +84,7 @@ def run_tool(
         from .mask_lifting import LiftMaskArgs, lift_mask_to_3d
 
         return lift_mask_to_3d(
-            _parse(LiftMaskArgs, raw_args),
+            _parse(LiftMaskArgs, _with_resolved_lift_geometry(tool_scene, raw_args)),
             out_dir=out_dir,
             scene_mesh_path=tool_scene.conceptgraph_dir / "mesh.ply",
         )
@@ -117,6 +117,33 @@ def _parse(model: type[_ArgsT], raw_args: Mapping[str, object]) -> _ArgsT:
         raise ToolInputError(
             f"invalid arguments for {model.__name__}: {_format_validation_error(exc)}"
         ) from exc
+
+
+def _with_resolved_lift_geometry(
+    tool_scene: SceneFunc3dToolScene, raw_args: Mapping[str, object]
+) -> dict[str, object]:
+    values = dict(raw_args)
+    if _has_all_lift_geometry_fields(values):
+        return values
+    frame_id = values.get("frame_id")
+    if not isinstance(frame_id, str) or not frame_id.strip():
+        return values
+    normalized_frame_id = frame_id.strip()
+
+    from ..backends.frame_assets import resolve_frame_geometry_assets
+
+    assets = resolve_frame_geometry_assets(tool_scene, normalized_frame_id)
+    values.setdefault("depth_path", str(assets.depth_path))
+    values.setdefault("intrinsics_path", str(assets.intrinsics_path))
+    values.setdefault("pose_path", str(assets.pose_path))
+    return values
+
+
+def _has_all_lift_geometry_fields(values: Mapping[str, object]) -> bool:
+    return all(
+        field_name in values
+        for field_name in ("depth_path", "intrinsics_path", "pose_path")
+    )
 
 
 def _format_validation_error(exc: ValidationError) -> str:

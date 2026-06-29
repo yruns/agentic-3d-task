@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from re import Pattern
-from typing import TYPE_CHECKING, Annotated, TypedDict
+from typing import TYPE_CHECKING, Annotated, TypedDict, cast
 
 from pydantic import (
     AliasChoices,
@@ -23,7 +23,7 @@ from ...errors import SceneFunc3dDataError
 from .models import ToolInputError
 
 if TYPE_CHECKING:
-    from codex_agent.scenefunc3d.backends.lift_3d import FloatArray
+    from codex_agent.scenefunc3d.backends.lift_3d import FloatArray, IntArray
 
 SafePathComponentText = Annotated[
     str,
@@ -35,6 +35,9 @@ SafePathComponentText = Annotated[
 ]
 _SAFE_PATH_COMPONENT_RE: Pattern[str] = re.compile(r"^[A-Za-z0-9_-]+$")
 _MAX_SCENE_POINT_ASSIGNMENT_DISTANCE_METERS = 0.05
+_CONCEPTGRAPH_DIR_NAME = "conceptgraph"
+_FILTERED_DATASET_DIR_NAME = "SceneFuncVal-CG"
+_SOURCE_DATASET_DIR_NAMES = ("SceneFunVal", "SceneFuncVal")
 
 
 class LiftMaskResultPayload(TypedDict):
@@ -152,13 +155,18 @@ def lift_mask_to_3d(
         scene_points_world,
         max_distance_meters=_MAX_SCENE_POINT_ASSIGNMENT_DISTANCE_METERS,
     )
+    scoring_point_indices = _map_filtered_mesh_indices_to_source_scan_ids(
+        point_indices,
+        scene_mesh_path=scene_mesh_path,
+        scene_point_count=int(scene_points_world.shape[0]),
+    )
     fragment_dir = _fragment_dir(
         out_dir, frame_id=args.frame_id, candidate_id=args.candidate_id
     )
     mask_npz_path = write_lift_npz(
         fragment_dir / "mask_data.npz",
         points_world,
-        point_indices=point_indices,
+        point_indices=scoring_point_indices,
     )
     mask_ply_path = write_lift_ply(fragment_dir / "lifted_points.ply", points_world)
     overlay_path = _write_lift_summary(
@@ -259,6 +267,87 @@ def _fragment_dir(out_dir: Path, *, frame_id: str, candidate_id: str) -> Path:
             f"candidate_id must be a safe path component: {candidate_id!r}"
         )
     return out_dir / "fragments" / f"{frame_id}_{candidate_id}"
+
+
+def _map_filtered_mesh_indices_to_source_scan_ids(
+    point_indices: IntArray,
+    *,
+    scene_mesh_path: Path,
+    scene_point_count: int,
+) -> IntArray:
+    crop_mask_path = _find_source_crop_mask_path(scene_mesh_path)
+    if crop_mask_path is None:
+        return point_indices
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise ToolInputError(
+            "numpy is required to map filtered SceneFunc3D mesh indices back to "
+            f"source scan ids: crop_mask_path={crop_mask_path}"
+        ) from exc
+
+    try:
+        crop_mask = np.asarray(np.load(crop_mask_path))
+    except (OSError, ValueError) as exc:
+        raise ToolInputError(
+            "could not load SceneFunc3D source crop mask: "
+            f"path={crop_mask_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    if crop_mask.ndim != 1:
+        raise ToolInputError(
+            "SceneFunc3D source crop mask must be 1D: "
+            f"path={crop_mask_path}; ndim={crop_mask.ndim}"
+        )
+    if crop_mask.dtype != np.dtype(np.bool_):
+        raise ToolInputError(
+            "SceneFunc3D source crop mask must use bool dtype: "
+            f"path={crop_mask_path}; dtype={crop_mask.dtype}"
+        )
+
+    source_scan_ids = cast("IntArray", np.flatnonzero(crop_mask).astype(np.int64))
+    if source_scan_ids.shape[0] != scene_point_count:
+        raise ToolInputError(
+            "SceneFunc3D source crop mask true count must match filtered mesh "
+            "vertex count: "
+            f"crop_mask_path={crop_mask_path}; true_count={source_scan_ids.shape[0]}; "
+            f"scene_point_count={scene_point_count}; scene_mesh_path={scene_mesh_path}"
+        )
+    if bool(np.any(point_indices >= source_scan_ids.shape[0])):
+        raise ToolInputError(
+            "filtered SceneFunc3D point index is outside crop-mask mapping: "
+            f"crop_mask_path={crop_mask_path}; max_mapping_index="
+            f"{source_scan_ids.shape[0] - 1}"
+        )
+    return cast("IntArray", source_scan_ids[point_indices])
+
+
+def _find_source_crop_mask_path(scene_mesh_path: Path) -> Path | None:
+    if scene_mesh_path.parent.name != _CONCEPTGRAPH_DIR_NAME:
+        return None
+    scene_root = scene_mesh_path.parent.parent
+    visit_id = scene_root.name
+    candidate_paths = _candidate_source_crop_mask_paths(scene_root, visit_id=visit_id)
+    for candidate_path in candidate_paths:
+        if candidate_path.is_file():
+            return candidate_path
+    return None
+
+
+def _candidate_source_crop_mask_paths(
+    scene_root: Path, *, visit_id: str
+) -> tuple[Path, ...]:
+    crop_mask_name = f"{visit_id}_crop_mask.npy"
+    dataset_root = scene_root.parent
+    candidates: list[Path] = [scene_root / crop_mask_name]
+    if dataset_root.name == _FILTERED_DATASET_DIR_NAME:
+        for source_dataset_dir_name in _SOURCE_DATASET_DIR_NAMES:
+            candidates.append(
+                dataset_root.parent
+                / source_dataset_dir_name
+                / visit_id
+                / crop_mask_name
+            )
+    return tuple(dict.fromkeys(candidates))
 
 
 def _write_lift_summary(

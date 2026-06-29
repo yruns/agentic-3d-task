@@ -156,6 +156,28 @@ def test_sam_mask_args_accept_single_point_alias_and_redundant_image_size(
     assert args.points[0].label == "bottom drawer handle"
 
 
+def test_sam_mask_args_ignore_redundant_point_label(tmp_path: Path) -> None:
+    image_path = tmp_path / "000056.jpg"
+    image_path.write_bytes(b"image")
+
+    args = SamMaskArgs.model_validate(
+        {
+            "frame_id": "000056",
+            "image_path": str(image_path),
+            "point_label": "bottom drawer handle",
+            "points": (
+                {
+                    "x_px": 613.18,
+                    "y_px": 1075.68,
+                    "label": "bottom drawer handle",
+                },
+            ),
+        }
+    )
+
+    assert args.points[0].label == "bottom drawer handle"
+
+
 def test_cli_molmo_point_returns_recoverable_backend_error(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -1346,6 +1368,56 @@ def test_cli_lift_mask_writes_deterministic_artifacts(
         .read_text(encoding="utf-8")
         .startswith("frame_id=000000\n")
     )
+
+
+def test_cli_lift_mask_resolves_frame_geometry_when_paths_are_omitted(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir, _ = _write_cli_scene_with_real_image(tmp_path)
+    _write_binary_scene_mesh(
+        scene_dir / "conceptgraph" / "mesh.ply",
+        points=((10.0, 0.0, 0.0), (1.0, 0.0, 2.0)),
+    )
+    mask_path = tmp_path / "mask.npz"
+    raw_dir = scene_dir / "raw"
+    depth_path = raw_dir / "000000-depth.png"
+    intrinsics_path = raw_dir / "000000-intrinsic.txt"
+    pose_path = raw_dir / "000000.txt"
+    np.savez(mask_path, mask=np.array([[0, 1], [0, 0]], dtype=np.uint8))
+    Image.fromarray(np.array([[0, 2000], [0, 0]], dtype=np.uint16)).save(depth_path)
+    intrinsics_path.write_text("2 0 0\n0 2 0\n0 0 1\n", encoding="utf-8")
+    pose_path.write_text("1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+
+    code = main(
+        [
+            "lift_mask_to_3d",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "frame_id": " 000000 ",
+                    "candidate_id": "mask_00",
+                    "mask_npz_path": str(mask_path),
+                }
+            ),
+            "--out-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["frame_id"] == "000000"
+    assert payload["lifted_point_count"] == 1
+    with np.load(Path(payload["mask_npz_path"])) as archive:
+        np.testing.assert_array_equal(
+            archive["point_indices"], np.array([1], dtype=np.int64)
+        )
 
 
 def test_parse_molmo_points_preserves_tag_order() -> None:

@@ -156,6 +156,24 @@ def test_inspect_mask_artifact_validates_npz_and_ply(tmp_path: Path) -> None:
     assert result.overlay_paths == (overlay_path,)
 
 
+def test_inspect_mask_artifact_ignores_review_only_frame_fields(
+    tmp_path: Path,
+) -> None:
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "fragment-a")
+
+    args = InspectMaskArtifactArgs.model_validate(
+        {
+            "frame_id": "000050",
+            "candidate_id": "mask_00",
+            "mask_npz_path": str(mask_npz_path),
+            "mask_ply_path": str(mask_ply_path),
+        }
+    )
+
+    assert args.mask_npz_path == mask_npz_path
+    assert args.mask_ply_path == mask_ply_path
+
+
 def test_suggested_views_payload() -> None:
     result = SuggestedViewsResult(
         seed_fragment_id="000050_mask_00",
@@ -399,6 +417,31 @@ def test_suggest_additional_views_requires_seed_artifact() -> None:
         )
 
 
+def test_suggest_additional_views_args_accept_seed_frame_id_alias(
+    tmp_path: Path,
+) -> None:
+    seed_dir = tmp_path / "fragments" / "000050_mask_02"
+    mask_npz_path, mask_ply_path = _write_points_artifact(seed_dir)
+    lift_overlay_path = _write_lift_overlay(
+        seed_dir / "lift_overlay.txt",
+        frame_id="000050",
+        candidate_id="mask_02",
+    )
+
+    args = SuggestAdditionalViewsArgs.model_validate(
+        {
+            "seed_fragment_id": "000050_mask_02",
+            "seed_frame_id": "000050",
+            "seed_mask_npz_path": str(mask_npz_path),
+            "seed_mask_ply_path": str(mask_ply_path),
+            "seed_lift_overlay_path": str(lift_overlay_path),
+            "task_description": "Open the lower drawer.",
+        }
+    )
+
+    assert args.accepted_frame_id == "000050"
+
+
 def test_fused_mask_payload(tmp_path: Path) -> None:
     review_artifacts = _write_review_artifacts(tmp_path / "review-a")
     result = FusedMaskResult(
@@ -573,6 +616,73 @@ def test_fuse_accepted_masks_records_multi_view_decision(tmp_path: Path) -> None
     payload = json.loads(result.mask_artifact_path.read_text(encoding="utf-8"))
     assert payload["multi_view_decision"] == multi_view_decision
     assert result.to_payload()["multi_view_decision"] == multi_view_decision
+
+
+def test_fuse_accepted_masks_args_accept_accepted_fragments_alias(
+    tmp_path: Path,
+) -> None:
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "000050_mask_02")
+    review_artifacts = _write_review_artifacts(tmp_path / "review")
+
+    args = FuseAcceptedMasksArgs.model_validate(
+        {
+            "accepted_fragments": [
+                {
+                    "fragment_id": "000050_mask_02",
+                    "frame_id": "000050",
+                    "candidate_id": "mask_02",
+                    "mask_npz_path": str(mask_npz_path),
+                    "mask_ply_path": str(mask_ply_path),
+                    "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+                    "review_artifacts": review_artifacts,
+                }
+            ],
+            "multi_view_decision": {
+                "seed_fragment_id": "000050_mask_02",
+                "action": "stop",
+                "reason": "first lift is enough",
+                "suggested_frame_ids": ["000112", "000116"],
+            },
+        }
+    )
+
+    assert tuple(fragment.fragment_id for fragment in args.fragments) == (
+        "000050_mask_02",
+    )
+
+
+def test_fuse_accepted_masks_ignores_redundant_candidate_id_on_fragments(
+    tmp_path: Path,
+) -> None:
+    mask_npz_path, mask_ply_path = _write_points_artifact(
+        tmp_path / "frag-a", point_indices=(10, 12)
+    )
+    review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+
+    args = FuseAcceptedMasksArgs.model_validate(
+        {
+            "fragments": [
+                {
+                    "fragment_id": "frag-a",
+                    "frame_id": "000010",
+                    "candidate_id": "mask_00",
+                    "mask_npz_path": str(mask_npz_path),
+                    "mask_ply_path": str(mask_ply_path),
+                    "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+                    "review_artifacts": review_artifacts,
+                }
+            ],
+            "multi_view_decision": {
+                "seed_fragment_id": "frag-a",
+                "action": "stop",
+                "reason": "first lift covers the accepted target part",
+                "suggested_frame_ids": [],
+            },
+        }
+    )
+
+    assert args.fragments[0].fragment_id == "frag-a"
+    assert args.fragments[0].frame_id == "000010"
 
 
 def test_fuse_accepted_masks_rejects_multi_view_seed_mismatch(

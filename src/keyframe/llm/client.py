@@ -171,7 +171,7 @@ class LLMClient:
             azure_endpoint=model_config.endpoint_for(key),
             api_version=model_config.api_version,
             temperature=temperature,
-            max_tokens=max_tokens,
+            max_completion_tokens=max_tokens,
             timeout=model_config.timeout,
             max_retries=0,
         )

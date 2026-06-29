@@ -122,7 +122,8 @@ class QueryParser:
                     },
                 }
             )
-        return [HumanMessage(content=blocks)]
+        message_content = cast(list[str | dict[str, object]], blocks)
+        return [HumanMessage(content=message_content)]
 
     def _parse_json_response(
         self, response_text: str, query: str

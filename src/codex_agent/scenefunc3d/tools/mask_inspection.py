@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -16,6 +17,7 @@ from pydantic import (
     FilePath,
     StringConstraints,
     ValidationError,
+    model_validator,
 )
 
 from ...errors import CodexResponseError, SceneFunc3dDataError
@@ -137,6 +139,17 @@ class InspectMaskArtifactArgs(BaseModel):
     artifact_path: FilePath | None = None
     overlay_paths: tuple[FilePath, ...] = ()
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_review_only_fields(cls, payload: object) -> object:
+        """Ignore review context fields that are not inspection inputs."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        values.pop("frame_id", None)
+        values.pop("candidate_id", None)
+        return values
+
 
 class SuggestAdditionalViewsArgs(BaseModel):
     """Arguments for suggesting extra views after accepting a 3D seed."""
@@ -152,6 +165,22 @@ class SuggestAdditionalViewsArgs(BaseModel):
     min_seed_point_count: int = Field(default=256, ge=1, strict=True)
     k: int = Field(default=4, ge=1, le=8, strict=True)
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_seed_frame_aliases(cls, payload: object) -> object:
+        """Accept common seed-frame wording from agent tool calls."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        if "accepted_frame_id" not in values and "seed_frame_id" in values:
+            values["accepted_frame_id"] = values.pop("seed_frame_id")
+        else:
+            values.pop("seed_frame_id", None)
+        values.pop("task_description", None)
+        values.pop("desc_id", None)
+        values.pop("annotation_ids", None)
+        return values
+
 
 class AcceptedFragmentInput(BaseModel):
     """One accepted lifted fragment to fuse."""
@@ -164,6 +193,16 @@ class AcceptedFragmentInput(BaseModel):
     mask_ply_path: FilePath
     approval_actions: tuple[ApprovalAction, ...] = Field(min_length=1)
     review_artifacts: AcceptedFragmentReviewArtifactsInput
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_review_only_fields(cls, payload: object) -> object:
+        """Ignore SAM candidate context already encoded in ``fragment_id``."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        values.pop("candidate_id", None)
+        return values
 
 
 class AcceptedFragmentReviewArtifactsInput(BaseModel):
@@ -215,6 +254,19 @@ class FuseAcceptedMasksArgs(BaseModel):
 
     fragments: tuple[AcceptedFragmentInput, ...] = Field(min_length=1)
     multi_view_decision: MultiViewDecisionInput
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_fragment_aliases(cls, payload: object) -> object:
+        """Accept explicit accepted-fragment wording from agent tool calls."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        if "fragments" not in values and "accepted_fragments" in values:
+            values["fragments"] = values.pop("accepted_fragments")
+        else:
+            values.pop("accepted_fragments", None)
+        return values
 
 
 @dataclass(frozen=True)

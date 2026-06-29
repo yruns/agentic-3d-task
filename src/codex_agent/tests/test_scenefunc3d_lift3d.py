@@ -20,6 +20,7 @@ from codex_agent.scenefunc3d.backends.lift_3d import (
     write_lift_npz,
     write_lift_ply,
 )
+from codex_agent.scenefunc3d.tools.mask_lifting import LiftMaskArgs, lift_mask_to_3d
 from codex_agent.scenefunc3d.tools.models import ToolInputError
 from codex_agent.scenefunc3d.tools.scene_context import (
     SceneFunc3dToolScene,
@@ -225,6 +226,49 @@ def test_assign_nearest_scene_point_indices_returns_vertex_indices() -> None:
     )
 
     np.testing.assert_array_equal(point_indices, np.array([0, 1], dtype=np.int64))
+
+
+def test_lift_mask_to_3d_maps_filtered_mesh_indices_to_source_scan_ids(
+    tmp_path: Path,
+) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    mesh_path = _write_binary_scene_mesh(
+        tmp_path / "SceneFuncVal-CG" / "421254" / "conceptgraph" / "mesh.ply",
+        points=((0.0, 0.0, 1.0), (1.0, 0.0, 1.0)),
+    )
+    crop_mask = np.array([False, True, False, True], dtype=np.bool_)
+    crop_mask_path = tmp_path / "SceneFunVal" / "421254" / "421254_crop_mask.npy"
+    crop_mask_path.parent.mkdir(parents=True)
+    np.save(crop_mask_path, crop_mask)
+    mask_path = tmp_path / "mask.npz"
+    depth_path = tmp_path / "depth.png"
+    intrinsics_path = tmp_path / "intrinsics.txt"
+    pose_path = tmp_path / "pose.txt"
+    np.savez_compressed(mask_path, mask=np.array([[True, True]], dtype=np.bool_))
+    Image.fromarray(np.array([[1000, 1000]], dtype=np.uint16)).save(depth_path)
+    intrinsics_path.write_text("1 0 0\n0 1 0\n0 0 1\n", encoding="utf-8")
+    pose_path.write_text("1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+
+    result = lift_mask_to_3d(
+        LiftMaskArgs(
+            frame_id="000001",
+            candidate_id="mask_00",
+            mask_path=mask_path,
+            depth_path=depth_path,
+            intrinsics_path=intrinsics_path,
+            pose_path=pose_path,
+        ),
+        out_dir=tmp_path / "out",
+        scene_mesh_path=mesh_path,
+    )
+
+    with np.load(result.mask_npz_path) as archive:
+        np.testing.assert_array_equal(
+            archive["point_indices"], np.array([1, 3], dtype=np.int64)
+        )
 
 
 def test_assign_nearest_scene_point_indices_rejects_far_points() -> None:

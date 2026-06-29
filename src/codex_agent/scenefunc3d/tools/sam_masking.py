@@ -124,6 +124,7 @@ class SamMaskArgs(BaseModel):
             values["points"] = (values.pop("point"),)
         values.pop("image_width", None)
         values.pop("image_height", None)
+        values.pop("point_label", None)
         return values
 
     def to_payload(self) -> SamMaskArgsPayload:

@@ -37,6 +37,18 @@ class SceneSummaryArgs(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_task_context_fields(cls, payload: object) -> object:
+        """Ignore task context fields that do not affect scene metadata."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        values.pop("task_description", None)
+        values.pop("desc_id", None)
+        values.pop("annotation_ids", None)
+        return values
+
 
 @dataclass(frozen=True)
 class SceneSummaryResult:
@@ -173,10 +185,18 @@ class ViewCropArgs(BaseModel):
             return payload
         values = dict(payload)
         used_box_alias = "bbox" not in values and "box" in values
+        used_xyxy_alias = "bbox" not in values and _has_xyxy_aliases(values)
         if "bbox" not in values and "box" in values:
             values["bbox"] = values.pop("box")
+        if used_xyxy_alias:
+            values["bbox"] = (
+                values.pop("x1"),
+                values.pop("y1"),
+                values.pop("x2"),
+                values.pop("y2"),
+            )
         if (
-            used_box_alias
+            (used_box_alias or used_xyxy_alias)
             and "bbox_format" not in values
             and _raw_bbox_looks_like_pixels(values.get("bbox"))
         ):
@@ -549,6 +569,12 @@ def _raw_bbox_looks_like_pixels(raw_bbox: object) -> bool:
             return False
         coordinates.append(float(coordinate))
     return any(abs(coordinate) > 1.0 for coordinate in coordinates)
+
+
+def _has_xyxy_aliases(values: Mapping[str, object]) -> bool:
+    return all(
+        coordinate_name in values for coordinate_name in ("x1", "y1", "x2", "y2")
+    )
 
 
 def _format_validation_error(exc: ValidationError) -> str:

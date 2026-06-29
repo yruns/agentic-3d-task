@@ -67,9 +67,12 @@ as seed_lift_overlay_path, and build seed_fragment_id as
 
 For small knobs, handles, dials, switches, buttons, and pinch_pull annotations,
 first identify the affordance concept, then use a complete task-constrained
-Molmo point prompt. For drawer or cabinet pull tasks, point to the handle,
-pull edge, recessed grip, seam, or lip that a hand would pinch/pull. The target
-is not the drawer front panel center or the broad cabinet body.
+Molmo point prompt. For drawer or cabinet pull tasks, inspect nearby frames
+around the best drawer/cabinet view (+/- 8 frame ids when available) before the
+first Molmo call. Prefer a visible knob, handle, pull tab, or recessed grip; use
+a seam or lip only after the nearby frames do not show a distinct small
+operable component. The target is not the drawer front panel center or the broad
+cabinet body.
 Never repeat an expensive Molmo or SAM call with identical arguments after a
 model-quality failure. Change crop, prompt, or frame.
 

@@ -91,8 +91,14 @@ def test_playbook_tells_agent_to_pass_seed_artifact_to_multiview_suggestion() ->
 def test_playbook_tells_agent_to_target_pinch_pull_affordance_points() -> None:
     assert "pinch_pull" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "handle" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "pull edge" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "knob" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "not the drawer front panel center" in SCENEFUNC3D_TOOLS_PLAYBOOK
+
+
+def test_playbook_requires_nearby_frame_sweep_before_accepting_drawer_seams() -> None:
+    assert "nearby frames" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "+/- 8" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "seam or lip only after" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
