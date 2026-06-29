@@ -277,6 +277,21 @@ class ViewBevArgs(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_task_context_fields(cls, payload: object) -> object:
+        """Ignore task context fields that do not affect BEV retrieval."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        values.pop("visit_id", None)
+        values.pop("task_description", None)
+        values.pop("desc_id", None)
+        values.pop("target", None)
+        values.pop("annotation_ids", None)
+        values.pop("motion_hints", None)
+        return values
+
 
 class _ObjectFrameMapObject(BaseModel):
     """One visible object entry from ``object_frame_map.json``."""

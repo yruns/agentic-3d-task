@@ -13,6 +13,7 @@ from codex_agent.scenefunc3d.task import ApprovalAction
 from codex_agent.scenefunc3d.tools.__main__ import main
 from codex_agent.scenefunc3d.tools.frame_views import (
     SceneSummaryArgs,
+    ViewBevArgs,
     ViewCropArgs,
     ViewFrameArgs,
     view_crop,
@@ -58,6 +59,21 @@ def test_scene_summary_args_ignore_motion_hints_context_field() -> None:
     )
 
     assert isinstance(args, SceneSummaryArgs)
+
+
+def test_view_bev_args_ignore_task_context_fields() -> None:
+    args = ViewBevArgs.model_validate(
+        {
+            "task_description": "Adjust room temperature using the radiator dial.",
+            "visit_id": "421393",
+            "desc_id": "desc-a",
+            "target": "radiator dial",
+            "annotation_ids": ["annotation-a"],
+            "motion_hints": [{"motion_type": "rot"}],
+        }
+    )
+
+    assert isinstance(args, ViewBevArgs)
 
 
 def test_keyframe_selector_args_accept_task_description_alias() -> None:
