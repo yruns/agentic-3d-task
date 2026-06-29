@@ -692,6 +692,57 @@ def test_main_with_score_prints_result_path_and_score(
     assert score["metrics"]["gt_count"] == 3
 
 
+def test_build_executor_uses_tool_writable_runtime_defaults(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from codex_agent.runtime import CodexAgentRuntime
+
+    config_path = tmp_path / "codex-home"
+    monkeypatch.setenv("CODEX_HOME", str(config_path))
+    monkeypatch.delenv("CODEX_AGENT_SANDBOX", raising=False)
+    monkeypatch.delenv("CODEX_AGENT_SANDBOX_NETWORK", raising=False)
+
+    executor = runner._build_executor()
+
+    assert isinstance(executor, CodexAgentRuntime)
+    assert executor.config.sandbox == "workspace_write"
+    assert executor.config.sandbox_network_access is True
+
+
+def test_build_executor_preserves_full_access_runtime_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from codex_agent.runtime import CodexAgentRuntime
+
+    config_path = tmp_path / "codex-home"
+    monkeypatch.setenv("CODEX_HOME", str(config_path))
+    monkeypatch.setenv("CODEX_AGENT_SANDBOX", "full_access")
+    monkeypatch.delenv("CODEX_AGENT_SANDBOX_NETWORK", raising=False)
+
+    executor = runner._build_executor()
+
+    assert isinstance(executor, CodexAgentRuntime)
+    assert executor.config.sandbox == "full_access"
+    assert executor.config.sandbox_network_access is False
+
+
+def test_build_executor_upgrades_read_only_runtime_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from codex_agent.runtime import CodexAgentRuntime
+
+    config_path = tmp_path / "codex-home"
+    monkeypatch.setenv("CODEX_HOME", str(config_path))
+    monkeypatch.setenv("CODEX_AGENT_SANDBOX", "read_only")
+    monkeypatch.setenv("CODEX_AGENT_SANDBOX_NETWORK", "false")
+
+    executor = runner._build_executor()
+
+    assert isinstance(executor, CodexAgentRuntime)
+    assert executor.config.sandbox == "workspace_write"
+    assert executor.config.sandbox_network_access is True
+
+
 def test_run_single_sample_revalidates_executor_outcome(
     tmp_path: Path,
 ) -> None:

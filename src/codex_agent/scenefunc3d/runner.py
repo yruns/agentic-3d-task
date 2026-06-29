@@ -6,7 +6,7 @@ import argparse
 import json
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Annotated, TypeAlias, TypedDict
@@ -16,6 +16,7 @@ from urllib.request import Request, urlopen
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic.types import StringConstraints
 
+from ..config import CodexAgentConfig
 from ..errors import CodexResponseError, SceneFunc3dDataError
 from ..json_extraction import extract_json_object
 from ..models import CodexTurnMetadata, CodexTurnRequest
@@ -563,10 +564,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _build_executor() -> CodexExecutor:
-    from ..config import CodexAgentConfig
     from ..runtime import CodexAgentRuntime
 
-    return CodexAgentRuntime(CodexAgentConfig.from_env())
+    return CodexAgentRuntime(_tool_writable_runtime_config(CodexAgentConfig.from_env()))
+
+
+def _tool_writable_runtime_config(config: CodexAgentConfig) -> CodexAgentConfig:
+    """Return SceneFunc3D runtime defaults suitable for shell tool execution."""
+    if config.sandbox == "full_access":
+        return config
+    return replace(config, sandbox="workspace_write", sandbox_network_access=True)
 
 
 def _run_payload(result_path: Path) -> SceneFunc3dCliRunPayload:
