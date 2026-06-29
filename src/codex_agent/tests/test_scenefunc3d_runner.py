@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -922,7 +923,14 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
         confidence=0.87,
         uncertainties=("partial occlusion",),
     )
-    executor = _FakeExecutor(outcome)
+    executor = _FakeExecutor(
+        outcome,
+        on_execute=lambda: _write_suggest_additional_views_event(
+            sample_output_dir,
+            expansion_recommendation="expand",
+            frame_ids=("000020", "000030"),
+        ),
+    )
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path / "data",
         output_dir=tmp_path / "out",
@@ -995,8 +1003,8 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
     event_lines = (
         (sample_output_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
     )
-    assert len(event_lines) == 1
-    completion_event = json.loads(event_lines[0])
+    assert len(event_lines) == 2
+    completion_event = json.loads(event_lines[-1])
     assert completion_event == {
         "event_type": "run_completed",
         "sample_id": "421254::desc-a",
@@ -1005,6 +1013,86 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
         "summary_path": str(summary_path),
         "mask_artifact_path": str(sample_output_dir / "mask_artifact.json"),
     }
+
+
+def test_run_single_sample_rejects_stop_missing_expand_rejected_frames(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_outcome_artifacts(sample_output_dir)
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("frag-a",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+    executor = _FakeExecutor(
+        outcome,
+        on_execute=lambda: _write_suggest_additional_views_event(
+            sample_output_dir,
+            expansion_recommendation="expand",
+            frame_ids=("000020", "000030"),
+        ),
+    )
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="missing_rejected_suggested"):
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
+
+
+def test_run_single_sample_ignores_stale_expand_events_from_previous_run(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_outcome_artifacts(sample_output_dir)
+    _write_suggest_additional_views_event(
+        sample_output_dir,
+        expansion_recommendation="expand",
+        frame_ids=("000020", "000030"),
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("frag-a",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+    executor = _FakeExecutor(outcome)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    result_path = run_single_sample(
+        config,
+        sample_id="421254::desc-a",
+        executor=executor,
+        check_sidecars=False,
+    )
+
+    event_lines = (
+        (sample_output_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    )
+    assert len(event_lines) == 1
+    assert json.loads(event_lines[0])["event_type"] == "run_completed"
+    assert result_path == sample_output_dir / "result.json"
 
 
 def test_main_with_score_prints_result_path_and_score(
@@ -1156,9 +1244,19 @@ def test_run_single_sample_revalidates_executor_outcome(
         )
 
 
+def _do_nothing() -> None:
+    return None
+
+
 class _FakeExecutor:
-    def __init__(self, outcome: SceneFunc3dMaskOutcome) -> None:
+    def __init__(
+        self,
+        outcome: SceneFunc3dMaskOutcome,
+        *,
+        on_execute: Callable[[], None] = _do_nothing,
+    ) -> None:
         self._outcome = outcome
+        self._on_execute = on_execute
         self.task_name = ""
         self.prompt = ""
 
@@ -1166,6 +1264,7 @@ class _FakeExecutor:
         request = task.build_turn_request()
         self.task_name = task.task_name
         self.prompt = request.prompt
+        self._on_execute()
         return CodexTaskResult(
             task_name=task.task_name,
             outcome=cast(ResultT, self._outcome),
@@ -1308,6 +1407,47 @@ def _write_outcome_artifacts(
     (root / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
+
+
+def _write_suggest_additional_views_event(
+    root: Path,
+    *,
+    expansion_recommendation: str,
+    frame_ids: tuple[str, ...],
+) -> None:
+    event_payload = {
+        "event_type": "tool_completed",
+        "tool_name": "suggest_additional_views",
+        "status": "success",
+        "args": {
+            "seed_fragment_id": "frag-a",
+            "accepted_frame_id": "000010",
+        },
+        "result": {
+            "seed_fragment_id": "frag-a",
+            "seed_lift_point_count": 2,
+            "seed_lift_status": "usable",
+            "expansion_recommendation": expansion_recommendation,
+            "expansion_reason": "test suggested views",
+            "views": [
+                {
+                    "frame_id": frame_id,
+                    "reason": "test follow-up view",
+                    "rank": rank,
+                    "has_depth": True,
+                    "has_intrinsics": True,
+                    "has_pose": True,
+                    "view_diversity_score": 1.0,
+                }
+                for rank, frame_id in enumerate(frame_ids, start=1)
+            ],
+        },
+        "error": "",
+    }
+    events_path = root / "events.jsonl"
+    events_path.parent.mkdir(parents=True, exist_ok=True)
+    with events_path.open("a", encoding="utf-8") as event_file:
+        event_file.write(json.dumps(event_payload, ensure_ascii=False) + "\n")
 
 
 def _write_review_artifacts(root: Path) -> dict[str, str]:

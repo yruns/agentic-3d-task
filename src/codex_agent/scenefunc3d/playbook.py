@@ -119,7 +119,9 @@ Also include multi_view_decision when calling fuse_accepted_masks. Use action
 "stop" only when the accepted fragments all come from the first accepted frame.
 When multi_view_decision.action is "stop", suggested_frame_ids must be empty.
 If you stop after checking suggested views, use rejected_suggested_frame_ids to
-record every suggested follow-up frame you inspected and rejected.
+record every suggested follow-up frame you inspected and rejected. If
+suggest_additional_views returned action "expand", stopping requires rejecting
+every frame returned by an expand recommendation.
 Use action "expand" when you accepted fragments from later frames; in that case,
 suggested_frame_ids must include at least one accepted follow-up frame. The
 seed_fragment_id must be the first accepted fragment.

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from json import JSONDecodeError
 from pathlib import Path
@@ -25,6 +25,7 @@ from .backends.config import load_backend_settings
 from .evaluation.payloads import SceneFunc3dScorePayload, score_to_payload
 from .evaluation.scorer import score_result_file
 from .final_mask_artifacts import (
+    FinalMaskMultiViewAction,
     ValidatedFinalMaskArtifact,
     validate_final_mask_artifact,
 )
@@ -246,12 +247,15 @@ class SceneFunc3dMaskTask:
         selected_frame_ids = tuple(decision.selected_frame_ids)
         accepted_fragment_ids = tuple(decision.accepted_fragment_ids)
         self._validate_selected_frame_ids(selected_frame_ids)
-        validate_final_mask_artifact(
+        validated_artifact = validate_final_mask_artifact(
             artifact_path=mask_artifact_path,
             mask_npz_path=mask_npz_path,
             mask_ply_path=mask_ply_path,
             selected_frame_ids=selected_frame_ids,
             accepted_fragment_ids=accepted_fragment_ids,
+        )
+        _validate_multiview_decision_against_tool_events(
+            validated_artifact, self.output_dir / "events.jsonl"
         )
         return SceneFunc3dMaskOutcome(
             mask_artifact_path=mask_artifact_path,
@@ -415,6 +419,7 @@ def run_single_sample(
     )
     sample_output_dir = artifact_paths.root
     sample_output_dir.mkdir(parents=True, exist_ok=True)
+    _initialize_run_events(artifact_paths.events_jsonl)
     task = SceneFunc3dMaskTask(
         sample=sample,
         scene_root=scene_dir_for(config.dataset_root, sample.visit_id),
@@ -456,6 +461,18 @@ def run_single_sample(
     return result_path
 
 
+def _initialize_run_events(events_path: Path) -> None:
+    """Start a fresh per-run tool event log for one sample output directory."""
+    try:
+        events_path.parent.mkdir(parents=True, exist_ok=True)
+        events_path.write_text("", encoding="utf-8")
+    except OSError as exc:
+        raise SceneFunc3dDataError(
+            "could not initialize SceneFunc3D tool event log: "
+            f"events_path={events_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+
+
 def _validate_outcome_artifact(
     outcome: SceneFunc3dMaskOutcome,
 ) -> ValidatedFinalMaskArtifact:
@@ -466,6 +483,143 @@ def _validate_outcome_artifact(
         selected_frame_ids=outcome.selected_frame_ids,
         accepted_fragment_ids=outcome.accepted_fragment_ids,
     )
+
+
+def _validate_multiview_decision_against_tool_events(
+    artifact: ValidatedFinalMaskArtifact, events_path: Path
+) -> None:
+    """Validate final multi-view decision against recorded tool suggestions."""
+    if artifact.multi_view_decision.action is not FinalMaskMultiViewAction.STOP:
+        return
+    suggested_frame_ids = _expand_suggested_frame_ids_from_events(events_path)
+    if not suggested_frame_ids:
+        return
+    rejected_frame_ids = set(artifact.multi_view_decision.rejected_suggested_frame_ids)
+    missing_frame_ids = tuple(
+        frame_id
+        for frame_id in suggested_frame_ids
+        if frame_id not in rejected_frame_ids
+    )
+    if missing_frame_ids:
+        raise CodexResponseError(
+            "multi_view_decision.action='stop' must account for every frame from "
+            "successful suggest_additional_views expand results in "
+            "rejected_suggested_frame_ids: "
+            f"missing_rejected_suggested_frame_ids={missing_frame_ids}; "
+            f"events_path={events_path}"
+        )
+
+
+def _expand_suggested_frame_ids_from_events(events_path: Path) -> tuple[str, ...]:
+    """Return unique frames suggested by successful expand recommendations."""
+    if not events_path.is_file():
+        return ()
+    frame_ids: list[str] = []
+    seen_frame_ids: set[str] = set()
+    try:
+        event_lines = events_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise CodexResponseError(
+            "could not read SceneFunc3D tool events for multi-view validation: "
+            f"events_path={events_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    for line_number, raw_line in enumerate(event_lines, start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        event = _load_event_payload(
+            line, events_path=events_path, line_number=line_number
+        )
+        if event.get("tool_name") != "suggest_additional_views":
+            continue
+        if event.get("status") != "success":
+            continue
+        result = _require_mapping_field(
+            event,
+            "result",
+            events_path=events_path,
+            line_number=line_number,
+        )
+        if (
+            result.get("expansion_recommendation")
+            != FinalMaskMultiViewAction.EXPAND.value
+        ):
+            continue
+        views = result.get("views")
+        if not isinstance(views, list):
+            raise CodexResponseError(
+                "successful suggest_additional_views expand event must include "
+                "result.views as a JSON array: "
+                f"events_path={events_path}; line={line_number}"
+            )
+        for view_index, view_item in enumerate(views):
+            view = _require_json_mapping(
+                view_item,
+                events_path=events_path,
+                line_number=line_number,
+                field_name=f"result.views[{view_index}]",
+            )
+            frame_id = view.get("frame_id")
+            if not isinstance(frame_id, str) or not frame_id.strip():
+                raise CodexResponseError(
+                    "successful suggest_additional_views expand event view must "
+                    "include a non-empty frame_id: "
+                    f"events_path={events_path}; line={line_number}; "
+                    f"view_index={view_index}"
+                )
+            normalized_frame_id = frame_id.strip()
+            if normalized_frame_id not in seen_frame_ids:
+                frame_ids.append(normalized_frame_id)
+                seen_frame_ids.add(normalized_frame_id)
+    return tuple(frame_ids)
+
+
+def _load_event_payload(
+    line: str, *, events_path: Path, line_number: int
+) -> Mapping[object, object]:
+    try:
+        parsed = json.loads(line)
+    except JSONDecodeError as exc:
+        raise CodexResponseError(
+            "SceneFunc3D tool event line is not valid JSON: "
+            f"events_path={events_path}; line={line_number}; error={exc}"
+        ) from exc
+    return _require_json_mapping(
+        parsed,
+        events_path=events_path,
+        line_number=line_number,
+        field_name="event",
+    )
+
+
+def _require_mapping_field(
+    payload: Mapping[object, object],
+    field_name: str,
+    *,
+    events_path: Path,
+    line_number: int,
+) -> Mapping[object, object]:
+    return _require_json_mapping(
+        payload.get(field_name),
+        events_path=events_path,
+        line_number=line_number,
+        field_name=field_name,
+    )
+
+
+def _require_json_mapping(
+    value: object,
+    *,
+    events_path: Path,
+    line_number: int,
+    field_name: str,
+) -> Mapping[object, object]:
+    if not isinstance(value, Mapping):
+        raise CodexResponseError(
+            "SceneFunc3D tool event field must be a JSON object: "
+            f"field={field_name}; events_path={events_path}; line={line_number}"
+        )
+    return value
 
 
 def _completed_run_summary(
