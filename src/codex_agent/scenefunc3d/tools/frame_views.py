@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
+import importlib.util
 import json
 import math
 from collections.abc import Mapping, Sequence
@@ -29,6 +31,7 @@ _ERROR_FRAME_ID_PREVIEW = 8
 _JPEG_QUALITY = 90
 _CROP_HASH_LENGTH = 12
 _PIXEL_BBOX_INFERENCE_MIN_ABS_COORDINATE = 2.0
+_SCHEMATIC_BEV_FALLBACK_REQUIRED_MODULES: tuple[str, ...] = ("cv2", "numpy")
 
 BboxFormat = Literal["normalized", "pixel_xyxy"]
 
@@ -64,6 +67,9 @@ class SceneSummaryResult:
     has_conceptgraph: bool
     has_bev: bool
     bev_path: Path | None
+    has_schematic_bev_fallback: bool
+    schematic_bev_fallback_pose_count: int
+    schematic_bev_fallback_unavailable_reason: str
     has_scene_mesh: bool
     scene_mesh_path: Path | None
     has_visible_object_index: bool
@@ -79,6 +85,13 @@ class SceneSummaryResult:
             "rgb_frame_ids": list(self.rgb_frame_ids),
             "has_conceptgraph": self.has_conceptgraph,
             "has_bev": self.has_bev,
+            "has_schematic_bev_fallback": self.has_schematic_bev_fallback,
+            "schematic_bev_fallback_pose_count": (
+                self.schematic_bev_fallback_pose_count
+            ),
+            "schematic_bev_fallback_unavailable_reason": (
+                self.schematic_bev_fallback_unavailable_reason
+            ),
             "has_scene_mesh": self.has_scene_mesh,
             "has_visible_object_index": self.has_visible_object_index,
             "visible_object_frame_count": self.visible_object_frame_count,
@@ -104,13 +117,27 @@ def scene_summary(
     visible_object_summary = _summarize_visible_object_index(
         tool_scene, visible_object_index_path
     )
+    has_prepared_bev = bev_path.is_file()
+    schematic_bev_pose_count = (
+        0 if has_prepared_bev else len(_camera_centers_from_frame_poses(tool_scene))
+    )
+    schematic_bev_unavailable_reason = (
+        ""
+        if has_prepared_bev
+        else _schematic_bev_fallback_unavailable_reason(schematic_bev_pose_count)
+    )
     return SceneSummaryResult(
         visit_id=tool_scene.visit_id,
         total_rgb_frames=len(tool_scene.rgb_frame_ids),
         rgb_frame_ids=tool_scene.rgb_frame_ids,
         has_conceptgraph=tool_scene.conceptgraph_dir.is_dir(),
-        has_bev=bev_path.is_file(),
-        bev_path=bev_path if bev_path.is_file() else None,
+        has_bev=has_prepared_bev,
+        bev_path=bev_path if has_prepared_bev else None,
+        has_schematic_bev_fallback=(
+            schematic_bev_pose_count > 0 and not schematic_bev_unavailable_reason
+        ),
+        schematic_bev_fallback_pose_count=schematic_bev_pose_count,
+        schematic_bev_fallback_unavailable_reason=(schematic_bev_unavailable_reason),
         has_scene_mesh=scene_mesh_path.is_file(),
         scene_mesh_path=scene_mesh_path if scene_mesh_path.is_file() else None,
         has_visible_object_index=visible_object_index_path.is_file(),
@@ -486,13 +513,164 @@ def view_crop(
 def view_bev(
     tool_scene: SceneFunc3dToolScene, args: ViewBevArgs, *, out_dir: Path
 ) -> ViewFrameResult:
-    """Return the top-down BEV image when the prepared scene provides one."""
+    """Return a top-down BEV image for the prepared scene."""
     _ = args
-    _ = out_dir
     bev_path = _scene_bev_path(tool_scene)
-    if not bev_path.is_file():
-        raise ToolInputError(f"BEV asset is not available: {bev_path}")
-    return ViewFrameResult(frames=(ViewFrame(frame_id="bev", image_path=bev_path),))
+    image_path = (
+        bev_path
+        if bev_path.is_file()
+        else _render_schematic_bev_from_camera_poses(
+            tool_scene, out_dir=out_dir, missing_bev_path=bev_path
+        )
+    )
+    return ViewFrameResult(frames=(ViewFrame(frame_id="bev", image_path=image_path),))
+
+
+def _render_schematic_bev_from_camera_poses(
+    tool_scene: SceneFunc3dToolScene, *, out_dir: Path, missing_bev_path: Path
+) -> Path:
+    camera_centers = _camera_centers_from_frame_poses(tool_scene)
+    if not camera_centers:
+        raise ToolInputError(
+            "BEV asset is not available: "
+            f"{missing_bev_path}; no frame camera poses were available for a "
+            "schematic BEV fallback"
+        )
+    dependency_reason = _schematic_bev_fallback_dependency_unavailable_reason()
+    if dependency_reason:
+        raise ToolInputError(
+            f"BEV asset is not available and {dependency_reason}: "
+            f"{missing_bev_path}"
+        )
+    try:
+        import cv2
+        import numpy as np
+
+        from keyframe.bev.schematic import render_schematic_bev
+    except ImportError as exc:
+        raise ToolInputError(
+            "BEV asset is not available and schematic BEV fallback requires "
+            f"numpy and opencv: {missing_bev_path}"
+        ) from exc
+
+    camera_xy = np.array(
+        [(center[0], center[1]) for center in camera_centers],
+        dtype=np.float64,
+    )
+    try:
+        image_rgb, view = render_schematic_bev((), camera_xy)
+    except ValueError as exc:
+        raise ToolInputError(
+            "could not render schematic BEV fallback from frame camera poses: " f"{exc}"
+        ) from exc
+    image_path = out_dir / tool_scene.visit_id / "schematic_bev.png"
+    image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+    try:
+        image_path.parent.mkdir(parents=True, exist_ok=True)
+        if not bool(cv2.imwrite(str(image_path), image_bgr)):
+            raise ToolInputError(
+                f"could not write schematic BEV fallback: {image_path}"
+            )
+        image_path.with_suffix(".view.json").write_text(
+            json.dumps(view.to_payload()), encoding="utf-8"
+        )
+    except OSError as exc:
+        raise ToolInputError(
+            "could not write schematic BEV fallback: "
+            f"image_path={image_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    return image_path
+
+
+def _schematic_bev_fallback_unavailable_reason(pose_count: int) -> str:
+    if pose_count == 0:
+        return "no frame camera poses were available for a schematic BEV fallback"
+    return _schematic_bev_fallback_dependency_unavailable_reason()
+
+
+def _schematic_bev_fallback_dependency_unavailable_reason() -> str:
+    missing_module_names = tuple(
+        module_name
+        for module_name in _SCHEMATIC_BEV_FALLBACK_REQUIRED_MODULES
+        if not _module_is_importable(module_name)
+    )
+    if not missing_module_names:
+        return ""
+    return (
+        "schematic BEV fallback requires optional vision dependencies: "
+        f"{', '.join(missing_module_names)}"
+    )
+
+
+def _module_is_importable(module_name: str) -> bool:
+    try:
+        if importlib.util.find_spec(module_name) is None:
+            return False
+        importlib.import_module(module_name)
+    except (ImportError, ValueError):
+        return False
+    return True
+
+
+def _camera_centers_from_frame_poses(
+    tool_scene: SceneFunc3dToolScene,
+) -> tuple[tuple[float, float, float], ...]:
+    camera_centers: list[tuple[float, float, float]] = []
+    for frame_id in tool_scene.rgb_frame_ids:
+        pose_path = _resolve_frame_geometry_paths(tool_scene, frame_id).pose_path
+        if pose_path is None:
+            continue
+        camera_centers.append(_load_camera_center(pose_path))
+    return tuple(camera_centers)
+
+
+def _load_camera_center(pose_path: Path) -> tuple[float, float, float]:
+    try:
+        raw_values = tuple(
+            float(value) for value in pose_path.read_text(encoding="utf-8").split()
+        )
+    except OSError as exc:
+        raise ToolInputError(
+            "could not read camera pose for schematic BEV fallback: "
+            f"pose_path={pose_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    except ValueError as exc:
+        raise ToolInputError(
+            "could not parse camera pose for schematic BEV fallback: "
+            f"pose_path={pose_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    if len(raw_values) != 16:
+        raise ToolInputError(
+            "camera pose for schematic BEV fallback must contain 16 values: "
+            f"pose_path={pose_path}; actual={len(raw_values)}"
+        )
+    if not all(math.isfinite(value) for value in raw_values):
+        raise ToolInputError(
+            "camera pose for schematic BEV fallback must contain finite values: "
+            f"pose_path={pose_path}"
+        )
+    last_row = (raw_values[12], raw_values[13], raw_values[14], raw_values[15])
+    if not _pose_last_row_is_homogeneous(last_row):
+        raise ToolInputError(
+            "camera pose for schematic BEV fallback must have last row "
+            f"[0, 0, 0, 1]: pose_path={pose_path}; "
+            f"last_row={last_row}"
+        )
+    return (raw_values[3], raw_values[7], raw_values[11])
+
+
+def _pose_last_row_is_homogeneous(last_row: tuple[float, float, float, float]) -> bool:
+    return all(
+        math.isclose(
+            actual_value,
+            expected_value,
+            rel_tol=1e-9,
+            abs_tol=1e-9,
+        )
+        for actual_value, expected_value in zip(
+            last_row, (0.0, 0.0, 0.0, 1.0), strict=True
+        )
+    )
 
 
 def _validate_frame_ids(

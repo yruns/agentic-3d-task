@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import importlib
+import importlib.machinery
+import importlib.util
 import json
 from pathlib import Path
+from types import ModuleType
 from typing import cast
 
 import pytest
@@ -16,9 +20,11 @@ from codex_agent.scenefunc3d.tools.frame_views import (
     ViewBevArgs,
     ViewCropArgs,
     ViewFrameArgs,
+    view_bev,
     view_crop,
 )
 from codex_agent.scenefunc3d.tools.keyframe_retrieval import KeyframeSelectorArgs
+from codex_agent.scenefunc3d.tools.models import ToolInputError
 from codex_agent.scenefunc3d.tools.scene_context import (
     SceneFunc3dToolScene,
     SourceFrameIndex,
@@ -326,6 +332,28 @@ def _write_source_frame_scene(root: Path, source_frames: object) -> Path:
     return scene_dir
 
 
+def _write_pose(
+    path: Path,
+    *,
+    x_translation: float,
+    y_translation: float,
+    z_translation: float = 0.0,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "\n".join(
+            (
+                f"1 0 0 {x_translation}",
+                f"0 1 0 {y_translation}",
+                f"0 0 1 {z_translation}",
+                "0 0 0 1",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+
 def _source_frame_records() -> list[dict[str, str]]:
     return [
         {
@@ -362,6 +390,8 @@ def test_cli_scene_summary_reads_source_frame_index(
     assert payload["has_conceptgraph"] is True
     assert payload["has_bev"] is False
     assert "bev_path" not in payload
+    assert payload["has_schematic_bev_fallback"] is False
+    assert payload["schematic_bev_fallback_pose_count"] == 0
     assert payload["has_scene_mesh"] is False
     assert "scene_mesh_path" not in payload
     assert payload["has_visible_object_index"] is False
@@ -416,6 +446,127 @@ def test_cli_source_frame_index_rejects_duplicate_frame_ids(
 
     assert excinfo.value.code == 1
     assert "duplicate frame id '000000'" in capsys.readouterr().err
+
+
+def test_cli_scene_summary_reports_schematic_bev_fallback(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pose_a_path = tmp_path / "source" / "pose_a.txt"
+    pose_b_path = tmp_path / "source" / "pose_b.txt"
+    _write_pose(pose_a_path, x_translation=0.0, y_translation=0.0)
+    _write_pose(pose_b_path, x_translation=1.0, y_translation=0.0)
+    scene_dir = _write_source_frame_scene(
+        tmp_path,
+        [
+            {"frame_id": "000000", "pose": str(pose_a_path)},
+            {"frame_id": "000010", "pose": str(pose_b_path)},
+        ],
+    )
+
+    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["has_bev"] is False
+    assert payload["has_schematic_bev_fallback"] is True
+    assert payload["schematic_bev_fallback_pose_count"] == 2
+
+
+def test_cli_scene_summary_reports_schematic_bev_dependency_gap(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pose_path = tmp_path / "source" / "pose.txt"
+    _write_pose(pose_path, x_translation=0.0, y_translation=0.0)
+    scene_dir = _write_source_frame_scene(
+        tmp_path, [{"frame_id": "000000", "pose": str(pose_path)}]
+    )
+    original_find_spec = importlib.util.find_spec
+
+    def fake_find_spec(
+        module_name: str, package: str | None = None
+    ) -> importlib.machinery.ModuleSpec | None:
+        if module_name == "cv2":
+            return None
+        return original_find_spec(module_name, package)
+
+    monkeypatch.setattr(importlib.util, "find_spec", fake_find_spec)
+
+    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["has_bev"] is False
+    assert payload["has_schematic_bev_fallback"] is False
+    assert payload["schematic_bev_fallback_pose_count"] == 1
+    assert "cv2" in payload["schematic_bev_fallback_unavailable_reason"]
+
+
+def test_cli_scene_summary_reports_broken_schematic_bev_dependency(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pose_path = tmp_path / "source" / "pose.txt"
+    _write_pose(pose_path, x_translation=0.0, y_translation=0.0)
+    scene_dir = _write_source_frame_scene(
+        tmp_path, [{"frame_id": "000000", "pose": str(pose_path)}]
+    )
+    original_import_module = importlib.import_module
+
+    def fake_import_module(module_name: str, package: str | None = None) -> ModuleType:
+        if module_name == "cv2":
+            raise ImportError("broken cv2 install")
+        return original_import_module(module_name, package)
+
+    monkeypatch.setattr(importlib, "import_module", fake_import_module)
+
+    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["has_bev"] is False
+    assert payload["has_schematic_bev_fallback"] is False
+    assert payload["schematic_bev_fallback_pose_count"] == 1
+    assert "cv2" in payload["schematic_bev_fallback_unavailable_reason"]
+
+
+def test_cli_scene_summary_rejects_invalid_schematic_bev_pose(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pose_path = tmp_path / "source" / "pose.txt"
+    pose_path.parent.mkdir(parents=True)
+    pose_path.write_text("1 0 0 inf\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+    scene_dir = _write_source_frame_scene(
+        tmp_path, [{"frame_id": "000000", "pose": str(pose_path)}]
+    )
+
+    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "camera pose for schematic BEV fallback" in payload["error"]
+    assert "finite" in payload["error"]
+
+
+def test_cli_scene_summary_prefers_prepared_bev_over_invalid_fallback_pose(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pose_path = tmp_path / "source" / "pose.txt"
+    pose_path.parent.mkdir(parents=True)
+    pose_path.write_text("1 0 0 inf\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+    scene_dir = _write_source_frame_scene(
+        tmp_path, [{"frame_id": "000000", "pose": str(pose_path)}]
+    )
+    bev_path = scene_dir / "conceptgraph" / "bev" / "scene_bev.png"
+    bev_path.parent.mkdir()
+    bev_path.write_bytes(b"prepared-bev")
+
+    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["has_bev"] is True
+    assert payload["bev_path"] == str(bev_path)
+    assert payload["has_schematic_bev_fallback"] is False
+    assert payload["schematic_bev_fallback_pose_count"] == 0
 
 
 def test_cli_scene_summary_falls_back_to_raw_rgb_frames(
@@ -1534,6 +1685,121 @@ def test_cli_view_bev_reports_unavailable_without_bev_asset(
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
     assert "BEV asset is not available" in payload["error"]
+
+
+def test_cli_view_bev_renders_fallback_from_source_frame_poses(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("cv2")
+    pose_a_path = tmp_path / "source" / "pose_a.txt"
+    pose_b_path = tmp_path / "source" / "pose_b.txt"
+    _write_pose(pose_a_path, x_translation=0.0, y_translation=0.0)
+    _write_pose(pose_b_path, x_translation=2.0, y_translation=1.0)
+    scene_dir = _write_source_frame_scene(
+        tmp_path,
+        [
+            {"frame_id": "000000", "pose": str(pose_a_path)},
+            {"frame_id": "000010", "pose": str(pose_b_path)},
+        ],
+    )
+
+    code = main(
+        [
+            "view_bev",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            "{}",
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    frame_payload = payload["frames"][0]
+    image_path = Path(frame_payload["image_path"])
+    assert frame_payload["frame_id"] == "bev"
+    assert image_path == tmp_path / "scratch" / "421254" / "schematic_bev.png"
+    assert image_path.is_file()
+    view_payload = json.loads(image_path.with_suffix(".view.json").read_text())
+    assert view_payload["width"] > 0
+    assert view_payload["height"] > 0
+
+
+def test_cli_view_bev_prefers_prepared_bev_over_pose_fallback(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_source_frame_scene(
+        tmp_path,
+        [
+            {"frame_id": "000000", "pose": str(tmp_path / "source" / "pose.txt")},
+        ],
+    )
+    bev_path = scene_dir / "conceptgraph" / "bev" / "scene_bev.png"
+    bev_path.parent.mkdir()
+    bev_path.write_bytes(b"prepared-bev")
+
+    code = main(["view_bev", "--scene-root", str(scene_dir), "--args", "{}"])
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["frames"][0]["image_path"] == str(bev_path)
+
+
+def test_view_bev_rejects_non_finite_pose_for_fallback(tmp_path: Path) -> None:
+    pose_path = tmp_path / "source" / "pose.txt"
+    pose_path.parent.mkdir(parents=True)
+    pose_path.write_text("1 0 0 inf\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
+    scene_dir = _write_source_frame_scene(
+        tmp_path, [{"frame_id": "000000", "pose": str(pose_path)}]
+    )
+
+    with pytest.raises(ToolInputError, match="finite"):
+        view_bev(
+            SceneFunc3dToolScene.load(scene_dir),
+            ViewBevArgs(),
+            out_dir=tmp_path / "scratch",
+        )
+
+
+def test_view_bev_accepts_near_homogeneous_pose_last_row(tmp_path: Path) -> None:
+    pytest.importorskip("cv2")
+    pose_path = tmp_path / "source" / "pose.txt"
+    pose_path.parent.mkdir(parents=True)
+    pose_path.write_text(
+        "1 0 0 0\n0 1 0 0\n0 0 1 0\n1e-12 0 0 0.999999999999\n",
+        encoding="utf-8",
+    )
+    scene_dir = _write_source_frame_scene(
+        tmp_path, [{"frame_id": "000000", "pose": str(pose_path)}]
+    )
+
+    result = view_bev(
+        SceneFunc3dToolScene.load(scene_dir),
+        ViewBevArgs(),
+        out_dir=tmp_path / "scratch",
+    )
+
+    assert result.frames[0].image_path.is_file()
+
+
+def test_view_bev_reports_fallback_write_error(tmp_path: Path) -> None:
+    pytest.importorskip("cv2")
+    pose_path = tmp_path / "source" / "pose.txt"
+    _write_pose(pose_path, x_translation=0.0, y_translation=0.0)
+    scene_dir = _write_source_frame_scene(
+        tmp_path, [{"frame_id": "000000", "pose": str(pose_path)}]
+    )
+    out_dir_file = tmp_path / "not-a-directory"
+    out_dir_file.write_text("occupied\n", encoding="utf-8")
+
+    with pytest.raises(ToolInputError, match="could not write schematic BEV fallback"):
+        view_bev(
+            SceneFunc3dToolScene.load(scene_dir),
+            ViewBevArgs(),
+            out_dir=out_dir_file,
+        )
 
 
 def test_cli_keyframe_selector_prioritizes_query_frame_id(
