@@ -290,6 +290,70 @@ def build_upstream_request(
     )
 
 
+def build_compact_upstream_request(
+    raw_body: Any,
+    *,
+    settings: AdapterSettings | None = None,
+    upstream_extra: dict[str, str] | None = None,
+    logid: str | None = None,
+    excluded_upstream_aliases: frozenset[str] = frozenset(),
+) -> UpstreamRequest:
+    resolved_settings = settings or AdapterSettings.from_env()
+    upstream_api = resolve_upstream_api(raw_body, resolved_settings)
+    if upstream_api == "chat_completions":
+        raise RuntimeError("responses compact proxy requires upstream_api=responses")
+    selected_upstream = resolve_modelhub_upstream(
+        resolved_settings,
+        raw_body,
+        upstream_extra,
+        excluded_upstream_aliases=excluded_upstream_aliases,
+    )
+    upstream_base_url = resolved_settings.upstream_base_url
+    upstream_path_override = ""
+    if selected_upstream is not None:
+        key_alias = selected_upstream.alias
+        ak = selected_upstream.ak
+        key_selection = "toml_weighted_extra_hash"
+        upstream_base_url, upstream_path_override = _split_modelhub_target_url(
+            selected_upstream.url,
+            upstream_api,
+        )
+    elif (
+        selected_key := resolve_modelhub_key(resolved_settings, upstream_extra)
+    ) is not None:
+        key_alias, ak = selected_key
+        key_selection = "extra_session_rendezvous_hash"
+    else:
+        ak = _valid_modelhub_ak(resolved_settings.modelhub_ak)
+        key_alias = "single"
+        key_selection = "single_key_fallback"
+    if not ak:
+        raise RuntimeError("AIDP_GPT_AK or AIDP_MODELHUB_AK is required")
+
+    responses_path = upstream_path_override or _normalize_path(
+        resolved_settings.responses_path
+    )
+    path = _responses_compact_path(responses_path)
+    return UpstreamRequest(
+        url=f"{upstream_base_url}{path}?ak={quote(ak, safe='')}",
+        headers={
+            "content-type": "application/json",
+            "X-TT-LOGID": logid or _build_logid(),
+            "extra": encode_upstream_extra(
+                upstream_extra, fallback_session_id=resolved_settings.session_id
+            ),
+        },
+        body=_build_responses_body(
+            raw_body,
+            max_output_tokens=resolved_settings.max_output_tokens,
+            mutation_enabled=resolved_settings.responses_body_mutation_enabled,
+        ),
+        upstream_api=upstream_api,
+        upstream_key_alias=key_alias,
+        upstream_key_selection=key_selection,
+    )
+
+
 def _build_responses_body(
     raw_body: Any,
     *,
@@ -311,6 +375,13 @@ def resolve_upstream_api(raw_body: Any, settings: AdapterSettings) -> str:
     if configured in {"responses", "chat_completions"}:
         return configured
     return "responses"
+
+
+def _responses_compact_path(responses_path: str) -> str:
+    normalized = _normalize_path(responses_path)
+    if normalized.endswith("/compact"):
+        return normalized
+    return f"{normalized}/compact"
 
 
 def _requests_reasoning_summary(raw_body: Any) -> bool:

@@ -88,21 +88,24 @@ def _env(values: dict[str, str], *, remove: tuple[str, ...] = ()):
 
 
 class AppTest(unittest.TestCase):
-    def test_responses_route_uses_office_chat_adapter(self):
+    def test_responses_route_uses_office_responses_passthrough(self):
         _FakeAsyncClient.calls = []
         _FakeAsyncClient.response = _FakeUpstreamResponse(
             body=json.dumps(
                 {
+                    "id": "resp_test",
+                    "object": "response",
+                    "status": "completed",
                     "model": "gpt-5.5-2026-04-24",
-                    "choices": [{"message": {"role": "assistant", "content": "2"}}],
-                    "usage": {
-                        "prompt_tokens": 10,
-                        "completion_tokens": 1,
-                        "total_tokens": 11,
-                    },
+                    "output_text": "2",
                 }
             ).encode()
         )
+        request_body = {
+            "model": "gpt-5.5-2026-04-24",
+            "input": "What is 1+1?",
+            "stream": False,
+        }
 
         with _env(
             {
@@ -115,11 +118,7 @@ class AppTest(unittest.TestCase):
             with patch("adapter.app.httpx.AsyncClient", _FakeAsyncClient):
                 response = TestClient(app).post(
                     "/v1/responses",
-                    json={
-                        "model": "gpt-5.5-2026-04-24",
-                        "input": "What is 1+1?",
-                        "stream": False,
-                    },
+                    json=request_body,
                 )
 
         self.assertEqual(response.status_code, 200)
@@ -128,32 +127,55 @@ class AppTest(unittest.TestCase):
         call = _FakeAsyncClient.calls[0]
         self.assertEqual(
             call["url"],
-            "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl?ak=ak-1",
+            "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/responses?ak=ak-1",
         )
-        self.assertEqual(
-            call["json"]["messages"], [{"role": "user", "content": "What is 1+1?"}]
-        )
-        self.assertEqual(call["json"]["max_tokens"], 65536)
+        self.assertEqual(call["json"], request_body)
 
-    def test_compact_route_returns_local_response_compaction(self):
-        response = TestClient(app).post(
-            "/v1/responses/compact",
-            json={
-                "model": "gpt-5.5-2026-04-24",
-                "input": [
-                    {
-                        "type": "message",
-                        "role": "user",
-                        "content": [{"type": "input_text", "text": "hello"}],
-                    },
-                ],
-            },
+    def test_compact_route_proxies_modelhub_responses_compact(self):
+        _FakeAsyncClient.calls = []
+        _FakeAsyncClient.response = _FakeUpstreamResponse(
+            body=json.dumps(
+                {
+                    "id": "resp_compact_test",
+                    "object": "response.compaction",
+                    "status": "completed",
+                    "output": [],
+                }
+            ).encode()
         )
+        request_body = {
+            "model": "gpt-5.5-2026-04-24",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": "hello"}],
+                },
+            ],
+        }
+
+        with _env(
+            {
+                "AIDP_GPT_AK": "ak-1",
+                "AIDP_CODEX_PROXY_UPSTREAM_ENV": "office",
+            },
+            remove=("MODELHUB_AK", "MODELHUB_URL"),
+        ):
+            with patch("adapter.app.httpx.AsyncClient", _FakeAsyncClient):
+                response = TestClient(app).post(
+                    "/v1/responses/compact",
+                    json=request_body,
+                )
 
         self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertEqual(body["object"], "response.compaction")
-        self.assertEqual(body["output"][0]["content"][0]["type"], "input_text")
+        self.assertEqual(response.json()["object"], "response.compaction")
+        self.assertEqual(len(_FakeAsyncClient.calls), 1)
+        call = _FakeAsyncClient.calls[0]
+        self.assertEqual(
+            call["url"],
+            "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/responses/compact?ak=ak-1",
+        )
+        self.assertEqual(call["json"], request_body)
 
     def test_health_reports_toml_upstreams_without_exposing_ak(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -198,10 +220,11 @@ weight = 2
             _FakeUpstreamResponse(
                 body=json.dumps(
                     {
+                        "id": "resp_test",
+                        "object": "response",
+                        "status": "completed",
                         "model": "gpt-5.4-2026-03-05",
-                        "choices": [
-                            {"message": {"role": "assistant", "content": "ok"}}
-                        ],
+                        "output_text": "ok",
                     }
                 ).encode()
             ),

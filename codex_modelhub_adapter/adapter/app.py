@@ -19,6 +19,7 @@ from adapter.mapping import (
 )
 from adapter.proxy import (
     AdapterSettings,
+    build_compact_upstream_request,
     build_upstream_request,
     health_payload,
     resolve_upstream_extra,
@@ -178,7 +179,11 @@ async def create_response(
 
 
 @app.post("/v1/responses/compact")
-async def compact_response(request: Request) -> JSONResponse:
+async def compact_response(
+    request: Request,
+    x_tt_logid: str | None = Header(default=None, alias="X-TT-LOGID"),
+    extra_header: str | None = Header(default=None, alias="extra"),
+) -> Response:
     try:
         raw_body: Any = await request.json()
     except Exception as exc:
@@ -186,11 +191,52 @@ async def compact_response(request: Request) -> JSONResponse:
             status_code=400, detail="Request body must be valid JSON"
         ) from exc
     settings = AdapterSettings.from_env()
-    return JSONResponse(
-        content=build_compaction_response(
-            raw_body,
-            max_chars=settings.compact_summary_max_chars,
+    if settings.upstream_api == "chat_completions":
+        return JSONResponse(
+            content=build_compaction_response(
+                raw_body,
+                max_chars=settings.compact_summary_max_chars,
+            )
         )
+    resolved_extra = resolve_upstream_extra(
+        extra_header,
+        fallback_session_id=settings.session_id,
+    )
+    try:
+        upstream_request = build_compact_upstream_request(
+            raw_body,
+            settings=settings,
+            upstream_extra=resolved_extra.value,
+            logid=x_tt_logid,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    timeout = httpx.Timeout(
+        settings.timeout_seconds,
+        connect=min(settings.timeout_seconds, 20.0),
+        read=None,
+    )
+    client = httpx.AsyncClient(timeout=timeout, follow_redirects=False)
+    try:
+        stream_context, upstream = await _open_upstream(client, upstream_request)
+    except httpx.HTTPError as exc:
+        await client.aclose()
+        raise HTTPException(
+            status_code=502, detail=f"Failed to reach AIDP upstream: {exc}"
+        ) from exc
+    body = await upstream.aread()
+    await stream_context.__aexit__(None, None, None)
+    await client.aclose()
+
+    response_headers = _copy_response_headers(upstream)
+    if upstream_request.headers.get("X-TT-LOGID"):
+        response_headers["X-TT-LOGID"] = upstream_request.headers["X-TT-LOGID"]
+    return Response(
+        content=body,
+        status_code=upstream.status_code,
+        media_type=upstream.headers.get("content-type") or "application/json",
+        headers=response_headers,
     )
 
 
