@@ -2290,6 +2290,12 @@ def _validate_expand_decision_against_tool_events(
             f"fuse_line={before_line_number}; "
             f"events_path={events_path}"
         )
+    _require_all_expand_suggestions_accounted_for(
+        suggested_frame_ids,
+        accepted_suggested_frame_ids=decision.suggested_frame_ids,
+        rejected_suggested_frame_ids=decision.rejected_suggested_frame_ids,
+        events_path=events_path,
+    )
 
 
 def _require_suggest_event_uses_standard_seed(
@@ -2376,6 +2382,32 @@ def _require_tool_event_path_match(
         f"tool_name={tool_name}; field={field_name}; "
         f"actual={raw_path}; expected={expected_path}; "
         f"events_path={events_path}; line={line_number}"
+    )
+
+
+def _require_all_expand_suggestions_accounted_for(
+    suggested_frame_ids: tuple[str, ...],
+    *,
+    accepted_suggested_frame_ids: tuple[str, ...],
+    rejected_suggested_frame_ids: tuple[str, ...],
+    events_path: Path,
+) -> None:
+    accounted_frame_ids = set(accepted_suggested_frame_ids) | set(
+        rejected_suggested_frame_ids
+    )
+    missing_frame_ids = tuple(
+        frame_id
+        for frame_id in suggested_frame_ids
+        if frame_id not in accounted_frame_ids
+    )
+    if not missing_frame_ids:
+        return
+    raise CodexResponseError(
+        "multi_view_decision.action='expand' must account for every frame from "
+        "successful suggest_additional_views expand results in either "
+        "suggested_frame_ids or rejected_suggested_frame_ids: "
+        f"missing_rejected_suggested_frame_ids={missing_frame_ids}; "
+        f"events_path={events_path}"
     )
 
 
