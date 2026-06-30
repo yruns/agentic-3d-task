@@ -707,12 +707,17 @@ def _validate_expand_multi_view_decision(
         )
     accepted_followup_frame_ids = set(accepted_frame_ids[1:])
     suggested_frame_ids = set(decision.suggested_frame_ids)
-    if not accepted_followup_frame_ids.intersection(suggested_frame_ids):
+    missing_accepted_followup_frame_ids = tuple(
+        sorted(accepted_followup_frame_ids - suggested_frame_ids)
+    )
+    if missing_accepted_followup_frame_ids:
         raise ValueError(
-            "multi_view_decision.suggested_frame_ids must include at least one "
-            "accepted follow-up frame: "
+            "multi_view_decision.suggested_frame_ids must include every accepted "
+            "follow-up frame: "
             f"suggested_frame_ids={decision.suggested_frame_ids}; "
-            f"accepted_followup_frame_ids={tuple(sorted(accepted_followup_frame_ids))}"
+            f"accepted_followup_frame_ids={tuple(sorted(accepted_followup_frame_ids))}; "
+            f"missing_accepted_followup_frame_ids="
+            f"{missing_accepted_followup_frame_ids}"
         )
 
 

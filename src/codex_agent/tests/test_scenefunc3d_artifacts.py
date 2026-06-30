@@ -1091,6 +1091,18 @@ def test_fuse_accepted_masks_rejects_expand_without_accepted_suggested_frame(
         fuse_accepted_masks(args, out_dir=tmp_path / "out")
 
 
+def test_fuse_accepted_masks_rejects_expand_missing_accepted_followup_frame(
+    tmp_path: Path,
+) -> None:
+    args = _three_fragment_fuse_args(
+        tmp_path,
+        multi_view_decision=_expand_decision_payload(suggested_frame_ids=("000020",)),
+    )
+
+    with pytest.raises(ToolInputError, match="accepted follow-up frame"):
+        fuse_accepted_masks(args, out_dir=tmp_path / "out")
+
+
 def test_fuse_accepted_masks_rejects_fragment_without_point_indices(
     tmp_path: Path,
 ) -> None:
@@ -1373,6 +1385,39 @@ def _two_fragment_fuse_args(
                     "review_artifacts": second_review_artifacts,
                 },
             ],
+            "multi_view_decision": multi_view_decision,
+        }
+    )
+
+
+def _three_fragment_fuse_args(
+    tmp_path: Path,
+    *,
+    multi_view_decision: MultiViewDecisionPayload,
+) -> FuseAcceptedMasksArgs:
+    fragment_specs: tuple[tuple[str, str, tuple[int, ...], str], ...] = (
+        ("frag-a", "000010", (10, 12), "review-a"),
+        ("frag-b", "000020", (20, 22), "review-b"),
+        ("frag-c", "000030", (30, 32), "review-c"),
+    )
+    fragments: list[dict[str, object]] = []
+    for fragment_id, frame_id, point_indices, review_dir_name in fragment_specs:
+        mask_npz_path, mask_ply_path = _write_points_artifact(
+            tmp_path / fragment_id, point_indices=point_indices
+        )
+        fragments.append(
+            {
+                "fragment_id": fragment_id,
+                "frame_id": frame_id,
+                "mask_npz_path": str(mask_npz_path),
+                "mask_ply_path": str(mask_ply_path),
+                "approval_actions": _action_values(_APPROVED_FRAGMENT_ACTIONS),
+                "review_artifacts": _write_review_artifacts(tmp_path / review_dir_name),
+            }
+        )
+    return FuseAcceptedMasksArgs.model_validate(
+        {
+            "fragments": fragments,
             "multi_view_decision": multi_view_decision,
         }
     )
