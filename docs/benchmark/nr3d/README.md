@@ -21,6 +21,7 @@ Process archive for NR3D evaluations in `agentic-3d-task`. Mirrors the
 | [v5_summary_responses_strat600_20260611](v5_summary_responses_strat600_20260611.md) | 2026-06-11 | Codex agent VG | v4 + **reasoning effort `""`→`medium`** + **reasoning summaries on** (`--reasoning-summary auto`, which forces the upstream **/responses** API), on the **in-repo vendored adapter**, strat600, gpt-5.4, 40 workers — **COMPLETE 600/600** | **Acc@0.25 = 85.33% (512/600), +7.00 pp over v4** — uniform gain across every tier (Easy 89.3 / Hard 81.6 / **V-Dep 81.0** / V-Indep 87.7), all far outside the variance bands → **real, not noise.** Summaries captured 491/600 (81.8%); only 2 hard failures. The +7 pp was first attributed to effort, but **[v6](v6_effort_ablation_chat_strat600_20260611.md) isolated it**: ≈+2 pp effort + **≈+5 pp the /responses path** (the dominant lever). Code `56e2d24` |
 | [v6_effort_ablation_chat_strat600_20260611](v6_effort_ablation_chat_strat600_20260611.md) | 2026-06-11 | Codex agent VG | **Ablation** — effort `medium` on the **chat** path (summaries off) to split v5's +7 pp, strat600, gpt-5.4, 40 workers — **COMPLETE 600/600** | **Acc@0.25 = 80.33% (482/600)** (Easy 84.5 / Hard 76.5 / **V-Dep 72.5** / V-Indep 84.6). **Decomposes the v5 gain:** medium effort on chat = **+2.0 pp over v4** (near-noise); switching chat→/responses at fixed effort = **+5.0 pp** (v5−v6, dominant, biggest on V-Dep +8.5). **The `/responses` path — cross-turn reasoning-state carryover — is the real lever, not the effort param.** Chat-path cache signature 0.965/0.577 ≈ v4. Code `56e2d24` |
 | [v7_responses_passthrough_strat600_20260630](v7_responses_passthrough_strat600_20260630.md) | 2026-06-30 | Codex agent VG | **Adapter regression** — ModelHub adapter simplified to responses-first passthrough (`/v1/responses` body unchanged by default; compact proxied upstream), strat600, gpt-5.4, 40 workers — **COMPLETE 600/600** | **Acc@0.25 = 86.00% (516/600)** (Easy 90.3 / Hard 81.9 / **V-Dep 82.5** / V-Indep 87.9). Clears the migration gate: Overall ≥83, View-Dep ≥76.5, cache 0.987/0.930, 2 failures, summaries 542/600. This is v5-level behavior preserved by the simpler Responses API passthrough adapter. Code `4b51027` |
+| [v8_failclosed_encrypted_state_strat600_20260701](v8_failclosed_encrypted_state_strat600_20260701.md) | 2026-07-01 | Codex agent VG | **Adapter regression** — encrypted reasoning state fallback removed; `invalid_encrypted_content` now fails the turn instead of sanitizing/retrying, strat600, gpt-5.4, 40 workers — **COMPLETE 600/600** | **Acc@0.25 = 84.50% (507/600)** (Easy 88.6 / Hard 80.6 / **V-Dep 77.3** / V-Indep 88.4). Still clears the migration gate and keeps cache healthy (0.990/0.930), but exposes 1 fail-closed encrypted-state turn failure and lands much closer to the View-Dep threshold. Code `8054f6b` |
 
 ## Codex agent VG — per-tier accuracy (canonical strat600)
 
@@ -29,19 +30,21 @@ box, gpt-5.4 via ModelHub adapter, all full 600/600 on the same fold. v1 =
 catalog-first **prompt-only**; v3/v4 = v1 + 9 in-turn evidence tools (+ loop fix,
 + sandbox network); v6 = v4 + **effort `medium` on the chat path**; v5 = v6 + the
 **`/responses` path** (effort `medium` + summaries on); v7 validates that the
-simplified responses-passthrough adapter preserves v5-level behavior. Columns
-below are ordered as floor -> tools -> effort -> path -> current adapter. (v2
-looped, ran only 169/600 at the v1 floor; v3 ≈ v4 Overall — see timeline.)
+simplified responses-passthrough adapter preserves v5-level behavior; v8 removes
+the encrypted-state sanitizer/retry fallback and lets mismatched encrypted state
+fail closed. Columns below are ordered as floor -> tools -> effort -> path ->
+adapter checkpoints. (v2 looped, ran only 169/600 at the v1 floor; v3 ≈ v4
+Overall — see timeline.)
 
-| Slice | n | v1 (floor) | v4 (tools) | v6 (+effort, chat) | v5 (+/responses) | **v7** (passthrough) | v7-v5 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| **Overall** | 600 | 63.83% | 78.33% | 80.33% | 85.33% | **86.00%** | +0.67 |
-| Easy | 290 | 73.10% | 82.76% | 84.48% | 89.31% | **90.34%** | +1.03 |
-| Hard | 310 | 55.16% | 74.19% | 76.45% | 81.61% | **81.94%** | +0.32 |
-| **View-Dep** | 211 | 51.66% | 68.25% | 72.51% | 81.04% | **82.46%** | +1.42 |
-| View-Indep | 389 | 70.44% | 83.80% | 84.58% | 87.66% | **87.92%** | +0.26 |
+| Slice | n | v1 (floor) | v4 (tools) | v6 (+effort, chat) | v5 (+/responses) | v7 (passthrough) | **v8** (fail-closed) | v8-v7 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Overall** | 600 | 63.83% | 78.33% | 80.33% | 85.33% | 86.00% | **84.50%** | -1.50 |
+| Easy | 290 | 73.10% | 82.76% | 84.48% | 89.31% | 90.34% | **88.62%** | -1.72 |
+| Hard | 310 | 55.16% | 74.19% | 76.45% | 81.61% | 81.94% | **80.65%** | -1.29 |
+| **View-Dep** | 211 | 51.66% | 68.25% | 72.51% | 81.04% | 82.46% | **77.25%** | -5.21 |
+| View-Indep | 389 | 70.44% | 83.80% | 84.58% | 87.66% | 87.92% | **88.43%** | +0.51 |
 
-Three distinct levers, each isolated on this fold:
+Five checkpoints/levers, each isolated on this fold:
 
 1. **Tools** (v1 → v4): **+14.5 pp Overall**, ~+16–19 pp on Hard / View-Dep.
    `keyframe_selector` live (v4) vs dead (v3) makes no measurable difference — the
@@ -58,12 +61,18 @@ Three distinct levers, each isolated on this fold:
    both inside the strat600 bands. Read this as a regression gate pass: the
    responses-passthrough adapter preserves v5 behavior while improving cache ratio
    slightly (`0.930` vs `0.914`) and summary capture (`542/600` vs `491/600`).
+5. **Encrypted-state fail-closed** (v7 → v8): **-1.50 pp Overall, -5.21 pp
+   View-Dep**. v8 still clears the adapter gate, but it exposes one real
+   `invalid_encrypted_content` turn failure and lands closer to the View-Dep
+   threshold. Do not read this as a reason to restore sanitized fallback; the
+   fallback can break reasoning-state/prompt-cache correspondence.
 
 Full runs: [v3](v3_codex_tools_loopfix_strat600_20260609.md) ·
 [v4](v4_network_fix_strat600_20260610.md) ·
 [v5](v5_summary_responses_strat600_20260611.md) ·
 [v6](v6_effort_ablation_chat_strat600_20260611.md) ·
-[v7](v7_responses_passthrough_strat600_20260630.md).
+[v7](v7_responses_passthrough_strat600_20260630.md) ·
+[v8](v8_failclosed_encrypted_state_strat600_20260701.md).
 
 ## Metric
 
