@@ -355,6 +355,42 @@ class _LiftMaskToolArgs(BaseModel):
     )
 
 
+class _InspectMaskToolArgs(BaseModel):
+    """Fields needed to prove agent reviewed one lifted 3D mask artifact."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    mask_npz_path: NonEmptyString
+    mask_ply_path: NonEmptyString
+    overlay_paths: tuple[NonEmptyString, ...] = ()
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_overlay_path_alias(cls, payload: object) -> object:
+        """Accept the single-overlay alias supported by the inspect tool."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        overlay_path = values.get("overlay_path")
+        if "overlay_paths" not in values and overlay_path is not None:
+            values["overlay_paths"] = (overlay_path,)
+        return values
+
+
+class _InspectMaskToolResult(BaseModel):
+    """Fields needed to prove a 3D mask inspection returned geometry summary."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    overlay_paths: tuple[NonEmptyString, ...] = ()
+    lifted_point_count: int = Field(ge=1)
+    bbox_min_xyz: tuple[float, float, float]
+    bbox_max_xyz: tuple[float, float, float]
+    bbox_extent_xyz: tuple[float, float, float]
+    max_extent_meters: float = Field(ge=0.0, allow_inf_nan=False)
+    status: NonEmptyString
+
+
 @dataclass(frozen=True)
 class _ParsedFuseToolEvent:
     """A validated fuse event with source location for diagnostics."""
@@ -405,6 +441,24 @@ class _ParsedLiftMaskToolEvent:
     line_number: int
     args: _LiftMaskToolArgs
     result: _LiftMaskToolResult
+
+
+@dataclass(frozen=True)
+class _ParsedInspectMaskToolEvent:
+    """A validated 3D mask inspection event with source location."""
+
+    line_number: int
+    args: _InspectMaskToolArgs
+    result: _InspectMaskToolResult
+
+
+@dataclass(frozen=True)
+class _ValidatedStandardFragmentToolChain:
+    """Validated upstream event line numbers for one accepted standard fragment."""
+
+    fragment_id: str
+    lift_line_number: int
+    inspect_line_number: int
 
 
 @dataclass(frozen=True)
@@ -1018,16 +1072,30 @@ def _validate_outcome_against_fuse_tool_event(
         events_path=events_path,
     )
     if matching_fuse_event is not None:
-        _validate_standard_fragment_upstream_tool_events(
+        standard_fragment_chains = _validate_standard_fragment_upstream_tool_events(
             artifact_document,
             artifact_root=_infer_output_root_from_outcome(outcome),
             events_path=events_path,
             fuse_line_number=matching_fuse_event.line_number,
         )
+        seed_standard_chain = _seed_standard_fragment_tool_chain(
+            artifact_document.multi_view_decision,
+            standard_fragment_chains=standard_fragment_chains,
+        )
+        if seed_standard_chain is not None:
+            _reject_seed_suggest_events_before_inspection(
+                seed_standard_chain,
+                events_path=events_path,
+            )
         _validate_multiview_decision_against_tool_events(
             artifact_document.multi_view_decision,
             events_path,
             before_line_number=matching_fuse_event.line_number,
+            after_line_number=(
+                seed_standard_chain.inspect_line_number
+                if seed_standard_chain is not None
+                else 0
+            ),
         )
         return
     raise CodexResponseError(
@@ -1205,25 +1273,97 @@ def _validate_standard_fragment_upstream_tool_events(
     artifact_root: Path,
     events_path: Path,
     fuse_line_number: int,
-) -> None:
+) -> tuple[_ValidatedStandardFragmentToolChain, ...]:
     evidence_image_events = _successful_evidence_image_tool_events(events_path)
     molmo_events = _successful_molmo_point_tool_events(events_path)
     sam_events = _successful_sam_mask_tool_events(events_path)
     lift_events = _successful_lift_mask_tool_events(events_path)
+    inspect_events = _successful_inspect_mask_tool_events(events_path)
+    validated_chains: list[_ValidatedStandardFragmentToolChain] = []
     for fragment in artifact_document.accepted_fragments:
         candidate_id = _standard_fragment_candidate_id(fragment)
         if candidate_id is None:
             continue
-        _require_matching_standard_fragment_tool_chain(
-            fragment,
-            candidate_id=candidate_id,
-            evidence_image_events=evidence_image_events,
-            molmo_events=molmo_events,
-            sam_events=sam_events,
-            lift_events=lift_events,
-            artifact_root=artifact_root,
+        validated_chains.append(
+            _require_matching_standard_fragment_tool_chain(
+                fragment,
+                candidate_id=candidate_id,
+                evidence_image_events=evidence_image_events,
+                molmo_events=molmo_events,
+                sam_events=sam_events,
+                lift_events=lift_events,
+                inspect_events=inspect_events,
+                artifact_root=artifact_root,
+                events_path=events_path,
+                fuse_line_number=fuse_line_number,
+            )
+        )
+    return tuple(validated_chains)
+
+
+def _seed_standard_fragment_tool_chain(
+    decision: FinalMaskMultiViewDecision,
+    *,
+    standard_fragment_chains: tuple[_ValidatedStandardFragmentToolChain, ...],
+) -> _ValidatedStandardFragmentToolChain | None:
+    for chain in standard_fragment_chains:
+        if chain.fragment_id == decision.seed_fragment_id:
+            return chain
+    return None
+
+
+def _reject_seed_suggest_events_before_inspection(
+    seed_chain: _ValidatedStandardFragmentToolChain,
+    *,
+    events_path: Path,
+) -> None:
+    if not events_path.is_file():
+        return
+    try:
+        event_lines = events_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as exc:
+        raise CodexResponseError(
+            "could not read SceneFunc3D tool events while validating "
+            "pre-inspection multi-view ordering: "
+            f"events_path={events_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    for line_number, raw_line in enumerate(event_lines, start=1):
+        if line_number <= seed_chain.lift_line_number:
+            continue
+        if line_number >= seed_chain.inspect_line_number:
+            continue
+        line = raw_line.strip()
+        if not line:
+            continue
+        event = _load_event_payload(
+            line, events_path=events_path, line_number=line_number
+        )
+        if event.get("tool_name") != "suggest_additional_views":
+            continue
+        if event.get("status") != "success":
+            continue
+        if event.get("event_type") != "tool_completed":
+            raise CodexResponseError(
+                "successful suggest_additional_views event must have "
+                "event_type='tool_completed': "
+                f"events_path={events_path}; line={line_number}"
+            )
+        result = _require_mapping_field(
+            event,
+            "result",
             events_path=events_path,
-            fuse_line_number=fuse_line_number,
+            line_number=line_number,
+        )
+        if result.get("seed_fragment_id") != seed_chain.fragment_id:
+            continue
+        raise CodexResponseError(
+            "suggest_additional_views for a standard seed fragment must occur "
+            "after inspect_mask_artifact has reviewed the lifted 3D seed: "
+            f"seed_fragment_id={seed_chain.fragment_id}; "
+            f"suggest_line={line_number}; "
+            f"lift_line={seed_chain.lift_line_number}; "
+            f"inspect_line={seed_chain.inspect_line_number}; "
+            f"events_path={events_path}"
         )
 
 
@@ -1235,10 +1375,11 @@ def _require_matching_standard_fragment_tool_chain(
     molmo_events: tuple[_ParsedMolmoPointToolEvent, ...],
     sam_events: tuple[_ParsedSamMaskToolEvent, ...],
     lift_events: tuple[_ParsedLiftMaskToolEvent, ...],
+    inspect_events: tuple[_ParsedInspectMaskToolEvent, ...],
     artifact_root: Path,
     events_path: Path,
     fuse_line_number: int,
-) -> None:
+) -> _ValidatedStandardFragmentToolChain:
     matching_molmo_events = _matching_molmo_point_events(
         fragment,
         evidence_image_events=evidence_image_events,
@@ -1252,6 +1393,8 @@ def _require_matching_standard_fragment_tool_chain(
         )
 
     last_matching_sam_event: _MatchedSamMaskToolEvent | None = None
+    last_matching_lift_event: _ParsedLiftMaskToolEvent | None = None
+    latest_validated_chain: _ValidatedStandardFragmentToolChain | None = None
     for molmo_event in matching_molmo_events:
         sam_event = _matching_sam_mask_event(
             fragment,
@@ -1266,7 +1409,7 @@ def _require_matching_standard_fragment_tool_chain(
         if sam_event is None:
             continue
         last_matching_sam_event = sam_event
-        lift_event = _matching_lift_mask_event(
+        lift_events_for_sam = _matching_lift_mask_events(
             fragment,
             candidate_id=candidate_id,
             sam_candidate_mask_npz_path=sam_event.candidate_mask_npz_path,
@@ -1276,10 +1419,48 @@ def _require_matching_standard_fragment_tool_chain(
             after_line_number=sam_event.line_number,
             before_line_number=fuse_line_number,
         )
-        if lift_event is not None:
-            return
+        for lift_event in lift_events_for_sam:
+            if (
+                last_matching_lift_event is None
+                or lift_event.line_number > last_matching_lift_event.line_number
+            ):
+                last_matching_lift_event = lift_event
+            inspect_event = _matching_inspect_mask_artifact_event(
+                fragment,
+                inspect_events=inspect_events,
+                artifact_root=artifact_root,
+                events_path=events_path,
+                after_line_number=lift_event.line_number,
+                before_line_number=fuse_line_number,
+            )
+            if inspect_event is not None:
+                validated_chain = _ValidatedStandardFragmentToolChain(
+                    fragment_id=fragment.fragment_id,
+                    lift_line_number=lift_event.line_number,
+                    inspect_line_number=inspect_event.line_number,
+                )
+                if (
+                    latest_validated_chain is None
+                    or validated_chain.lift_line_number
+                    > latest_validated_chain.lift_line_number
+                ):
+                    latest_validated_chain = validated_chain
 
-    if last_matching_sam_event is not None:
+    if last_matching_lift_event is not None:
+        if (
+            latest_validated_chain is not None
+            and latest_validated_chain.lift_line_number
+            == last_matching_lift_event.line_number
+        ):
+            return latest_validated_chain
+        _raise_missing_inspect_mask_artifact_event(
+            fragment,
+            artifact_root=artifact_root,
+            events_path=events_path,
+            after_line_number=last_matching_lift_event.line_number,
+            before_line_number=fuse_line_number,
+        )
+    elif last_matching_sam_event is not None:
         _raise_missing_lift_mask_event(
             fragment,
             candidate_id=candidate_id,
@@ -1557,7 +1738,7 @@ def _coerce_tool_point_coordinate(raw_coordinate: object, field_name: str) -> fl
     return coordinate
 
 
-def _matching_lift_mask_event(
+def _matching_lift_mask_events(
     fragment: FinalMaskAcceptedFragment,
     *,
     candidate_id: str,
@@ -1567,13 +1748,14 @@ def _matching_lift_mask_event(
     events_path: Path,
     after_line_number: int,
     before_line_number: int,
-) -> _ParsedLiftMaskToolEvent | None:
+) -> tuple[_ParsedLiftMaskToolEvent, ...]:
     expected_mask_npz_path = (
         artifact_root / "fragments" / fragment.fragment_id / ("mask_data.npz")
     )
     expected_mask_ply_path = (
         artifact_root / "fragments" / fragment.fragment_id / "lifted_points.ply"
     )
+    matching_events: list[_ParsedLiftMaskToolEvent] = []
     for parsed_event in lift_events:
         if (
             parsed_event.line_number <= after_line_number
@@ -1622,8 +1804,8 @@ def _matching_lift_mask_event(
             line_number=parsed_event.line_number,
         ):
             continue
-        return parsed_event
-    return None
+        matching_events.append(parsed_event)
+    return tuple(matching_events)
 
 
 def _raise_missing_lift_mask_event(
@@ -1652,6 +1834,88 @@ def _raise_missing_lift_mask_event(
         f"sam_candidate_mask_npz_path={sam_candidate_mask_npz_path}; "
         f"lift_overlay_path={fragment.review_artifacts.lift_overlay_path}; "
         f"after_line={after_line_number}; fuse_line={before_line_number}; "
+        f"events_path={events_path}"
+    )
+
+
+def _matching_inspect_mask_artifact_event(
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    inspect_events: tuple[_ParsedInspectMaskToolEvent, ...],
+    artifact_root: Path,
+    events_path: Path,
+    after_line_number: int,
+    before_line_number: int,
+) -> _ParsedInspectMaskToolEvent | None:
+    expected_mask_npz_path = (
+        artifact_root / "fragments" / fragment.fragment_id / "mask_data.npz"
+    )
+    expected_mask_ply_path = (
+        artifact_root / "fragments" / fragment.fragment_id / "lifted_points.ply"
+    )
+    expected_lift_overlay_path = Path(fragment.review_artifacts.lift_overlay_path)
+    for parsed_event in inspect_events:
+        if (
+            parsed_event.line_number <= after_line_number
+            or parsed_event.line_number >= before_line_number
+        ):
+            continue
+        args = parsed_event.args
+        if not _tool_event_path_matches(
+            args.mask_npz_path,
+            expected_mask_npz_path,
+            tool_name="inspect_mask_artifact",
+            field_name="args.mask_npz_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            continue
+        if not _tool_event_path_matches(
+            args.mask_ply_path,
+            expected_mask_ply_path,
+            tool_name="inspect_mask_artifact",
+            field_name="args.mask_ply_path",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            continue
+        if not _tool_event_path_sequence_contains(
+            args.overlay_paths,
+            expected_lift_overlay_path,
+            tool_name="inspect_mask_artifact",
+            field_name="args.overlay_paths",
+            events_path=events_path,
+            line_number=parsed_event.line_number,
+        ):
+            continue
+        return parsed_event
+    return None
+
+
+def _raise_missing_inspect_mask_artifact_event(
+    fragment: FinalMaskAcceptedFragment,
+    *,
+    artifact_root: Path,
+    events_path: Path,
+    after_line_number: int,
+    before_line_number: int,
+) -> NoReturn:
+    expected_mask_npz_path = (
+        artifact_root / "fragments" / fragment.fragment_id / "mask_data.npz"
+    )
+    expected_mask_ply_path = (
+        artifact_root / "fragments" / fragment.fragment_id / "lifted_points.ply"
+    )
+    raise CodexResponseError(
+        "accepted standard fragment must be backed by a successful "
+        "inspect_mask_artifact tool event from this run after lift_mask_to_3d "
+        "and before fuse_accepted_masks, and the inspection must use the lifted "
+        "mask_npz_path, mask_ply_path, and lift overlay reviewed by the agent: "
+        f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
+        f"mask_npz_path={expected_mask_npz_path}; "
+        f"mask_ply_path={expected_mask_ply_path}; "
+        f"lift_overlay_path={fragment.review_artifacts.lift_overlay_path}; "
+        f"after_lift_line={after_line_number}; fuse_line={before_line_number}; "
         f"events_path={events_path}"
     )
 
@@ -1747,6 +2011,32 @@ def _successful_lift_mask_tool_events(
         events.append(
             _ParsedLiftMaskToolEvent(
                 line_number=event.line_number, args=args, result=result
+            )
+        )
+    return tuple(events)
+
+
+def _successful_inspect_mask_tool_events(
+    events_path: Path,
+) -> tuple[_ParsedInspectMaskToolEvent, ...]:
+    events: list[_ParsedInspectMaskToolEvent] = []
+    for event in _successful_tool_result_events(
+        events_path, tool_names={"inspect_mask_artifact"}
+    ):
+        try:
+            args = _InspectMaskToolArgs.model_validate(event.args)
+            result = _InspectMaskToolResult.model_validate(event.result)
+        except ValidationError as exc:
+            raise CodexResponseError(
+                "successful inspect_mask_artifact tool event does not match the "
+                "expected args/result schema: "
+                f"events_path={events_path}; line={event.line_number}; error={exc}"
+            ) from exc
+        events.append(
+            _ParsedInspectMaskToolEvent(
+                line_number=event.line_number,
+                args=args,
+                result=result,
             )
         )
     return tuple(events)
@@ -1848,6 +2138,28 @@ def _tool_event_path_matches(
     return event_path == expected_path.expanduser().resolve()
 
 
+def _tool_event_path_sequence_contains(
+    raw_paths: Sequence[str],
+    expected_path: Path,
+    *,
+    tool_name: str,
+    field_name: str,
+    events_path: Path,
+    line_number: int,
+) -> bool:
+    return any(
+        _tool_event_path_matches(
+            raw_path,
+            expected_path,
+            tool_name=tool_name,
+            field_name=f"{field_name}[{index}]",
+            events_path=events_path,
+            line_number=line_number,
+        )
+        for index, raw_path in enumerate(raw_paths)
+    )
+
+
 def _accepted_frame_ids_from_fuse_fragments(
     accepted_fragments: tuple[FinalMaskAcceptedFragment, ...],
 ) -> tuple[str, ...]:
@@ -1871,6 +2183,7 @@ def _validate_multiview_decision_against_tool_events(
     events_path: Path,
     *,
     before_line_number: int,
+    after_line_number: int = 0,
 ) -> None:
     """Validate final multi-view decision against recorded tool suggestions."""
     if decision.action is FinalMaskMultiViewAction.EXPAND:
@@ -1878,11 +2191,13 @@ def _validate_multiview_decision_against_tool_events(
             decision,
             events_path,
             before_line_number=before_line_number,
+            after_line_number=after_line_number,
         )
         return
     suggested_frame_ids = _expand_suggested_frame_ids_from_events(
         events_path,
         seed_fragment_id=decision.seed_fragment_id,
+        after_line_number=after_line_number,
         before_line_number=before_line_number,
     )
     if not suggested_frame_ids:
@@ -1908,10 +2223,12 @@ def _validate_expand_decision_against_tool_events(
     events_path: Path,
     *,
     before_line_number: int,
+    after_line_number: int,
 ) -> None:
     suggested_frame_ids = _expand_suggested_frame_ids_from_events(
         events_path,
         seed_fragment_id=decision.seed_fragment_id,
+        after_line_number=after_line_number,
         before_line_number=before_line_number,
     )
     suggested_frame_id_set = set(suggested_frame_ids)
@@ -1923,17 +2240,22 @@ def _validate_expand_decision_against_tool_events(
     if missing_frame_ids:
         raise CodexResponseError(
             "multi_view_decision.action='expand' must be backed by a successful "
-            "suggest_additional_views expand result for the seed fragment before "
-            "fuse_accepted_masks: "
+            "suggest_additional_views expand result for the seed fragment after "
+            "inspect_mask_artifact and before fuse_accepted_masks: "
             f"seed_fragment_id={decision.seed_fragment_id}; "
             f"missing_suggested_frame_ids={missing_frame_ids}; "
+            f"after_inspect_line={after_line_number}; "
             f"fuse_line={before_line_number}; "
             f"events_path={events_path}"
         )
 
 
 def _expand_suggested_frame_ids_from_events(
-    events_path: Path, *, seed_fragment_id: str, before_line_number: int
+    events_path: Path,
+    *,
+    seed_fragment_id: str,
+    after_line_number: int = 0,
+    before_line_number: int,
 ) -> tuple[str, ...]:
     """Return unique frames suggested by successful expand recommendations."""
     if not events_path.is_file():
@@ -1948,6 +2270,8 @@ def _expand_suggested_frame_ids_from_events(
             f"events_path={events_path}; error_type={exc.__class__.__name__}"
         ) from exc
     for line_number, raw_line in enumerate(event_lines, start=1):
+        if line_number <= after_line_number:
+            continue
         if line_number >= before_line_number:
             continue
         line = raw_line.strip()
