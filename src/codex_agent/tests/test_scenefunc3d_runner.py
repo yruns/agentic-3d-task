@@ -1404,6 +1404,130 @@ def test_run_single_sample_rejects_standard_stop_suggested_before_inspection(
         )
 
 
+def test_run_single_sample_rejects_standard_expand_with_wrong_seed_artifact_path(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_standard_outcome_artifacts_for_fragments(
+        sample_output_dir,
+        fragments=(("000010", "mask_00"), ("000020", "mask_00")),
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010", "000020"),
+        accepted_fragment_ids=("000010_mask_00", "000020_mask_00"),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+
+    def write_tool_events() -> None:
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _write_suggest_additional_views_event(
+            sample_output_dir,
+            expansion_recommendation="expand",
+            frame_ids=("000020",),
+            seed_fragment_id="000010_mask_00",
+            accepted_frame_id="000010",
+            args_overrides=_standard_suggest_seed_args(
+                sample_output_dir,
+                seed_fragment_id="wrong_seed",
+            ),
+        )
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000020",
+            candidate_id="mask_00",
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00", "000020_mask_00"),
+            accepted_frame_ids=("000010", "000020"),
+        )
+
+    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="suggest_additional_views"):
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
+
+
+def test_run_single_sample_accepts_standard_expand_with_seed_artifact_paths(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_standard_outcome_artifacts_for_fragments(
+        sample_output_dir,
+        fragments=(("000010", "mask_00"), ("000020", "mask_00")),
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010", "000020"),
+        accepted_fragment_ids=("000010_mask_00", "000020_mask_00"),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+
+    def write_tool_events() -> None:
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _write_suggest_additional_views_event(
+            sample_output_dir,
+            expansion_recommendation="expand",
+            frame_ids=("000020",),
+            seed_fragment_id="000010_mask_00",
+            accepted_frame_id="000010",
+            args_overrides=_standard_suggest_seed_args(sample_output_dir),
+        )
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000020",
+            candidate_id="mask_00",
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00", "000020_mask_00"),
+            accepted_frame_ids=("000010", "000020"),
+        )
+
+    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    result_path = run_single_sample(
+        config,
+        sample_id="421254::desc-a",
+        executor=executor,
+        check_sidecars=False,
+    )
+
+    assert result_path == sample_output_dir / "result.json"
+
+
 def test_run_single_sample_rejects_standard_fragment_re_lifted_without_reinspection(
     tmp_path: Path,
 ) -> None:
@@ -2917,15 +3041,19 @@ def _write_suggest_additional_views_event(
     frame_ids: tuple[str, ...],
     seed_fragment_id: str = "frag-a",
     accepted_frame_id: str = "000010",
+    args_overrides: dict[str, object] | None = None,
 ) -> None:
+    args_payload: dict[str, object] = {
+        "seed_fragment_id": seed_fragment_id,
+        "accepted_frame_id": accepted_frame_id,
+    }
+    if args_overrides is not None:
+        args_payload.update(args_overrides)
     event_payload = {
         "event_type": "tool_completed",
         "tool_name": "suggest_additional_views",
         "status": "success",
-        "args": {
-            "seed_fragment_id": seed_fragment_id,
-            "accepted_frame_id": accepted_frame_id,
-        },
+        "args": args_payload,
         "result": {
             "seed_fragment_id": seed_fragment_id,
             "seed_lift_point_count": 2,
@@ -2951,6 +3079,24 @@ def _write_suggest_additional_views_event(
     events_path.parent.mkdir(parents=True, exist_ok=True)
     with events_path.open("a", encoding="utf-8") as event_file:
         event_file.write(json.dumps(event_payload, ensure_ascii=False) + "\n")
+
+
+def _standard_suggest_seed_args(
+    root: Path, *, seed_fragment_id: str = "000010_mask_00"
+) -> dict[str, object]:
+    return {
+        "seed_fragment_id": seed_fragment_id,
+        "accepted_frame_id": "000010",
+        "seed_mask_npz_path": str(
+            root / "fragments" / seed_fragment_id / "mask_data.npz"
+        ),
+        "seed_mask_ply_path": str(
+            root / "fragments" / seed_fragment_id / "lifted_points.ply"
+        ),
+        "seed_lift_overlay_path": str(
+            root / "fragments" / seed_fragment_id / "lift_overlay.txt"
+        ),
+    }
 
 
 def _write_standard_upstream_tool_events(

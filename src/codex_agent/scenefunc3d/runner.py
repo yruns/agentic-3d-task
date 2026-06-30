@@ -391,6 +391,18 @@ class _InspectMaskToolResult(BaseModel):
     status: NonEmptyString
 
 
+class _SuggestAdditionalViewsToolArgs(BaseModel):
+    """Fields needed to prove multi-view suggestions used the inspected seed."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    seed_fragment_id: NonEmptyString
+    accepted_frame_id: NonEmptyString
+    seed_mask_npz_path: NonEmptyString
+    seed_mask_ply_path: NonEmptyString
+    seed_lift_overlay_path: NonEmptyString
+
+
 @dataclass(frozen=True)
 class _ParsedFuseToolEvent:
     """A validated fuse event with source location for diagnostics."""
@@ -457,8 +469,12 @@ class _ValidatedStandardFragmentToolChain:
     """Validated upstream event line numbers for one accepted standard fragment."""
 
     fragment_id: str
+    frame_id: str
     lift_line_number: int
     inspect_line_number: int
+    mask_npz_path: Path
+    mask_ply_path: Path
+    lift_overlay_path: Path
 
 
 @dataclass(frozen=True)
@@ -1096,6 +1112,7 @@ def _validate_outcome_against_fuse_tool_event(
                 if seed_standard_chain is not None
                 else 0
             ),
+            seed_chain=seed_standard_chain,
         )
         return
     raise CodexResponseError(
@@ -1436,8 +1453,16 @@ def _require_matching_standard_fragment_tool_chain(
             if inspect_event is not None:
                 validated_chain = _ValidatedStandardFragmentToolChain(
                     fragment_id=fragment.fragment_id,
+                    frame_id=fragment.frame_id,
                     lift_line_number=lift_event.line_number,
                     inspect_line_number=inspect_event.line_number,
+                    mask_npz_path=_standard_fragment_mask_npz_path(
+                        fragment, artifact_root=artifact_root
+                    ),
+                    mask_ply_path=_standard_fragment_mask_ply_path(
+                        fragment, artifact_root=artifact_root
+                    ),
+                    lift_overlay_path=Path(fragment.review_artifacts.lift_overlay_path),
                 )
                 if (
                     latest_validated_chain is None
@@ -1489,6 +1514,18 @@ def _standard_fragment_candidate_id(
     if candidate_id == "":
         return None
     return candidate_id
+
+
+def _standard_fragment_mask_npz_path(
+    fragment: FinalMaskAcceptedFragment, *, artifact_root: Path
+) -> Path:
+    return artifact_root / "fragments" / fragment.fragment_id / "mask_data.npz"
+
+
+def _standard_fragment_mask_ply_path(
+    fragment: FinalMaskAcceptedFragment, *, artifact_root: Path
+) -> Path:
+    return artifact_root / "fragments" / fragment.fragment_id / "lifted_points.ply"
 
 
 def _matching_molmo_point_events(
@@ -2184,6 +2221,7 @@ def _validate_multiview_decision_against_tool_events(
     *,
     before_line_number: int,
     after_line_number: int = 0,
+    seed_chain: _ValidatedStandardFragmentToolChain | None = None,
 ) -> None:
     """Validate final multi-view decision against recorded tool suggestions."""
     if decision.action is FinalMaskMultiViewAction.EXPAND:
@@ -2192,6 +2230,7 @@ def _validate_multiview_decision_against_tool_events(
             events_path,
             before_line_number=before_line_number,
             after_line_number=after_line_number,
+            seed_chain=seed_chain,
         )
         return
     suggested_frame_ids = _expand_suggested_frame_ids_from_events(
@@ -2199,6 +2238,7 @@ def _validate_multiview_decision_against_tool_events(
         seed_fragment_id=decision.seed_fragment_id,
         after_line_number=after_line_number,
         before_line_number=before_line_number,
+        seed_chain=seed_chain,
     )
     if not suggested_frame_ids:
         return
@@ -2224,12 +2264,14 @@ def _validate_expand_decision_against_tool_events(
     *,
     before_line_number: int,
     after_line_number: int,
+    seed_chain: _ValidatedStandardFragmentToolChain | None,
 ) -> None:
     suggested_frame_ids = _expand_suggested_frame_ids_from_events(
         events_path,
         seed_fragment_id=decision.seed_fragment_id,
         after_line_number=after_line_number,
         before_line_number=before_line_number,
+        seed_chain=seed_chain,
     )
     suggested_frame_id_set = set(suggested_frame_ids)
     missing_frame_ids = tuple(
@@ -2250,12 +2292,100 @@ def _validate_expand_decision_against_tool_events(
         )
 
 
+def _require_suggest_event_uses_standard_seed(
+    raw_args: Mapping[object, object],
+    *,
+    seed_chain: _ValidatedStandardFragmentToolChain | None,
+    events_path: Path,
+    line_number: int,
+) -> None:
+    if seed_chain is None:
+        return
+    try:
+        args = _SuggestAdditionalViewsToolArgs.model_validate(raw_args)
+    except ValidationError as exc:
+        raise CodexResponseError(
+            "successful suggest_additional_views event for a standard seed "
+            "fragment must include the inspected seed artifact paths: "
+            f"seed_fragment_id={seed_chain.fragment_id}; "
+            f"events_path={events_path}; line={line_number}; error={exc}"
+        ) from exc
+    if args.seed_fragment_id != seed_chain.fragment_id:
+        raise CodexResponseError(
+            "successful suggest_additional_views event args.seed_fragment_id must "
+            "match the inspected standard seed fragment: "
+            f"args_seed_fragment_id={args.seed_fragment_id}; "
+            f"seed_fragment_id={seed_chain.fragment_id}; "
+            f"events_path={events_path}; line={line_number}"
+        )
+    if args.accepted_frame_id != seed_chain.frame_id:
+        raise CodexResponseError(
+            "successful suggest_additional_views event args.accepted_frame_id must "
+            "match the inspected standard seed frame: "
+            f"args_accepted_frame_id={args.accepted_frame_id}; "
+            f"seed_frame_id={seed_chain.frame_id}; "
+            f"events_path={events_path}; line={line_number}"
+        )
+    _require_tool_event_path_match(
+        args.seed_mask_npz_path,
+        seed_chain.mask_npz_path,
+        tool_name="suggest_additional_views",
+        field_name="args.seed_mask_npz_path",
+        events_path=events_path,
+        line_number=line_number,
+    )
+    _require_tool_event_path_match(
+        args.seed_mask_ply_path,
+        seed_chain.mask_ply_path,
+        tool_name="suggest_additional_views",
+        field_name="args.seed_mask_ply_path",
+        events_path=events_path,
+        line_number=line_number,
+    )
+    _require_tool_event_path_match(
+        args.seed_lift_overlay_path,
+        seed_chain.lift_overlay_path,
+        tool_name="suggest_additional_views",
+        field_name="args.seed_lift_overlay_path",
+        events_path=events_path,
+        line_number=line_number,
+    )
+
+
+def _require_tool_event_path_match(
+    raw_path: str,
+    expected_path: Path,
+    *,
+    tool_name: str,
+    field_name: str,
+    events_path: Path,
+    line_number: int,
+) -> None:
+    if _tool_event_path_matches(
+        raw_path,
+        expected_path,
+        tool_name=tool_name,
+        field_name=field_name,
+        events_path=events_path,
+        line_number=line_number,
+    ):
+        return
+    raise CodexResponseError(
+        "successful SceneFunc3D tool event path does not match the validated "
+        "provenance chain: "
+        f"tool_name={tool_name}; field={field_name}; "
+        f"actual={raw_path}; expected={expected_path}; "
+        f"events_path={events_path}; line={line_number}"
+    )
+
+
 def _expand_suggested_frame_ids_from_events(
     events_path: Path,
     *,
     seed_fragment_id: str,
     after_line_number: int = 0,
     before_line_number: int,
+    seed_chain: _ValidatedStandardFragmentToolChain | None = None,
 ) -> tuple[str, ...]:
     """Return unique frames suggested by successful expand recommendations."""
     if not events_path.is_file():
@@ -2298,6 +2428,18 @@ def _expand_suggested_frame_ids_from_events(
         )
         if result.get("seed_fragment_id") != seed_fragment_id:
             continue
+        args = _require_mapping_field(
+            event,
+            "args",
+            events_path=events_path,
+            line_number=line_number,
+        )
+        _require_suggest_event_uses_standard_seed(
+            args,
+            seed_chain=seed_chain,
+            events_path=events_path,
+            line_number=line_number,
+        )
         if (
             result.get("expansion_recommendation")
             != FinalMaskMultiViewAction.EXPAND.value
