@@ -153,6 +153,15 @@ def test_playbook_tells_agent_stop_decision_has_no_suggested_frame_ids() -> None
     )
 
 
+def test_playbook_tells_agent_expand_decision_accounts_for_suggested_frames() -> None:
+    normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
+    assert 'When multi_view_decision.action is "expand"' in normalized_playbook
+    assert "exactly one of suggested_frame_ids or rejected_suggested_frame_ids" in (
+        normalized_playbook
+    )
+    assert "Do not put a frame in both lists" in normalized_playbook
+
+
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path,

@@ -130,6 +130,9 @@ every frame returned by an expand recommendation.
 Use action "expand" when you accepted fragments from later frames; in that case,
 suggested_frame_ids must include at least one accepted follow-up frame. The
 seed_fragment_id must be the first accepted fragment.
+When multi_view_decision.action is "expand", every frame returned by an
+expand recommendation must appear in exactly one of suggested_frame_ids or
+rejected_suggested_frame_ids. Do not put a frame in both lists.
 Set selected_frame_ids to the accepted_frame_ids returned by fuse_accepted_masks.
 """
 
