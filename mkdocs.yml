@@ -70,3 +70,4 @@ nav:
           - v2 Full Molmo: benchmark/scenefunc_molmo_sam3d/v2_full_molmo_20260627.md
           - Sidecar E2E Status: benchmark/scenefunc_molmo_sam3d/sidecar_e2e_20260628.md
           - Agent Runner E2E: benchmark/scenefunc_molmo_sam3d/agent_runner_e2e_20260629.md
+          - v3 Agent Loop Status: benchmark/scenefunc_molmo_sam3d/v3_agent_loop_status_20260630.md
