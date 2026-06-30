@@ -172,6 +172,42 @@ fuse_accepted_masks
 MolmoPoint-8B + SAM2.1-Hiera-L
 ```
 
+### Native single-port sidecar server
+
+新的正式服务入口是 repo 内的单进程 server：
+
+```text
+src/codex_agent/scenefunc3d/servers/scenefunc_sidecar_server.py
+```
+
+它在一个 Python 进程中同时加载 MolmoPoint 和 SAM2.1，并只监听一个对外端口。对 `mlx export --port=9001` 场景，推荐直接让该 server 监听 IPv6 `::` 的 `9001`：
+
+```bash
+PYTHONPATH=src scripts/scenefunc3d/serve_native_sidecar.sh \
+  --host :: \
+  --port 9001 \
+  --device cuda:0 \
+  --molmo-model-path /mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/sidecar_services_20260630/molmopoint_merged_model \
+  --sam-backend transformers \
+  --sam-model-path /mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/molmopoint_sam21_20260628/hf_home/transformers/models--facebook--sam2.1-hiera-large/snapshots/665f8e2ad61cf5f53d65644ff27c8ee525124610 \
+  --staging-root /mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/sidecar_services_20260630 \
+  --base-path /s/qnpoSRas
+```
+
+这个 server 原生暴露：
+
+```text
+GET  /health
+GET  /molmo/health
+GET  /sam/health
+POST /molmo/v1/point
+POST /sam/v1/masks
+```
+
+如果部署在会保留 URL prefix 的 reverse proxy 后面，用 `--base-path` 增加挂载前缀。例如 `--base-path /s/qnpoSRas` 会同时支持 `/health` 和 `/s/qnpoSRas/health`。
+
+旧的 `molmo_point_server.py` 和 `sam2_mask_server.py` 仍保留为单模型调试入口，但外部服务不再需要额外的 NAS wrapper 或 `8711/8712` 双端口暴露。
+
 E2E launcher 现在在 Linux 上默认启动项目内 ModelHub adapter：
 
 ```text
