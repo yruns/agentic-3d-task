@@ -17,6 +17,7 @@ def test_defaults_are_usable() -> None:
     assert config.model_provider
     assert config.sandbox == "read_only"
     assert config.enable_prefix_cache is True
+    assert config.copy_auth_file is False
 
 
 def test_invalid_sandbox_raises() -> None:
@@ -41,10 +42,12 @@ def test_from_env_reads_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CODEX_AGENT_MODEL", "custom-model")
     monkeypatch.setenv("CODEX_AGENT_SANDBOX", "workspace-write")
     monkeypatch.setenv("CODEX_AGENT_ENABLE_PREFIX_CACHE", "0")
+    monkeypatch.setenv("CODEX_AGENT_COPY_AUTH", "1")
     config = CodexAgentConfig.from_env(project_root="/tmp/proj")
     assert config.model == "custom-model"
     assert config.sandbox == "workspace_write"
     assert config.enable_prefix_cache is False
+    assert config.copy_auth_file is True
     assert config.codex_home == Path("/tmp/proj/.codex-home")
 
 

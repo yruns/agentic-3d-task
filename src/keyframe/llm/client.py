@@ -9,6 +9,7 @@ use ``invoke`` for a built-in rate-limit-aware retry across the pool.
 from __future__ import annotations
 
 import threading
+from typing import TypeAlias
 
 from langchain_core.messages import BaseMessage
 from langchain_core.prompt_values import PromptValue
@@ -39,7 +40,7 @@ _RATE_LIMIT_MARKERS: tuple[str, ...] = (
 )
 
 #: Accepted prompt input types for ``LLMClient.invoke``.
-PromptInput = str | list[BaseMessage] | PromptValue
+PromptInput: TypeAlias = str | list[BaseMessage] | PromptValue
 
 
 def is_rate_limit_error(error: Exception) -> bool:
@@ -163,14 +164,14 @@ class LLMClient:
         temperature: float,
         max_tokens: int | None,
     ) -> AzureChatOpenAI:
-        return AzureChatOpenAI(  # type: ignore[call-arg]
+        return AzureChatOpenAI(
             azure_deployment=name,
             model=name,
             api_key=SecretStr(key.api_key),
             azure_endpoint=model_config.endpoint_for(key),
             api_version=model_config.api_version,
             temperature=temperature,
-            max_tokens=max_tokens,
+            max_completion_tokens=max_tokens,
             timeout=model_config.timeout,
             max_retries=0,
         )

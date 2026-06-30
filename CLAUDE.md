@@ -251,10 +251,14 @@ gitignored weighted TOML upstream file:
 ```
 
 The real AKs are in that file. Do not copy them into tracked docs, benchmark
-records, git commits, or terminal logs. The current private pool is
-`gpt-5.4-2026-03-05` on the office endpoint
-`https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online`, with weights
-`5:1:5` across aliases `gpt54_a`, `gpt54_b`, and `gpt54_c`.
+records, git commits, or terminal logs. For this repository, leave
+`AIDP_CODEX_PROXY_UPSTREAM_ENV` unset unless you need an override: Linux defaults
+to the online endpoint
+`https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online`, while macOS keeps the
+previous office endpoint
+`https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online`. The private pool
+uses `gpt-5.4-2026-03-05`; keep its real aliases, AKs, and weights in the
+gitignored TOML file only.
 Codex SDK keeps `extra.session_id` stable for prefix caching and sends a
 per-turn `extra.chat_run_id` so the adapter can distribute concurrent requests
 across the weighted AK pool.

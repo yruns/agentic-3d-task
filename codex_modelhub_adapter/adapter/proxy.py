@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import platform
 import uuid
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
@@ -21,6 +22,16 @@ except ModuleNotFoundError:  # pragma: no cover - exercised only on Python < 3.1
 
 
 JsonObject = dict[str, Any]
+_VALID_UPSTREAM_ENVS = frozenset({"office", "online"})
+_PLACEHOLDER_SECRET_VALUES = frozenset(
+    {
+        "replace-with-modelhub-ak",
+        "replace-with-modelhub-ak-1",
+        "replace-with-modelhub-ak-2",
+        "replace-with-modelhub-ak-3",
+    }
+)
+_PLACEHOLDER_SECRET_PREFIXES = ("replace-", "replace_", "placeholder", "your-")
 
 
 @dataclass(frozen=True)
@@ -61,9 +72,16 @@ class AdapterSettings:
         defaults = cls()
         legacy_url = (os.getenv("MODELHUB_URL") or "").strip()
         base_url = (os.getenv("AIDP_BASE_URL") or "").strip()
-        responses_path = os.getenv("AIDP_CODEX_PROXY_RESPONSES_PATH") or defaults.responses_path
-        chat_path = os.getenv("AIDP_CODEX_PROXY_CHAT_COMPLETIONS_PATH") or defaults.chat_completions_path
-        upstream_api = os.getenv("AIDP_CODEX_PROXY_UPSTREAM_API") or defaults.upstream_api
+        responses_path = (
+            os.getenv("AIDP_CODEX_PROXY_RESPONSES_PATH") or defaults.responses_path
+        )
+        chat_path = (
+            os.getenv("AIDP_CODEX_PROXY_CHAT_COMPLETIONS_PATH")
+            or defaults.chat_completions_path
+        )
+        upstream_api = (
+            os.getenv("AIDP_CODEX_PROXY_UPSTREAM_API") or defaults.upstream_api
+        )
         modelhub_upstreams_toml = _resolve_modelhub_upstreams_toml_path(
             os.getenv("AIDP_MODELHUB_UPSTREAMS_TOML")
         )
@@ -80,10 +98,14 @@ class AdapterSettings:
                 upstream_api = "responses"
 
         return cls(
-            online_base_url=os.getenv("AIDP_CODEX_PROXY_ONLINE_BASE_URL") or defaults.online_base_url,
-            office_base_url=os.getenv("AIDP_CODEX_PROXY_OFFICE_BASE_URL") or defaults.office_base_url,
+            online_base_url=os.getenv("AIDP_CODEX_PROXY_ONLINE_BASE_URL")
+            or defaults.online_base_url,
+            office_base_url=os.getenv("AIDP_CODEX_PROXY_OFFICE_BASE_URL")
+            or defaults.office_base_url,
             base_url=base_url,
-            upstream_env=os.getenv("AIDP_CODEX_PROXY_UPSTREAM_ENV") or defaults.upstream_env,
+            upstream_env=_upstream_env_from_env(
+                os.getenv("AIDP_CODEX_PROXY_UPSTREAM_ENV")
+            ),
             upstream_api=upstream_api,
             responses_path=responses_path,
             chat_completions_path=chat_path,
@@ -91,7 +113,9 @@ class AdapterSettings:
                 os.getenv("AIDP_CODEX_PROXY_CHAT_COMPLETIONS_MODELS"),
                 defaults.chat_completions_models,
             ),
-            max_output_tokens=_int_env("AIDP_CODEX_PROXY_MAX_OUTPUT_TOKENS", defaults.max_output_tokens),
+            max_output_tokens=_int_env(
+                "AIDP_CODEX_PROXY_MAX_OUTPUT_TOKENS", defaults.max_output_tokens
+            ),
             chat_context_token_limit=_int_env(
                 "AIDP_CODEX_PROXY_CHAT_CONTEXT_TOKEN_LIMIT",
                 defaults.chat_context_token_limit,
@@ -112,23 +136,31 @@ class AdapterSettings:
                 "AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED",
                 defaults.encrypted_state_fallback_enabled,
             ),
-            timeout_seconds=_float_env("AIDP_CODEX_PROXY_TIMEOUT_SECONDS", defaults.timeout_seconds),
-            max_429_retries=_int_env("AIDP_CODEX_PROXY_MAX_429_RETRIES", defaults.max_429_retries),
+            timeout_seconds=_float_env(
+                "AIDP_CODEX_PROXY_TIMEOUT_SECONDS", defaults.timeout_seconds
+            ),
+            max_429_retries=_int_env(
+                "AIDP_CODEX_PROXY_MAX_429_RETRIES", defaults.max_429_retries
+            ),
             session_id=(
                 os.getenv("AIDP_SESSION_ID")
                 or os.getenv("AIDP_CODEX_PROXY_SESSION_ID")
                 or defaults.session_id
             ).strip(),
-            modelhub_ak=(
+            modelhub_ak=_valid_modelhub_ak(
                 os.getenv("AIDP_GPT_AK")
                 or os.getenv("AIDP_MODELHUB_AK")
                 or os.getenv("MODELHUB_AK")
                 or os.getenv("CASE_REVIEW_LLM_AK")
                 or defaults.modelhub_ak
             ).strip(),
-            modelhub_ak_pool=_parse_modelhub_key_pool(os.getenv("AIDP_MODELHUB_AK_POOL")),
+            modelhub_ak_pool=_parse_modelhub_key_pool(
+                os.getenv("AIDP_MODELHUB_AK_POOL")
+            ),
             modelhub_upstreams_toml=modelhub_upstreams_toml,
-            modelhub_upstreams=_load_modelhub_upstreams_from_toml(modelhub_upstreams_toml),
+            modelhub_upstreams=_load_modelhub_upstreams_from_toml(
+                modelhub_upstreams_toml
+            ),
         )
 
     @property
@@ -138,6 +170,26 @@ class AdapterSettings:
         if self.upstream_env == "office":
             return _trim_trailing_slash(self.office_base_url)
         return _trim_trailing_slash(self.online_base_url)
+
+
+def _default_upstream_env() -> str:
+    """Return the platform-specific default ModelHub network."""
+    if platform.system() == "Linux":
+        return "online"
+    return "office"
+
+
+def _upstream_env_from_env(value: str | None) -> str:
+    """Return a validated upstream environment name."""
+    if value is None or not value.strip():
+        return _default_upstream_env()
+    upstream_env = value.strip().lower()
+    if upstream_env not in _VALID_UPSTREAM_ENVS:
+        raise RuntimeError(
+            "AIDP_CODEX_PROXY_UPSTREAM_ENV must be one of "
+            f"{sorted(_VALID_UPSTREAM_ENVS)}, got {value!r}"
+        )
+    return upstream_env
 
 
 @dataclass(frozen=True)
@@ -164,10 +216,16 @@ def build_upstream_request(
     chat_context_token_limit: int | None = None,
     upstream_extra: dict[str, str] | None = None,
     logid: str | None = None,
+    excluded_upstream_aliases: frozenset[str] = frozenset(),
 ) -> UpstreamRequest:
     resolved_settings = settings or AdapterSettings.from_env()
     upstream_api = resolve_upstream_api(raw_body, resolved_settings)
-    selected_upstream = resolve_modelhub_upstream(resolved_settings, raw_body, upstream_extra)
+    selected_upstream = resolve_modelhub_upstream(
+        resolved_settings,
+        raw_body,
+        upstream_extra,
+        excluded_upstream_aliases=excluded_upstream_aliases,
+    )
     upstream_base_url = resolved_settings.upstream_base_url
     upstream_path_override = ""
     if selected_upstream is not None:
@@ -178,11 +236,13 @@ def build_upstream_request(
             selected_upstream.url,
             upstream_api,
         )
-    elif (selected_key := resolve_modelhub_key(resolved_settings, upstream_extra)) is not None:
+    elif (
+        selected_key := resolve_modelhub_key(resolved_settings, upstream_extra)
+    ) is not None:
         key_alias, ak = selected_key
         key_selection = "extra_session_rendezvous_hash"
     else:
-        ak = resolved_settings.modelhub_ak
+        ak = _valid_modelhub_ak(resolved_settings.modelhub_ak)
         key_alias = "single"
         key_selection = "single_key_fallback"
     if not ak:
@@ -198,7 +258,8 @@ def build_upstream_request(
         build_chat_completions_body(
             raw_body,
             max_output_tokens=resolved_settings.max_output_tokens,
-            token_limit=chat_context_token_limit or resolved_settings.chat_context_token_limit,
+            token_limit=chat_context_token_limit
+            or resolved_settings.chat_context_token_limit,
             chars_per_token=resolved_settings.chat_context_chars_per_token,
         )
         if upstream_api == "chat_completions"
@@ -212,7 +273,9 @@ def build_upstream_request(
         headers={
             "content-type": "application/json",
             "X-TT-LOGID": logid or _build_logid(),
-            "extra": encode_upstream_extra(upstream_extra, fallback_session_id=resolved_settings.session_id),
+            "extra": encode_upstream_extra(
+                upstream_extra, fallback_session_id=resolved_settings.session_id
+            ),
         },
         body=body,
         upstream_api=upstream_api,
@@ -265,7 +328,10 @@ def resolve_modelhub_key(
     keys = _normalize_key_pool(settings.modelhub_ak_pool)
     if not keys:
         return None
-    session_id = _valid_upstream_extra_session_id((upstream_extra or {}).get("session_id")) or settings.session_id
+    session_id = (
+        _valid_upstream_extra_session_id((upstream_extra or {}).get("session_id"))
+        or settings.session_id
+    )
     return _pick_modelhub_key_by_rendezvous_hash(session_id, keys)
 
 
@@ -273,16 +339,33 @@ def resolve_modelhub_upstream(
     settings: AdapterSettings,
     raw_body: Any,
     upstream_extra: dict[str, str] | None = None,
+    *,
+    excluded_upstream_aliases: frozenset[str] = frozenset(),
 ) -> ModelHubUpstream | None:
     upstreams = _normalize_modelhub_upstreams(settings.modelhub_upstreams)
     if not upstreams:
         return None
     model = _request_model_name(raw_body)
-    matches = tuple(upstream for upstream in upstreams if _modelhub_upstream_matches_model(upstream, model))
+    matches = tuple(
+        upstream
+        for upstream in upstreams
+        if _modelhub_upstream_matches_model(upstream, model)
+    )
     if not matches:
-        raise RuntimeError(f"No ModelHub TOML upstream matches model '{model or '<empty>'}'")
+        raise RuntimeError(
+            f"No ModelHub TOML upstream matches model '{model or '<empty>'}'"
+        )
+    available_matches = tuple(
+        upstream
+        for upstream in matches
+        if upstream.alias not in excluded_upstream_aliases
+    )
+    if not available_matches:
+        available_matches = matches
     selection_id = _modelhub_upstream_selection_id(settings, upstream_extra)
-    return _pick_modelhub_upstream_by_weighted_session_hash(selection_id, model, matches)
+    return _pick_modelhub_upstream_by_weighted_session_hash(
+        selection_id, model, available_matches
+    )
 
 
 def resolve_upstream_extra(
@@ -316,7 +399,8 @@ def resolve_upstream_extra(
             ),
             sandbox_session_id=(
                 str(parsed.get("sandbox_session_id"))
-                if isinstance(parsed, dict) and parsed.get("sandbox_session_id") is not None
+                if isinstance(parsed, dict)
+                and parsed.get("sandbox_session_id") is not None
                 else None
             ),
         )
@@ -344,17 +428,20 @@ def encode_upstream_extra(
             or fallback_session_id,
             request_source=(
                 str(upstream_extra.get("source"))
-                if isinstance(upstream_extra, dict) and upstream_extra.get("source") is not None
+                if isinstance(upstream_extra, dict)
+                and upstream_extra.get("source") is not None
                 else None
             ),
             chat_run_id=(
                 str(upstream_extra.get("chat_run_id"))
-                if isinstance(upstream_extra, dict) and upstream_extra.get("chat_run_id") is not None
+                if isinstance(upstream_extra, dict)
+                and upstream_extra.get("chat_run_id") is not None
                 else None
             ),
             sandbox_session_id=(
                 str(upstream_extra.get("sandbox_session_id"))
-                if isinstance(upstream_extra, dict) and upstream_extra.get("sandbox_session_id") is not None
+                if isinstance(upstream_extra, dict)
+                and upstream_extra.get("sandbox_session_id") is not None
                 else None
             ),
         )
@@ -385,9 +472,13 @@ def health_payload(settings: AdapterSettings | None = None) -> JsonObject:
         "modelhub_key_aliases": [alias for alias, _ in keys],
         "modelhub_toml_path": resolved.modelhub_upstreams_toml,
         "modelhub_toml_upstream_count": len(toml_upstreams),
-        "modelhub_toml_models": sorted({upstream.model_name for upstream in toml_upstreams}),
+        "modelhub_toml_models": sorted(
+            {upstream.model_name for upstream in toml_upstreams}
+        ),
         "modelhub_toml_urls": sorted({upstream.url for upstream in toml_upstreams}),
-        "has_upstream_ak": bool(resolved.modelhub_ak or keys or toml_upstreams),
+        "has_upstream_ak": bool(
+            _valid_modelhub_ak(resolved.modelhub_ak) or keys or toml_upstreams
+        ),
     }
 
 
@@ -452,16 +543,22 @@ def _load_modelhub_upstreams_from_toml(path: str) -> tuple[ModelHubUpstream, ...
         with open(path, "rb") as handle:
             parsed = tomllib.load(handle)
     except tomllib.TOMLDecodeError as exc:
-        raise RuntimeError(f"ModelHub TOML upstream config is invalid: {path}: {exc}") from exc
+        raise RuntimeError(
+            f"ModelHub TOML upstream config is invalid: {path}: {exc}"
+        ) from exc
 
     items = _modelhub_toml_upstream_items(parsed)
     if not items:
-        raise RuntimeError("ModelHub TOML upstream config must define at least one [[upstreams]] entry")
+        raise RuntimeError(
+            "ModelHub TOML upstream config must define at least one [[upstreams]] entry"
+        )
 
     upstreams: list[ModelHubUpstream] = []
     for index, item in enumerate(items):
         if not isinstance(item, dict):
-            raise RuntimeError(f"ModelHub TOML upstream entry #{index + 1} must be a table")
+            raise RuntimeError(
+                f"ModelHub TOML upstream entry #{index + 1} must be a table"
+            )
         upstreams.append(_parse_modelhub_upstream_item(item, index))
     return tuple(upstreams)
 
@@ -488,12 +585,18 @@ def _parse_modelhub_upstream_item(item: dict[str, Any], index: int) -> ModelHubU
     try:
         weight = int(item.get("weight", 1))
     except (TypeError, ValueError) as exc:
-        raise RuntimeError(f"ModelHub TOML upstream entry '{alias}' has invalid weight") from exc
+        raise RuntimeError(
+            f"ModelHub TOML upstream entry '{alias}' has invalid weight"
+        ) from exc
 
     if not _is_valid_http_url(url):
-        raise RuntimeError(f"ModelHub TOML upstream entry '{alias}' must provide a valid http(s) url")
+        raise RuntimeError(
+            f"ModelHub TOML upstream entry '{alias}' must provide a valid http(s) url"
+        )
     if not model_name:
-        raise RuntimeError(f"ModelHub TOML upstream entry '{alias}' must provide model_name")
+        raise RuntimeError(
+            f"ModelHub TOML upstream entry '{alias}' must provide model_name"
+        )
     if not ak:
         raise RuntimeError(f"ModelHub TOML upstream entry '{alias}' must provide ak")
     if weight <= 0:
@@ -508,7 +611,9 @@ def _parse_modelhub_upstream_item(item: dict[str, Any], index: int) -> ModelHubU
     )
 
 
-def _normalize_modelhub_upstreams(value: tuple[ModelHubUpstream, ...]) -> tuple[ModelHubUpstream, ...]:
+def _normalize_modelhub_upstreams(
+    value: tuple[ModelHubUpstream, ...],
+) -> tuple[ModelHubUpstream, ...]:
     upstreams: list[ModelHubUpstream] = []
     seen_aliases: set[str] = set()
     for index, upstream in enumerate(value):
@@ -522,7 +627,7 @@ def _normalize_modelhub_upstreams(value: tuple[ModelHubUpstream, ...]) -> tuple[
             continue
         url = _trim_trailing_slash(str(upstream.url or "").strip())
         model_name = str(upstream.model_name or "").strip()
-        ak = str(upstream.ak or "").strip()
+        ak = _valid_modelhub_ak(upstream.ak)
         if not _is_valid_http_url(url) or not model_name or not ak or weight <= 0:
             continue
         upstreams.append(
@@ -550,7 +655,9 @@ def _pick_modelhub_upstream_by_weighted_session_hash(
     upstreams: tuple[ModelHubUpstream, ...],
 ) -> ModelHubUpstream:
     total_weight = sum(upstream.weight for upstream in upstreams)
-    digest = hashlib.sha256(f"{session_id}:{model}:modelhub-upstream".encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(
+        f"{session_id}:{model}:modelhub-upstream".encode("utf-8")
+    ).hexdigest()
     bucket = int(digest, 16) % total_weight
     cumulative = 0
     for upstream in upstreams:
@@ -581,15 +688,19 @@ def _split_modelhub_target_url(url: str, upstream_api: str) -> tuple[str, str]:
         return _trim_trailing_slash(base_url), _normalize_path(path)
     if upstream_api == "responses" and path.endswith("/responses"):
         return _trim_trailing_slash(base_url), _normalize_path(path)
-    raise RuntimeError(f"ModelHub TOML upstream url path '{path}' is incompatible with upstream_api '{upstream_api}'")
+    raise RuntimeError(
+        f"ModelHub TOML upstream url path '{path}' is incompatible with upstream_api '{upstream_api}'"
+    )
 
 
-def _normalize_key_pool(value: tuple[tuple[str, str], ...]) -> tuple[tuple[str, str], ...]:
+def _normalize_key_pool(
+    value: tuple[tuple[str, str], ...],
+) -> tuple[tuple[str, str], ...]:
     pairs: list[tuple[str, str]] = []
     seen: set[str] = set()
     for alias, ak in value:
         safe_alias = _valid_modelhub_key_alias(alias)
-        safe_ak = str(ak or "").strip()
+        safe_ak = _valid_modelhub_ak(ak)
         if not safe_alias or not safe_ak or safe_alias in seen:
             continue
         seen.add(safe_alias)
@@ -642,7 +753,9 @@ def _build_upstream_extra_payload(
 _UPSTREAM_EXTRA_SESSION_ID_MAX_LENGTH = 128
 _UPSTREAM_EXTRA_SOURCE_MAX_LENGTH = 64
 _MODELHUB_KEY_ALIAS_MAX_LENGTH = 64
-_ALLOWED_EXTRA_CHARS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.:-")
+_ALLOWED_EXTRA_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.:-"
+)
 
 
 def _valid_upstream_extra_session_id(value: Any) -> str:
@@ -670,6 +783,18 @@ def _valid_modelhub_key_alias(value: Any) -> str:
     if any(ch not in _ALLOWED_EXTRA_CHARS for ch in alias):
         return ""
     return alias
+
+
+def _valid_modelhub_ak(value: Any) -> str:
+    secret = str(value or "").strip()
+    if not secret:
+        return ""
+    normalized = secret.lower()
+    if normalized in _PLACEHOLDER_SECRET_VALUES:
+        return ""
+    if any(normalized.startswith(prefix) for prefix in _PLACEHOLDER_SECRET_PREFIXES):
+        return ""
+    return secret
 
 
 def _safe_default_upstream_extra_session_id(value: Any) -> str:

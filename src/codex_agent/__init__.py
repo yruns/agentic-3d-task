@@ -19,6 +19,8 @@ Example (NR3D visual grounding)::
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from .config import CodexAgentConfig, SandboxMode
 from .errors import (
     CodexAgentError,
@@ -36,8 +38,10 @@ from .models import (
     CodexTurnRequest,
     CodexTurnResult,
 )
-from .runtime import CodexAgentRuntime
 from .tasks import CodexTask
+
+if TYPE_CHECKING:
+    from .runtime import CodexAgentRuntime
 
 __version__ = "0.1.0"
 
@@ -63,3 +67,12 @@ __all__ = [
     "OpenEqaDataError",
     "OpenEqaJudgeError",
 ]
+
+
+def __getattr__(name: str) -> object:
+    """Lazily expose optional Codex Agent SDK runtime symbols."""
+    if name == "CodexAgentRuntime":
+        from .runtime import CodexAgentRuntime
+
+        return CodexAgentRuntime
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

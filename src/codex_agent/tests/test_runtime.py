@@ -8,12 +8,13 @@ surface instead of ad-hoc stand-ins.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 import pytest
-from openai_codex import CodexConfig, Sandbox, TurnResult
+from openai_codex import CodexConfig, InputItem, Sandbox, TurnResult
 from openai_codex.generated.v2_all import (
     ReasoningEffort,
     ReasoningSummary,
@@ -25,7 +26,16 @@ from openai_codex.generated.v2_all import (
 )
 
 import codex_agent.runtime as runtime_module
-from codex_agent.config import CodexAgentConfig
+from codex_agent.config import (
+    CodexAgentConfig,
+    SandboxMode,
+)
+from codex_agent.config import (
+    ReasoningEffort as ConfigReasoningEffort,
+)
+from codex_agent.config import (
+    ReasoningSummary as ConfigReasoningSummary,
+)
 from codex_agent.errors import CodexConfigError, CodexTurnError
 from codex_agent.models import CodexSkill, CodexTurnRequest
 from codex_agent.runtime import CodexAgentRuntime, _remove_tree_best_effort
@@ -69,29 +79,58 @@ def _reasoning_item(*summary: str) -> ThreadItem:
     )
 
 
+@dataclass(frozen=True)
+class _ThreadRunCall:
+    items: tuple[InputItem, ...]
+    cwd: str | None
+    sandbox: Sandbox | None
+    effort: ReasoningEffort | None
+    summary: ReasoningSummary | None
+
+
+class _SkillConfigWriteParams(TypedDict):
+    enabled: bool
+    name: str
+
+
+@dataclass(frozen=True)
+class _RawRequest:
+    method: str
+    params: _SkillConfigWriteParams
+
+
+@dataclass(frozen=True)
+class _ThreadStartCall:
+    model: str
+    model_provider: str
+    sandbox: Sandbox
+    cwd: str
+
+
 class _FakeThread:
     def __init__(self, results: list[TurnResult]) -> None:
         self._results = list(results)
-        self.calls: list[dict[str, Any]] = []
+        self.calls: list[_ThreadRunCall] = []
 
     def run(
         self,
-        items: list[Any],
+        items: list[InputItem],
         *,
         cwd: str | None = None,
-        output_schema: dict[str, Any] | None = None,
-        sandbox: Any = None,
-        effort: Any = None,
-        summary: Any = None,
+        output_schema: Mapping[str, object] | None = None,
+        sandbox: Sandbox | None = None,
+        effort: ReasoningEffort | None = None,
+        summary: ReasoningSummary | None = None,
     ) -> TurnResult:
+        _ = output_schema
         self.calls.append(
-            {
-                "items": items,
-                "cwd": cwd,
-                "sandbox": sandbox,
-                "effort": effort,
-                "summary": summary,
-            }
+            _ThreadRunCall(
+                items=tuple(items),
+                cwd=cwd,
+                sandbox=sandbox,
+                effort=effort,
+                summary=summary,
+            )
         )
         if not self._results:
             raise AssertionError("fake thread ran out of results")
@@ -102,12 +141,17 @@ class _FakeRawClient:
     """Stand-in for the low-level CodexClient that records RPC calls."""
 
     def __init__(self) -> None:
-        self.requests: list[dict[str, Any]] = []
+        self.requests: list[_RawRequest] = []
 
     def request(
-        self, method: str, params: dict[str, Any], *, response_model: Any = None
+        self,
+        method: str,
+        params: _SkillConfigWriteParams,
+        *,
+        response_model: type[object] | None = None,
     ) -> None:
-        self.requests.append({"method": method, "params": params})
+        _ = response_model
+        self.requests.append(_RawRequest(method=method, params=params))
         return None
 
 
@@ -118,7 +162,7 @@ class _FakeClient:
         self.thread = thread
         self._client = _FakeRawClient()
         self.config: CodexConfig | None = None
-        self.thread_start_kwargs: dict[str, Any] | None = None
+        self.thread_start_call: _ThreadStartCall | None = None
 
     def __enter__(self) -> _FakeClient:
         return self
@@ -126,19 +170,26 @@ class _FakeClient:
     def __exit__(self, *exc: object) -> None:
         return None
 
-    def thread_start(self, **kwargs: Any) -> _FakeThread:
-        self.thread_start_kwargs = kwargs
+    def thread_start(
+        self, *, model: str, model_provider: str, sandbox: Sandbox, cwd: str
+    ) -> _FakeThread:
+        self.thread_start_call = _ThreadStartCall(
+            model=model,
+            model_provider=model_provider,
+            sandbox=sandbox,
+            cwd=cwd,
+        )
         return self.thread
 
     @property
     def config_overrides(self) -> tuple[str, ...]:
         assert self.config is not None
-        return self.config.config_overrides
+        return tuple(self.config.config_overrides)
 
     @property
     def env(self) -> dict[str, str]:
         assert self.config is not None and self.config.env is not None
-        return self.config.env
+        return dict(self.config.env)
 
 
 @dataclass
@@ -152,10 +203,25 @@ def _install(
     codex_home: Path,
     results: list[TurnResult],
     monkeypatch: pytest.MonkeyPatch,
-    **config_kwargs: Any,
+    *,
+    sandbox: SandboxMode = "read_only",
+    sandbox_network_access: bool = False,
+    restrict_skills_to_project: bool = True,
+    reasoning_effort: ConfigReasoningEffort = "medium",
+    reasoning_summary: ConfigReasoningSummary = "",
+    copy_auth_file: bool = False,
+    keep_run_home: bool = False,
 ) -> _Fake:
     agent_config = CodexAgentConfig(
-        project_root=tmp_path, codex_home=codex_home, **config_kwargs
+        project_root=tmp_path,
+        codex_home=codex_home,
+        sandbox=sandbox,
+        sandbox_network_access=sandbox_network_access,
+        restrict_skills_to_project=restrict_skills_to_project,
+        reasoning_effort=reasoning_effort,
+        reasoning_summary=reasoning_summary,
+        copy_auth_file=copy_auth_file,
+        keep_run_home=keep_run_home,
     )
     runtime = CodexAgentRuntime(agent_config)
     client = _FakeClient(_FakeThread(results))
@@ -242,6 +308,62 @@ def test_run_turn_cleans_up_run_home(
     assert not list(runs_dir.iterdir())
 
 
+def test_run_turn_does_not_copy_auth_by_default(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (fake_codex_home / "auth.json").write_text("{}", encoding="utf-8")
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
+        keep_run_home=True,
+    )
+
+    result = fake.runtime.run_turn(_request())
+
+    assert result.metadata.run_home is not None
+    assert not (Path(result.metadata.run_home) / "auth.json").exists()
+
+
+def test_run_turn_copies_auth_when_enabled(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (fake_codex_home / "auth.json").write_text(
+        '{"auth_mode":"chatgpt"}\n', encoding="utf-8"
+    )
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
+        copy_auth_file=True,
+        keep_run_home=True,
+    )
+
+    result = fake.runtime.run_turn(_request())
+
+    assert result.metadata.run_home is not None
+    assert (Path(result.metadata.run_home) / "auth.json").read_text(
+        encoding="utf-8"
+    ) == '{"auth_mode":"chatgpt"}\n'
+
+
+def test_run_turn_requires_auth_file_when_copy_enabled(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
+        copy_auth_file=True,
+    )
+
+    with pytest.raises(CodexConfigError, match="auth.json"):
+        fake.runtime.run_turn(_request())
+
+
 def test_prefix_cache_headers_present(
     tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -285,10 +407,10 @@ def test_sandbox_mode_set_on_thread_not_overridden_per_turn(
         sandbox_network_access=True,
     )
     fake.runtime.run_turn(_request())
-    assert fake.client.thread_start_kwargs is not None
-    assert fake.client.thread_start_kwargs["sandbox"] == Sandbox.workspace_write
+    assert fake.client.thread_start_call is not None
+    assert fake.client.thread_start_call.sandbox == Sandbox.workspace_write
     assert fake.client.thread.calls and all(
-        call["sandbox"] is None for call in fake.client.thread.calls
+        call.sandbox is None for call in fake.client.thread.calls
     )
 
 
@@ -302,14 +424,14 @@ def test_restrict_skills_isolates_home_and_disables_system_skills(
     assert fake.client.env["HOME"].startswith(str(fake_codex_home / "runs"))
     # Bundled .system skills are disabled via the skills/config/write RPC.
     writes = [
-        call
-        for call in fake.client._client.requests
-        if call["method"] == "skills/config/write"
+        request
+        for request in fake.client._client.requests
+        if request.method == "skills/config/write"
     ]
-    assert {call["params"]["name"] for call in writes} == set(
+    assert {request.params["name"] for request in writes} == set(
         runtime_module._BUNDLED_SYSTEM_SKILLS
     )
-    assert all(call["params"]["enabled"] is False for call in writes)
+    assert all(request.params["enabled"] is False for request in writes)
 
 
 def test_no_skill_restriction_keeps_real_home(
@@ -424,8 +546,8 @@ def test_default_effort_is_medium_summary_not_requested(
     fake = _install(tmp_path, fake_codex_home, [_turn_result('{"ok": 1}')], monkeypatch)
     fake.runtime.run_turn(_request())
     call = fake.client.thread.calls[0]
-    assert call["effort"] == ReasoningEffort.medium
-    assert call["summary"] is None
+    assert call.effort == ReasoningEffort.medium
+    assert call.summary is None
     assert not any("model_reasoning" in o for o in fake.client.config_overrides)
 
 
@@ -442,7 +564,7 @@ def test_empty_effort_follows_model_default(
         reasoning_effort="",
     )
     fake.runtime.run_turn(_request())
-    assert fake.client.thread.calls[0]["effort"] is None
+    assert fake.client.thread.calls[0].effort is None
 
 
 def test_effort_and_summary_passed_at_call_site(
@@ -460,8 +582,8 @@ def test_effort_and_summary_passed_at_call_site(
     )
     fake.runtime.run_turn(_request())
     call = fake.client.thread.calls[0]
-    assert call["effort"] == ReasoningEffort.high
-    assert call["summary"] == ReasoningSummary.model_validate("auto")
+    assert call.effort == ReasoningEffort.high
+    assert call.summary == ReasoningSummary.model_validate("auto")
     assert not any("model_reasoning_effort" in o for o in fake.client.config_overrides)
 
 
@@ -506,14 +628,16 @@ def test_remove_tree_best_effort_deletes_dir(tmp_path: Path) -> None:
 def test_remove_tree_best_effort_tolerates_oserror(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    calls = {"n": 0}
+    call_count = 0
 
-    def _boom(path: Any) -> None:
-        calls["n"] += 1
+    def _boom(path: Path) -> None:
+        nonlocal call_count
+        _ = path
+        call_count += 1
         raise OSError(66, "Directory not empty")
 
     monkeypatch.setattr(runtime_module.shutil, "rmtree", _boom)
     monkeypatch.setattr(runtime_module.time, "sleep", lambda _seconds: None)
     # Housekeeping must never raise even if removal never succeeds.
     _remove_tree_best_effort(tmp_path / "missing", attempts=3)
-    assert calls["n"] == 3
+    assert call_count == 3

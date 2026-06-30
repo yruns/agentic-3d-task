@@ -12,9 +12,10 @@ from __future__ import annotations
 import base64
 import json
 import re
-from collections.abc import Sequence
+from collections.abc import MutableMapping, Sequence
 from io import BytesIO
 from pathlib import Path
+from typing import Literal, TypedDict, cast
 
 from langchain_core.messages import HumanMessage
 from langchain_openai import AzureChatOpenAI
@@ -23,6 +24,24 @@ from loguru import logger
 from keyframe.llm.client import LLMClient
 from keyframe.models.hypotheses import HypothesisOutputV1, QueryNode
 from keyframe.parsing.structures import get_few_shot_examples, get_system_prompt
+
+
+class _TextContentBlock(TypedDict):
+    type: Literal["text"]
+    text: str
+
+
+class _ImageUrlPayload(TypedDict):
+    url: str
+    detail: Literal["low"]
+
+
+class _ImageContentBlock(TypedDict):
+    type: Literal["image_url"]
+    image_url: _ImageUrlPayload
+
+
+_MessageContentBlock = _TextContentBlock | _ImageContentBlock
 
 
 class QueryParser:
@@ -92,7 +111,7 @@ class QueryParser:
     ) -> list[HumanMessage]:
         if not scene_images:
             return [HumanMessage(content=prompt)]
-        blocks: list[dict[str, object]] = [{"type": "text", "text": prompt}]
+        blocks: list[_MessageContentBlock] = [{"type": "text", "text": prompt}]
         for image_path in scene_images:
             blocks.append(
                 {
@@ -103,7 +122,8 @@ class QueryParser:
                     },
                 }
             )
-        return [HumanMessage(content=blocks)]  # type: ignore[arg-type]
+        message_content = cast(list[str | dict[str, object]], blocks)
+        return [HumanMessage(content=message_content)]
 
     def _parse_json_response(
         self, response_text: str, query: str
@@ -113,19 +133,23 @@ class QueryParser:
         data = json.loads(json_str)
         if not isinstance(data, dict):
             raise TypeError("parsed JSON response is not an object")
-        return self._finalize_json(data, query)
+        return self._finalize_json(cast(MutableMapping[str, object], data), query)
 
     @staticmethod
-    def _finalize_json(data: dict[str, object], query: str) -> HypothesisOutputV1:
+    def _finalize_json(
+        data: MutableMapping[str, object], query: str
+    ) -> HypothesisOutputV1:
         """Fill defaults the LLM may omit, then validate into the typed model."""
         data.setdefault("format_version", "hypothesis_output_v1")
         hypotheses = data.get("hypotheses")
         if isinstance(hypotheses, list):
             for hypothesis in hypotheses:
-                if not isinstance(hypothesis, dict):
+                if not isinstance(hypothesis, MutableMapping):
                     continue
                 grounding = hypothesis.get("grounding_query")
-                if isinstance(grounding, dict) and not grounding.get("raw_query"):
+                if isinstance(grounding, MutableMapping) and not grounding.get(
+                    "raw_query"
+                ):
                     kind = hypothesis.get("kind")
                     prefix = (
                         "proxy for: "

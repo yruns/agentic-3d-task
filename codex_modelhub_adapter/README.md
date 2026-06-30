@@ -28,7 +28,7 @@ For `gpt-5.4*` and `gpt-5.5*`, the default route is:
 ```text
 Codex SDK Responses API
   -> http://127.0.0.1:8787/v1/responses
-  -> AIDP ModelHub office endpoint /api/modelhub/online/v2/crawl
+  -> AIDP ModelHub platform-selected endpoint /api/modelhub/online/v2/crawl
   -> Chat Completions response/SSE
   -> Responses response/SSE
 ```
@@ -81,21 +81,21 @@ Then set real AK values in `.modelhub_upstreams.toml`:
 ```toml
 [[upstreams]]
 alias = "gpt54_a"
-url = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online"
+url = "https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online"
 model_name = "gpt-5.4-2026-03-05"
 ak = "replace-with-modelhub-ak-1"
 weight = 5
 
 [[upstreams]]
 alias = "gpt54_b"
-url = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online"
+url = "https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online"
 model_name = "gpt-5.4-2026-03-05"
 ak = "replace-with-modelhub-ak-2"
 weight = 1
 
 [[upstreams]]
 alias = "gpt54_c"
-url = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online"
+url = "https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online"
 model_name = "gpt-5.4-2026-03-05"
 ak = "replace-with-modelhub-ak-3"
 weight = 5
@@ -110,17 +110,17 @@ AIDP_MODELHUB_UPSTREAMS_TOML=.modelhub_upstreams.toml
 If `AIDP_MODELHUB_UPSTREAMS_TOML` is not set, the adapter ignores the TOML pool
 and falls back to legacy single-AK / JSON AK-pool environment variables.
 
-The default network is office:
+When `AIDP_CODEX_PROXY_UPSTREAM_ENV` is unset, the adapter chooses the default
+network from the host platform:
 
-```bash
-AIDP_CODEX_PROXY_UPSTREAM_ENV=office
-```
+- Linux: `online`, resolving to
+  `https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online`
+- macOS: `office`, resolving to
+  `https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online`
 
-That resolves to:
-
-```text
-https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online
-```
+Set `AIDP_CODEX_PROXY_UPSTREAM_ENV=office` or
+`AIDP_CODEX_PROXY_UPSTREAM_ENV=online` only when you need to override that
+platform default.
 
 The checked-in Codex config is:
 
@@ -221,7 +221,7 @@ Legacy variables still work:
 
 ```bash
 MODELHUB_AK=replace-with-modelhub-ak
-MODELHUB_URL=https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl
+MODELHUB_URL=https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online/v2/crawl
 ```
 
 ## Test

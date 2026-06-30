@@ -182,6 +182,16 @@ set +a
 uv run uvicorn adapter.app:app --host 127.0.0.1 --port 8787
 ```
 
+Initialize the project-local Codex home once per checkout:
+
+```bash
+scripts/codex_agent/bootstrap_codex_home.sh
+```
+
+This writes `.codex-home/config.toml` with the local adapter provider only. It
+does not write ModelHub credentials; real credentials stay in the adapter's
+gitignored `.env` or upstream TOML file.
+
 Real ModelHub AKs and upstream pools are private and gitignored. Keep them out
 of docs, logs, commits, and benchmark records.
 

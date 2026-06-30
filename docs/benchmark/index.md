@@ -10,6 +10,8 @@ and other assets stay beside the records that cite them.
   keyframe coverage, tool-loop runs, and reasoning-path ablations.
 - [OpenEQA Timeline](openeqa/README.md): embodied QA evaluations, no-frame
   redesign runs, judge notes, and failure trace analysis.
+- [SceneFunc Molmo SAM3D Timeline](scenefunc_molmo_sam3d/README.md):
+  SceneFuncVal-CG small-object Molmo/SAM/3D-lifting feasibility checks.
 
 ## Process Rules
 
