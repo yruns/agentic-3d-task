@@ -30,7 +30,7 @@
    https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online
    ```
 
-5. `gpt-5.4-2026-03-05` / `gpt-5.5-2026-04-24` 当前走 Chat Completions 风格的 `/v2/crawl`，adapter 负责把 Codex SDK 的 Responses 请求转换成 ModelHub crawl 请求，再把返回转换回 Responses 形状。
+5. `gpt-5.4-2026-03-05` / `gpt-5.5-2026-04-24` 当前默认走 ModelHub Responses API；adapter 负责把本地 `/v1/responses` 请求转发到 ModelHub `/responses`，并默认保持 request body 不变。
 6. Codex SDK 能启动 thread 并完成文件创建任务。
 7. repo skill 可通过 `SkillInput` 显式注入。
 8. 项目级 MCP 配置能被 `codex mcp list/get` 识别。
@@ -73,31 +73,29 @@ openai-codex Python SDK
   -> Codex app-server/runtime
   -> http://127.0.0.1:8787/v1/responses
   -> adapter.app FastAPI
-  -> AIDP ModelHub office endpoint /api/modelhub/online/v2/crawl
-  -> adapter.mapping 转回 Responses shape
+  -> AIDP ModelHub office endpoint /api/modelhub/online/responses
+  -> Responses response/SSE passthrough
   -> Codex runtime 继续执行 shell/apply_patch/MCP 等动作
 ```
 
 为什么需要 adapter：
 
 1. Codex Python SDK 期望访问 OpenAI-compatible Responses API。
-2. 内部 AIDP ModelHub 示例是 Chat Completions/crawl 风格：
+2. 内部 AIDP ModelHub 当前支持 Responses API：
 
    ```bash
    curl --location --request POST \
-     'https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl?ak=replace-with-ak' \
+     'https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/responses?ak=replace-with-ak' \
      --header 'Content-Type: application/json' \
      --header 'X-TT-LOGID: replace-with-logid' \
      --data '{
-       "stream": false,
        "model": "gpt-5.4-2026-03-05",
-       "max_tokens": 500,
-       "messages": [
+       "input": [
          {
            "role": "user",
            "content": [
              {
-               "type": "text",
+               "type": "input_text",
                "text": "What is the result of 1+1?"
              }
            ]
@@ -106,15 +104,13 @@ openai-codex Python SDK
      }'
    ```
 
-3. Codex runtime 会传入 Responses-style request、tools、stream event、state、compact request 等，不能只做一个简单文本转发。
+3. Codex runtime 会传入 Responses-style request、tools、stream event、state、compact request 等，adapter 不能把它降级成简单文本转发，也不能默认改写 body。
 4. adapter 要处理：
 
-   - Responses input -> Chat Completions messages
-   - Responses tools -> Chat Completions tools
-   - function call / function call output 配对
-   - streamed Chat Completions SSE -> Responses SSE lifecycle
-   - `/v1/responses/compact`
-   - context length retry
+   - `/v1/responses` -> ModelHub `/responses`
+   - `/v1/responses/compact` -> ModelHub `/responses/compact`
+   - Responses request/response/SSE passthrough
+   - legacy Chat Completions fallback，仅在显式配置时启用
    - encrypted state fallback
    - 429 retry
    - AK pool sticky routing
@@ -140,7 +136,7 @@ uv init --bare
 [project]
 name = "codex-modelhub-adapter"
 version = "0.1.0"
-description = "Project-local Codex SDK adapter for the internal ModelHub crawl endpoint."
+description = "Project-local Codex SDK adapter for the internal ModelHub Responses endpoint."
 requires-python = ">=3.10,<3.13"
 dependencies = [
     "fastapi>=0.115",
@@ -261,9 +257,8 @@ AIDP_GPT_AK=replace-with-modelhub-ak
 # Office network default. Set to online only outside the office network if needed.
 AIDP_CODEX_PROXY_UPSTREAM_ENV=office
 
-# gpt-5.4/gpt-5.5 are exposed by ModelHub as Chat Completions crawl, not raw Responses.
-AIDP_CODEX_PROXY_UPSTREAM_API=auto
-AIDP_CODEX_PROXY_CHAT_COMPLETIONS_MODELS=gpt-5.4*,gpt-5.5*
+# Default path is native ModelHub Responses API passthrough.
+AIDP_CODEX_PROXY_UPSTREAM_API=responses
 AIDP_CODEX_PROXY_CHAT_COMPLETIONS_PATH=/v2/crawl
 AIDP_CODEX_PROXY_RESPONSES_PATH=/responses
 
@@ -271,6 +266,7 @@ AIDP_CODEX_PROXY_MAX_OUTPUT_TOKENS=65536
 AIDP_CODEX_PROXY_CHAT_CONTEXT_TOKEN_LIMIT=820000
 AIDP_CODEX_PROXY_CHAT_CONTEXT_RETRY_TOKEN_LIMIT=700000
 AIDP_CODEX_PROXY_CHAT_CONTEXT_CHARS_PER_TOKEN=2.8
+AIDP_CODEX_PROXY_RESPONSES_BODY_MUTATION_ENABLED=false
 AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED=true
 AIDP_CODEX_PROXY_TIMEOUT_SECONDS=300
 AIDP_CODEX_PROXY_MAX_429_RETRIES=3
@@ -284,7 +280,7 @@ AIDP_CODEX_PROXY_SESSION_ID=case-reviewer-codex
 
 # Backward-compatible legacy names still work:
 # MODELHUB_AK=replace-with-modelhub-ak
-# MODELHUB_URL=https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl
+# MODELHUB_URL=https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/responses
 
 CODEX_PROMPT=Explain this repository in three bullets.
 ```
@@ -385,6 +381,7 @@ AIDP_CODEX_PROXY_CHAT_CONTEXT_TOKEN_LIMIT
 AIDP_CODEX_PROXY_CHAT_CONTEXT_RETRY_TOKEN_LIMIT
 AIDP_CODEX_PROXY_CHAT_CONTEXT_CHARS_PER_TOKEN
 AIDP_CODEX_PROXY_COMPACT_SUMMARY_MAX_CHARS
+AIDP_CODEX_PROXY_RESPONSES_BODY_MUTATION_ENABLED
 AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED
 AIDP_CODEX_PROXY_TIMEOUT_SECONDS
 AIDP_CODEX_PROXY_MAX_429_RETRIES
@@ -406,8 +403,9 @@ upstream_env = "office"
 upstream_api = "auto"
 responses_path = "/responses"
 chat_completions_path = "/v2/crawl"
-chat_completions_models = ("gpt-5.4*", "gpt-5.5*")
+chat_completions_models = ("gpt-5.4*", "gpt-5.5*")  # legacy chat mode only
 max_output_tokens = 65536
+responses_body_mutation_enabled = False
 ```
 
 `resolve_upstream_api()` 逻辑：
@@ -417,10 +415,8 @@ if AIDP_CODEX_PROXY_UPSTREAM_API is "responses":
   use /responses
 elif it is "chat_completions":
   use /v2/crawl
-elif model matches gpt-5.4* or gpt-5.5*:
-  use /v2/crawl
 else:
-  use /responses
+  use /responses  # auto is responses-first
 ```
 
 `build_upstream_request()` 需要生成：
@@ -432,7 +428,7 @@ headers = {
   "X-TT-LOGID": generated-or-forwarded-logid,
   "extra": json.dumps({"session_id": ...})
 }
-body = converted payload
+body = original Responses request body by default
 ```
 
 AK 选择规则：
@@ -686,7 +682,9 @@ Compact endpoint：
 POST /v1/responses/compact
 ```
 
-返回本地 `build_compaction_response()`。
+默认代理到 ModelHub `/responses/compact`。只有显式
+`AIDP_CODEX_PROXY_UPSTREAM_API=chat_completions` 的 legacy 模式才返回本地
+`build_compaction_response()`。
 
 ## 9. 最小 Codex SDK 脚本
 
@@ -1092,8 +1090,7 @@ tests/test_print_heart.py
 ```bash
 export AIDP_GPT_AK='replace-with-real-ak'
 export AIDP_CODEX_PROXY_UPSTREAM_ENV=office
-export AIDP_CODEX_PROXY_UPSTREAM_API=auto
-export AIDP_CODEX_PROXY_CHAT_COMPLETIONS_MODELS='gpt-5.4*,gpt-5.5*'
+export AIDP_CODEX_PROXY_UPSTREAM_API=responses
 
 uv run uvicorn adapter.app:app --host 127.0.0.1 --port 8787
 ```
