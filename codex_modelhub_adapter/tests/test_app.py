@@ -110,7 +110,6 @@ class AppTest(unittest.TestCase):
             {
                 "AIDP_GPT_AK": "ak-1",
                 "AIDP_CODEX_PROXY_UPSTREAM_ENV": "office",
-                "AIDP_CODEX_PROXY_CHAT_COMPLETIONS_MODELS": "gpt-5.5*",
             },
             remove=("MODELHUB_AK", "MODELHUB_URL"),
         ):

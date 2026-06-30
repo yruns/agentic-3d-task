@@ -10,11 +10,6 @@ from fnmatch import fnmatchcase
 from typing import Any
 from urllib.parse import quote, urlsplit
 
-from adapter.mapping import (
-    build_chat_completions_body,
-    normalize_responses_body,
-)
-
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - exercised only on Python < 3.11.
@@ -32,6 +27,7 @@ _PLACEHOLDER_SECRET_VALUES = frozenset(
     }
 )
 _PLACEHOLDER_SECRET_PREFIXES = ("replace-", "replace_", "placeholder", "your-")
+_RESPONSES_API_NAME = "responses"
 
 
 @dataclass(frozen=True)
@@ -49,16 +45,7 @@ class AdapterSettings:
     office_base_url: str = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online"
     base_url: str = ""
     upstream_env: str = "office"
-    upstream_api: str = "auto"
     responses_path: str = "/responses"
-    chat_completions_path: str = "/v2/crawl"
-    chat_completions_models: tuple[str, ...] = ("gpt-5.4*", "gpt-5.5*")
-    max_output_tokens: int = 65536
-    chat_context_token_limit: int = 820000
-    chat_context_retry_token_limit: int = 700000
-    chat_context_chars_per_token: float = 2.8
-    compact_summary_max_chars: int = 60000
-    responses_body_mutation_enabled: bool = False
     encrypted_state_fallback_enabled: bool = True
     timeout_seconds: float = 300.0
     max_429_retries: int = 3
@@ -71,32 +58,28 @@ class AdapterSettings:
     @classmethod
     def from_env(cls) -> AdapterSettings:
         defaults = cls()
+        _validate_responses_only_upstream_api(
+            os.getenv("AIDP_CODEX_PROXY_UPSTREAM_API")
+        )
         legacy_url = (os.getenv("MODELHUB_URL") or "").strip()
         base_url = (os.getenv("AIDP_BASE_URL") or "").strip()
         responses_path = (
             os.getenv("AIDP_CODEX_PROXY_RESPONSES_PATH") or defaults.responses_path
-        )
-        chat_path = (
-            os.getenv("AIDP_CODEX_PROXY_CHAT_COMPLETIONS_PATH")
-            or defaults.chat_completions_path
-        )
-        upstream_api = (
-            os.getenv("AIDP_CODEX_PROXY_UPSTREAM_API") or defaults.upstream_api
         )
         modelhub_upstreams_toml = _resolve_modelhub_upstreams_toml_path(
             os.getenv("AIDP_MODELHUB_UPSTREAMS_TOML")
         )
 
         if legacy_url:
-            parsed_base_url, parsed_path = _split_legacy_modelhub_url(legacy_url)
+            parsed_base_url, parsed_path = _split_modelhub_url(legacy_url)
+            if parsed_path == "/v2/crawl":
+                raise RuntimeError(
+                    "Responses API only: MODELHUB_URL must not use /v2/crawl"
+                )
             if parsed_base_url:
                 base_url = parsed_base_url
-            if parsed_path.endswith("/v2/crawl"):
-                chat_path = parsed_path
-                upstream_api = "chat_completions"
-            elif parsed_path.endswith("/responses"):
+            if parsed_path:
                 responses_path = parsed_path
-                upstream_api = "responses"
 
         return cls(
             online_base_url=os.getenv("AIDP_CODEX_PROXY_ONLINE_BASE_URL")
@@ -107,36 +90,7 @@ class AdapterSettings:
             upstream_env=_upstream_env_from_env(
                 os.getenv("AIDP_CODEX_PROXY_UPSTREAM_ENV")
             ),
-            upstream_api=upstream_api,
             responses_path=responses_path,
-            chat_completions_path=chat_path,
-            chat_completions_models=_csv_tuple(
-                os.getenv("AIDP_CODEX_PROXY_CHAT_COMPLETIONS_MODELS"),
-                defaults.chat_completions_models,
-            ),
-            max_output_tokens=_int_env(
-                "AIDP_CODEX_PROXY_MAX_OUTPUT_TOKENS", defaults.max_output_tokens
-            ),
-            chat_context_token_limit=_int_env(
-                "AIDP_CODEX_PROXY_CHAT_CONTEXT_TOKEN_LIMIT",
-                defaults.chat_context_token_limit,
-            ),
-            chat_context_retry_token_limit=_int_env(
-                "AIDP_CODEX_PROXY_CHAT_CONTEXT_RETRY_TOKEN_LIMIT",
-                defaults.chat_context_retry_token_limit,
-            ),
-            chat_context_chars_per_token=_float_env(
-                "AIDP_CODEX_PROXY_CHAT_CONTEXT_CHARS_PER_TOKEN",
-                defaults.chat_context_chars_per_token,
-            ),
-            compact_summary_max_chars=_int_env(
-                "AIDP_CODEX_PROXY_COMPACT_SUMMARY_MAX_CHARS",
-                defaults.compact_summary_max_chars,
-            ),
-            responses_body_mutation_enabled=_bool_env(
-                "AIDP_CODEX_PROXY_RESPONSES_BODY_MUTATION_ENABLED",
-                defaults.responses_body_mutation_enabled,
-            ),
             encrypted_state_fallback_enabled=_bool_env(
                 "AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED",
                 defaults.encrypted_state_fallback_enabled,
@@ -177,32 +131,12 @@ class AdapterSettings:
         return _trim_trailing_slash(self.online_base_url)
 
 
-def _default_upstream_env() -> str:
-    """Return the platform-specific default ModelHub network."""
-    if platform.system() == "Linux":
-        return "online"
-    return "office"
-
-
-def _upstream_env_from_env(value: str | None) -> str:
-    """Return a validated upstream environment name."""
-    if value is None or not value.strip():
-        return _default_upstream_env()
-    upstream_env = value.strip().lower()
-    if upstream_env not in _VALID_UPSTREAM_ENVS:
-        raise RuntimeError(
-            "AIDP_CODEX_PROXY_UPSTREAM_ENV must be one of "
-            f"{sorted(_VALID_UPSTREAM_ENVS)}, got {value!r}"
-        )
-    return upstream_env
-
-
 @dataclass(frozen=True)
 class UpstreamRequest:
     url: str
     headers: dict[str, str]
     body: JsonObject
-    upstream_api: str
+    upstream_api: str = _RESPONSES_API_NAME
     upstream_key_alias: str = ""
     upstream_key_selection: str = ""
 
@@ -214,79 +148,41 @@ class ResolvedExtra:
     source: str
 
 
+@dataclass(frozen=True)
+class _ResolvedModelHubTarget:
+    base_url: str
+    ak: str
+    path_override: str
+    key_alias: str
+    key_selection: str
+
+
 def build_upstream_request(
     raw_body: Any,
     *,
     settings: AdapterSettings | None = None,
-    chat_context_token_limit: int | None = None,
     upstream_extra: dict[str, str] | None = None,
     logid: str | None = None,
     excluded_upstream_aliases: frozenset[str] = frozenset(),
 ) -> UpstreamRequest:
     resolved_settings = settings or AdapterSettings.from_env()
-    upstream_api = resolve_upstream_api(raw_body, resolved_settings)
-    selected_upstream = resolve_modelhub_upstream(
+    target = _resolve_modelhub_target(
         resolved_settings,
         raw_body,
         upstream_extra,
         excluded_upstream_aliases=excluded_upstream_aliases,
     )
-    upstream_base_url = resolved_settings.upstream_base_url
-    upstream_path_override = ""
-    if selected_upstream is not None:
-        key_alias = selected_upstream.alias
-        ak = selected_upstream.ak
-        key_selection = "toml_weighted_extra_hash"
-        upstream_base_url, upstream_path_override = _split_modelhub_target_url(
-            selected_upstream.url,
-            upstream_api,
-        )
-    elif (
-        selected_key := resolve_modelhub_key(resolved_settings, upstream_extra)
-    ) is not None:
-        key_alias, ak = selected_key
-        key_selection = "extra_session_rendezvous_hash"
-    else:
-        ak = _valid_modelhub_ak(resolved_settings.modelhub_ak)
-        key_alias = "single"
-        key_selection = "single_key_fallback"
-    if not ak:
-        raise RuntimeError("AIDP_GPT_AK or AIDP_MODELHUB_AK is required")
-
-    default_path = (
-        _normalize_path(resolved_settings.chat_completions_path)
-        if upstream_api == "chat_completions"
-        else _normalize_path(resolved_settings.responses_path)
-    )
-    path = upstream_path_override or default_path
-    body = (
-        build_chat_completions_body(
-            raw_body,
-            max_output_tokens=resolved_settings.max_output_tokens,
-            token_limit=chat_context_token_limit
-            or resolved_settings.chat_context_token_limit,
-            chars_per_token=resolved_settings.chat_context_chars_per_token,
-        )
-        if upstream_api == "chat_completions"
-        else _build_responses_body(
-            raw_body,
-            max_output_tokens=resolved_settings.max_output_tokens,
-            mutation_enabled=resolved_settings.responses_body_mutation_enabled,
-        )
-    )
+    path = target.path_override or _normalize_path(resolved_settings.responses_path)
     return UpstreamRequest(
-        url=f"{upstream_base_url}{path}?ak={quote(ak, safe='')}",
-        headers={
-            "content-type": "application/json",
-            "X-TT-LOGID": logid or _build_logid(),
-            "extra": encode_upstream_extra(
-                upstream_extra, fallback_session_id=resolved_settings.session_id
-            ),
-        },
-        body=body,
-        upstream_api=upstream_api,
-        upstream_key_alias=key_alias,
-        upstream_key_selection=key_selection,
+        url=f"{target.base_url}{path}?ak={quote(target.ak, safe='')}",
+        headers=_build_headers(
+            upstream_extra=upstream_extra,
+            fallback_session_id=resolved_settings.session_id,
+            logid=logid,
+        ),
+        body=_responses_body(raw_body),
+        upstream_key_alias=target.key_alias,
+        upstream_key_selection=target.key_selection,
     )
 
 
@@ -299,107 +195,73 @@ def build_compact_upstream_request(
     excluded_upstream_aliases: frozenset[str] = frozenset(),
 ) -> UpstreamRequest:
     resolved_settings = settings or AdapterSettings.from_env()
-    upstream_api = resolve_upstream_api(raw_body, resolved_settings)
-    if upstream_api == "chat_completions":
-        raise RuntimeError("responses compact proxy requires upstream_api=responses")
-    selected_upstream = resolve_modelhub_upstream(
+    target = _resolve_modelhub_target(
         resolved_settings,
         raw_body,
         upstream_extra,
         excluded_upstream_aliases=excluded_upstream_aliases,
     )
-    upstream_base_url = resolved_settings.upstream_base_url
-    upstream_path_override = ""
-    if selected_upstream is not None:
-        key_alias = selected_upstream.alias
-        ak = selected_upstream.ak
-        key_selection = "toml_weighted_extra_hash"
-        upstream_base_url, upstream_path_override = _split_modelhub_target_url(
-            selected_upstream.url,
-            upstream_api,
-        )
-    elif (
-        selected_key := resolve_modelhub_key(resolved_settings, upstream_extra)
-    ) is not None:
-        key_alias, ak = selected_key
-        key_selection = "extra_session_rendezvous_hash"
-    else:
-        ak = _valid_modelhub_ak(resolved_settings.modelhub_ak)
-        key_alias = "single"
-        key_selection = "single_key_fallback"
-    if not ak:
-        raise RuntimeError("AIDP_GPT_AK or AIDP_MODELHUB_AK is required")
-
-    responses_path = upstream_path_override or _normalize_path(
+    responses_path = target.path_override or _normalize_path(
         resolved_settings.responses_path
     )
     path = _responses_compact_path(responses_path)
     return UpstreamRequest(
-        url=f"{upstream_base_url}{path}?ak={quote(ak, safe='')}",
-        headers={
-            "content-type": "application/json",
-            "X-TT-LOGID": logid or _build_logid(),
-            "extra": encode_upstream_extra(
-                upstream_extra, fallback_session_id=resolved_settings.session_id
-            ),
-        },
-        body=_build_responses_body(
-            raw_body,
-            max_output_tokens=resolved_settings.max_output_tokens,
-            mutation_enabled=resolved_settings.responses_body_mutation_enabled,
+        url=f"{target.base_url}{path}?ak={quote(target.ak, safe='')}",
+        headers=_build_headers(
+            upstream_extra=upstream_extra,
+            fallback_session_id=resolved_settings.session_id,
+            logid=logid,
         ),
-        upstream_api=upstream_api,
-        upstream_key_alias=key_alias,
-        upstream_key_selection=key_selection,
+        body=_responses_body(raw_body),
+        upstream_key_alias=target.key_alias,
+        upstream_key_selection=target.key_selection,
     )
 
 
-def _build_responses_body(
+def _resolve_modelhub_target(
+    settings: AdapterSettings,
     raw_body: Any,
+    upstream_extra: dict[str, str] | None,
     *,
-    max_output_tokens: int,
-    mutation_enabled: bool,
-) -> JsonObject:
-    if not isinstance(raw_body, dict):
-        return {}
-    if mutation_enabled:
-        return normalize_responses_body(
-            raw_body,
-            max_output_tokens=max_output_tokens,
+    excluded_upstream_aliases: frozenset[str],
+) -> _ResolvedModelHubTarget:
+    selected_upstream = resolve_modelhub_upstream(
+        settings,
+        raw_body,
+        upstream_extra,
+        excluded_upstream_aliases=excluded_upstream_aliases,
+    )
+    if selected_upstream is not None:
+        base_url, path_override = _split_modelhub_target_url(selected_upstream.url)
+        return _ResolvedModelHubTarget(
+            base_url=base_url,
+            ak=selected_upstream.ak,
+            path_override=path_override,
+            key_alias=selected_upstream.alias,
+            key_selection="toml_weighted_extra_hash",
         )
-    return raw_body
 
+    selected_key = resolve_modelhub_key(settings, upstream_extra)
+    if selected_key is not None:
+        key_alias, ak = selected_key
+        return _ResolvedModelHubTarget(
+            base_url=settings.upstream_base_url,
+            ak=ak,
+            path_override="",
+            key_alias=key_alias,
+            key_selection="extra_session_rendezvous_hash",
+        )
 
-def resolve_upstream_api(raw_body: Any, settings: AdapterSettings) -> str:
-    configured = settings.upstream_api
-    if configured in {"responses", "chat_completions"}:
-        return configured
-    return "responses"
-
-
-def _responses_compact_path(responses_path: str) -> str:
-    normalized = _normalize_path(responses_path)
-    if normalized.endswith("/compact"):
-        return normalized
-    return f"{normalized}/compact"
-
-
-def _requests_reasoning_summary(raw_body: Any) -> bool:
-    """True when the request asks for a non-empty reasoning summary.
-
-    Codex talks to the adapter in the Responses dialect, so a summary request
-    arrives as ``reasoning: {"summary": "auto" | "concise" | "detailed"}``.
-    ``""`` / ``"none"`` mean "no summary" and stay on the default route.
-    """
-    if not isinstance(raw_body, dict):
-        return False
-    reasoning = raw_body.get("reasoning")
-    if not isinstance(reasoning, dict):
-        return False
-    summary = reasoning.get("summary")
-    if not isinstance(summary, str):
-        return False
-    return summary.strip().lower() not in ("", "none")
+    ak = _valid_modelhub_ak(settings.modelhub_ak)
+    if not ak:
+        raise RuntimeError("AIDP_GPT_AK or AIDP_MODELHUB_AK is required")
+    return _ResolvedModelHubTarget(
+        base_url=settings.upstream_base_url,
+        ak=ak,
+        path_override="",
+        key_alias="single",
+        key_selection="single_key_fallback",
+    )
 
 
 def resolve_modelhub_key(
@@ -538,15 +400,8 @@ def health_payload(settings: AdapterSettings | None = None) -> JsonObject:
     toml_upstreams = _normalize_modelhub_upstreams(resolved.modelhub_upstreams)
     return {
         "upstream_base_url": resolved.upstream_base_url,
-        "upstream_api": resolved.upstream_api,
-        "chat_completions_models": list(resolved.chat_completions_models),
+        "upstream_api": _RESPONSES_API_NAME,
         "responses_path": _normalize_path(resolved.responses_path),
-        "chat_completions_path": _normalize_path(resolved.chat_completions_path),
-        "max_output_tokens": resolved.max_output_tokens,
-        "chat_context_token_limit": resolved.chat_context_token_limit,
-        "chat_context_retry_token_limit": resolved.chat_context_retry_token_limit,
-        "chat_context_chars_per_token": resolved.chat_context_chars_per_token,
-        "responses_body_mutation_enabled": resolved.responses_body_mutation_enabled,
         "encrypted_state_fallback_enabled": resolved.encrypted_state_fallback_enabled,
         "session_id": resolved.session_id,
         "modelhub_key_pool_enabled": bool(keys),
@@ -564,7 +419,61 @@ def health_payload(settings: AdapterSettings | None = None) -> JsonObject:
     }
 
 
-def _split_legacy_modelhub_url(url: str) -> tuple[str, str]:
+def _build_headers(
+    *,
+    upstream_extra: dict[str, str] | None,
+    fallback_session_id: str,
+    logid: str | None,
+) -> dict[str, str]:
+    return {
+        "content-type": "application/json",
+        "X-TT-LOGID": logid or _build_logid(),
+        "extra": encode_upstream_extra(
+            upstream_extra, fallback_session_id=fallback_session_id
+        ),
+    }
+
+
+def _responses_body(raw_body: Any) -> JsonObject:
+    if not isinstance(raw_body, dict):
+        return {}
+    return raw_body
+
+
+def _responses_compact_path(responses_path: str) -> str:
+    normalized = _normalize_path(responses_path)
+    if normalized.endswith("/compact"):
+        return normalized
+    return f"{normalized}/compact"
+
+
+def _validate_responses_only_upstream_api(value: str | None) -> None:
+    if value is None or not value.strip():
+        return
+    if value.strip().lower() == _RESPONSES_API_NAME:
+        return
+    raise RuntimeError("Responses API only: chat completions upstream is unsupported")
+
+
+def _default_upstream_env() -> str:
+    if platform.system() == "Linux":
+        return "online"
+    return "office"
+
+
+def _upstream_env_from_env(value: str | None) -> str:
+    if value is None or not value.strip():
+        return _default_upstream_env()
+    upstream_env = value.strip().lower()
+    if upstream_env not in _VALID_UPSTREAM_ENVS:
+        raise RuntimeError(
+            "AIDP_CODEX_PROXY_UPSTREAM_ENV must be one of "
+            f"{sorted(_VALID_UPSTREAM_ENVS)}, got {value!r}"
+        )
+    return upstream_env
+
+
+def _split_modelhub_url(url: str) -> tuple[str, str]:
     parsed = urlsplit(url)
     if not parsed.scheme or not parsed.netloc:
         return "", ""
@@ -675,6 +584,11 @@ def _parse_modelhub_upstream_item(item: dict[str, Any], index: int) -> ModelHubU
         raise RuntimeError(
             f"ModelHub TOML upstream entry '{alias}' must provide a valid http(s) url"
         )
+    _, path = _split_modelhub_url(url)
+    if path == "/v2/crawl":
+        raise RuntimeError(
+            f"Responses API only: ModelHub TOML upstream '{alias}' must not use /v2/crawl"
+        )
     if not model_name:
         raise RuntimeError(
             f"ModelHub TOML upstream entry '{alias}' must provide model_name"
@@ -710,7 +624,14 @@ def _normalize_modelhub_upstreams(
         url = _trim_trailing_slash(str(upstream.url or "").strip())
         model_name = str(upstream.model_name or "").strip()
         ak = _valid_modelhub_ak(upstream.ak)
-        if not _is_valid_http_url(url) or not model_name or not ak or weight <= 0:
+        _, path = _split_modelhub_url(url)
+        if (
+            not _is_valid_http_url(url)
+            or path == "/v2/crawl"
+            or not model_name
+            or not ak
+            or weight <= 0
+        ):
             continue
         upstreams.append(
             ModelHubUpstream(
@@ -762,17 +683,13 @@ def _modelhub_upstream_selection_id(
     )
 
 
-def _split_modelhub_target_url(url: str, upstream_api: str) -> tuple[str, str]:
-    base_url, path = _split_legacy_modelhub_url(url)
+def _split_modelhub_target_url(url: str) -> tuple[str, str]:
+    base_url, path = _split_modelhub_url(url)
     if not path:
         return _trim_trailing_slash(base_url or url), ""
-    if upstream_api == "chat_completions" and path.endswith("/v2/crawl"):
+    if path == "/responses":
         return _trim_trailing_slash(base_url), _normalize_path(path)
-    if upstream_api == "responses" and path.endswith("/responses"):
-        return _trim_trailing_slash(base_url), _normalize_path(path)
-    raise RuntimeError(
-        f"ModelHub TOML upstream url path '{path}' is incompatible with upstream_api '{upstream_api}'"
-    )
+    raise RuntimeError(f"Responses API only: unsupported ModelHub URL path '{path}'")
 
 
 def _normalize_key_pool(
@@ -879,66 +796,61 @@ def _valid_modelhub_ak(value: Any) -> str:
     return secret
 
 
-def _safe_default_upstream_extra_session_id(value: Any) -> str:
-    configured = str(value or "case-reviewer-codex").strip()
-    safe = "".join(ch if ch in _ALLOWED_EXTRA_CHARS else "_" for ch in configured)
-    safe = safe.strip("._:-")[:_UPSTREAM_EXTRA_SESSION_ID_MAX_LENGTH]
-    return safe or "case-reviewer-codex"
-
-
-def _matches_any_model_pattern(model: str, patterns: tuple[str, ...]) -> bool:
-    normalized = model.strip()
-    return any(fnmatchcase(normalized, pattern) for pattern in patterns)
-
-
-def _is_valid_http_url(value: str) -> bool:
-    parsed = urlsplit(value)
-    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
-
-
-def _build_logid() -> str:
-    return f"codex-modelhub-adapter-{uuid.uuid4().hex[:16]}"
-
-
-def _normalize_path(value: str) -> str:
-    return "/" + str(value or "").strip("/")
-
-
-def _trim_trailing_slash(value: str) -> str:
-    return value.rstrip("/")
-
-
-def _csv_tuple(value: str | None, default: tuple[str, ...]) -> tuple[str, ...]:
-    if value is None:
-        return default
-    parsed = tuple(part.strip() for part in value.split(",") if part.strip())
-    return parsed
+def _safe_default_upstream_extra_session_id(value: str) -> str:
+    valid = _valid_upstream_extra_session_id(value)
+    if valid:
+        return valid
+    return "case-reviewer-codex"
 
 
 def _int_env(name: str, default: int) -> int:
-    value = os.getenv(name)
-    if not value:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
         return default
     try:
-        parsed = int(value)
-    except ValueError:
-        return default
-    return parsed if parsed > 0 else default
+        value = int(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be an integer, got {raw!r}") from exc
+    if value < 0:
+        raise RuntimeError(f"{name} must be >= 0, got {value}")
+    return value
 
 
 def _float_env(name: str, default: float) -> float:
-    value = os.getenv(name)
-    if not value:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
         return default
     try:
-        parsed = float(value)
-    except ValueError:
-        return default
-    return parsed if parsed > 0 else default
+        value = float(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be a number, got {raw!r}") from exc
+    if value <= 0:
+        raise RuntimeError(f"{name} must be > 0, got {value}")
+    return value
 
 
 def _bool_env(name: str, default: bool) -> bool:
-    value = os.getenv(name)
-    if value is None:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
         return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _build_logid() -> str:
+    return f"codex-adapter-{uuid.uuid4().hex}"
+
+
+def _normalize_path(path: str) -> str:
+    stripped = (path or "").strip()
+    if not stripped:
+        return "/responses"
+    return "/" + stripped.strip("/")
+
+
+def _trim_trailing_slash(url: str) -> str:
+    return url.rstrip("/")
+
+
+def _is_valid_http_url(url: str) -> bool:
+    parsed = urlsplit(url)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)

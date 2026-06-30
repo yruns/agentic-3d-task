@@ -1,24 +1,19 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from typing import Any
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 
-from adapter.mapping import (
-    build_compaction_response,
-    chat_completion_to_response,
-    is_context_length_exceeded,
+from adapter.encrypted_state import (
     is_invalid_encrypted_content,
-    iter_chat_sse_as_responses,
-    log_cache_hit,
     sanitize_encrypted_state,
 )
 from adapter.proxy import (
     AdapterSettings,
+    UpstreamRequest,
     build_compact_upstream_request,
     build_upstream_request,
     health_payload,
@@ -104,51 +99,6 @@ async def create_response(
             headers=response_headers,
         )
 
-    if upstream_request.upstream_api == "chat_completions":
-        if bool(upstream_request.body.get("stream")):
-
-            async def iter_chat_as_responses():
-                try:
-                    async for chunk in iter_chat_sse_as_responses(
-                        upstream.aiter_text(),
-                        logid=upstream_request.headers.get("X-TT-LOGID", ""),
-                        key_alias=upstream_request.upstream_key_alias,
-                    ):
-                        yield chunk
-                finally:
-                    await stream_context.__aexit__(None, None, None)
-                    await client.aclose()
-
-            return StreamingResponse(
-                iter_chat_as_responses(),
-                status_code=upstream.status_code,
-                media_type="text/event-stream",
-                headers={**response_headers, "Content-Type": "text/event-stream"},
-            )
-
-        upstream_bytes = await upstream.aread()
-        await stream_context.__aexit__(None, None, None)
-        await client.aclose()
-        try:
-            upstream_payload = (
-                json.loads(upstream_bytes.decode("utf-8")) if upstream_bytes else {}
-            )
-        except Exception:
-            upstream_payload = {}
-        if isinstance(upstream_payload, dict):
-            log_cache_hit(
-                upstream_payload.get("usage"),
-                logid=upstream_request.headers.get("X-TT-LOGID", ""),
-                key_alias=upstream_request.upstream_key_alias,
-            )
-        return JSONResponse(
-            status_code=upstream.status_code,
-            content=chat_completion_to_response(
-                upstream_payload if isinstance(upstream_payload, dict) else {}
-            ),
-            headers=response_headers,
-        )
-
     if bool(upstream_request.body.get("stream")):
 
         async def iter_upstream_body():
@@ -191,13 +141,6 @@ async def compact_response(
             status_code=400, detail="Request body must be valid JSON"
         ) from exc
     settings = AdapterSettings.from_env()
-    if settings.upstream_api == "chat_completions":
-        return JSONResponse(
-            content=build_compaction_response(
-                raw_body,
-                max_chars=settings.compact_summary_max_chars,
-            )
-        )
     resolved_extra = resolve_upstream_extra(
         extra_header,
         fallback_session_id=settings.session_id,
@@ -242,13 +185,13 @@ async def compact_response(
 
 async def _open_upstream_with_retries(
     client: httpx.AsyncClient,
-    upstream_request: Any,
+    upstream_request: UpstreamRequest,
     *,
     raw_body: Any,
     settings: AdapterSettings,
     upstream_extra: dict[str, str],
     logid: str | None,
-) -> tuple[Any, httpx.Response, Any]:
+) -> tuple[Any, httpx.Response, UpstreamRequest]:
     stream_context = None
     upstream = None
     excluded_upstream_aliases: frozenset[str] = frozenset()
@@ -279,18 +222,7 @@ async def _open_upstream_with_retries(
 
     error_bytes = await upstream.aread()
     retry_request = None
-    if (
-        upstream_request.upstream_api == "chat_completions"
-        and is_context_length_exceeded(error_bytes)
-    ):
-        retry_request = build_upstream_request(
-            raw_body,
-            settings=settings,
-            chat_context_token_limit=settings.chat_context_retry_token_limit,
-            upstream_extra=upstream_extra,
-            logid=logid,
-        )
-    elif settings.encrypted_state_fallback_enabled and is_invalid_encrypted_content(
+    if settings.encrypted_state_fallback_enabled and is_invalid_encrypted_content(
         error_bytes
     ):
         if isinstance(raw_body, dict):

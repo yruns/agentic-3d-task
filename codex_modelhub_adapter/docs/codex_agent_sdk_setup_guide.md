@@ -259,14 +259,8 @@ AIDP_CODEX_PROXY_UPSTREAM_ENV=office
 
 # Default path is native ModelHub Responses API passthrough.
 AIDP_CODEX_PROXY_UPSTREAM_API=responses
-AIDP_CODEX_PROXY_CHAT_COMPLETIONS_PATH=/v2/crawl
 AIDP_CODEX_PROXY_RESPONSES_PATH=/responses
 
-AIDP_CODEX_PROXY_MAX_OUTPUT_TOKENS=65536
-AIDP_CODEX_PROXY_CHAT_CONTEXT_TOKEN_LIMIT=820000
-AIDP_CODEX_PROXY_CHAT_CONTEXT_RETRY_TOKEN_LIMIT=700000
-AIDP_CODEX_PROXY_CHAT_CONTEXT_CHARS_PER_TOKEN=2.8
-AIDP_CODEX_PROXY_RESPONSES_BODY_MUTATION_ENABLED=false
 AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED=true
 AIDP_CODEX_PROXY_TIMEOUT_SECONDS=300
 AIDP_CODEX_PROXY_MAX_429_RETRIES=3
@@ -315,14 +309,15 @@ https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online
 adapter/
   __init__.py
   app.py
-  mapping.py
+  encrypted_state.py
   proxy.py
 examples/
   run_codex_sdk.py
   run_skill_tool_trace.py
 tests/
   test_app.py
-  test_mapping.py
+  test_encrypted_state.py
+  test_proxy.py
 tools/
   heart_mcp_server.py
 .agents/
@@ -340,11 +335,11 @@ README.md
 
 ```text
 adapter/proxy.py
-  读取环境变量，解析 office/online base URL，选择 upstream API，
-  生成 ModelHub 请求 URL、headers、body，处理 AK pool。
+  读取环境变量，解析 office/online base URL，生成 ModelHub Responses
+  请求 URL、headers、body，处理 AK pool。
 
-adapter/mapping.py
-  负责 Responses API 和 Chat Completions/crawl API 之间的结构转换。
+adapter/encrypted_state.py
+  负责 invalid_encrypted_content fallback 前的 Responses 状态清理。
 
 adapter/app.py
   FastAPI 入口，暴露 /health、/v1/responses、/v1/responses/compact，
@@ -374,14 +369,6 @@ AIDP_BASE_URL
 AIDP_CODEX_PROXY_UPSTREAM_ENV
 AIDP_CODEX_PROXY_UPSTREAM_API
 AIDP_CODEX_PROXY_RESPONSES_PATH
-AIDP_CODEX_PROXY_CHAT_COMPLETIONS_PATH
-AIDP_CODEX_PROXY_CHAT_COMPLETIONS_MODELS
-AIDP_CODEX_PROXY_MAX_OUTPUT_TOKENS
-AIDP_CODEX_PROXY_CHAT_CONTEXT_TOKEN_LIMIT
-AIDP_CODEX_PROXY_CHAT_CONTEXT_RETRY_TOKEN_LIMIT
-AIDP_CODEX_PROXY_CHAT_CONTEXT_CHARS_PER_TOKEN
-AIDP_CODEX_PROXY_COMPACT_SUMMARY_MAX_CHARS
-AIDP_CODEX_PROXY_RESPONSES_BODY_MUTATION_ENABLED
 AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED
 AIDP_CODEX_PROXY_TIMEOUT_SECONDS
 AIDP_CODEX_PROXY_MAX_429_RETRIES
@@ -400,23 +387,15 @@ AIDP_MODELHUB_AK_POOL
 online_base_url = "https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online"
 office_base_url = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online"
 upstream_env = "office"
-upstream_api = "auto"
 responses_path = "/responses"
-chat_completions_path = "/v2/crawl"
-chat_completions_models = ("gpt-5.4*", "gpt-5.5*")  # legacy chat mode only
-max_output_tokens = 65536
-responses_body_mutation_enabled = False
 ```
 
-`resolve_upstream_api()` 逻辑：
+upstream API 逻辑：
 
 ```text
-if AIDP_CODEX_PROXY_UPSTREAM_API is "responses":
-  use /responses
-elif it is "chat_completions":
-  use /v2/crawl
-else:
-  use /responses  # auto is responses-first
+use /responses only
+if AIDP_CODEX_PROXY_UPSTREAM_API is set to anything other than "responses":
+  fail closed
 ```
 
 `build_upstream_request()` 需要生成：
@@ -440,193 +419,23 @@ AK 选择规则：
 5. 如果没有 pool，回退到单个 `AIDP_GPT_AK`。
 6. 如果没有 AK，`/v1/responses` 应返回 503。
 
-## 7. mapping.py 设计要点
+## 7. encrypted_state.py 设计要点
 
-### 7.1 Responses input -> messages
+当前 adapter 不再做 Responses 与 Chat Completions 之间的结构转换。
+`/v1/responses` 和 `/v1/responses/compact` 都按 Responses API 原样代理。
 
-Codex SDK 可能传入：
+唯一保留的 body 处理是错误恢复：当 upstream 返回
+`invalid_encrypted_content` 时，adapter 可以移除请求里的 opaque
+`encrypted_content`、空 reasoning item 和顶层 `previous_response_id`，然后
+用清理后的 Responses body 重试一次。这是 Responses API 的 fallback，不是
+协议转换。
 
-```json
-{
-  "model": "gpt-5.4-2026-03-05",
-  "input": "What is 1+1?",
-  "stream": false
-}
-```
+必须保持的边界：
 
-需要转换成：
-
-```json
-{
-  "model": "gpt-5.4-2026-03-05",
-  "messages": [
-    {"role": "user", "content": "What is 1+1?"}
-  ],
-  "stream": false,
-  "max_tokens": 65536
-}
-```
-
-Responses `instructions` 应作为 system message 注入。
-
-Responses content item：
-
-```json
-{"type": "input_text", "text": "..."}
-```
-
-要转换为 Chat Completions 可接受的 text content。
-
-### 7.2 tools 转换
-
-Responses tool：
-
-```json
-{
-  "type": "function",
-  "name": "shell",
-  "description": "Run a shell command.",
-  "parameters": {
-    "type": "object",
-    "properties": {"cmd": {"type": "string"}},
-    "required": ["cmd"]
-  }
-}
-```
-
-要转为 Chat Completions tool：
-
-```json
-{
-  "type": "function",
-  "function": {
-    "name": "shell",
-    "description": "Run a shell command.",
-    "parameters": {
-      "type": "object",
-      "properties": {"cmd": {"type": "string"}},
-      "required": ["cmd"]
-    }
-  }
-}
-```
-
-### 7.3 function call 配对
-
-Codex runtime 会把历史工具调用放进 Responses input：
-
-```json
-{"type": "function_call", "call_id": "call_keep", "name": "shell", "arguments": "{\"cmd\":\"pwd\"}"}
-{"type": "function_call_output", "call_id": "call_keep", "output": "/tmp/project"}
-```
-
-Chat Completions 需要配对消息：
-
-```json
-{
-  "role": "assistant",
-  "content": null,
-  "tool_calls": [
-    {
-      "id": "call_keep",
-      "type": "function",
-      "function": {"name": "shell", "arguments": "{\"cmd\":\"pwd\"}"}
-    }
-  ]
-}
-{"role": "tool", "tool_call_id": "call_keep", "content": "/tmp/project"}
-```
-
-如果存在未配对的 function call，当前实现会丢弃未配对项，避免 upstream Chat Completions 报错。
-
-### 7.4 Chat Completions response -> Responses response
-
-输入：
-
-```json
-{
-  "choices": [
-    {
-      "message": {
-        "role": "assistant",
-        "content": "2"
-      }
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 10,
-    "completion_tokens": 1,
-    "total_tokens": 11
-  }
-}
-```
-
-输出：
-
-```json
-{
-  "object": "response",
-  "status": "completed",
-  "output_text": "2",
-  "usage": {
-    "input_tokens": 10,
-    "output_tokens": 1,
-    "total_tokens": 11
-  }
-}
-```
-
-### 7.5 SSE stream 转换
-
-Codex SDK streaming 需要完整 Responses lifecycle。Chat Completions delta：
-
-```text
-data: {"choices":[{"delta":{"content":"he"}}]}
-data: {"choices":[{"delta":{"content":"llo"}}]}
-data: [DONE]
-```
-
-要转换为 Responses events，至少包括：
-
-```text
-response.created
-response.output_item.added
-response.content_part.added
-response.output_text.delta
-response.output_text.done
-response.content_part.done
-response.output_item.done
-response.completed
-data: [DONE]
-```
-
-否则 SDK 的 `turn.stream()` 可能无法形成完整 turn。
-
-### 7.6 compact endpoint
-
-Codex runtime 会调用 compaction。adapter 要支持：
-
-```text
-POST /v1/responses/compact
-```
-
-本仓库实现为本地 lossy checkpoint summary，返回：
-
-```json
-{
-  "object": "response.compaction",
-  "status": "completed",
-  "output": [
-    {
-      "type": "message",
-      "role": "user",
-      "content": [
-        {"type": "input_text", "text": "CONTEXT CHECKPOINT SUMMARY ..."}
-      ]
-    }
-  ]
-}
-```
+- 正常请求 body 不改写。
+- stream/non-stream 响应都直接透传 upstream。
+- compact 直接代理到 ModelHub `/responses/compact`。
+- `/v2/crawl` / Chat Completions 配置 fail closed。
 
 ## 8. app.py 设计要点
 
@@ -667,14 +476,8 @@ POST /v1/responses
 4. 调用 `build_upstream_request()`。
 5. 通过 `httpx.AsyncClient.stream()` 调 ModelHub。
 6. 对 429 做指数退避 retry。
-7. 对 context length exceeded 做更强裁剪后 retry。
-8. 对 invalid encrypted content 做 sanitize 后 retry。
-9. 根据 upstream API 类型决定返回：
-
-   - chat_completions + stream -> `iter_chat_sse_as_responses`
-   - chat_completions + non-stream -> `chat_completion_to_response`
-   - responses + stream -> 透传
-   - responses + non-stream -> 透传
+7. 对 invalid encrypted content 做 sanitize 后 retry。
+8. Responses stream/non-stream 均原样透传。
 
 Compact endpoint：
 
@@ -682,9 +485,7 @@ Compact endpoint：
 POST /v1/responses/compact
 ```
 
-默认代理到 ModelHub `/responses/compact`。只有显式
-`AIDP_CODEX_PROXY_UPSTREAM_API=chat_completions` 的 legacy 模式才返回本地
-`build_compaction_response()`。
+代理到 ModelHub `/responses/compact`，不再做本地 lossy compact。
 
 ## 9. 最小 Codex SDK 脚本
 
@@ -1064,15 +865,17 @@ uv run python -m unittest discover -s tests
 本仓库测试覆盖：
 
 ```text
-tests/test_mapping.py
-  Responses input -> messages
-  Responses tools -> Chat tools
-  Chat response -> Responses response
-  SSE lifecycle
-  function call pair preservation
-  encrypted state sanitize
-  compact response
+tests/test_app.py
+  Responses passthrough
+  compact passthrough
+  429 retry/failover
+
+tests/test_proxy.py
+  responses-only fail-closed behavior
   AK pool sticky selection
+
+tests/test_encrypted_state.py
+  encrypted state sanitize
 
 tests/test_app.py
   /v1/responses route
@@ -1356,19 +1159,10 @@ wire_api = "responses"
 
 ### 15.4 adapter 收到请求但上游报 context length
 
-adapter 已有 retry：
-
-```text
-AIDP_CODEX_PROXY_CHAT_CONTEXT_TOKEN_LIMIT=820000
-AIDP_CODEX_PROXY_CHAT_CONTEXT_RETRY_TOKEN_LIMIT=700000
-AIDP_CODEX_PROXY_CHAT_CONTEXT_CHARS_PER_TOKEN=2.8
-```
-
-如果仍然失败：
-
-1. 降低 retry token limit。
-2. 检查是否有大文件内容或历史 tool output 被塞进 input。
-3. 检查 `/v1/responses/compact` 是否被正常调用。
+当前 adapter 不做本地 context 裁剪或协议转换。context length 由 Codex SDK
+请求构造和 ModelHub Responses API 自身处理；adapter 只透传 upstream 错误。
+如果仍然失败，检查是否有大文件内容或历史 tool output 被塞进 input，以及
+`/v1/responses/compact` 是否被正常调用。
 
 ### 15.5 invalid encrypted content
 
@@ -1441,9 +1235,9 @@ turn: no tools
 2. 写 `.codex-home/config.toml`，确认 `CODEX_HOME` 指向项目目录。
 3. 写 `.env.example`，真实 AK 只放 `.env` 或 shell export。
 4. 实现 `adapter/proxy.py`，先保证 URL、AK、office endpoint 和 body route 正确。
-5. 实现 `adapter/mapping.py`，先做非 streaming text，再补 tools、function call pair、SSE、compact、sanitize。
+5. 实现 `adapter/encrypted_state.py`，只保留 invalid encrypted content fallback。
 6. 实现 `adapter/app.py`。
-7. 写 `tests/test_mapping.py` 和 `tests/test_app.py`。
+7. 写 `tests/test_proxy.py`、`tests/test_encrypted_state.py` 和 `tests/test_app.py`。
 8. `uv run python -m unittest discover -s tests`。
 9. 启动 adapter。
 10. `/health`。
@@ -1475,8 +1269,8 @@ adapter/app.py
 adapter/proxy.py
   配置解析、AK、URL、upstream request 构建。
 
-adapter/mapping.py
-  Responses <-> Chat Completions/crawl 转换。
+adapter/encrypted_state.py
+  invalid encrypted content fallback 清理。
 
 examples/run_codex_sdk.py
   最小 SDK smoke。
@@ -1491,7 +1285,8 @@ tools/heart_mcp_server.py
   示例 MCP stdio server。
 
 tests/test_app.py
-tests/test_mapping.py
+tests/test_proxy.py
+tests/test_encrypted_state.py
 tests/test_print_heart.py
   回归测试。
 ```

@@ -43,7 +43,6 @@ concerns:
 - optional sticky AK pool selected by `extra.session_id`
 - 429 retry/failover
 - invalid encrypted state retry after removing opaque state
-- legacy Chat Completions conversion only when `upstream_api=chat_completions`
 
 ## Install
 
@@ -178,7 +177,7 @@ uv run python examples/run_codex_sdk.py
 
 `[[upstreams]]` entries use:
 
-- `url`: ModelHub base URL, or a legacy full URL ending in `/v2/crawl` or `/responses`
+- `url`: ModelHub base URL or a full URL ending in `/responses`
 - `model_name`: exact model name or a wildcard pattern such as `gpt-5.4*`
 - `ak`: upstream ModelHub AK
 - `weight`: positive integer traffic weight
@@ -208,11 +207,9 @@ configured, it falls back to `AIDP_GPT_AK`.
 
 ## Compatibility Notes
 
-The default path expects ModelHub's Responses API. The adapter can still make
-Codex SDK talk to an AIDP Chat Completions-style model when explicitly launched
-with `AIDP_CODEX_PROXY_UPSTREAM_API=chat_completions`, but that legacy mode
-converts request/response shapes and does not preserve Responses reasoning state
-with the same fidelity.
+The adapter expects ModelHub's Responses API. Chat Completions crawl endpoints
+(`/v2/crawl`) are intentionally unsupported; configuring one fails closed at
+startup/request-build time.
 
 Legacy variables still work:
 

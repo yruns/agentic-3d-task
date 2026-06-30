@@ -7,73 +7,89 @@ from unittest.mock import patch
 
 from adapter.proxy import (
     AdapterSettings,
-    _requests_reasoning_summary,
     build_upstream_request,
     health_payload,
-    resolve_upstream_api,
 )
 
 
-def _auto_settings() -> AdapterSettings:
-    return AdapterSettings(
-        upstream_api="auto",
-        chat_completions_models=("gpt-5.4*", "gpt-5.5*"),
-    )
+class ResponsesOnlyProxyTest(unittest.TestCase):
+    def test_chat_upstream_env_fails_closed(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {"AIDP_CODEX_PROXY_UPSTREAM_API": "chat_completions"},
+            clear=True,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Responses API only"):
+                AdapterSettings.from_env()
 
+    def test_legacy_chat_modelhub_url_fails_closed(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "MODELHUB_URL": "https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online/v2/crawl"
+            },
+            clear=True,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Responses API only"):
+                AdapterSettings.from_env()
 
-class RequestsReasoningSummaryTest(unittest.TestCase):
-    def test_true_for_auto_concise_detailed(self):
-        for value in ("auto", "concise", "detailed", "AUTO"):
-            self.assertTrue(
-                _requests_reasoning_summary({"reasoning": {"summary": value}}), value
-            )
-
-    def test_false_for_none_or_empty(self):
-        for value in ("none", "", "  ", "NONE"):
-            self.assertFalse(
-                _requests_reasoning_summary({"reasoning": {"summary": value}}), value
-            )
-
-    def test_false_when_no_summary_field(self):
-        self.assertFalse(_requests_reasoning_summary({}))
-        self.assertFalse(_requests_reasoning_summary({"reasoning": {"effort": "high"}}))
-
-    def test_false_when_reasoning_not_dict_or_body_not_dict(self):
-        self.assertFalse(_requests_reasoning_summary({"reasoning": "high"}))
-        self.assertFalse(_requests_reasoning_summary("not a dict"))
-        self.assertFalse(_requests_reasoning_summary({"reasoning": {"summary": 1}}))
-
-
-class ResolveUpstreamApiTest(unittest.TestCase):
-    def test_chat_model_without_summary_uses_responses(self):
-        body = {"model": "gpt-5.4-2026-03-05", "reasoning": {"effort": "medium"}}
-        self.assertEqual(resolve_upstream_api(body, _auto_settings()), "responses")
-
-    def test_chat_model_with_summary_uses_responses(self):
-        body = {
+    def test_legacy_mutation_env_does_not_change_request_body(self) -> None:
+        request = {
             "model": "gpt-5.4-2026-03-05",
-            "reasoning": {"effort": "medium", "summary": "auto"},
+            "input": "hello",
+            "max_output_tokens": 123,
+            "store": False,
         }
-        self.assertEqual(resolve_upstream_api(body, _auto_settings()), "responses")
+        with patch.dict(
+            "os.environ",
+            {
+                "AIDP_GPT_AK": "ak-1",
+                "AIDP_CODEX_PROXY_RESPONSES_BODY_MUTATION_ENABLED": "true",
+            },
+            clear=True,
+        ):
+            settings = AdapterSettings.from_env()
 
-    def test_summary_none_still_uses_responses(self):
-        body = {"model": "gpt-5.4-2026-03-05", "reasoning": {"summary": "none"}}
-        self.assertEqual(resolve_upstream_api(body, _auto_settings()), "responses")
+        upstream = build_upstream_request(request, settings=settings)
 
-    def test_non_chat_model_uses_responses_by_default(self):
-        self.assertEqual(
-            resolve_upstream_api({"model": "o4-mini"}, _auto_settings()), "responses"
-        )
+        self.assertEqual(upstream.upstream_api, "responses")
+        self.assertEqual(upstream.body, request)
 
-    def test_explicit_chat_config_wins_over_summary(self):
-        # An operator who pins upstream_api=chat_completions keeps that route even
-        # for a summary request (documented limitation: summaries then disappear).
-        settings = AdapterSettings(
-            upstream_api="chat_completions",
-            chat_completions_models=("gpt-5.4*",),
-        )
-        body = {"model": "gpt-5.4-2026-03-05", "reasoning": {"summary": "auto"}}
-        self.assertEqual(resolve_upstream_api(body, settings), "chat_completions")
+    def test_chat_completion_toml_url_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            toml_path = Path(tmp_dir) / "upstreams.toml"
+            toml_path.write_text(
+                "\n".join(
+                    (
+                        "[[upstreams]]",
+                        'alias = "legacy_chat"',
+                        'url = "https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online/v2/crawl"',
+                        'model_name = "gpt-5.4-2026-03-05"',
+                        'ak = "ak-1"',
+                        "weight = 1",
+                        "",
+                    )
+                ),
+                encoding="utf-8",
+            )
+            with patch.dict(
+                "os.environ",
+                {"AIDP_MODELHUB_UPSTREAMS_TOML": str(toml_path)},
+                clear=True,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "Responses API"):
+                    AdapterSettings.from_env()
+
+    def test_health_reports_only_responses_route_fields(self) -> None:
+        settings = AdapterSettings(modelhub_ak="ak-1")
+
+        payload = health_payload(settings)
+
+        self.assertEqual(payload["upstream_api"], "responses")
+        self.assertEqual(payload["responses_path"], "/responses")
+        self.assertNotIn("chat_completions_path", payload)
+        self.assertNotIn("chat_completions_models", payload)
+        self.assertNotIn("responses_body_mutation_enabled", payload)
 
 
 class DefaultGatewayTest(unittest.TestCase):
