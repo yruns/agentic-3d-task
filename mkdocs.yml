@@ -57,6 +57,7 @@ nav:
           - v4 Network Fix Strat600: benchmark/nr3d/v4_network_fix_strat600_20260610.md
           - v5 Summary Responses Strat600: benchmark/nr3d/v5_summary_responses_strat600_20260611.md
           - v6 Effort Ablation Chat Strat600: benchmark/nr3d/v6_effort_ablation_chat_strat600_20260611.md
+          - v7 Responses Passthrough Strat600: benchmark/nr3d/v7_responses_passthrough_strat600_20260630.md
       - OpenEQA:
           - Timeline: benchmark/openeqa/README.md
           - v1 SDK Migration Smoke: benchmark/openeqa/v1_codex_sdk_migration_smoke10_20260611.md

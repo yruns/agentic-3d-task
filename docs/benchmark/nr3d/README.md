@@ -20,6 +20,7 @@ Process archive for NR3D evaluations in `agentic-3d-task`. Mirrors the
 | [v4_network_fix_strat600_20260610](v4_network_fix_strat600_20260610.md) | 2026-06-10 | Codex agent VG | v3 + **sandbox network fix** so `keyframe_selector` (its parser LLM call) actually runs instead of silently falling back, strat600, gpt-5.4, 40 workers — **COMPLETE 600/600** | **Acc@0.25 = 78.33%** (Easy 82.8 / Hard 74.2 / V-Dep 68.3 / V-Indep 83.8) — **identical Overall to v3 (470/600); every tier Δ a ≤6-case shuffle inside the variance band.** Net: the fix is a correctness fix; the catalog-first selectors already cover the fold, so working `keyframe_selector` is accuracy-neutral here. 0 permanent failures; 48 transient 429s absorbed. Code `28d117a` |
 | [v5_summary_responses_strat600_20260611](v5_summary_responses_strat600_20260611.md) | 2026-06-11 | Codex agent VG | v4 + **reasoning effort `""`→`medium`** + **reasoning summaries on** (`--reasoning-summary auto`, which forces the upstream **/responses** API), on the **in-repo vendored adapter**, strat600, gpt-5.4, 40 workers — **COMPLETE 600/600** | **Acc@0.25 = 85.33% (512/600), +7.00 pp over v4** — uniform gain across every tier (Easy 89.3 / Hard 81.6 / **V-Dep 81.0** / V-Indep 87.7), all far outside the variance bands → **real, not noise.** Summaries captured 491/600 (81.8%); only 2 hard failures. The +7 pp was first attributed to effort, but **[v6](v6_effort_ablation_chat_strat600_20260611.md) isolated it**: ≈+2 pp effort + **≈+5 pp the /responses path** (the dominant lever). Code `56e2d24` |
 | [v6_effort_ablation_chat_strat600_20260611](v6_effort_ablation_chat_strat600_20260611.md) | 2026-06-11 | Codex agent VG | **Ablation** — effort `medium` on the **chat** path (summaries off) to split v5's +7 pp, strat600, gpt-5.4, 40 workers — **COMPLETE 600/600** | **Acc@0.25 = 80.33% (482/600)** (Easy 84.5 / Hard 76.5 / **V-Dep 72.5** / V-Indep 84.6). **Decomposes the v5 gain:** medium effort on chat = **+2.0 pp over v4** (near-noise); switching chat→/responses at fixed effort = **+5.0 pp** (v5−v6, dominant, biggest on V-Dep +8.5). **The `/responses` path — cross-turn reasoning-state carryover — is the real lever, not the effort param.** Chat-path cache signature 0.965/0.577 ≈ v4. Code `56e2d24` |
+| [v7_responses_passthrough_strat600_20260630](v7_responses_passthrough_strat600_20260630.md) | 2026-06-30 | Codex agent VG | **Adapter regression** — ModelHub adapter simplified to responses-first passthrough (`/v1/responses` body unchanged by default; compact proxied upstream), strat600, gpt-5.4, 40 workers — **COMPLETE 600/600** | **Acc@0.25 = 86.00% (516/600)** (Easy 90.3 / Hard 81.9 / **V-Dep 82.5** / V-Indep 87.9). Clears the migration gate: Overall ≥83, View-Dep ≥76.5, cache 0.987/0.930, 2 failures, summaries 542/600. This is v5-level behavior preserved by the simpler Responses API passthrough adapter. Code `4b51027` |
 
 ## Codex agent VG — per-tier accuracy (canonical strat600)
 
@@ -27,17 +28,18 @@ Process archive for NR3D evaluations in `agentic-3d-task`. Mirrors the
 box, gpt-5.4 via ModelHub adapter, all full 600/600 on the same fold. v1 =
 catalog-first **prompt-only**; v3/v4 = v1 + 9 in-turn evidence tools (+ loop fix,
 + sandbox network); v6 = v4 + **effort `medium` on the chat path**; v5 = v6 + the
-**`/responses` path** (effort `medium` + summaries on). Columns below are ordered as
-the **causal decomposition** (floor → tools → effort → path). (v2 looped, ran only
-169/600 at the v1 floor; v3 ≈ v4 Overall — see timeline.)
+**`/responses` path** (effort `medium` + summaries on); v7 validates that the
+simplified responses-passthrough adapter preserves v5-level behavior. Columns
+below are ordered as floor -> tools -> effort -> path -> current adapter. (v2
+looped, ran only 169/600 at the v1 floor; v3 ≈ v4 Overall — see timeline.)
 
-| Slice | n | v1 (floor) | v4 (tools) | v6 (+effort, chat) | **v5** (+/responses) | effort Δ (v6−v4) | path Δ (v5−v6) |
+| Slice | n | v1 (floor) | v4 (tools) | v6 (+effort, chat) | v5 (+/responses) | **v7** (passthrough) | v7-v5 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| **Overall** | 600 | 63.83% | 78.33% | 80.33% | **85.33%** | +2.00 | **+5.00** |
-| Easy | 290 | 73.10% | 82.76% | 84.48% | **89.31%** | +1.72 | +4.83 |
-| Hard | 310 | 55.16% | 74.19% | 76.45% | **81.61%** | +2.26 | +5.16 |
-| **View-Dep** | 211 | 51.66% | 68.25% | 72.51% | **81.04%** | +4.26 | **+8.53** |
-| View-Indep | 389 | 70.44% | 83.80% | 84.58% | **87.66%** | +0.78 | +3.08 |
+| **Overall** | 600 | 63.83% | 78.33% | 80.33% | 85.33% | **86.00%** | +0.67 |
+| Easy | 290 | 73.10% | 82.76% | 84.48% | 89.31% | **90.34%** | +1.03 |
+| Hard | 310 | 55.16% | 74.19% | 76.45% | 81.61% | **81.94%** | +0.32 |
+| **View-Dep** | 211 | 51.66% | 68.25% | 72.51% | 81.04% | **82.46%** | +1.42 |
+| View-Indep | 389 | 70.44% | 83.80% | 84.58% | 87.66% | **87.92%** | +0.26 |
 
 Three distinct levers, each isolated on this fold:
 
@@ -52,11 +54,16 @@ Three distinct levers, each isolated on this fold:
    drops it), so this inspect→rank→decide agent keeps its chain-of-thought between
    tool calls. (First attributed to effort in the v5 draft; the
    [v6 ablation](v6_effort_ablation_chat_strat600_20260611.md) corrected it.)
+4. **Adapter simplification** (v5 → v7): **+0.67 pp Overall, +1.42 pp View-Dep**,
+   both inside the strat600 bands. Read this as a regression gate pass: the
+   responses-passthrough adapter preserves v5 behavior while improving cache ratio
+   slightly (`0.930` vs `0.914`) and summary capture (`542/600` vs `491/600`).
 
 Full runs: [v3](v3_codex_tools_loopfix_strat600_20260609.md) ·
 [v4](v4_network_fix_strat600_20260610.md) ·
 [v5](v5_summary_responses_strat600_20260611.md) ·
-[v6](v6_effort_ablation_chat_strat600_20260611.md).
+[v6](v6_effort_ablation_chat_strat600_20260611.md) ·
+[v7](v7_responses_passthrough_strat600_20260630.md).
 
 ## Metric
 
