@@ -118,6 +118,21 @@ class FinalMaskMultiViewDecision(BaseModel):
     suggested_frame_ids: tuple[NonEmptyString, ...] = ()
     rejected_suggested_frame_ids: tuple[NonEmptyString, ...] = ()
 
+    @model_validator(mode="after")
+    def validate_suggestion_accounting(self) -> FinalMaskMultiViewDecision:
+        """Validate accepted and rejected suggested frame sets are disjoint."""
+        overlapping_frame_ids = _overlapping_frame_ids(
+            self.suggested_frame_ids,
+            self.rejected_suggested_frame_ids,
+        )
+        if overlapping_frame_ids:
+            raise ValueError(
+                "multi_view_decision.suggested_frame_ids and "
+                "rejected_suggested_frame_ids must not overlap: "
+                f"overlapping_frame_ids={overlapping_frame_ids}"
+            )
+        return self
+
 
 class FinalMaskArtifactDocument(BaseModel):
     """Strict JSON contract for one fused SceneFunc3D mask artifact."""
@@ -719,6 +734,16 @@ def _validate_expand_multi_view_decision(
             f"missing_accepted_followup_frame_ids="
             f"{missing_accepted_followup_frame_ids}"
         )
+
+
+def _overlapping_frame_ids(
+    first_frame_ids: tuple[str, ...],
+    second_frame_ids: tuple[str, ...],
+) -> tuple[str, ...]:
+    second_frame_id_set = set(second_frame_ids)
+    return tuple(
+        frame_id for frame_id in first_frame_ids if frame_id in second_frame_id_set
+    )
 
 
 def _validate_fragment_review_artifacts(

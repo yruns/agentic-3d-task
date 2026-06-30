@@ -1103,6 +1103,21 @@ def test_fuse_accepted_masks_rejects_expand_missing_accepted_followup_frame(
         fuse_accepted_masks(args, out_dir=tmp_path / "out")
 
 
+def test_fuse_accepted_masks_rejects_overlapping_suggested_and_rejected_frames(
+    tmp_path: Path,
+) -> None:
+    args = _two_fragment_fuse_args(
+        tmp_path,
+        multi_view_decision=_expand_decision_payload(
+            suggested_frame_ids=("000020",),
+            rejected_suggested_frame_ids=("000020",),
+        ),
+    )
+
+    with pytest.raises(ToolInputError, match="must not overlap"):
+        fuse_accepted_masks(args, out_dir=tmp_path / "out")
+
+
 def test_fuse_accepted_masks_rejects_fragment_without_point_indices(
     tmp_path: Path,
 ) -> None:
@@ -1342,13 +1357,14 @@ def _expand_decision_payload(
     *,
     seed_fragment_id: str = "frag-a",
     suggested_frame_ids: tuple[str, ...] = ("000020",),
+    rejected_suggested_frame_ids: tuple[str, ...] = (),
 ) -> MultiViewDecisionPayload:
     return {
         "seed_fragment_id": seed_fragment_id,
         "action": FinalMaskMultiViewAction.EXPAND.value,
         "reason": "first lift is sparse and the target part needs another view",
         "suggested_frame_ids": list(suggested_frame_ids),
-        "rejected_suggested_frame_ids": [],
+        "rejected_suggested_frame_ids": list(rejected_suggested_frame_ids),
     }
 
 
