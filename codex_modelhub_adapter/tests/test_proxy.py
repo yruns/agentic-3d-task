@@ -45,26 +45,20 @@ class RequestsReasoningSummaryTest(unittest.TestCase):
 
 
 class ResolveUpstreamApiTest(unittest.TestCase):
-    def test_chat_model_without_summary_uses_chat(self):
+    def test_chat_model_without_summary_uses_responses(self):
         body = {"model": "gpt-5.4-2026-03-05", "reasoning": {"effort": "medium"}}
-        self.assertEqual(
-            resolve_upstream_api(body, _auto_settings()), "chat_completions"
-        )
+        self.assertEqual(resolve_upstream_api(body, _auto_settings()), "responses")
 
-    def test_chat_model_with_summary_routes_to_responses(self):
-        # The chat upstream returns no reasoning content, so a summary request
-        # must go to /responses.
+    def test_chat_model_with_summary_uses_responses(self):
         body = {
             "model": "gpt-5.4-2026-03-05",
             "reasoning": {"effort": "medium", "summary": "auto"},
         }
         self.assertEqual(resolve_upstream_api(body, _auto_settings()), "responses")
 
-    def test_summary_none_stays_on_chat(self):
+    def test_summary_none_still_uses_responses(self):
         body = {"model": "gpt-5.4-2026-03-05", "reasoning": {"summary": "none"}}
-        self.assertEqual(
-            resolve_upstream_api(body, _auto_settings()), "chat_completions"
-        )
+        self.assertEqual(resolve_upstream_api(body, _auto_settings()), "responses")
 
     def test_non_chat_model_uses_responses_by_default(self):
         self.assertEqual(

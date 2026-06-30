@@ -58,6 +58,7 @@ class AdapterSettings:
     chat_context_retry_token_limit: int = 700000
     chat_context_chars_per_token: float = 2.8
     compact_summary_max_chars: int = 60000
+    responses_body_mutation_enabled: bool = False
     encrypted_state_fallback_enabled: bool = True
     timeout_seconds: float = 300.0
     max_429_retries: int = 3
@@ -131,6 +132,10 @@ class AdapterSettings:
             compact_summary_max_chars=_int_env(
                 "AIDP_CODEX_PROXY_COMPACT_SUMMARY_MAX_CHARS",
                 defaults.compact_summary_max_chars,
+            ),
+            responses_body_mutation_enabled=_bool_env(
+                "AIDP_CODEX_PROXY_RESPONSES_BODY_MUTATION_ENABLED",
+                defaults.responses_body_mutation_enabled,
             ),
             encrypted_state_fallback_enabled=_bool_env(
                 "AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED",
@@ -263,9 +268,10 @@ def build_upstream_request(
             chars_per_token=resolved_settings.chat_context_chars_per_token,
         )
         if upstream_api == "chat_completions"
-        else normalize_responses_body(
+        else _build_responses_body(
             raw_body,
             max_output_tokens=resolved_settings.max_output_tokens,
+            mutation_enabled=resolved_settings.responses_body_mutation_enabled,
         )
     )
     return UpstreamRequest(
@@ -284,22 +290,26 @@ def build_upstream_request(
     )
 
 
+def _build_responses_body(
+    raw_body: Any,
+    *,
+    max_output_tokens: int,
+    mutation_enabled: bool,
+) -> JsonObject:
+    if not isinstance(raw_body, dict):
+        return {}
+    if mutation_enabled:
+        return normalize_responses_body(
+            raw_body,
+            max_output_tokens=max_output_tokens,
+        )
+    return raw_body
+
+
 def resolve_upstream_api(raw_body: Any, settings: AdapterSettings) -> str:
     configured = settings.upstream_api
     if configured in {"responses", "chat_completions"}:
         return configured
-    # A reasoning *summary* is only produced by the Responses API. The
-    # chat-completions crawl upstream returns no reasoning content at all
-    # (verified empirically), so a turn that asks for a summary must go to
-    # /responses or the summary is silently lost. Everything else keeps the
-    # chat-completions default (prefix cache + context trimming live there).
-    if _requests_reasoning_summary(raw_body):
-        return "responses"
-    model = ""
-    if isinstance(raw_body, dict):
-        model = str(raw_body.get("model") or "").strip()
-    if model and _matches_any_model_pattern(model, settings.chat_completions_models):
-        return "chat_completions"
     return "responses"
 
 
@@ -465,6 +475,7 @@ def health_payload(settings: AdapterSettings | None = None) -> JsonObject:
         "chat_context_token_limit": resolved.chat_context_token_limit,
         "chat_context_retry_token_limit": resolved.chat_context_retry_token_limit,
         "chat_context_chars_per_token": resolved.chat_context_chars_per_token,
+        "responses_body_mutation_enabled": resolved.responses_body_mutation_enabled,
         "encrypted_state_fallback_enabled": resolved.encrypted_state_fallback_enabled,
         "session_id": resolved.session_id,
         "modelhub_key_pool_enabled": bool(keys),

@@ -299,7 +299,7 @@ class MappingTest(unittest.TestCase):
     def test_build_upstream_request_uses_office_chat_adapter_and_extra_header(self):
         settings = AdapterSettings(
             upstream_env="office",
-            upstream_api="auto",
+            upstream_api="chat_completions",
             chat_completions_models=("gpt-5.5*",),
             modelhub_ak="ak-1",
         )
@@ -319,18 +319,47 @@ class MappingTest(unittest.TestCase):
         self.assertEqual(upstream.body["max_tokens"], 65536)
         self.assertEqual(json.loads(upstream.headers["extra"]), {"session_id": "codex-demo", "source": "local"})
 
-    def test_build_upstream_request_routes_gpt54_to_chat_completions_by_default(self):
+    def test_build_upstream_request_routes_gpt54_to_responses_by_default(self):
+        request = {
+            "model": "gpt-5.4-2026-03-05",
+            "input": [
+                {"type": "message", "role": "user", "content": "hello"},
+                {
+                    "id": "rs_1",
+                    "type": "reasoning",
+                    "summary": [],
+                    "encrypted_content": "opaque-state",
+                },
+            ],
+            "previous_response_id": "resp_previous",
+            "max_output_tokens": 123,
+            "store": False,
+            "text": {
+                "format": {
+                    "type": "json_schema",
+                    "name": "answer",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {"answer": {"type": "string"}},
+                        "required": ["answer"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+        }
+
         upstream = build_upstream_request(
-            {"model": "gpt-5.4-2026-03-05", "input": "hello"},
+            request,
             settings=AdapterSettings(modelhub_ak="ak-1"),
         )
 
         self.assertEqual(
             upstream.url,
-            "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl?ak=ak-1",
+            "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/responses?ak=ak-1",
         )
-        self.assertEqual(upstream.upstream_api, "chat_completions")
-        self.assertEqual(upstream.body["messages"], [{"role": "user", "content": "hello"}])
+        self.assertEqual(upstream.upstream_api, "responses")
+        self.assertEqual(upstream.body, request)
 
     def test_build_upstream_request_uses_sticky_key_pool(self):
         settings = AdapterSettings(
@@ -383,9 +412,9 @@ weight = 3
 
         self.assertEqual(
             upstream.url,
-            "https://modelhub-a.example.test/api/modelhub/online/v2/crawl?ak=ak-from-toml",
+            "https://modelhub-a.example.test/api/modelhub/online/responses?ak=ak-from-toml",
         )
-        self.assertEqual(upstream.upstream_api, "chat_completions")
+        self.assertEqual(upstream.upstream_api, "responses")
         self.assertEqual(upstream.upstream_key_alias, "u1")
         self.assertEqual(upstream.upstream_key_selection, "toml_weighted_extra_hash")
 
