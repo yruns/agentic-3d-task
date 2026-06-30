@@ -129,6 +129,69 @@ class AppTest(unittest.TestCase):
         )
         self.assertEqual(call["json"], request_body)
 
+    def test_invalid_encrypted_content_fails_without_state_retry(self) -> None:
+        _FakeAsyncClient.calls = []
+        _FakeAsyncClient.response = [
+            _FakeUpstreamResponse(
+                status_code=400,
+                body=json.dumps(
+                    {
+                        "error": {
+                            "code": "invalid_encrypted_content",
+                            "message": "Encrypted content is invalid.",
+                        }
+                    }
+                ).encode(),
+            ),
+            _FakeUpstreamResponse(
+                body=json.dumps(
+                    {
+                        "id": "resp_retry_should_not_happen",
+                        "object": "response",
+                        "status": "completed",
+                        "output_text": "state retry",
+                    }
+                ).encode()
+            ),
+        ]
+        request_body = {
+            "model": "gpt-5.5-2026-04-24",
+            "previous_response_id": "resp_previous",
+            "input": [
+                {
+                    "type": "reasoning",
+                    "id": "rs_1",
+                    "encrypted_content": "opaque-state",
+                    "status": "completed",
+                },
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": "continue"}],
+                },
+            ],
+            "stream": False,
+        }
+
+        with patch.dict(
+            "os.environ",
+            {
+                "AIDP_GPT_AK": "ak-1",
+                "AIDP_CODEX_PROXY_UPSTREAM_ENV": "office",
+            },
+            clear=True,
+        ):
+            with patch("adapter.app.httpx.AsyncClient", _FakeAsyncClient):
+                response = TestClient(app).post(
+                    "/v1/responses",
+                    json=request_body,
+                )
+
+        self.assertEqual(len(_FakeAsyncClient.calls), 1)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"]["code"], "invalid_encrypted_content")
+        self.assertEqual(_FakeAsyncClient.calls[0]["json"], request_body)
+
     def test_compact_route_proxies_modelhub_responses_compact(self):
         _FakeAsyncClient.calls = []
         _FakeAsyncClient.response = _FakeUpstreamResponse(

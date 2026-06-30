@@ -46,7 +46,6 @@ class AdapterSettings:
     base_url: str = ""
     upstream_env: str = "office"
     responses_path: str = "/responses"
-    encrypted_state_fallback_enabled: bool = True
     timeout_seconds: float = 300.0
     max_429_retries: int = 3
     session_id: str = "case-reviewer-codex"
@@ -91,10 +90,6 @@ class AdapterSettings:
                 os.getenv("AIDP_CODEX_PROXY_UPSTREAM_ENV")
             ),
             responses_path=responses_path,
-            encrypted_state_fallback_enabled=_bool_env(
-                "AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED",
-                defaults.encrypted_state_fallback_enabled,
-            ),
             timeout_seconds=_float_env(
                 "AIDP_CODEX_PROXY_TIMEOUT_SECONDS", defaults.timeout_seconds
             ),
@@ -402,7 +397,6 @@ def health_payload(settings: AdapterSettings | None = None) -> JsonObject:
         "upstream_base_url": resolved.upstream_base_url,
         "upstream_api": _RESPONSES_API_NAME,
         "responses_path": _normalize_path(resolved.responses_path),
-        "encrypted_state_fallback_enabled": resolved.encrypted_state_fallback_enabled,
         "session_id": resolved.session_id,
         "modelhub_key_pool_enabled": bool(keys),
         "modelhub_key_pool_size": len(keys),

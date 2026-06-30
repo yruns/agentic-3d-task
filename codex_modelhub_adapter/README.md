@@ -42,7 +42,6 @@ concerns:
 - optional TOML upstream pool with `url`, `model_name`, `ak`, and `weight`
 - optional sticky AK pool selected by `extra.session_id`
 - 429 retry/failover
-- invalid encrypted state retry after removing opaque state
 
 ## Install
 

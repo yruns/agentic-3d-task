@@ -7,10 +7,6 @@ import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 
-from adapter.encrypted_state import (
-    is_invalid_encrypted_content,
-    sanitize_encrypted_state,
-)
 from adapter.proxy import (
     AdapterSettings,
     UpstreamRequest,
@@ -221,34 +217,12 @@ async def _open_upstream_with_retries(
         return stream_context, upstream, upstream_request
 
     error_bytes = await upstream.aread()
-    retry_request = None
-    if settings.encrypted_state_fallback_enabled and is_invalid_encrypted_content(
-        error_bytes
-    ):
-        if isinstance(raw_body, dict):
-            sanitized_body, stats = sanitize_encrypted_state(raw_body)
-            if (
-                stats.removed_encrypted_content_count
-                or stats.dropped_empty_reasoning_count
-                or stats.removed_previous_response_id
-            ):
-                retry_request = build_upstream_request(
-                    sanitized_body,
-                    settings=settings,
-                    upstream_extra=upstream_extra,
-                    logid=logid,
-                )
-
-    if retry_request is None:
-        return (
-            _BufferedResponseContext(),
-            _BufferedResponse(upstream, error_bytes),
-            upstream_request,
-        )
-
     await stream_context.__aexit__(None, None, None)
-    retry_stream_context, retry_upstream = await _open_upstream(client, retry_request)
-    return retry_stream_context, retry_upstream, retry_request
+    return (
+        _BufferedResponseContext(),
+        _BufferedResponse(upstream, error_bytes),
+        upstream_request,
+    )
 
 
 def _updated_excluded_upstream_aliases(

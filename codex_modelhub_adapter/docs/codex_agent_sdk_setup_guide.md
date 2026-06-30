@@ -110,8 +110,8 @@ openai-codex Python SDK
    - `/v1/responses` -> ModelHub `/responses`
    - `/v1/responses/compact` -> ModelHub `/responses/compact`
    - Responses request/response/SSE passthrough
-   - legacy Chat Completions fallback，仅在显式配置时启用
-   - encrypted state fallback
+   - Chat Completions 配置 fail closed
+   - encrypted reasoning state fail closed
    - 429 retry
    - AK pool sticky routing
 
@@ -261,7 +261,6 @@ AIDP_CODEX_PROXY_UPSTREAM_ENV=office
 AIDP_CODEX_PROXY_UPSTREAM_API=responses
 AIDP_CODEX_PROXY_RESPONSES_PATH=/responses
 
-AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED=true
 AIDP_CODEX_PROXY_TIMEOUT_SECONDS=300
 AIDP_CODEX_PROXY_MAX_429_RETRIES=3
 AIDP_CODEX_PROXY_SESSION_ID=case-reviewer-codex
@@ -309,14 +308,12 @@ https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online
 adapter/
   __init__.py
   app.py
-  encrypted_state.py
   proxy.py
 examples/
   run_codex_sdk.py
   run_skill_tool_trace.py
 tests/
   test_app.py
-  test_encrypted_state.py
   test_proxy.py
 tools/
   heart_mcp_server.py
@@ -337,9 +334,6 @@ README.md
 adapter/proxy.py
   读取环境变量，解析 office/online base URL，生成 ModelHub Responses
   请求 URL、headers、body，处理 AK pool。
-
-adapter/encrypted_state.py
-  负责 invalid_encrypted_content fallback 前的 Responses 状态清理。
 
 adapter/app.py
   FastAPI 入口，暴露 /health、/v1/responses、/v1/responses/compact，
@@ -369,7 +363,6 @@ AIDP_BASE_URL
 AIDP_CODEX_PROXY_UPSTREAM_ENV
 AIDP_CODEX_PROXY_UPSTREAM_API
 AIDP_CODEX_PROXY_RESPONSES_PATH
-AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED
 AIDP_CODEX_PROXY_TIMEOUT_SECONDS
 AIDP_CODEX_PROXY_MAX_429_RETRIES
 AIDP_CODEX_PROXY_SESSION_ID
@@ -419,23 +412,28 @@ AK 选择规则：
 5. 如果没有 pool，回退到单个 `AIDP_GPT_AK`。
 6. 如果没有 AK，`/v1/responses` 应返回 503。
 
-## 7. encrypted_state.py 设计要点
+## 7. encrypted reasoning state 设计要点
 
 当前 adapter 不再做 Responses 与 Chat Completions 之间的结构转换。
 `/v1/responses` 和 `/v1/responses/compact` 都按 Responses API 原样代理。
 
-唯一保留的 body 处理是错误恢复：当 upstream 返回
-`invalid_encrypted_content` 时，adapter 可以移除请求里的 opaque
-`encrypted_content`、空 reasoning item 和顶层 `previous_response_id`，然后
-用清理后的 Responses body 重试一次。这是 Responses API 的 fallback，不是
-协议转换。
+encrypted reasoning state 是 Codex turn 的上下文契约，必须和
+`previous_response_id`、reasoning item、prompt cache 输入完全对应。adapter
+不能移除 `encrypted_content`、空 reasoning item 或顶层
+`previous_response_id`，也不能在 `invalid_encrypted_content` 后用清理过的 body
+重试。
+
+如果 upstream 返回 `invalid_encrypted_content`，adapter 必须原样把这个错误透传
+给 Codex，让当前 turn 失败。这样可以避免产生“请求表面成功但上下文已经丢失”的
+假成功。
 
 必须保持的边界：
 
-- 正常请求 body 不改写。
+- 所有 `/v1/responses` 请求 body 不改写。
 - stream/non-stream 响应都直接透传 upstream。
 - compact 直接代理到 ModelHub `/responses/compact`。
 - `/v2/crawl` / Chat Completions 配置 fail closed。
+- `invalid_encrypted_content` 不 fallback、不 sanitize、不 retry。
 
 ## 8. app.py 设计要点
 
@@ -476,7 +474,7 @@ POST /v1/responses
 4. 调用 `build_upstream_request()`。
 5. 通过 `httpx.AsyncClient.stream()` 调 ModelHub。
 6. 对 429 做指数退避 retry。
-7. 对 invalid encrypted content 做 sanitize 后 retry。
+7. 对非 429 upstream 错误原样返回。
 8. Responses stream/non-stream 均原样透传。
 
 Compact endpoint：
@@ -869,13 +867,11 @@ tests/test_app.py
   Responses passthrough
   compact passthrough
   429 retry/failover
+  invalid encrypted content fail closed
 
 tests/test_proxy.py
   responses-only fail-closed behavior
   AK pool sticky selection
-
-tests/test_encrypted_state.py
-  encrypted state sanitize
 
 tests/test_app.py
   /v1/responses route
@@ -1168,21 +1164,9 @@ wire_api = "responses"
 
 Codex runtime 可能带上 opaque encrypted state。内部 upstream 不一定接受。
 
-adapter 当前支持：
-
-```text
-AIDP_CODEX_PROXY_ENCRYPTED_STATE_FALLBACK_ENABLED=true
-```
-
-它会移除：
-
-```text
-previous_response_id
-encrypted_content
-空 reasoning item
-```
-
-然后 retry。
+adapter 不能移除 `previous_response_id`、`encrypted_content` 或 reasoning item，也
+不能用清理后的 body retry。`invalid_encrypted_content` 必须原样透传，让当前
+turn 失败；否则上下文和 prompt cache 输入可能不再对应。
 
 ### 15.6 模型只返回文本，不执行工具
 
@@ -1235,18 +1219,17 @@ turn: no tools
 2. 写 `.codex-home/config.toml`，确认 `CODEX_HOME` 指向项目目录。
 3. 写 `.env.example`，真实 AK 只放 `.env` 或 shell export。
 4. 实现 `adapter/proxy.py`，先保证 URL、AK、office endpoint 和 body route 正确。
-5. 实现 `adapter/encrypted_state.py`，只保留 invalid encrypted content fallback。
-6. 实现 `adapter/app.py`。
-7. 写 `tests/test_proxy.py`、`tests/test_encrypted_state.py` 和 `tests/test_app.py`。
-8. `uv run python -m unittest discover -s tests`。
-9. 启动 adapter。
-10. `/health`。
-11. 直接 `/v1/responses` 问 `1+1`。
-12. 跑 `examples/run_codex_sdk.py` 创建 `codex_sdk_smoke.txt`。
-13. 跑爱心打印任务。
-14. 创建 skill 和 MCP server。
-15. 跑 `examples/run_skill_tool_trace.py`。
-16. 如实记录 trace，不要把“CLI 识别 MCP server”等同于“SDK 原生调用自定义 MCP tool”。
+5. 实现 `adapter/app.py`，保证 `/v1/responses` body 原样透传，非 429 upstream 错误原样返回。
+6. 写 `tests/test_proxy.py` 和 `tests/test_app.py`。
+7. `uv run python -m unittest discover -s tests`。
+8. 启动 adapter。
+9. `/health`。
+10. 直接 `/v1/responses` 问 `1+1`。
+11. 跑 `examples/run_codex_sdk.py` 创建 `codex_sdk_smoke.txt`。
+12. 跑爱心打印任务。
+13. 创建 skill 和 MCP server。
+14. 跑 `examples/run_skill_tool_trace.py`。
+15. 如实记录 trace，不要把“CLI 识别 MCP server”等同于“SDK 原生调用自定义 MCP tool”。
 
 ## 17. 当前仓库关键文件索引
 
@@ -1269,9 +1252,6 @@ adapter/app.py
 adapter/proxy.py
   配置解析、AK、URL、upstream request 构建。
 
-adapter/encrypted_state.py
-  invalid encrypted content fallback 清理。
-
 examples/run_codex_sdk.py
   最小 SDK smoke。
 
@@ -1286,7 +1266,6 @@ tools/heart_mcp_server.py
 
 tests/test_app.py
 tests/test_proxy.py
-tests/test_encrypted_state.py
 tests/test_print_heart.py
   回归测试。
 ```
