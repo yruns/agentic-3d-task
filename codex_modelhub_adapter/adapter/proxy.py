@@ -69,7 +69,7 @@ class AdapterSettings:
     modelhub_upstreams: tuple[ModelHubUpstream, ...] = ()
 
     @classmethod
-    def from_env(cls) -> "AdapterSettings":
+    def from_env(cls) -> AdapterSettings:
         defaults = cls()
         legacy_url = (os.getenv("MODELHUB_URL") or "").strip()
         base_url = (os.getenv("AIDP_BASE_URL") or "").strip()
@@ -738,7 +738,7 @@ def _pick_modelhub_upstream_by_weighted_session_hash(
 ) -> ModelHubUpstream:
     total_weight = sum(upstream.weight for upstream in upstreams)
     digest = hashlib.sha256(
-        f"{session_id}:{model}:modelhub-upstream".encode("utf-8")
+        f"{session_id}:{model}:modelhub-upstream".encode()
     ).hexdigest()
     bucket = int(digest, 16) % total_weight
     cumulative = 0
@@ -798,7 +798,7 @@ def _pick_modelhub_key_by_rendezvous_hash(
     best_score = -1
     for key in keys:
         alias, _ = key
-        digest = hashlib.sha256(f"{session_id}:{alias}".encode("utf-8")).hexdigest()
+        digest = hashlib.sha256(f"{session_id}:{alias}".encode()).hexdigest()
         score = int(digest, 16)
         if score > best_score:
             best_score = score

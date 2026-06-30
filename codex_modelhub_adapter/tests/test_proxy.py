@@ -7,9 +7,9 @@ from unittest.mock import patch
 
 from adapter.proxy import (
     AdapterSettings,
+    _requests_reasoning_summary,
     build_upstream_request,
     health_payload,
-    _requests_reasoning_summary,
     resolve_upstream_api,
 )
 

@@ -1,8 +1,8 @@
-import json
-import unittest
 import asyncio
+import json
 import os
 import tempfile
+import unittest
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -12,8 +12,8 @@ from adapter.mapping import (
     build_modelhub_payload,
     build_responses_payload,
     extract_text,
-    iter_sse_events,
     iter_chat_sse_as_responses,
+    iter_sse_events,
     sanitize_encrypted_state,
 )
 from adapter.proxy import (
@@ -158,11 +158,25 @@ class MappingTest(unittest.TestCase):
         )
 
     def test_extract_text_supports_common_modelhub_shapes(self):
-        self.assertEqual(extract_text({"output_text": "from output_text"}), "from output_text")
-        self.assertEqual(extract_text({"text": "from text"}), "from text")
-        self.assertEqual(extract_text({"data": {"output": "from data output"}}), "from data output")
         self.assertEqual(
-            extract_text({"choices": [{"message": {"content": [{"type": "text", "text": "from list"}]}}]}),
+            extract_text({"output_text": "from output_text"}), "from output_text"
+        )
+        self.assertEqual(extract_text({"text": "from text"}), "from text")
+        self.assertEqual(
+            extract_text({"data": {"output": "from data output"}}), "from data output"
+        )
+        self.assertEqual(
+            extract_text(
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": [{"type": "text", "text": "from list"}]
+                            }
+                        }
+                    ]
+                }
+            ),
             "from list",
         )
 
@@ -192,25 +206,39 @@ class MappingTest(unittest.TestCase):
         self.assertEqual(payloads[1]["delta"], "hello")
         self.assertEqual(payloads[3]["response"]["output_text"], "hello")
 
-    def test_build_chat_completions_body_preserves_tool_pairs_and_drops_unpaired_calls(self):
+    def test_build_chat_completions_body_preserves_tool_pairs_and_drops_unpaired_calls(
+        self,
+    ):
         request = {
             "model": "gpt-5.5-2026-04-24",
             "input": [
-                {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "start"}]},
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": "start"}],
+                },
                 {
                     "type": "function_call",
                     "call_id": "call_keep",
                     "name": "shell",
-                    "arguments": "{\"cmd\":\"pwd\"}",
+                    "arguments": '{"cmd":"pwd"}',
                 },
-                {"type": "function_call_output", "call_id": "call_keep", "output": "/tmp/project"},
+                {
+                    "type": "function_call_output",
+                    "call_id": "call_keep",
+                    "output": "/tmp/project",
+                },
                 {
                     "type": "function_call",
                     "call_id": "call_drop",
                     "name": "apply_patch",
-                    "arguments": "{\"patch\":\"...\"}",
+                    "arguments": '{"patch":"..."}',
                 },
-                {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "continue"}]},
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": "continue"}],
+                },
             ],
             "max_output_tokens": 64,
         }
@@ -228,11 +256,15 @@ class MappingTest(unittest.TestCase):
                         {
                             "id": "call_keep",
                             "type": "function",
-                            "function": {"name": "shell", "arguments": "{\"cmd\":\"pwd\"}"},
+                            "function": {"name": "shell", "arguments": '{"cmd":"pwd"}'},
                         }
                     ],
                 },
-                {"role": "tool", "tool_call_id": "call_keep", "content": "/tmp/project"},
+                {
+                    "role": "tool",
+                    "tool_call_id": "call_keep",
+                    "content": "/tmp/project",
+                },
                 {"role": "user", "content": "continue"},
             ],
         )
@@ -246,7 +278,10 @@ class MappingTest(unittest.TestCase):
             yield "data: [DONE]\n\n"
 
         async def collect():
-            return [chunk.decode("utf-8") async for chunk in iter_chat_sse_as_responses(chunks())]
+            return [
+                chunk.decode("utf-8")
+                async for chunk in iter_chat_sse_as_responses(chunks())
+            ]
 
         events = asyncio.run(collect())
         payloads = [
@@ -277,7 +312,12 @@ class MappingTest(unittest.TestCase):
             "previous_response_id": "resp_old",
             "input": [
                 {"type": "message", "role": "user", "content": "continue"},
-                {"id": "rs_1", "type": "reasoning", "summary": [], "encrypted_content": "gAAA"},
+                {
+                    "id": "rs_1",
+                    "type": "reasoning",
+                    "summary": [],
+                    "encrypted_content": "gAAA",
+                },
                 {
                     "type": "message",
                     "role": "assistant",
@@ -315,9 +355,14 @@ class MappingTest(unittest.TestCase):
             "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl?ak=ak-1",
         )
         self.assertEqual(upstream.upstream_api, "chat_completions")
-        self.assertEqual(upstream.body["messages"], [{"role": "user", "content": "hello"}])
+        self.assertEqual(
+            upstream.body["messages"], [{"role": "user", "content": "hello"}]
+        )
         self.assertEqual(upstream.body["max_tokens"], 65536)
-        self.assertEqual(json.loads(upstream.headers["extra"]), {"session_id": "codex-demo", "source": "local"})
+        self.assertEqual(
+            json.loads(upstream.headers["extra"]),
+            {"session_id": "codex-demo", "source": "local"},
+        )
 
     def test_build_upstream_request_routes_gpt54_to_responses_by_default(self):
         request = {
@@ -372,13 +417,17 @@ class MappingTest(unittest.TestCase):
         extra = {"session_id": "codex-sticky-session"}
 
         first = build_upstream_request(request, settings=settings, upstream_extra=extra)
-        second = build_upstream_request(request, settings=settings, upstream_extra=extra)
+        second = build_upstream_request(
+            request, settings=settings, upstream_extra=extra
+        )
 
         self.assertEqual(first.url, second.url)
         self.assertEqual(first.upstream_key_alias, second.upstream_key_alias)
         self.assertIn(first.upstream_key_alias, {"k1", "k2", "k3"})
 
-    def test_build_upstream_request_uses_toml_weighted_upstream_for_matching_model(self):
+    def test_build_upstream_request_uses_toml_weighted_upstream_for_matching_model(
+        self,
+    ):
         with tempfile.TemporaryDirectory() as tmpdir:
             toml_path = Path(tmpdir) / "modelhub_upstreams.toml"
             toml_path.write_text(
@@ -479,7 +528,9 @@ weight = 1
             ):
                 settings = AdapterSettings.from_env()
 
-        with self.assertRaisesRegex(RuntimeError, "No ModelHub TOML upstream matches model 'gpt-5.4-2026-03-05'"):
+        with self.assertRaisesRegex(
+            RuntimeError, "No ModelHub TOML upstream matches model 'gpt-5.4-2026-03-05'"
+        ):
             build_upstream_request(
                 {"model": "gpt-5.4-2026-03-05", "input": "hello"},
                 settings=settings,
@@ -491,8 +542,17 @@ weight = 1
             {
                 "model": "gpt-5.5-2026-04-24",
                 "input": [
-                    {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "hello" * 100}]},
-                    {"type": "function_call", "call_id": "call_demo", "name": "search", "arguments": "{\"q\":\"demo\"}"},
+                    {
+                        "type": "message",
+                        "role": "user",
+                        "content": [{"type": "input_text", "text": "hello" * 100}],
+                    },
+                    {
+                        "type": "function_call",
+                        "call_id": "call_demo",
+                        "name": "search",
+                        "arguments": '{"q":"demo"}',
+                    },
                 ],
             },
             max_chars=180,

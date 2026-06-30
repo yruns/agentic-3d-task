@@ -9,9 +9,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from fastapi.testclient import TestClient
-
 from adapter.app import app
+from fastapi.testclient import TestClient
 
 
 class _FakeUpstreamResponse:
