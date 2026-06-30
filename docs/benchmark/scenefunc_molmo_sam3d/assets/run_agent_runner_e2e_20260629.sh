@@ -83,9 +83,9 @@ export CODEX_AGENT_MODEL="${CODEX_AGENT_MODEL:-gpt-5.4-2026-03-05}"
 export CODEX_AGENT_MODEL_PROVIDER="${CODEX_AGENT_MODEL_PROVIDER:-modelhub_adapter}"
 export CODEX_AGENT_COPY_AUTH="${CODEX_AGENT_COPY_AUTH:-0}"
 export CODEX_AGENT_ENABLE_PREFIX_CACHE="${CODEX_AGENT_ENABLE_PREFIX_CACHE:-1}"
-export CODEX_AGENT_TURN_TIMEOUT_S="${CODEX_AGENT_TURN_TIMEOUT_S:-1800}"
-export CODEX_AGENT_MAX_TOOL_CALLS="${CODEX_AGENT_MAX_TOOL_CALLS:-48}"
-export CODEX_AGENT_MAX_REPEATED_TOOL_CALLS="${CODEX_AGENT_MAX_REPEATED_TOOL_CALLS:-3}"
+export CODEX_AGENT_TURN_TIMEOUT_S="${CODEX_AGENT_TURN_TIMEOUT_S:-900}"
+export CODEX_AGENT_MAX_TOOL_CALLS="${CODEX_AGENT_MAX_TOOL_CALLS:-128}"
+export CODEX_AGENT_MAX_REPEATED_TOOL_CALLS="${CODEX_AGENT_MAX_REPEATED_TOOL_CALLS:-6}"
 export CODEX_AGENT_KEEP_RUN_HOME="${CODEX_AGENT_KEEP_RUN_HOME:-1}"
 
 mkdir -p "${RUN_ROOT}/logs"
@@ -420,14 +420,24 @@ def run_agent_runner(sample_args: list[str]) -> None:
         "--score",
     ]
     with log_path.open("wb") as log_handle:
-        completed = subprocess.run(
-            command,
-            cwd=repo_root,
-            env=os.environ.copy(),
-            stdout=subprocess.PIPE,
-            stderr=log_handle,
-            check=True,
-        )
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=repo_root,
+                env=os.environ.copy(),
+                stdout=subprocess.PIPE,
+                stderr=log_handle,
+                check=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            if exc.stdout is None:
+                stdout_path.write_bytes(b"")
+            else:
+                stdout_path.write_bytes(exc.stdout)
+                print(exc.stdout.decode("utf-8", errors="replace"), flush=True)
+            print(f"runner stdout: {stdout_path}", flush=True)
+            print(f"runner log: {log_path}", flush=True)
+            raise
     stdout_path.write_bytes(completed.stdout)
     print(completed.stdout.decode("utf-8"), flush=True)
     print(f"runner stdout: {stdout_path}", flush=True)

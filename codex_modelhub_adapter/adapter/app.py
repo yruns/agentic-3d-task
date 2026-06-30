@@ -24,7 +24,6 @@ from adapter.proxy import (
     resolve_upstream_extra,
 )
 
-
 app = FastAPI(title="Codex ModelHub Adapter")
 
 
@@ -48,7 +47,9 @@ async def create_response(
     try:
         raw_body: Any = await request.json()
     except Exception as exc:
-        raise HTTPException(status_code=400, detail="Request body must be valid JSON") from exc
+        raise HTTPException(
+            status_code=400, detail="Request body must be valid JSON"
+        ) from exc
 
     settings = AdapterSettings.from_env()
     resolved_extra = resolve_upstream_extra(
@@ -83,7 +84,9 @@ async def create_response(
         )
     except httpx.HTTPError as exc:
         await client.aclose()
-        raise HTTPException(status_code=502, detail=f"Failed to reach AIDP upstream: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"Failed to reach AIDP upstream: {exc}"
+        ) from exc
 
     response_headers = _copy_response_headers(upstream)
     if upstream_request.headers.get("X-TT-LOGID"):
@@ -102,6 +105,7 @@ async def create_response(
 
     if upstream_request.upstream_api == "chat_completions":
         if bool(upstream_request.body.get("stream")):
+
             async def iter_chat_as_responses():
                 try:
                     async for chunk in iter_chat_sse_as_responses(
@@ -125,7 +129,9 @@ async def create_response(
         await stream_context.__aexit__(None, None, None)
         await client.aclose()
         try:
-            upstream_payload = json.loads(upstream_bytes.decode("utf-8")) if upstream_bytes else {}
+            upstream_payload = (
+                json.loads(upstream_bytes.decode("utf-8")) if upstream_bytes else {}
+            )
         except Exception:
             upstream_payload = {}
         if isinstance(upstream_payload, dict):
@@ -143,6 +149,7 @@ async def create_response(
         )
 
     if bool(upstream_request.body.get("stream")):
+
         async def iter_upstream_body():
             try:
                 async for chunk in upstream.aiter_raw():
@@ -175,7 +182,9 @@ async def compact_response(request: Request) -> JSONResponse:
     try:
         raw_body: Any = await request.json()
     except Exception as exc:
-        raise HTTPException(status_code=400, detail="Request body must be valid JSON") from exc
+        raise HTTPException(
+            status_code=400, detail="Request body must be valid JSON"
+        ) from exc
     settings = AdapterSettings.from_env()
     return JSONResponse(
         content=build_compaction_response(
@@ -196,11 +205,23 @@ async def _open_upstream_with_retries(
 ) -> tuple[Any, httpx.Response, Any]:
     stream_context = None
     upstream = None
+    excluded_upstream_aliases: frozenset[str] = frozenset()
     for attempt in range(settings.max_429_retries + 1):
         stream_context, upstream = await _open_upstream(client, upstream_request)
         if upstream.status_code == 429 and attempt < settings.max_429_retries:
+            excluded_upstream_aliases = _updated_excluded_upstream_aliases(
+                upstream_request,
+                excluded_upstream_aliases,
+            )
+            upstream_request = build_upstream_request(
+                raw_body,
+                settings=settings,
+                upstream_extra=upstream_extra,
+                logid=logid,
+                excluded_upstream_aliases=excluded_upstream_aliases,
+            )
             await stream_context.__aexit__(None, None, None)
-            await asyncio.sleep(1.0 * (2 ** attempt))
+            await asyncio.sleep(1.0 * (2**attempt))
             continue
         break
 
@@ -212,7 +233,10 @@ async def _open_upstream_with_retries(
 
     error_bytes = await upstream.aread()
     retry_request = None
-    if upstream_request.upstream_api == "chat_completions" and is_context_length_exceeded(error_bytes):
+    if (
+        upstream_request.upstream_api == "chat_completions"
+        and is_context_length_exceeded(error_bytes)
+    ):
         retry_request = build_upstream_request(
             raw_body,
             settings=settings,
@@ -220,7 +244,9 @@ async def _open_upstream_with_retries(
             upstream_extra=upstream_extra,
             logid=logid,
         )
-    elif settings.encrypted_state_fallback_enabled and is_invalid_encrypted_content(error_bytes):
+    elif settings.encrypted_state_fallback_enabled and is_invalid_encrypted_content(
+        error_bytes
+    ):
         if isinstance(raw_body, dict):
             sanitized_body, stats = sanitize_encrypted_state(raw_body)
             if (
@@ -236,14 +262,31 @@ async def _open_upstream_with_retries(
                 )
 
     if retry_request is None:
-        return _BufferedResponseContext(), _BufferedResponse(upstream, error_bytes), upstream_request
+        return (
+            _BufferedResponseContext(),
+            _BufferedResponse(upstream, error_bytes),
+            upstream_request,
+        )
 
     await stream_context.__aexit__(None, None, None)
     retry_stream_context, retry_upstream = await _open_upstream(client, retry_request)
     return retry_stream_context, retry_upstream, retry_request
 
 
-async def _open_upstream(client: httpx.AsyncClient, upstream_request: Any) -> tuple[Any, httpx.Response]:
+def _updated_excluded_upstream_aliases(
+    upstream_request: Any,
+    excluded_upstream_aliases: frozenset[str],
+) -> frozenset[str]:
+    if upstream_request.upstream_key_selection != "toml_weighted_extra_hash":
+        return excluded_upstream_aliases
+    if not upstream_request.upstream_key_alias:
+        return excluded_upstream_aliases
+    return excluded_upstream_aliases | frozenset((upstream_request.upstream_key_alias,))
+
+
+async def _open_upstream(
+    client: httpx.AsyncClient, upstream_request: Any
+) -> tuple[Any, httpx.Response]:
     stream_context = client.stream(
         "POST",
         upstream_request.url,

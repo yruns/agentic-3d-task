@@ -49,14 +49,22 @@ class _FakeStreamContext:
 
 class _FakeAsyncClient:
     calls: list[dict[str, Any]] = []
-    response: _FakeUpstreamResponse | list[_FakeUpstreamResponse] = _FakeUpstreamResponse()
+    response: _FakeUpstreamResponse | list[_FakeUpstreamResponse] = (
+        _FakeUpstreamResponse()
+    )
 
     def __init__(self, *args, **kwargs) -> None:
         self.init_kwargs = kwargs
 
-    def stream(self, method: str, url: str, *, headers: dict[str, str], json: dict[str, Any]):
-        self.calls.append({"method": method, "url": url, "headers": headers, "json": json})
-        response = self.response.pop(0) if isinstance(self.response, list) else self.response
+    def stream(
+        self, method: str, url: str, *, headers: dict[str, str], json: dict[str, Any]
+    ):
+        self.calls.append(
+            {"method": method, "url": url, "headers": headers, "json": json}
+        )
+        response = (
+            self.response.pop(0) if isinstance(self.response, list) else self.response
+        )
         return _FakeStreamContext(response)
 
     async def aclose(self) -> None:
@@ -87,7 +95,11 @@ class AppTest(unittest.TestCase):
                 {
                     "model": "gpt-5.5-2026-04-24",
                     "choices": [{"message": {"role": "assistant", "content": "2"}}],
-                    "usage": {"prompt_tokens": 10, "completion_tokens": 1, "total_tokens": 11},
+                    "usage": {
+                        "prompt_tokens": 10,
+                        "completion_tokens": 1,
+                        "total_tokens": 11,
+                    },
                 }
             ).encode()
         )
@@ -103,7 +115,11 @@ class AppTest(unittest.TestCase):
             with patch("adapter.app.httpx.AsyncClient", _FakeAsyncClient):
                 response = TestClient(app).post(
                     "/v1/responses",
-                    json={"model": "gpt-5.5-2026-04-24", "input": "What is 1+1?", "stream": False},
+                    json={
+                        "model": "gpt-5.5-2026-04-24",
+                        "input": "What is 1+1?",
+                        "stream": False,
+                    },
                 )
 
         self.assertEqual(response.status_code, 200)
@@ -114,7 +130,9 @@ class AppTest(unittest.TestCase):
             call["url"],
             "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl?ak=ak-1",
         )
-        self.assertEqual(call["json"]["messages"], [{"role": "user", "content": "What is 1+1?"}])
+        self.assertEqual(
+            call["json"]["messages"], [{"role": "user", "content": "What is 1+1?"}]
+        )
         self.assertEqual(call["json"]["max_tokens"], 65536)
 
     def test_compact_route_returns_local_response_compaction(self):
@@ -123,7 +141,11 @@ class AppTest(unittest.TestCase):
             json={
                 "model": "gpt-5.5-2026-04-24",
                 "input": [
-                    {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "hello"}]},
+                    {
+                        "type": "message",
+                        "role": "user",
+                        "content": [{"type": "input_text", "text": "hello"}],
+                    },
                 ],
             },
         )
@@ -164,8 +186,76 @@ weight = 2
         self.assertEqual(payload["status"], "healthy")
         self.assertTrue(payload["config"]["has_upstream_ak"])
         self.assertEqual(payload["config"]["modelhub_toml_upstream_count"], 1)
-        self.assertEqual(payload["config"]["modelhub_toml_models"], ["gpt-5.5-2026-04-24"])
+        self.assertEqual(
+            payload["config"]["modelhub_toml_models"], ["gpt-5.5-2026-04-24"]
+        )
         self.assertNotIn("ak-secret-from-toml", json.dumps(payload, ensure_ascii=False))
+
+    def test_responses_retries_429_with_different_toml_upstream(self):
+        _FakeAsyncClient.calls = []
+        _FakeAsyncClient.response = [
+            _FakeUpstreamResponse(status_code=429, body=b'{"error":"rate limited"}'),
+            _FakeUpstreamResponse(
+                body=json.dumps(
+                    {
+                        "model": "gpt-5.4-2026-03-05",
+                        "choices": [
+                            {"message": {"role": "assistant", "content": "ok"}}
+                        ],
+                    }
+                ).encode()
+            ),
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            toml_path = Path(tmpdir) / "modelhub_upstreams.toml"
+            toml_path.write_text(
+                """
+[[upstreams]]
+alias = "u1"
+url = "https://modelhub-a.example.test/api/modelhub/online"
+model_name = "gpt-5.4-2026-03-05"
+ak = "ak-from-toml-a"
+weight = 1
+
+[[upstreams]]
+alias = "u2"
+url = "https://modelhub-b.example.test/api/modelhub/online"
+model_name = "gpt-5.4-2026-03-05"
+ak = "ak-from-toml-b"
+weight = 1
+""".strip(),
+                encoding="utf-8",
+            )
+            with _env(
+                {
+                    "AIDP_MODELHUB_UPSTREAMS_TOML": str(toml_path),
+                    "AIDP_CODEX_PROXY_MAX_429_RETRIES": "1",
+                },
+                remove=(
+                    "AIDP_GPT_AK",
+                    "AIDP_MODELHUB_AK",
+                    "MODELHUB_AK",
+                    "CASE_REVIEW_LLM_AK",
+                    "AIDP_MODELHUB_AK_POOL",
+                ),
+            ):
+                with patch("adapter.app.asyncio.sleep", return_value=None):
+                    with patch("adapter.app.httpx.AsyncClient", _FakeAsyncClient):
+                        response = TestClient(app).post(
+                            "/v1/responses",
+                            json={
+                                "model": "gpt-5.4-2026-03-05",
+                                "input": "hello",
+                                "stream": False,
+                            },
+                        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["output_text"], "ok")
+        self.assertEqual(len(_FakeAsyncClient.calls), 2)
+        called_urls = {call["url"] for call in _FakeAsyncClient.calls}
+        self.assertEqual(len(called_urls), 2)
 
 
 if __name__ == "__main__":

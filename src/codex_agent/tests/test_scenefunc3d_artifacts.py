@@ -195,6 +195,24 @@ def test_inspect_mask_artifact_ignores_review_only_frame_fields(
     assert args.overlay_paths == (overlay_path,)
 
 
+def test_inspect_mask_artifact_accepts_lift_overlay_path_alias(
+    tmp_path: Path,
+) -> None:
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "fragment-a")
+    lift_overlay_path = tmp_path / "lift_overlay.txt"
+    lift_overlay_path.write_text("reviewed\n", encoding="utf-8")
+
+    args = InspectMaskArtifactArgs.model_validate(
+        {
+            "mask_npz_path": str(mask_npz_path),
+            "mask_ply_path": str(mask_ply_path),
+            "lift_overlay_path": str(lift_overlay_path),
+        }
+    )
+
+    assert args.overlay_paths == (lift_overlay_path,)
+
+
 def test_suggested_views_payload() -> None:
     result = SuggestedViewsResult(
         seed_fragment_id="000050_mask_00",

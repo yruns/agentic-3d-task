@@ -178,8 +178,13 @@ class InspectMaskArtifactArgs(BaseModel):
             return payload
         values = dict(payload)
         overlay_path = values.pop("overlay_path", None)
-        if "overlay_paths" not in values and overlay_path is not None:
-            values["overlay_paths"] = [overlay_path]
+        lift_overlay_path = values.pop("lift_overlay_path", None)
+        if "overlay_paths" not in values:
+            overlay_paths = tuple(
+                path for path in (overlay_path, lift_overlay_path) if path is not None
+            )
+            if overlay_paths:
+                values["overlay_paths"] = list(overlay_paths)
         values.pop("frame_id", None)
         values.pop("candidate_id", None)
         return values

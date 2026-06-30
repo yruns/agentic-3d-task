@@ -6,6 +6,7 @@ import importlib
 import importlib.machinery
 import importlib.util
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from types import ModuleType
 from typing import cast
@@ -751,6 +752,643 @@ def test_cli_writes_tool_failed_event_for_recoverable_error(
     assert event["status"] == "failed"
     assert event["args"] == {"frame_ids": ["000000"]}
     assert event["result"] is None
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_frame_search_after_successful_molmo_point(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    out_dir.mkdir()
+    (out_dir / "events.jsonl").write_text(
+        json.dumps(
+            {
+                "event_type": "tool_completed",
+                "tool_name": "molmo_point",
+                "status": "success",
+                "args": {},
+                "result": {"points": [{"x_px": 10.0, "y_px": 20.0}]},
+                "error": "",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000"}),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(event_lines) == 2
+    event = json.loads(event_lines[1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "view_frame"
+    assert "after a successful molmo_point call" in payload["error"]
+    assert "sam_mask" in payload["error"]
+    assert "molmo_point" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_frame_search_after_successful_sam_mask(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    _write_successful_checkpoint_event(out_dir, "sam_mask")
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000"}),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "view_frame"
+    assert "after a successful sam_mask call" in payload["error"]
+    assert "lift_mask_to_3d" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_inspection_before_lift_after_successful_sam_mask(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    _write_successful_checkpoint_event(out_dir, "sam_mask")
+
+    code = main(
+        [
+            "inspect_mask_artifact",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "mask_npz_path": str(out_dir / "lifted" / "mask_data.npz"),
+                    "mask_ply_path": str(out_dir / "lifted" / "lifted_points.ply"),
+                    "lift_overlay_path": str(out_dir / "lifted" / "lift_overlay.jpg"),
+                }
+            ),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "inspect_mask_artifact"
+    assert "after a successful sam_mask call" in payload["error"]
+    assert "call lift_mask_to_3d first" in payload["error"]
+    assert "candidate_id" in payload["error"]
+    assert "mask_npz_path" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_repeated_inspection_without_new_lift(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    _write_successful_checkpoint_event(out_dir, "inspect_mask_artifact")
+
+    code = main(
+        [
+            "inspect_mask_artifact",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "mask_npz_path": str(out_dir / "fragments" / "mask_data.npz"),
+                    "mask_ply_path": str(out_dir / "fragments" / "lifted_points.ply"),
+                    "lift_overlay_path": str(
+                        out_dir / "fragments" / "lift_overlay.txt"
+                    ),
+                }
+            ),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "inspect_mask_artifact"
+    assert "do not call inspect_mask_artifact again" in payload["error"]
+    assert "lift_mask_to_3d for a different candidate" in payload["error"]
+    assert "suggest_additional_views or fuse_accepted_masks" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_allows_frame_search_after_successful_inspection(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    Image.new("RGB", (12, 10), color=(10, 20, 30)).save(
+        scene_dir / "raw" / "000010-rgb.png"
+    )
+    _write_successful_checkpoint_event(out_dir, "inspect_mask_artifact")
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000010"}),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["frames"][0]["frame_id"] == "000010"
+
+
+def test_cli_allows_idempotent_inspection_repeat(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "fragment-a")
+    lift_overlay_path = _write_lift_overlay(
+        tmp_path / "fragment-a" / "lift_overlay.txt",
+        frame_id="000000",
+        candidate_id="mask_00",
+    )
+    tool_args = {
+        "mask_npz_path": str(mask_npz_path),
+        "mask_ply_path": str(mask_ply_path),
+        "lift_overlay_path": str(lift_overlay_path),
+    }
+    _write_successful_tool_events_with_args(
+        out_dir, (("inspect_mask_artifact", tool_args),)
+    )
+
+    code = main(
+        [
+            "inspect_mask_artifact",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(tool_args),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["status"] == "valid"
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[1])
+    assert event["event_type"] == "tool_completed"
+    assert event["tool_name"] == "inspect_mask_artifact"
+
+
+def test_cli_allows_fuse_after_successful_inspection(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "frag-a")
+    review_artifacts = _write_review_artifacts(tmp_path / "review-a")
+    _write_successful_checkpoint_event(out_dir, "inspect_mask_artifact")
+
+    code = main(
+        [
+            "fuse_accepted_masks",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "fragments": [
+                        {
+                            "fragment_id": "frag-a",
+                            "frame_id": "000000",
+                            "mask_npz_path": str(mask_npz_path),
+                            "mask_ply_path": str(mask_ply_path),
+                            "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
+                            "review_artifacts": review_artifacts,
+                        }
+                    ],
+                    "multi_view_decision": {
+                        "seed_fragment_id": "frag-a",
+                        "action": "stop",
+                        "reason": "the inspected fragment covers the target control",
+                        "rejected_suggested_frame_ids": [],
+                    },
+                }
+            ),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert Path(payload["mask_artifact_path"]).exists()
+
+
+def test_cli_requires_fuse_after_two_successful_inspections(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    _write_successful_tool_events(
+        out_dir,
+        (
+            "inspect_mask_artifact",
+            "inspect_mask_artifact",
+        ),
+    )
+
+    code = main(
+        [
+            "suggest_additional_views",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"seed_fragment_id": "000011_mask_00"}),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[2])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "suggest_additional_views"
+    assert "after 2 successful inspect_mask_artifact calls" in payload["error"]
+    assert "fuse_accepted_masks" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_frame_search_after_successful_lift_before_inspection(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    _write_successful_checkpoint_event(out_dir, "lift_mask_to_3d")
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000"}),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "view_frame"
+    assert "after a successful lift_mask_to_3d call" in payload["error"]
+    assert "inspect_mask_artifact" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_requires_lift_overlay_when_inspecting_after_successful_lift(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    mask_npz_path, mask_ply_path = _write_points_artifact(tmp_path / "fragment-a")
+    _write_successful_checkpoint_event(out_dir, "lift_mask_to_3d")
+
+    code = main(
+        [
+            "inspect_mask_artifact",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "mask_npz_path": str(mask_npz_path),
+                    "mask_ply_path": str(mask_ply_path),
+                }
+            ),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "inspect_mask_artifact"
+    assert "lift_overlay_path" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_duplicate_suggest_before_followup_progress(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    _write_successful_tool_events(out_dir, ("suggest_additional_views",))
+
+    code = main(
+        [
+            "suggest_additional_views",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"seed_fragment_id": "000000_mask_00"}),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "suggest_additional_views"
+    assert "after a successful suggest_additional_views call" in payload["error"]
+    assert "molmo_point" in payload["error"]
+    assert "fuse_accepted_masks" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_identical_molmo_retry_after_success(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    tool_args = {
+        "image_path": "/tmp/evidence.jpg",
+        "image_width": 128,
+        "image_height": 96,
+        "prompt": "point to the dial",
+    }
+    _write_successful_tool_events_with_args(out_dir, (("molmo_point", tool_args),))
+
+    code = main(
+        [
+            "molmo_point",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(tool_args),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "molmo_point"
+    assert "do not repeat molmo_point with identical arguments" in payload["error"]
+    assert "sam_mask" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_fourth_successful_molmo_before_sam(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    _write_successful_tool_events_with_args(
+        out_dir,
+        (
+            ("molmo_point", {"prompt": "point to the dial"}),
+            ("molmo_point", {"prompt": "point to the thermostat cap"}),
+            ("molmo_point", {"prompt": "point to the upper-right dial"}),
+        ),
+    )
+
+    code = main(
+        [
+            "molmo_point",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(
+                {
+                    "image_path": "/tmp/evidence.jpg",
+                    "image_width": 128,
+                    "image_height": 96,
+                    "prompt": "try another point",
+                }
+            ),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[-1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "molmo_point"
+    assert "after 3 successful molmo_point calls" in payload["error"]
+    assert "sam_mask" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_identical_sam_retry_after_success(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    tool_args = {
+        "frame_id": "000000",
+        "image_path": "/tmp/evidence.jpg",
+        "point_xy": [12.5, 34.0],
+    }
+    _write_successful_tool_events_with_args(out_dir, (("sam_mask", tool_args),))
+
+    code = main(
+        [
+            "sam_mask",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(tool_args),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "sam_mask"
+    assert "do not repeat sam_mask with identical arguments" in payload["error"]
+    assert "lift_mask_to_3d" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_identical_lift_retry_after_inspection(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    tool_args = {
+        "frame_id": "000000",
+        "candidate_id": "mask_00",
+        "mask_npz_path": "/tmp/mask_00_full_frame.npz",
+    }
+    _write_successful_tool_events_with_args(
+        out_dir,
+        (
+            ("lift_mask_to_3d", tool_args),
+            ("inspect_mask_artifact", {"mask_npz_path": "/tmp/mask_data.npz"}),
+        ),
+    )
+
+    code = main(
+        [
+            "lift_mask_to_3d",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps(tool_args),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[-1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "lift_mask_to_3d"
+    assert "do not repeat lift_mask_to_3d with identical arguments" in payload["error"]
+    assert "suggest_additional_views" in payload["error"]
+    assert "fuse_accepted_masks" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_bounds_followup_view_search_after_suggest_expand(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    _write_successful_tool_events(
+        out_dir,
+        (
+            "suggest_additional_views",
+            "view_crop",
+            "view_frame",
+            "view_crop",
+            "view_frame",
+        ),
+    )
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000000"}),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[-1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "view_frame"
+    assert "after successful suggest_additional_views follow-up evidence" in (
+        payload["error"]
+    )
+    assert "molmo_point" in payload["error"]
+    assert "fuse_accepted_masks" in payload["error"]
+    assert event["error"] == payload["error"]
+
+
+def test_cli_blocks_repeated_followup_view_frame_after_suggest_expand(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    out_dir = tmp_path / "run"
+    _write_successful_tool_events_with_args(
+        out_dir,
+        (
+            ("suggest_additional_views", {"seed_fragment_id": "000073_mask_00"}),
+            ("view_frame", {"frame_id": "000010"}),
+        ),
+    )
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_id": "000010"}),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[-1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "view_frame"
+    assert "do not repeat follow-up view_frame" in payload["error"]
+    assert "molmo_point" in payload["error"]
+    assert "fuse_accepted_masks" in payload["error"]
     assert event["error"] == payload["error"]
 
 
@@ -3025,6 +3663,43 @@ def _write_points_artifact(root: Path) -> tuple[Path, Path]:
     )
     mask_ply_path = write_lift_ply(root / "lifted_points.ply", points_world)
     return mask_npz_path, mask_ply_path
+
+
+def _write_successful_checkpoint_event(out_dir: Path, tool_name: str) -> None:
+    _write_successful_tool_events(out_dir, (tool_name,))
+
+
+def _write_successful_tool_events(out_dir: Path, tool_names: tuple[str, ...]) -> None:
+    _write_successful_tool_events_with_args(
+        out_dir, tuple((tool_name, {}) for tool_name in tool_names)
+    )
+
+
+def _write_successful_tool_events_with_args(
+    out_dir: Path, tool_events: tuple[tuple[str, Mapping[str, object]], ...]
+) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    lines = [
+        json.dumps(
+            _successful_tool_event_payload(tool_name, tool_args),
+            ensure_ascii=False,
+        )
+        for tool_name, tool_args in tool_events
+    ]
+    (out_dir / "events.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _successful_tool_event_payload(
+    tool_name: str, tool_args: Mapping[str, object]
+) -> dict[str, object]:
+    return {
+        "event_type": "tool_completed",
+        "tool_name": tool_name,
+        "status": "success",
+        "args": tool_args,
+        "result": {},
+        "error": "",
+    }
 
 
 def _write_lift_overlay(path: Path, *, frame_id: str, candidate_id: str) -> Path:

@@ -126,6 +126,11 @@ def test_mask_task_prompt_inlines_tools_without_attachments(
         f"--backend-config {backend_config_path} "
         f"--out-dir {output_dir} --args '<json>'"
     ) in request.prompt
+    assert "set yield_time_ms=30000" in request.prompt
+    assert "Process running with session ID" in request.prompt
+    assert "wait on that same session until it exits and returns JSON" in (
+        request.prompt
+    )
     hard_limits = request.prompt.split("Hard limits:\n", maxsplit=1)[1].split(
         "\nFinal JSON schema:", maxsplit=1
     )[0]
@@ -163,6 +168,17 @@ def test_mask_task_parses_strict_final_json(
     assert outcome.confidence == 0.87
     assert outcome.uncertainties == ("partial occlusion",)
     assert outcome.to_payload() == payload
+
+
+def test_mask_decision_schema_points_final_paths_to_fuse_tool() -> None:
+    schema = runner.SceneFunc3dMaskDecision.model_json_schema()
+
+    assert (
+        "fuse_accepted_masks"
+        in schema["properties"]["mask_artifact_path"]["description"]
+    )
+    assert "fuse_accepted_masks" in schema["properties"]["mask_npz_path"]["description"]
+    assert "fuse_accepted_masks" in schema["properties"]["mask_ply_path"]["description"]
 
 
 def test_mask_task_rejects_artifact_without_multi_view_decision(
@@ -592,6 +608,28 @@ def test_mask_task_rejects_lift_overlay_with_nonstandard_filename(
 
     with pytest.raises(CodexResponseError, match="lift_overlay.txt"):
         task.parse_response(json.dumps(_outcome_payload(output_dir)))
+
+
+def test_mask_task_rejects_lift_overlay_as_final_artifact_with_fuse_hint(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    scene_root = _write_scene_root(tmp_path / "421254")
+    _write_outcome_artifacts(output_dir)
+    review_artifacts = _write_review_artifacts(
+        output_dir / "review_artifacts" / "frag-a"
+    )
+    payload = _outcome_payload(output_dir)
+    payload["mask_artifact_path"] = review_artifacts["lift_overlay_path"]
+    task = SceneFunc3dMaskTask(
+        sample=_sample(),
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="fuse_accepted_masks"):
+        task.parse_response(json.dumps(payload))
 
 
 def test_mask_task_rejects_molmo_raw_text_from_wrong_frame(
@@ -1839,6 +1877,36 @@ def test_run_single_sample_accepts_standard_fragment_with_sam_point_xy_alias(
             args_mutator=lambda args: _set_sam_point_xy_alias_with_different_text(
                 args, sample_output_dir
             ),
+            event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
+            result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
+        )
+        _write_fuse_accepted_masks_event(
+            sample_output_dir,
+            accepted_fragment_ids=("000010_mask_00",),
+            accepted_frame_ids=("000010",),
+        )
+
+    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
+        tmp_path,
+        write_tool_events,
+    )
+
+    assert result_path == sample_output_dir / "result.json"
+
+
+def test_run_single_sample_accepts_standard_fragment_with_lift_overlay_path_alias(
+    tmp_path: Path,
+) -> None:
+    def write_tool_events(sample_output_dir: Path) -> None:
+        _write_standard_upstream_tool_events(
+            sample_output_dir,
+            frame_id="000010",
+            candidate_id="mask_00",
+        )
+        _rewrite_first_tool_result(
+            sample_output_dir,
+            tool_name="inspect_mask_artifact",
+            args_mutator=_set_inspect_lift_overlay_path_alias,
             event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
             result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
         )
@@ -3600,6 +3668,16 @@ def _set_failed_tool_event_status(event: dict[str, object], root: Path) -> None:
 def _set_view_crop_tool_event(event: dict[str, object], root: Path) -> None:
     _ = root
     event["tool_name"] = "view_crop"
+
+
+def _set_inspect_lift_overlay_path_alias(args: dict[str, object]) -> None:
+    overlay_paths = args.pop("overlay_paths")
+    if not isinstance(overlay_paths, list) or len(overlay_paths) != 1:
+        raise AssertionError("test inspect event must have one overlay path")
+    overlay_path = overlay_paths[0]
+    if not isinstance(overlay_path, str):
+        raise AssertionError("test inspect overlay path must be a string")
+    args["lift_overlay_path"] = overlay_path
 
 
 def _rewrite_first_tool_result(

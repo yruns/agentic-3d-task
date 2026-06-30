@@ -42,12 +42,28 @@ Tool catalog
 - suggest_additional_views: propose more views for multi-view completion.
 - fuse_accepted_masks: fuse approved 3D fragments into the final artifact.
 
-When calling molmo_point, pass the image_path, image_width, and image_height
-returned by view_frame or view_crop. Do not guess evidence image dimensions.
+molmo_point args are exactly image_path, image_width, image_height, prompt. Use
+prompt, not point_prompt or task_description. When calling molmo_point, pass the
+image_path, image_width, and image_height returned by view_frame or view_crop.
+Do not guess evidence image dimensions.
+
+sam_mask args are exactly frame_id, image_path, point_xy. point_xy must be
+[x_px, y_px] copied from the approved Molmo point. Use the same evidence
+image_path that produced the approved Molmo point, and do not pass a point
+object without frame_id.
+
+lift_mask_to_3d args are exactly frame_id, candidate_id, mask_npz_path. Copy
+candidate_id and mask_npz_path from the selected sam_mask candidate. Use
+mask_npz_path, not mask_path.
 
 Approval gates are mandatory:
 1. After molmo_point, inspect the Molmo point overlay. You must approve the
 Molmo point before calling sam_mask.
+After a successful molmo_point call, do not spend extra reasoning turns if the
+point lands on the intended affordance; immediately call sam_mask with the
+approved point_xy, the same image_path, and the matching frame_id.
+After at most three successful molmo_point attempts before SAM, stop trying new
+Molmo prompts or crops and call sam_mask with the best approved point_xy.
 2. After sam_mask, inspect the SAM candidates contact sheet. You must approve
 one SAM candidate before calling lift_mask_to_3d.
 Do not choose a SAM candidate by highest score alone. Use each candidate's
@@ -55,6 +71,19 @@ pixel_count and coverage_percent together with the contact sheet. For small
 knobs, dials, handles, switches, buttons, and valves, prefer a compact candidate
 that tightly covers the operable part; reject a broad panel, radiator body,
 cabinet face, wall patch, pipe run, or shadow even if its SAM score is higher.
+After a successful sam_mask call, do not spend extra reasoning turns if a
+candidate is plausibly compact for the target part; immediately call
+lift_mask_to_3d for the most plausible compact candidate and let the 3D geometry
+inspection confirm or reject it; do not write a text-only analysis or plan after
+sam_mask; your next assistant action must be lift_mask_to_3d unless every
+candidate is visibly impossible.
+Do not call inspect_mask_artifact after sam_mask before lift_mask_to_3d has
+returned mask_npz_path, mask_ply_path, and overlay_path; never guess lifted
+artifact paths.
+After you approve a compact SAM candidate, call lift_mask_to_3d before searching
+again; do not keep searching new crops or frames before the first 3D lift. Use
+the 3D geometry review to reject borderline compact candidates instead of
+remaining in 2D crop search.
 3. After lift_mask_to_3d, inspect the selected mask overlay and artifact
 summary. You must approve the first 3D lift before any multi-view expansion.
 Use inspect_mask_artifact geometry fields bbox_extent_xyz and max_extent_meters
@@ -62,8 +91,14 @@ before approving a 3D lift. A lift can be too broad for the target affordance.
 For small affordances, this usually means SAM captured a panel, body, pipe, wall
 patch, or shadow instead of the operable component; do not approve it.
 Change the SAM candidate, crop, point prompt, or frame before trying again.
+inspect_mask_artifact args must include mask_npz_path, mask_ply_path, and
+lift_overlay_path returned by lift_mask_to_3d; do not approve an accepted
+fragment from an inspection without those exact lifted artifact paths.
 4. Every additional view repeats Molmo point approval, SAM candidates approval,
 and 3D lift approval before fusion.
+Once two inspected fragments are valid for the same small affordance, call
+fuse_accepted_masks immediately; do not try a third view unless the first two
+valid fragments conflict or clearly cover different non-target parts.
 
 When calling suggest_additional_views after approving the first 3D lift, pass
 the approved seed's seed_mask_npz_path, seed_mask_ply_path, and
@@ -83,6 +118,13 @@ Use lift_mask_to_3d.mask_npz_path as seed_mask_npz_path,
 lift_mask_to_3d.mask_ply_path as seed_mask_ply_path, lift_mask_to_3d.overlay_path
 as seed_lift_overlay_path, and build seed_fragment_id as
 <frame_id>_<candidate_id> from that same lift result.
+After suggest_additional_views returns action "expand", choose at most two
+follow-up frames before the next Molmo call. Prefer the top-ranked suggested
+views with useful recommended_crops. After that, do not call suggest_additional_views again
+before Molmo or fusion. Once you have opened the selected follow-up evidence,
+call molmo_point on a selected follow-up crop or frame, or call
+fuse_accepted_masks with rejected_suggested_frame_ids if every suggested
+follow-up view has been rejected.
 
 For small knobs, handles, dials, switches, buttons, and pinch_pull annotations,
 first identify the affordance concept, then use a complete task-constrained
@@ -90,6 +132,9 @@ Molmo point prompt. If keyframe_selector returns matched_objects with
 bbox_xyxy, inspect the full frame and at least one view_crop around the matched
 object bbox before calling molmo_point. For tiny affordances on large objects,
 prefer keyframe_selector recommended_crops before making any manual crop guess.
+After view_crop returns an affordance-focused crop from recommended_crops or a
+manual crop around the likely affordance, call molmo_point as the next tool; do
+not spend extra reasoning turns comparing already-opened crops.
 If recommended_crops are missing, try object-bbox subcrops at the likely
 extremities before accepting a point: right/lower end for radiator dials or
 valves, edge/center-line regions for handles, and the visible control panel area
@@ -104,7 +149,12 @@ model-quality failure. Change crop, prompt, or frame.
 
 Final answer must be compact JSON with mask_artifact_path, mask_npz_path,
 mask_ply_path, selected_frame_ids, accepted_fragment_ids, confidence, and
-uncertainties.
+uncertainties. Before giving the final answer, you must call
+fuse_accepted_masks. Use mask_artifact_path returned by fuse_accepted_masks as
+the final JSON path, not a reviewed fragment path. Set mask_npz_path to its
+mask_npz_path, and mask_ply_path to its mask_ply_path.
+You must never use lift_overlay_path. Do not use lifted_points.ply, fragment
+mask_data.npz, a SAM candidate NPZ, or any review artifact as a final path.
 When passing each fragment into fuse_accepted_masks, include approval_actions in
 this exact order: select_evidence, propose_molmo_point, approve_molmo_point,
 propose_sam_candidates, approve_sam_candidate, create_first_lift,
@@ -122,6 +172,8 @@ approve a fragment only after those geometry fields are appropriate for the
 target part.
 Also include multi_view_decision when calling fuse_accepted_masks. Use action
 "stop" only when the accepted fragments all come from the first accepted frame.
+multi_view_decision.reason is required; explain why follow-up views were
+accepted or rejected.
 When multi_view_decision.action is "stop", suggested_frame_ids must be empty.
 If you stop after checking suggested views, use rejected_suggested_frame_ids to
 record every suggested follow-up frame you inspected and rejected. If

@@ -22,6 +22,29 @@ def test_agent_e2e_script_runs_runner_with_sidecars_and_scoring() -> None:
     assert "ensure_codex_home()" in script_text
 
 
+def test_agent_e2e_script_allows_full_molmo_sam_fuse_tool_budget() -> None:
+    script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
+
+    assert 'CODEX_AGENT_TURN_TIMEOUT_S="${CODEX_AGENT_TURN_TIMEOUT_S:-900}"' in (
+        script_text
+    )
+    assert 'CODEX_AGENT_MAX_TOOL_CALLS="${CODEX_AGENT_MAX_TOOL_CALLS:-128}"' in (
+        script_text
+    )
+    assert (
+        'CODEX_AGENT_MAX_REPEATED_TOOL_CALLS="${CODEX_AGENT_MAX_REPEATED_TOOL_CALLS:-6}"'
+        in script_text
+    )
+
+
+def test_agent_e2e_script_preserves_runner_stdout_on_failure() -> None:
+    script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
+
+    assert "except subprocess.CalledProcessError as exc:" in script_text
+    assert "stdout_path.write_bytes(exc.stdout)" in script_text
+    assert "runner stdout:" in script_text
+
+
 def test_agent_e2e_script_supports_batch_runner_sample_sources() -> None:
     script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
 

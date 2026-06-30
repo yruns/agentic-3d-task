@@ -169,9 +169,25 @@ class SceneFunc3dMaskDecision(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    mask_artifact_path: NonEmptyString
-    mask_npz_path: NonEmptyString
-    mask_ply_path: NonEmptyString
+    mask_artifact_path: NonEmptyString = Field(
+        description=(
+            "Final mask artifact JSON path returned by "
+            "fuse_accepted_masks.mask_artifact_path. Do not use fragment review "
+            "artifacts such as lift_overlay.txt."
+        )
+    )
+    mask_npz_path: NonEmptyString = Field(
+        description=(
+            "Final fused mask NPZ path returned by fuse_accepted_masks.mask_npz_path. "
+            "Do not use an individual fragment mask_data.npz."
+        )
+    )
+    mask_ply_path: NonEmptyString = Field(
+        description=(
+            "Final fused mask PLY path returned by fuse_accepted_masks.mask_ply_path. "
+            "Do not use an individual fragment lifted_points.ply."
+        )
+    )
     selected_frame_ids: tuple[NonEmptyString, ...] = Field(min_length=1)
     accepted_fragment_ids: tuple[NonEmptyString, ...] = Field(min_length=1)
     confidence: float = Field(ge=0.0, le=1.0)
@@ -372,6 +388,8 @@ class _InspectMaskToolArgs(BaseModel):
             return payload
         values = dict(payload)
         overlay_path = values.get("overlay_path")
+        if overlay_path is None:
+            overlay_path = values.get("lift_overlay_path")
         if "overlay_paths" not in values and overlay_path is not None:
             values["overlay_paths"] = (overlay_path,)
         return values
@@ -735,6 +753,13 @@ class SceneFunc3dMaskTask:
                 f"path={artifact_path}; output_dir={output_root}"
             ) from exc
         if artifact_path.suffix != suffix:
+            if field_name == "mask_artifact_path":
+                raise CodexResponseError(
+                    "mask_artifact_path must be the .json path returned by "
+                    "fuse_accepted_masks.mask_artifact_path; do not use review "
+                    "artifacts such as lift_overlay.txt: "
+                    f"path={artifact_path}"
+                )
             raise CodexResponseError(
                 f"{field_name} must have suffix {suffix!r}: path={artifact_path}"
             )
@@ -774,6 +799,13 @@ class SceneFunc3dMaskTask:
             f"--scene-root {self.scene_root} "
             f"--backend-config {self.backend_config_path} "
             f"--out-dir {self.output_dir} --args '<json>'\n"
+            "- For molmo_point, sam_mask, lift_mask_to_3d, "
+            "inspect_mask_artifact, suggest_additional_views, and "
+            "fuse_accepted_masks, set yield_time_ms=30000 on the shell call so "
+            "the command can finish and return JSON. If the shell reports "
+            "Process running with session ID, wait on that same session until "
+            "it exits and returns JSON; do not start another SceneFunc3D tool "
+            "while a previous tool command is still running.\n"
             "- Tool outputs are JSON. Open any returned image_path with "
             "view_image before relying on visual evidence.\n"
             "- Use the Molmo point and SAM candidates approval gates in the "

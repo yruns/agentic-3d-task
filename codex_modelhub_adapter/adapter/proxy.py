@@ -216,11 +216,15 @@ def build_upstream_request(
     chat_context_token_limit: int | None = None,
     upstream_extra: dict[str, str] | None = None,
     logid: str | None = None,
+    excluded_upstream_aliases: frozenset[str] = frozenset(),
 ) -> UpstreamRequest:
     resolved_settings = settings or AdapterSettings.from_env()
     upstream_api = resolve_upstream_api(raw_body, resolved_settings)
     selected_upstream = resolve_modelhub_upstream(
-        resolved_settings, raw_body, upstream_extra
+        resolved_settings,
+        raw_body,
+        upstream_extra,
+        excluded_upstream_aliases=excluded_upstream_aliases,
     )
     upstream_base_url = resolved_settings.upstream_base_url
     upstream_path_override = ""
@@ -335,6 +339,8 @@ def resolve_modelhub_upstream(
     settings: AdapterSettings,
     raw_body: Any,
     upstream_extra: dict[str, str] | None = None,
+    *,
+    excluded_upstream_aliases: frozenset[str] = frozenset(),
 ) -> ModelHubUpstream | None:
     upstreams = _normalize_modelhub_upstreams(settings.modelhub_upstreams)
     if not upstreams:
@@ -349,9 +355,16 @@ def resolve_modelhub_upstream(
         raise RuntimeError(
             f"No ModelHub TOML upstream matches model '{model or '<empty>'}'"
         )
+    available_matches = tuple(
+        upstream
+        for upstream in matches
+        if upstream.alias not in excluded_upstream_aliases
+    )
+    if not available_matches:
+        available_matches = matches
     selection_id = _modelhub_upstream_selection_id(settings, upstream_extra)
     return _pick_modelhub_upstream_by_weighted_session_hash(
-        selection_id, model, matches
+        selection_id, model, available_matches
     )
 
 
