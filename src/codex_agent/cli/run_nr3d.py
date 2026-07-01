@@ -21,22 +21,12 @@ from pathlib import Path
 
 from loguru import logger
 
-from ..config import (
-    DEFAULT_PROJECT_ROOT,
-    CodexAgentConfig,
-    ReasoningEffort,
-    ReasoningSummary,
-    SandboxMode,
-)
+from ..config import CodexAgentConfig, ReasoningEffort, ReasoningSummary, SandboxMode
 from ..evaluation.nr3d_runner import run_samples
 from ..evaluation.sample_ids import load_sample_ids
 from ..models import CodexSkill
 from ..nr3d.sample import DEFAULT_PACK_NAME
 from ..runtime import CodexAgentRuntime
-
-DEFAULT_SKILL_PATH = (
-    DEFAULT_PROJECT_ROOT / ".agents" / "skills" / "nr3d-codex-sdk" / "SKILL.md"
-)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -73,8 +63,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--skill-path",
         type=Path,
         default=None,
-        help="Path to the NR3D SKILL.md attached to each turn (default depends "
-        "on --tools).",
+        help="Path to the NR3D SKILL.md attached to each turn. Requires --tools; "
+        "default is no attached skill.",
     )
     parser.add_argument(
         "--no-skill",
@@ -85,8 +75,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--tools",
         action="store_true",
         help="Enable agent CLI tools (first-person frames, spatial ranking, BEV "
-        "highlights). Implies workspace_write sandbox + network access and the "
-        "nr3d-codex-tools skill unless overridden.",
+        "highlights). Implies workspace_write sandbox + network access. Attach "
+        "a skill explicitly with --skill-path when testing Codex Skill mode.",
     )
     parser.add_argument(
         "--turn-timeout",
@@ -135,6 +125,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
 
+    try:
+        skill = _resolve_skill(
+            skill_path=args.skill_path, no_skill=args.no_skill, tools=args.tools
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
+
     sample_ids = load_sample_ids(args.sample_ids)
     if args.limit is not None:
         if args.limit < 0:
@@ -154,9 +151,6 @@ def main(argv: list[str] | None = None) -> int:
             max_tool_calls=args.max_tool_calls,
             max_repeated_tool_calls=args.max_repeated_tool_calls,
         )
-    )
-    skill = _resolve_skill(
-        skill_path=args.skill_path, no_skill=args.no_skill, tools=args.tools
     )
 
     logger.info(
@@ -333,19 +327,20 @@ def _resolve_skill(
 ) -> CodexSkill | None:
     if no_skill:
         return None
+    if skill_path is not None and not tools:
+        raise ValueError("--skill-path requires --tools")
     # Tool mode inlines the playbook into the prompt and attaches no skill by
     # default: an advertised SKILL.md path is the bait for the unbounded re-read
     # loop. ``--skill-path`` still forces a skill for manual/legacy comparison.
-    if tools and skill_path is None:
+    if skill_path is None:
         return None
-    resolved_path = skill_path or DEFAULT_SKILL_PATH
+    resolved_path = skill_path
     if not resolved_path.exists():
         logger.warning(
             "skill file not found at {}; running without a skill", resolved_path
         )
         return None
-    skill_name = "nr3d-codex-tools" if tools else "nr3d-codex-sdk"
-    return CodexSkill(name=skill_name, path=resolved_path)
+    return CodexSkill(name="nr3d-codex-tools", path=resolved_path)
 
 
 if __name__ == "__main__":

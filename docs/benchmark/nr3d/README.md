@@ -23,6 +23,10 @@ Process archive for NR3D evaluations in `agentic-3d-task`. Mirrors the
 | [v7_responses_passthrough_strat600_20260630](v7_responses_passthrough_strat600_20260630.md) | 2026-06-30 | Codex agent VG | Responses passthrough adapter regression, strat600 — **COMPLETE 600/600** | **Acc@0.25 = 86.00% (516/600)**; View-Dep 82.46%; cache 0.987/0.930. Migration gate pass; v5-level behavior preserved. |
 | [v8_failclosed_encrypted_state_strat600_20260701](v8_failclosed_encrypted_state_strat600_20260701.md) | 2026-07-01 | Codex agent VG | Fail-closed encrypted-state adapter regression, strat600 — **COMPLETE 600/600** | **Acc@0.25 = 84.50% (507/600)**; View-Dep 77.25%; cache 0.990/0.930. Gate pass, but tighter; one encrypted-state rejection surfaced. |
 | [v8_flip41_repeat_20260701](v8_flip41_repeat_20260701.md) | 2026-07-01 | Codex agent VG diagnostic | Rerun of 41 v7/v8 correctness-flip samples — **COMPLETE 41/41** | **21/41 correct**, between v7's 25/41 and v8's 16/41. Supports run-to-run agent/model variance over deterministic adapter regression. |
+| [v9_skill20_explicit_skill_20260701](v9_skill20_explicit_skill_20260701.md) | 2026-07-01 | Codex agent VG diagnostic | Explicit `SkillInput` mode smoke, first 20 strat600 samples, workers=20 — **COMPLETE 20/20** | **17/20 correct**; no Skill re-read loop, no tool-loop interrupts, no timeouts. Cache lower than v8 smoke (0.850/0.822), so larger validation is needed before defaulting to Skill mode. |
+| [v10_skill10_minprompt_20260701](v10_skill10_minprompt_20260701.md) | 2026-07-01 | Codex agent VG diagnostic | Explicit `SkillInput` mode with minimal prompt, first 10 strat600 samples, workers=10 — **COMPLETE 10/10** | **8/10 correct**, matching v8/v9 first10 wrong set; no loop signals; cache 1.000/0.973. |
+| [v11_skill600_minprompt_20260701](v11_skill600_minprompt_20260701.md) | 2026-07-01 | Codex agent VG diagnostic | Explicit `SkillInput` mode with minimal prompt, full strat600, workers=40 — **COMPLETE 600/600** | **Acc@0.25 = 84.50% (507/600)**, matching v8 Overall; View-Dep 79.15%; cache 0.992/0.943; no adapter/encrypted-state errors. |
+| [v12_skill10_keep_home_20260701](v12_skill10_keep_home_20260701.md) | 2026-07-01 | Codex agent VG diagnostic | Explicit Skill mode first-10 rerun with `CODEX_AGENT_KEEP_RUN_HOME=1` — **COMPLETE 10/10** | **8/10 correct**; 10 per-turn Codex homes preserved under `.codex-home/runs/<id>` for trace inspection. |
 
 ## Codex agent VG — per-tier accuracy (canonical strat600)
 
@@ -37,13 +41,13 @@ fail closed. Columns below are ordered as floor -> tools -> effort -> path ->
 adapter checkpoints. (v2 looped, ran only 169/600 at the v1 floor; v3 ≈ v4
 Overall — see timeline.)
 
-| Slice | n | v1 (floor) | v4 (tools) | v6 (+effort, chat) | v5 (+/responses) | v7 (passthrough) | **v8** (fail-closed) | v8-v7 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| **Overall** | 600 | 63.83% | 78.33% | 80.33% | 85.33% | 86.00% | **84.50%** | -1.50 |
-| Easy | 290 | 73.10% | 82.76% | 84.48% | 89.31% | 90.34% | **88.62%** | -1.72 |
-| Hard | 310 | 55.16% | 74.19% | 76.45% | 81.61% | 81.94% | **80.65%** | -1.29 |
-| **View-Dep** | 211 | 51.66% | 68.25% | 72.51% | 81.04% | 82.46% | **77.25%** | -5.21 |
-| View-Indep | 389 | 70.44% | 83.80% | 84.58% | 87.66% | 87.92% | **88.43%** | +0.51 |
+| Slice | n | v1 (floor) | v4 (tools) | v6 (+effort, chat) | v5 (+/responses) | v7 (passthrough) | **v8** (fail-closed) | v8-v7 | **v11 Skill** | v11-v8 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Overall** | 600 | 63.83% | 78.33% | 80.33% | 85.33% | 86.00% | **84.50%** | -1.50 | **84.50%** | +0.00 |
+| Easy | 290 | 73.10% | 82.76% | 84.48% | 89.31% | 90.34% | **88.62%** | -1.72 | **89.31%** | +0.69 |
+| Hard | 310 | 55.16% | 74.19% | 76.45% | 81.61% | 81.94% | **80.65%** | -1.29 | **80.00%** | -0.65 |
+| **View-Dep** | 211 | 51.66% | 68.25% | 72.51% | 81.04% | 82.46% | **77.25%** | -5.21 | **79.15%** | +1.90 |
+| View-Indep | 389 | 70.44% | 83.80% | 84.58% | 87.66% | 87.92% | **88.43%** | +0.51 | **87.40%** | -1.03 |
 
 Five checkpoints/levers, each isolated on this fold:
 
@@ -67,13 +71,18 @@ Five checkpoints/levers, each isolated on this fold:
    `invalid_encrypted_content` turn failure and lands closer to the View-Dep
    threshold. Do not read this as a reason to restore sanitized fallback; the
    fallback can break reasoning-state/prompt-cache correspondence.
+6. **Explicit Skill mode, minimal prompt** (v8 → v11): **+0.00 pp Overall,
+   +1.90 pp View-Dep**, with a stronger cache signature (`0.943` mean ratio).
+   This clears the full-run Skill-mode gate while keeping the CLI workflow inside
+   the external skill rather than duplicating the inline playbook in the prompt.
 
 Full runs: [v3](v3_codex_tools_loopfix_strat600_20260609.md) ·
 [v4](v4_network_fix_strat600_20260610.md) ·
 [v5](v5_summary_responses_strat600_20260611.md) ·
 [v6](v6_effort_ablation_chat_strat600_20260611.md) ·
 [v7](v7_responses_passthrough_strat600_20260630.md) ·
-[v8](v8_failclosed_encrypted_state_strat600_20260701.md).
+[v8](v8_failclosed_encrypted_state_strat600_20260701.md) ·
+[v11](v11_skill600_minprompt_20260701.md).
 
 ## Metric
 

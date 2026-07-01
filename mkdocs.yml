@@ -58,6 +58,12 @@ nav:
           - v5 Summary Responses Strat600: benchmark/nr3d/v5_summary_responses_strat600_20260611.md
           - v6 Effort Ablation Chat Strat600: benchmark/nr3d/v6_effort_ablation_chat_strat600_20260611.md
           - v7 Responses Passthrough Strat600: benchmark/nr3d/v7_responses_passthrough_strat600_20260630.md
+          - v8 Fail Closed Encrypted State Strat600: benchmark/nr3d/v8_failclosed_encrypted_state_strat600_20260701.md
+          - v8 Flip41 Repeat: benchmark/nr3d/v8_flip41_repeat_20260701.md
+          - v9 Skill20 Explicit Skill: benchmark/nr3d/v9_skill20_explicit_skill_20260701.md
+          - v10 Skill10 Minimal Prompt: benchmark/nr3d/v10_skill10_minprompt_20260701.md
+          - v11 Skill600 Minimal Prompt: benchmark/nr3d/v11_skill600_minprompt_20260701.md
+          - v12 Skill10 Keep Run Home: benchmark/nr3d/v12_skill10_keep_home_20260701.md
       - OpenEQA:
           - Timeline: benchmark/openeqa/README.md
           - v1 SDK Migration Smoke: benchmark/openeqa/v1_codex_sdk_migration_smoke10_20260611.md
