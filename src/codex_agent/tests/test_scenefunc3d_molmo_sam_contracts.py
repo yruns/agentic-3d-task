@@ -296,6 +296,8 @@ def test_cli_molmo_point_returns_recoverable_backend_error(
             "molmo_point",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps(args_payload),
         ]
@@ -643,6 +645,8 @@ def test_cli_sam_mask_returns_recoverable_backend_error(
             "sam_mask",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps(args_payload),
         ]

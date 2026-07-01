@@ -261,11 +261,15 @@ def test_mask_task_prompt_inlines_tools_without_attachments(
     scene_root = tmp_path / "421254"
     backend_config_path = tmp_path / "backends.toml"
     output_dir = tmp_path / "out"
-    task = SceneFunc3dMaskTask(
+    tool_context_path = output_dir / "tool_context.json"
+    tool_context_path.parent.mkdir(parents=True)
+    tool_context_path.write_text("{}", encoding="utf-8")
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
         backend_config_path=backend_config_path,
+        tool_context_path=tool_context_path,
     )
 
     request = task.build_turn_request()
@@ -274,13 +278,17 @@ def test_mask_task_prompt_inlines_tools_without_attachments(
     assert request.image_paths == ()
     assert "Molmo point" in request.prompt
     assert "SAM candidates" in request.prompt
-    assert "--backend-config" in request.prompt
+    assert f"--context {tool_context_path}" in request.prompt
     assert (
         f"python -m codex_agent.scenefunc3d.tools <tool> "
-        f"--scene-root {scene_root} "
-        f"--backend-config {backend_config_path} "
-        f"--out-dir {output_dir} --args '<json>'"
+        f"--context {tool_context_path} --args '<json>'"
     ) in request.prompt
+    tool_command = request.prompt.split("- invoke: ", maxsplit=1)[1].split(
+        "\n", maxsplit=1
+    )[0]
+    assert "--scene-root" not in tool_command
+    assert "--backend-config" not in tool_command
+    assert "--out-dir" not in tool_command
     assert "set yield_time_ms=30000" in request.prompt
     assert "Process running with session ID" in request.prompt
     assert "wait on that same session until it exits and returns JSON" in (
@@ -297,13 +305,28 @@ def test_mask_task_prompt_inlines_tools_without_attachments(
     assert "Never re-run a tool with identical arguments" in hard_limits
 
 
+def test_mask_task_rejects_missing_tool_context_before_prompt(
+    tmp_path: Path,
+) -> None:
+    task = _mask_task(
+        sample=_sample(),
+        scene_root=tmp_path / "421254",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+        tool_context_path=tmp_path / "out" / "tool_context.json",
+    )
+
+    with pytest.raises(SceneFunc3dDataError, match="tool context is missing"):
+        task.build_turn_request()
+
+
 def test_mask_task_parses_strict_final_json(
     tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "out"
     scene_root = _write_scene_root(tmp_path / "421254")
     _write_outcome_artifacts(output_dir)
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -342,7 +365,7 @@ def test_mask_task_rejects_artifact_without_multi_view_decision(
     output_dir = tmp_path / "out"
     scene_root = _write_scene_root(tmp_path / "421254")
     _write_outcome_artifacts(output_dir)
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -366,7 +389,7 @@ def test_mask_task_rejects_artifact_without_fragment_lift_geometry(
     output_dir = tmp_path / "out"
     scene_root = _write_scene_root(tmp_path / "421254")
     _write_outcome_artifacts(output_dir, include_fragment_lift_geometry=False)
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -392,7 +415,7 @@ def test_mask_task_rejects_fragment_lift_geometry_mismatch(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -407,7 +430,7 @@ def test_mask_task_rejects_nonexistent_final_artifacts(
     tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "out"
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=tmp_path / "421254",
         output_dir=output_dir,
@@ -427,7 +450,7 @@ def test_mask_task_rejects_invalid_mask_npz_contents(
     scene_root = _write_scene_root(tmp_path / "421254")
     _write_outcome_artifacts(output_dir)
     (output_dir / "mask.npz").write_bytes(b"npz")
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -445,7 +468,7 @@ def test_mask_task_rejects_corrupt_zip_mask_npz_contents(
     scene_root = _write_scene_root(tmp_path / "421254")
     _write_outcome_artifacts(output_dir)
     (output_dir / "mask.npz").write_bytes(b"PK\x03\x04bad")
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -465,7 +488,7 @@ def test_mask_task_rejects_mask_npz_without_point_indices(
     _write_outcome_artifacts(output_dir)
     points_world = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
     np.savez_compressed(output_dir / "mask.npz", points_world=points_world)
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -483,7 +506,7 @@ def test_mask_task_rejects_invalid_mask_ply_contents(
     scene_root = _write_scene_root(tmp_path / "421254")
     _write_outcome_artifacts(output_dir)
     (output_dir / "mask.ply").write_text("ply\n", encoding="ascii")
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -507,7 +530,7 @@ def test_mask_task_rejects_final_artifact_path_mismatch(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -524,7 +547,7 @@ def test_mask_task_rejects_accepted_fragment_mismatch(
     output_dir = tmp_path / "out"
     scene_root = _write_scene_root(tmp_path / "421254")
     _write_outcome_artifacts(output_dir, accepted_fragment_ids=("frag-b",))
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -559,7 +582,7 @@ def test_mask_task_rejects_fragment_point_count_sum_mismatch(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -576,7 +599,7 @@ def test_mask_task_rejects_selected_frame_missing_from_scene(
     output_dir = tmp_path / "out"
     scene_root = _write_scene_root(tmp_path / "421254", frame_ids=("000010",))
     _write_outcome_artifacts(output_dir)
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -594,7 +617,7 @@ def test_mask_task_rejects_selected_frame_mismatch_with_final_artifact(
     output_dir = tmp_path / "out"
     scene_root = _write_scene_root(tmp_path / "421254")
     _write_outcome_artifacts(output_dir, accepted_frame_ids=("000010",))
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -619,7 +642,7 @@ def test_mask_task_rejects_artifact_accepted_frame_mismatch_with_fragments(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -644,7 +667,7 @@ def test_mask_task_rejects_fragment_without_approval_actions(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -671,7 +694,7 @@ def test_mask_task_rejects_fragment_approval_actions_out_of_order(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -697,7 +720,7 @@ def test_mask_task_rejects_missing_fragment_review_artifact(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -726,7 +749,7 @@ def test_mask_task_rejects_review_artifact_from_wrong_fragment(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -754,7 +777,7 @@ def test_mask_task_rejects_lift_overlay_with_nonstandard_filename(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -776,7 +799,7 @@ def test_mask_task_rejects_lift_overlay_as_final_artifact_with_fuse_hint(
     )
     payload = _outcome_payload(output_dir)
     payload["mask_artifact_path"] = review_artifacts["lift_overlay_path"]
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -813,7 +836,7 @@ def test_mask_task_rejects_molmo_raw_text_from_wrong_frame(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -857,7 +880,7 @@ def test_mask_task_rejects_sam_contact_sheet_from_wrong_frame(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -901,7 +924,7 @@ def test_mask_task_rejects_sam_candidate_overlay_from_wrong_candidate(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -942,7 +965,7 @@ def test_mask_task_rejects_standard_review_artifacts_from_other_run(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -987,7 +1010,7 @@ def test_mask_task_rejects_lift_overlay_candidate_mismatch(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -1032,7 +1055,7 @@ def test_mask_task_rejects_lift_overlay_frame_mismatch(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -1076,7 +1099,7 @@ def test_mask_task_rejects_standard_fragment_point_count_mismatch(
     (output_dir / "mask_artifact.json").write_text(
         json.dumps(artifact_payload), encoding="utf-8"
     )
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
@@ -1270,7 +1293,7 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
         "attempts": [],
     }
     assert executor.task_name == "scenefunc3d_mask_generation"
-    assert str(tmp_path / "data" / "421254") in executor.prompt
+    assert str(sample_output_dir / "tool_context.json") in executor.prompt
     summary_path = sample_output_dir / "summary.json"
     summary_payload = json.loads(summary_path.read_text(encoding="utf-8"))
     assert summary_payload["sample_id"] == "421254::desc-a"
@@ -1310,6 +1333,64 @@ def test_run_single_sample_writes_result_json_with_outcome_payload(
         "summary_path": str(summary_path),
         "mask_artifact_path": str(sample_output_dir / "mask_artifact.json"),
     }
+
+
+def test_run_single_sample_writes_tool_context_before_task_execution(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    backend_config_path = tmp_path / "backends.toml"
+    _write_outcome_artifacts(
+        sample_output_dir,
+        rejected_suggested_frame_ids=("000020", "000030"),
+    )
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("frag-a",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+
+    def assert_tool_context_exists() -> None:
+        context_path = sample_output_dir / "tool_context.json"
+        assert context_path.is_file()
+        payload = json.loads(context_path.read_text(encoding="utf-8"))
+        assert payload == {
+            "sample_id": "421254::desc-a",
+            "scene_root": str((tmp_path / "data" / "421254").resolve()),
+            "backend_config_path": str(backend_config_path.resolve()),
+            "out_dir": str(sample_output_dir.resolve()),
+        }
+        _write_suggest_additional_views_event(
+            sample_output_dir,
+            expansion_recommendation="expand",
+            frame_ids=("000020", "000030"),
+        )
+        _write_fuse_accepted_masks_event(sample_output_dir)
+
+    executor = _FakeExecutor(
+        outcome,
+        on_execute=assert_tool_context_exists,
+    )
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=backend_config_path,
+    )
+
+    result_path = run_single_sample(
+        config,
+        sample_id="421254::desc-a",
+        executor=executor,
+        check_sidecars=False,
+    )
+
+    assert result_path == sample_output_dir / "result.json"
+    assert f"--context {sample_output_dir / 'tool_context.json'}" in executor.prompt
 
 
 def test_run_single_sample_rejects_final_artifact_without_fuse_tool_event(
@@ -3223,6 +3304,29 @@ def _sample() -> SceneFunc3dSample:
     )
 
 
+def _mask_task(
+    *,
+    sample: SceneFunc3dSample,
+    scene_root: Path,
+    output_dir: Path,
+    backend_config_path: Path,
+    tool_context_path: Path | None = None,
+    tool_cli_module: str = runner.DEFAULT_TOOL_CLI_MODULE,
+) -> SceneFunc3dMaskTask:
+    return SceneFunc3dMaskTask(
+        sample=sample,
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=backend_config_path,
+        tool_context_path=(
+            output_dir / "tool_context.json"
+            if tool_context_path is None
+            else tool_context_path
+        ),
+        tool_cli_module=tool_cli_module,
+    )
+
+
 def _outcome_payload(
     root: Path,
     *,
@@ -4174,6 +4278,12 @@ def _write_backend_config(
 
 
 def _write_scene(root: Path) -> None:
+    _write_backend_config(
+        root.parent / "backends.toml",
+        molmo_url="http://127.0.0.1:8001",
+        sam_url="http://127.0.0.1:8002",
+        root=root.parent,
+    )
     scene_dir = root / "421254"
     _write_scene_root(scene_dir)
     (scene_dir / "421254_descriptions.json").write_text(
@@ -4225,6 +4335,12 @@ def _write_scene(root: Path) -> None:
 
 
 def _write_two_sample_scene(root: Path) -> None:
+    _write_backend_config(
+        root.parent / "backends.toml",
+        molmo_url="http://127.0.0.1:8001",
+        sam_url="http://127.0.0.1:8002",
+        root=root.parent,
+    )
     scene_dir = root / "421254"
     _write_scene_root(scene_dir)
     (scene_dir / "421254_descriptions.json").write_text(

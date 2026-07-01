@@ -42,6 +42,7 @@ from .final_mask_artifacts import (
 from .playbook import SCENEFUNC3D_TOOL_NAMES, SCENEFUNC3D_TOOLS_PLAYBOOK
 from .sample import SceneFunc3dSample, list_sample_ids, load_sample, scene_dir_for
 from .servers.schemas import HealthResponse
+from .tool_context import SceneFunc3dToolContext, write_tool_context
 from .tools.mask_artifacts import (
     SceneFunc3dCompletedRunSummary,
     SceneFunc3dRunCompletionEvent,
@@ -54,6 +55,7 @@ from .tools.scene_context import SceneFunc3dToolScene
 
 TASK_NAME = "scenefunc3d_mask_generation"
 DEFAULT_TOOL_CLI_MODULE = "codex_agent.scenefunc3d.tools"
+DEFAULT_TOOL_CONTEXT_FILENAME = "tool_context.json"
 SCENEFUNC3D_ALLOWED_TOOL_NAMES = SCENEFUNC3D_TOOL_NAMES
 
 NonEmptyString: TypeAlias = Annotated[
@@ -651,12 +653,14 @@ class SceneFunc3dMaskTask:
         scene_root: Path,
         output_dir: Path,
         backend_config_path: Path,
+        tool_context_path: Path,
         tool_cli_module: str = DEFAULT_TOOL_CLI_MODULE,
     ) -> None:
         self.sample = sample
         self.scene_root = Path(scene_root)
         self.output_dir = Path(output_dir)
         self.backend_config_path = Path(backend_config_path)
+        self.tool_context_path = Path(tool_context_path)
         self.tool_cli_module = tool_cli_module
 
     @property
@@ -664,11 +668,20 @@ class SceneFunc3dMaskTask:
         return TASK_NAME
 
     def build_turn_request(self) -> CodexTurnRequest:
+        self._require_tool_context_file()
         return CodexTurnRequest(
             prompt=self._build_prompt(),
             output_schema=SceneFunc3dMaskDecision.model_json_schema(),
             skills=(),
             image_paths=(),
+        )
+
+    def _require_tool_context_file(self) -> None:
+        if self.tool_context_path.is_file():
+            return
+        raise SceneFunc3dDataError(
+            "SceneFunc3D tool context is missing before prompt generation: "
+            f"path={self.tool_context_path}"
         )
 
     def is_valid_response(self, response_text: str) -> bool:
@@ -791,14 +804,10 @@ class SceneFunc3dMaskTask:
         schema = SceneFunc3dMaskDecision.model_json_schema()
         return (
             build_prompt(self.sample) + "\n\nRuntime paths:\n"
-            f"- scene_root: {self.scene_root}\n"
-            f"- backend_config: {self.backend_config_path}\n"
-            f"- out_dir: {self.output_dir}\n"
+            f"- tool_context: {self.tool_context_path}\n"
             "\nHow to run a tool (in the shell):\n"
             f"- invoke: python -m {self.tool_cli_module} <tool> "
-            f"--scene-root {self.scene_root} "
-            f"--backend-config {self.backend_config_path} "
-            f"--out-dir {self.output_dir} --args '<json>'\n"
+            f"--context {self.tool_context_path} --args '<json>'\n"
             "- For molmo_point, sam_mask, lift_mask_to_3d, "
             "inspect_mask_artifact, suggest_additional_views, and "
             "fuse_accepted_masks, set yield_time_ms=30000 on the shell call so "
@@ -890,11 +899,21 @@ def run_single_sample(
     sample_output_dir = artifact_paths.root
     sample_output_dir.mkdir(parents=True, exist_ok=True)
     _initialize_run_events(artifact_paths.events_jsonl)
+    tool_context_path = write_tool_context(
+        sample_output_dir / DEFAULT_TOOL_CONTEXT_FILENAME,
+        SceneFunc3dToolContext(
+            sample_id=sample.sample_id,
+            scene_root=scene_dir_for(config.dataset_root, sample.visit_id),
+            backend_config_path=config.backend_config_path,
+            out_dir=sample_output_dir,
+        ),
+    )
     task = SceneFunc3dMaskTask(
         sample=sample,
         scene_root=scene_dir_for(config.dataset_root, sample.visit_id),
         output_dir=sample_output_dir,
         backend_config_path=config.backend_config_path,
+        tool_context_path=tool_context_path,
     )
     result = executor.execute(task)
     validated_outcome = task.validate_outcome(result.outcome)
