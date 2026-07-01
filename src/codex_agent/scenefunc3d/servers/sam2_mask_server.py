@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import importlib
 import time
 from collections.abc import Iterable, Sequence
@@ -953,6 +955,7 @@ def _write_candidate_masks(
         mask_npz_path = staging_dir / f"{candidate_id}.npz"
         try:
             np.savez_compressed(mask_npz_path, mask=mask)
+            mask_npz_bytes = mask_npz_path.read_bytes()
         except OSError as exc:
             raise SamArtifactWriteError(
                 "could not write SAM2 mask artifact: "
@@ -965,6 +968,8 @@ def _write_candidate_masks(
                 candidate_id=candidate_id,
                 score=float(scores[index]),
                 mask_npz_path=mask_npz_path,
+                mask_npz_base64=base64.b64encode(mask_npz_bytes).decode("ascii"),
+                mask_npz_sha256=hashlib.sha256(mask_npz_bytes).hexdigest(),
                 pixel_count=pixel_count,
                 coverage_percent=coverage_percent,
             )

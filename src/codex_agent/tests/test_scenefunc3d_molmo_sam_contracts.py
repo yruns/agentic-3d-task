@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import io
 import json
 import math
 import struct
@@ -719,6 +722,84 @@ def test_cli_sam_mask_uses_configured_fake_backend(
     payload = json.loads(capsys.readouterr().out.strip())
     assert payload["candidates"][0]["candidate_id"] == "mask_00"
     assert Path(payload["candidates"][0]["mask_npz_path"]).exists()
+    assert Path(payload["contact_sheet_path"]).exists()
+
+
+def test_cli_sam_mask_materializes_inline_remote_mask(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    mask = np.zeros((80, 100), dtype=np.bool_)
+    mask[20:30, 10:30] = True
+    mask_bytes_io = io.BytesIO()
+    np.savez_compressed(mask_bytes_io, mask=mask)
+    mask_bytes = mask_bytes_io.getvalue()
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": "/mnt/bn/remote/mask_00.npz",
+                        "mask_npz_base64": base64.b64encode(mask_bytes).decode("ascii"),
+                        "mask_npz_sha256": hashlib.sha256(mask_bytes).hexdigest(),
+                        "pixel_count": 200,
+                        "coverage_percent": 2.5,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    try:
+        code = main(
+            [
+                "sam_mask",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(image_path),
+                        "points": [
+                            {
+                                "x_px": 10.0,
+                                "y_px": 20.0,
+                                "source": '<point x="10" y="20">drawer</point>',
+                                "label": "drawer",
+                            }
+                        ],
+                    }
+                ),
+                "--out-dir",
+                str(output_root),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    materialized_path = Path(payload["candidates"][0]["mask_npz_path"])
+    assert (
+        materialized_path
+        == output_root / "sam" / "000000" / "candidates" / "mask_00.npz"
+    )
+    assert materialized_path.is_file()
     assert Path(payload["contact_sheet_path"]).exists()
 
 

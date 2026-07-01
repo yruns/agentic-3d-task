@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from http.server import ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import TypeVar, cast
 
@@ -98,6 +99,48 @@ def test_build_arg_parser_accepts_all_samples_batch_runtime_options(
     assert args.backend_config == tmp_path / "backends.toml"
     assert args.output_dir == tmp_path / "out"
     assert args.score is True
+
+
+def test_main_prints_one_json_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result_path = tmp_path / "out" / "result.json"
+
+    def _fake_build_executor() -> CodexExecutor:
+        return cast(CodexExecutor, object())
+
+    def _fake_run_single_sample(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_id: str,
+        executor: CodexExecutor,
+        check_sidecars: bool,
+    ) -> Path:
+        _ = (config, sample_id, executor, check_sidecars)
+        return result_path
+
+    monkeypatch.setattr(runner, "_build_executor", _fake_build_executor)
+    monkeypatch.setattr(runner, "run_single_sample", _fake_run_single_sample)
+
+    exit_code = main(
+        [
+            "--dataset-root",
+            str(tmp_path / "data"),
+            "--sample-id",
+            "421254::desc-a",
+            "--backend-config",
+            str(tmp_path / "backends.toml"),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--skip-sidecar-health-check",
+        ]
+    )
+
+    assert exit_code == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert lines == [json.dumps({"result_path": str(result_path)})]
 
 
 def test_mask_task_prompt_inlines_tools_without_attachments(
@@ -959,6 +1002,33 @@ def test_check_sidecar_health_passes_for_healthy_fake_servers(
         sam_server.close()
 
 
+def test_check_sidecar_health_sends_configured_headers(tmp_path: Path) -> None:
+    molmo_server = _start_header_health_server(model_name="fake-molmo")
+    sam_server = _start_header_health_server(model_name="fake-sam")
+    headers_path = tmp_path / "headers.toml"
+    headers_path.write_text(
+        """
+[headers]
+X-Sidecar-Auth = "expected-secret"
+""",
+        encoding="utf-8",
+    )
+    backend_config_path = tmp_path / "backends.toml"
+    _write_backend_config(
+        backend_config_path,
+        molmo_url=molmo_server.base_url,
+        sam_url=sam_server.base_url,
+        root=tmp_path,
+        request_headers_path=headers_path,
+    )
+
+    try:
+        check_sidecar_health(backend_config_path)
+    finally:
+        molmo_server.close()
+        sam_server.close()
+
+
 def test_check_sidecar_health_rejects_unloaded_sidecar(
     tmp_path: Path,
 ) -> None:
@@ -997,6 +1067,7 @@ def test_check_sidecars_script_uses_backend_config(
     )
     script_path = Path("scripts/scenefunc3d/check_sidecars.sh").resolve()
     env = dict(os.environ)
+    env["PYTHON"] = sys.executable
     env["PYTHONPATH"] = "src"
 
     try:
@@ -2962,6 +3033,40 @@ def _start_health_server(*, model_name: str) -> _HealthServer:
     return _start_health_server_with_state(model_name=model_name, model_loaded=True)
 
 
+def _start_header_health_server(*, model_name: str) -> _HealthServer:
+    class HeaderHealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            if self.headers.get("X-Sidecar-Auth") != "expected-secret":
+                self.send_response(403)
+                self.end_headers()
+                return
+            body = json.dumps(
+                {
+                    "status": "ok",
+                    "model_name": model_name,
+                    "model_loaded": True,
+                }
+            ).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format: str, *args: object) -> None:
+            """Suppress noisy access logs in tests."""
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), HeaderHealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    port = int(server.server_address[1])
+    return _HealthServer(
+        base_url=f"http://127.0.0.1:{port}",
+        server=server,
+        thread=thread,
+    )
+
+
 def _start_health_server_with_state(
     *,
     model_name: str,
@@ -3932,12 +4037,19 @@ def _write_backend_config(
     molmo_url: str,
     sam_url: str,
     root: Path,
+    request_headers_path: Path | None = None,
 ) -> None:
+    header_lines: list[str] = []
+    if request_headers_path is not None:
+        header_lines.append(
+            f"request_headers_path = {json.dumps(str(request_headers_path))}"
+        )
     path.write_text(
         "\n".join(
             (
                 f"molmo_url = {json.dumps(molmo_url)}",
                 f"sam_url = {json.dumps(sam_url)}",
+                *header_lines,
                 "request_timeout_seconds = 2.0",
                 f"artifact_staging_root = {json.dumps(str(root / 'stage'))}",
                 f"allowed_image_roots = [{json.dumps(str(root))}]",

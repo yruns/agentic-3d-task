@@ -28,7 +28,7 @@ from ..errors import CodexResponseError, SceneFunc3dDataError
 from ..json_extraction import extract_json_object
 from ..models import CodexTurnMetadata, CodexTurnRequest
 from ..tasks.base import CodexExecutor
-from .backends.config import load_backend_settings
+from .backends.config import HttpHeader, load_backend_settings
 from .evaluation.payloads import SceneFunc3dScorePayload, score_to_payload
 from .evaluation.scorer import SceneFunc3dScore, score_result_file
 from .final_mask_artifacts import (
@@ -860,11 +860,13 @@ def check_sidecar_health(backend_config_path: Path) -> None:
         settings.molmo_url,
         service_name="molmo",
         timeout_seconds=settings.request_timeout_seconds,
+        request_headers=settings.request_headers,
     )
     sam_health = _fetch_sidecar_health(
         settings.sam_url,
         service_name="sam",
         timeout_seconds=settings.request_timeout_seconds,
+        request_headers=settings.request_headers,
     )
     _require_model_loaded(molmo_health, service_name="molmo")
     _require_model_loaded(sam_health, service_name="sam")
@@ -2809,11 +2811,12 @@ def _fetch_sidecar_health(
     *,
     service_name: str,
     timeout_seconds: float,
+    request_headers: tuple[HttpHeader, ...],
 ) -> HealthResponse:
     endpoint = _health_endpoint(base_url)
     request = Request(
         endpoint,
-        headers={"Accept": "application/json"},
+        headers=_health_request_headers(request_headers),
         method="GET",
     )
     try:
@@ -2843,6 +2846,13 @@ def _fetch_sidecar_health(
         raise RuntimeError(
             f"{service_name} sidecar health response failed validation"
         ) from exc
+
+
+def _health_request_headers(request_headers: tuple[HttpHeader, ...]) -> dict[str, str]:
+    headers = {"Accept": "application/json"}
+    for header in request_headers:
+        headers[header.name] = header.value
+    return headers
 
 
 def _decode_health_payload(response_body: bytes, *, service_name: str) -> object:

@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, ValidationError
 
+from codex_agent.scenefunc3d.backends.config import HttpHeader
 from codex_agent.scenefunc3d.tools.models import ToolInputError
 
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
@@ -23,6 +24,7 @@ def post_json(
     payload: dict[str, object],
     response_model: type[ResponseT],
     timeout_seconds: float,
+    request_headers: tuple[HttpHeader, ...] = (),
 ) -> ResponseT:
     """POST a JSON object and validate the sidecar response with Pydantic.
 
@@ -42,10 +44,7 @@ def post_json(
     request = Request(
         url,
         data=request_body,
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        },
+        headers=_json_request_headers(request_headers),
         method="POST",
     )
 
@@ -105,6 +104,16 @@ def _encode_request_payload(
             "sidecar HTTP request payload is not JSON serializable: "
             f"url={sanitized_url}; error_type=invalid_request_payload"
         ) from exc
+
+
+def _json_request_headers(request_headers: tuple[HttpHeader, ...]) -> dict[str, str]:
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    for header in request_headers:
+        headers[header.name] = header.value
+    return headers
 
 
 def _decode_response_body(response_body: bytes, *, sanitized_url: str) -> object:

@@ -37,6 +37,7 @@ def request_molmo_point(
         },
         response_model=MolmoPointResponse,
         timeout_seconds=settings.request_timeout_seconds,
+        request_headers=settings.request_headers,
     )
     if response.request_id != request_id:
         raise ToolInputError(

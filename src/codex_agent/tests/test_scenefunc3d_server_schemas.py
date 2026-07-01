@@ -232,15 +232,18 @@ def test_sam_mask_candidate_rejects_string_pixel_count(tmp_path: Path) -> None:
         SamMaskCandidateResponse.model_validate(payload)
 
 
-def test_sam_mask_candidate_requires_existing_mask_file(tmp_path: Path) -> None:
-    with pytest.raises(ValidationError):
-        SamMaskCandidateResponse(
-            candidate_id="mask_00",
-            score=0.9,
-            mask_npz_path=tmp_path / "missing.npz",
-            pixel_count=11,
-            coverage_percent=0.5,
-        )
+def test_sam_mask_candidate_accepts_remote_mask_path(tmp_path: Path) -> None:
+    candidate = SamMaskCandidateResponse(
+        candidate_id="mask_00",
+        score=0.9,
+        mask_npz_path=tmp_path / "missing.npz",
+        pixel_count=11,
+        coverage_percent=0.5,
+    )
+
+    assert candidate.mask_npz_path == tmp_path / "missing.npz"
+    assert candidate.mask_npz_base64 == ""
+    assert candidate.mask_npz_sha256 == ""
 
 
 def test_sam_mask_response_rejects_infinite_latency(tmp_path: Path) -> None:

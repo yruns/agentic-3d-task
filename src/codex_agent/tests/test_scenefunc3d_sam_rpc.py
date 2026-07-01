@@ -56,6 +56,49 @@ def test_request_sam_masks_returns_candidate_paths(tmp_path: Path) -> None:
     assert response.candidates[0].mask_npz_path == mask_path
 
 
+def test_request_sam_masks_supports_base_path(tmp_path: Path) -> None:
+    image_path = tmp_path / "frame.jpg"
+    image_path.write_bytes(b"image")
+    mask_path = tmp_path / "mask_00.npz"
+    mask_path.write_bytes(b"mask")
+    staging_dir = tmp_path / "out" / "sam" / "000050" / "candidates"
+    server = _start_server(
+        {
+            "/s/export-token/sam/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(mask_path),
+                        "pixel_count": 12,
+                        "coverage_percent": 15.0,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    settings = _settings(
+        tmp_path,
+        sam_url=f"http://127.0.0.1:{server.server_port}/s/export-token/sam",
+    )
+    try:
+        response = request_sam_masks(
+            settings,
+            request_id="req-path",
+            args=_args(image_path),
+            staging_dir=staging_dir,
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert response.request_id == "req-path"
+    assert response.candidates[0].candidate_id == "mask_00"
+
+
 def test_request_sam_masks_server_down_is_recoverable(tmp_path: Path) -> None:
     image_path = tmp_path / "frame.jpg"
     image_path.write_bytes(b"image")

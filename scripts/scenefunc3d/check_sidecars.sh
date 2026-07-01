@@ -3,7 +3,7 @@ set -euo pipefail
 
 backend_config="${1:?usage: scripts/scenefunc3d/check_sidecars.sh /path/to/scenefunc3d_backends.toml}"
 
-"${PYTHON:-python}" - <<'PY' "$backend_config"
+"${PYTHON:-python3}" - <<'PY' "$backend_config"
 from __future__ import annotations
 
 import sys

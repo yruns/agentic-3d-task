@@ -38,7 +38,31 @@ from TASA is intentionally out of scope for this smoke.
   is set. On Linux it starts the project-local ModelHub adapter by default;
   other platforms can still set `START_ADAPTER=1` explicitly. The adapter loads
   private credentials from the gitignored `codex_modelhub_adapter/.env` or
-  `codex_modelhub_adapter/.modelhub_upstreams.toml` before launching MolmoPoint,
-  SAM2.1-Hiera-L, and `codex_agent.scenefunc3d.runner --score`.
+  `codex_modelhub_adapter/.modelhub_upstreams.toml`. The sidecar mode defaults
+  to the configured remote workspace proxy; set `SIDECAR_MODE=local` to launch
+  local MolmoPoint and SAM2.1-Hiera-L sidecars before
+  `codex_agent.cli.run_scenefunc3d --score`.
 - `assets/test_molmo_sam3d_smoke.py` — unit tests for point parsing, SAM
   candidate selection, success assessment, and Molmo remote-code patching.
+
+## Run prerequisites
+
+- Set `DATASET_ROOT` to a prepared SceneFuncVal-CG root. The portable default is
+  `data/SceneFuncVal-CG` under the repo, but a real run needs the scene JSON
+  files, raw RGB/depth/pose/intrinsics, filtered mesh assets, crop masks, and
+  hidden GT masks for scoring.
+- Provide Codex access through either `USE_CODEX_AUTH=1` with an authenticated
+  `CODEX_HOME`, or the project-local ModelHub adapter credentials in gitignored
+  adapter config. `PRECHECK_ONLY=1` validates only this auth/adapter boundary.
+- For the default remote sidecar mode, put workspace-proxy request headers in
+  the gitignored `configs/scenefunc3d_sidecar_headers.toml` using
+  `configs/scenefunc3d_sidecar_headers.example.toml` as the template. Override
+  `SCENEFUNC3D_SIDECAR_BASE_URL` when the workspace-proxy path changes.
+- For `SIDECAR_MODE=local`, provide a CUDA-capable sidecar Python environment
+  and the local MolmoPoint and SAM2.1-Hiera-L snapshots referenced by `MOLMO_*`,
+  `SAM_MODEL_PATH`, and `HF_HOME`, or override those paths explicitly. Local
+  mode starts sidecars on ports `8711` and `8712`.
+- The native single-port sidecar can be used when running the CLI directly by
+  setting backend URLs such as
+  `http://127.0.0.1:9001/s/<export-id>/molmo` and
+  `http://127.0.0.1:9001/s/<export-id>/sam`.

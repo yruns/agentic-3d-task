@@ -99,7 +99,9 @@ class SamMaskCandidateResponse(_StrictSchema):
 
     candidate_id: NonEmptyString
     score: float = Field(ge=0.0, le=1.0)
-    mask_npz_path: FilePath
+    mask_npz_path: Path
+    mask_npz_base64: str = ""
+    mask_npz_sha256: str = ""
     pixel_count: int = Field(ge=0, strict=True)
     coverage_percent: float = Field(ge=0.0, le=100.0)
 

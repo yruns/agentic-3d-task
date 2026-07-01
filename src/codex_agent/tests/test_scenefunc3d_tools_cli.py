@@ -1857,7 +1857,9 @@ def test_cli_view_frame_prefers_conceptgraph_over_source_frame_raw_path(
     payload = json.loads(capsys.readouterr().out.strip())
     output_path = Path(payload["frames"][0]["image_path"])
     with Image.open(output_path) as image:
-        red, green, blue = image.convert("RGB").getpixel((0, 0))
+        red, green, blue = cast(
+            tuple[int, int, int], image.convert("RGB").getpixel((0, 0))
+        )
     assert green > red
     assert green > blue
 
@@ -2192,7 +2194,9 @@ def test_cli_view_crop_renders_normalized_rgb_crop(
     assert crop_path.exists()
     with Image.open(crop_path) as crop_image:
         assert crop_image.size == (40, 32)
-        red_mean, green_mean, _ = crop_image.resize((1, 1)).getpixel((0, 0))
+        red_mean, green_mean, _ = cast(
+            tuple[int, int, int], crop_image.resize((1, 1)).getpixel((0, 0))
+        )
         assert green_mean > red_mean
 
 
@@ -2265,7 +2269,9 @@ def test_cli_view_crop_accepts_frame_object_pixel_bbox(
     crop_path = Path(payload["frames"][0]["image_path"])
     with Image.open(crop_path) as crop_image:
         assert crop_image.size == (40, 32)
-        red_mean, green_mean, _ = crop_image.resize((1, 1)).getpixel((0, 0))
+        red_mean, green_mean, _ = cast(
+            tuple[int, int, int], crop_image.resize((1, 1)).getpixel((0, 0))
+        )
         assert green_mean > red_mean
 
 

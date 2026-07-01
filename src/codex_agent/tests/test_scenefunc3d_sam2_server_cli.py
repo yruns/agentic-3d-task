@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import importlib
 import json
 import sys
@@ -83,6 +85,25 @@ def test_build_arg_parser_accepts_runtime_options() -> None:
     assert args.config_path == Path("/models/sam2.yaml")
     assert args.staging_root == Path("/runs/scenefunc3d")
     assert args.device == "cuda:0"
+
+
+def test_write_candidate_masks_includes_inline_npz_payload(tmp_path: Path) -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import _write_candidate_masks
+
+    mask_batch = np.array(
+        [[[True, False, True], [False, False, True]]],
+        dtype=np.bool_,
+    )
+    candidates = _write_candidate_masks(
+        mask_batch,
+        np.array([0.91], dtype=np.float64),
+        staging_dir=tmp_path,
+    )
+
+    candidate = candidates[0]
+    mask_npz_bytes = candidate.mask_npz_path.read_bytes()
+    assert candidate.mask_npz_base64 == base64.b64encode(mask_npz_bytes).decode("ascii")
+    assert candidate.mask_npz_sha256 == hashlib.sha256(mask_npz_bytes).hexdigest()
 
 
 def test_build_arg_parser_accepts_transformers_model_path() -> None:
@@ -708,6 +729,8 @@ def test_handler_supports_health_and_masks_routes(tmp_path: Path) -> None:
             "candidate_id": "mask_00",
             "score": 0.91,
             "mask_npz_path": str(staging_dir / "mask_00.npz"),
+            "mask_npz_base64": "",
+            "mask_npz_sha256": "",
             "pixel_count": 3,
             "coverage_percent": 50.0,
         }

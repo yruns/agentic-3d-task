@@ -55,6 +55,48 @@ def test_request_molmo_point_returns_raw_text(tmp_path: Path) -> None:
     assert response.image_points[0].label == "handle"
 
 
+def test_request_molmo_point_supports_base_path(tmp_path: Path) -> None:
+    image_path = tmp_path / "frame.jpg"
+    image_path.write_bytes(b"image")
+    server = _start_server(
+        {
+            "/s/export-token/molmo/v1/point": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "MolmoPoint-8B",
+                "raw_text": '<point x="50" y="50">handle</point>',
+                "image_points": (
+                    {
+                        "x_px": 50.0,
+                        "y_px": 40.0,
+                        "source": '<point x="50" y="50">handle</point>',
+                        "label": "handle",
+                    },
+                ),
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    settings = _settings(
+        tmp_path,
+        molmo_url=f"http://127.0.0.1:{server.server_port}/s/export-token/molmo",
+    )
+    args = MolmoPointArgs(
+        frame_id="000050",
+        image_path=image_path,
+        prompt="drawer handle",
+        image_width=100,
+        image_height=80,
+    )
+    try:
+        response = request_molmo_point(settings, request_id="req-path", args=args)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert response.request_id == "req-path"
+    assert response.image_points[0].label == "handle"
+
+
 def test_request_molmo_point_server_down_is_recoverable(tmp_path: Path) -> None:
     image_path = tmp_path / "frame.jpg"
     image_path.write_bytes(b"image")

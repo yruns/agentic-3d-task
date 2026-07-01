@@ -1,8 +1,17 @@
-# Safe local placeholder configuration for SceneFunc3D sidecar backends.
+# Safe placeholder configuration for SceneFunc3D sidecar backends.
 # Copy to configs/scenefunc3d_backends.toml and adjust paths for local runs.
+# The real configs/scenefunc3d_backends.toml is gitignored.
 
+# Local sidecars.
 molmo_url = "http://127.0.0.1:8711"
 sam_url = "http://127.0.0.1:8712"
+
+# Remote workspace-proxy sidecar. When this is set, molmo_url and sam_url can
+# be omitted; the client derives <sidecar_base_url>/molmo and
+# <sidecar_base_url>/sam.
+# sidecar_base_url = "https://workspace-proxy-candy-maliva-tce.tiktok-row.org/pws..."
+# request_headers_path = "scenefunc3d_sidecar_headers.toml"
+
 request_timeout_seconds = 30.0
 
 artifact_staging_root = "/tmp/scenefunc3d/artifacts"

@@ -44,6 +44,7 @@ def request_sam_masks(
         },
         response_model=SamMaskResponse,
         timeout_seconds=settings.request_timeout_seconds,
+        request_headers=settings.request_headers,
     )
     if response.request_id != request_id:
         raise ToolInputError(

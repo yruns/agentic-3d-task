@@ -12,6 +12,7 @@ from typing import TypeAlias
 import pytest
 from pydantic import BaseModel, ConfigDict
 
+from codex_agent.scenefunc3d.backends.config import HttpHeader
 from codex_agent.scenefunc3d.backends.http_client import post_json
 from codex_agent.scenefunc3d.servers.http_json import JsonRoute, make_json_handler
 from codex_agent.scenefunc3d.tools.models import ToolInputError
@@ -29,6 +30,28 @@ class _EchoResponse(BaseModel):
 class _InvalidJsonHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
         body = b'{"ok": '
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args: object) -> None:
+        """Suppress noisy access logs in tests."""
+
+
+class _RequiredHeaderHandler(BaseHTTPRequestHandler):
+    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+        _ = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        if self.headers.get("X-Sidecar-Auth") != "expected-secret":
+            body = b'{"error":"missing_header"}'
+            self.send_response(403)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        body = b'{"ok": true, "message": "authorized"}'
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -61,6 +84,26 @@ def test_post_json_round_trip() -> None:
 
     assert response.ok is True
     assert response.message == "hello"
+
+
+def test_post_json_sends_configured_headers() -> None:
+    server = _start_server(_RequiredHeaderHandler)
+    try:
+        response = post_json(
+            f"http://127.0.0.1:{server.server_port}/echo",
+            payload={"message": "hello"},
+            response_model=_EchoResponse,
+            timeout_seconds=2.0,
+            request_headers=(
+                HttpHeader(name="X-Sidecar-Auth", value="expected-secret"),
+            ),
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert response.ok is True
+    assert response.message == "authorized"
 
 
 def test_json_server_get_health_round_trip() -> None:
