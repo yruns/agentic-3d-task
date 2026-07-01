@@ -8,7 +8,7 @@ surface instead of ad-hoc stand-ins.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
@@ -108,8 +108,15 @@ class _ThreadStartCall:
 
 
 class _FakeThread:
-    def __init__(self, results: list[TurnResult]) -> None:
+    def __init__(
+        self,
+        results: list[TurnResult],
+        *,
+        on_run: Callable[[Path], None] | None = None,
+    ) -> None:
         self._results = list(results)
+        self._on_run = on_run
+        self.env: dict[str, str] = {}
         self.calls: list[_ThreadRunCall] = []
 
     def run(
@@ -132,6 +139,8 @@ class _FakeThread:
                 summary=summary,
             )
         )
+        if self._on_run is not None:
+            self._on_run(Path(self.env["CODEX_HOME"]))
         if not self._results:
             raise AssertionError("fake thread ran out of results")
         return self._results.pop(0)
@@ -173,6 +182,7 @@ class _FakeClient:
     def thread_start(
         self, *, model: str, model_provider: str, sandbox: Sandbox, cwd: str
     ) -> _FakeThread:
+        self.thread.env = self.env
         self.thread_start_call = _ThreadStartCall(
             model=model,
             model_provider=model_provider,
@@ -211,6 +221,7 @@ def _install(
     reasoning_summary: ConfigReasoningSummary = "",
     copy_auth_file: bool = False,
     keep_run_home: bool = False,
+    on_run: Callable[[Path], None] | None = None,
 ) -> _Fake:
     agent_config = CodexAgentConfig(
         project_root=tmp_path,
@@ -224,7 +235,7 @@ def _install(
         keep_run_home=keep_run_home,
     )
     runtime = CodexAgentRuntime(agent_config)
-    client = _FakeClient(_FakeThread(results))
+    client = _FakeClient(_FakeThread(results, on_run=on_run))
 
     def _factory(*, config: CodexConfig) -> _FakeClient:
         client.config = config
@@ -324,6 +335,59 @@ def test_run_turn_does_not_copy_auth_by_default(
 
     assert result.metadata.run_home is not None
     assert not (Path(result.metadata.run_home) / "auth.json").exists()
+
+
+def test_run_turn_keeps_trace_but_prunes_app_server_state(
+    tmp_path: Path, fake_codex_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session_path_holder: list[Path] = []
+
+    def write_app_server_state(run_home: Path) -> None:
+        plugin_cache_path = run_home / ".tmp" / "plugins" / "plugins" / "demo"
+        plugin_cache_path.mkdir(parents=True)
+        (plugin_cache_path / "asset.bin").write_bytes(b"x" * 1024)
+        for name in (
+            "logs_2.sqlite",
+            "logs_2.sqlite-wal",
+            "logs_2.sqlite-shm",
+            "state_5.sqlite",
+            "state_5.sqlite-wal",
+            "state_5.sqlite-shm",
+        ):
+            (run_home / name).write_bytes(b"x" * 1024)
+        session_path = (
+            run_home / "sessions" / "2026" / "07" / "01" / "rollout-test.jsonl"
+        )
+        session_path.parent.mkdir(parents=True)
+        session_path.write_text('{"event":"trace"}\n', encoding="utf-8")
+        session_path_holder.append(session_path)
+
+    fake = _install(
+        tmp_path,
+        fake_codex_home,
+        [_turn_result('{"ok": 1}')],
+        monkeypatch,
+        keep_run_home=True,
+        on_run=write_app_server_state,
+    )
+
+    result = fake.runtime.run_turn(_request())
+
+    assert result.metadata.run_home is not None
+    run_home = Path(result.metadata.run_home)
+    assert run_home.is_dir()
+    assert session_path_holder == [
+        run_home / "sessions" / "2026" / "07" / "01" / "rollout-test.jsonl"
+    ]
+    assert session_path_holder[0].read_text(encoding="utf-8") == '{"event":"trace"}\n'
+    assert (run_home / "config.toml").is_file()
+    assert not (run_home / ".tmp").exists()
+    assert not (run_home / "logs_2.sqlite").exists()
+    assert not (run_home / "logs_2.sqlite-wal").exists()
+    assert not (run_home / "logs_2.sqlite-shm").exists()
+    assert not (run_home / "state_5.sqlite").exists()
+    assert not (run_home / "state_5.sqlite-wal").exists()
+    assert not (run_home / "state_5.sqlite-shm").exists()
 
 
 def test_run_turn_copies_auth_when_enabled(
