@@ -7,6 +7,7 @@ import importlib
 import importlib.util
 import json
 import math
+import shutil
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from json import JSONDecodeError
@@ -442,9 +443,10 @@ def view_frame(
     frames: list[ViewFrame] = []
     for frame_id in args.frame_ids:
         geometry_paths = _resolve_frame_geometry_paths(tool_scene, frame_id)
-        rendered_image = _write_jpeg_copy(
-            _resolve_rgb_source(tool_scene, frame_id),
-            out_dir / tool_scene.visit_id / f"{frame_id}.jpg",
+        source_path = _resolve_rgb_source(tool_scene, frame_id)
+        rendered_image = _copy_raw_rgb_frame(
+            source_path,
+            out_dir / tool_scene.visit_id / f"{frame_id}{source_path.suffix.lower()}",
         )
         frames.append(
             ViewFrame(
@@ -948,25 +950,25 @@ class _RenderedCrop:
     crop_metadata_path: Path
 
 
-def _write_jpeg_copy(source_path: Path, destination_path: Path) -> _RenderedImage:
+def _copy_raw_rgb_frame(source_path: Path, destination_path: Path) -> _RenderedImage:
     try:
         from PIL import Image
     except ImportError as exc:
         raise ToolInputError(
-            "Pillow is required to render SceneFunc3D evidence frames; install the "
+            "Pillow is required to inspect SceneFunc3D evidence frames; install the "
             "'vision' extra"
         ) from exc
 
     try:
         destination_path.parent.mkdir(parents=True, exist_ok=True)
+        if source_path.resolve() != destination_path.resolve():
+            shutil.copyfile(source_path, destination_path)
         with Image.open(source_path) as image:
-            rgb_image = image.convert("RGB")
-            rgb_image.save(destination_path, format="JPEG", quality=_JPEG_QUALITY)
-            image_width = rgb_image.width
-            image_height = rgb_image.height
+            image_width = image.width
+            image_height = image.height
     except OSError as exc:
         raise ToolInputError(
-            f"could not render RGB image {source_path} as JPEG: {exc}"
+            f"could not stage raw RGB image {source_path}: {exc}"
         ) from exc
     return _RenderedImage(
         image_path=destination_path,

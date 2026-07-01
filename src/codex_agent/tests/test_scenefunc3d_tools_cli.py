@@ -1841,6 +1841,45 @@ def test_cli_view_frame_returns_image_path(
     assert payload["frames"][0]["image_height"] == 10
 
 
+def test_cli_view_frame_preserves_raw_jpeg_bytes(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    (scene_dir / "raw" / "000000-rgb.png").unlink()
+    source_path = scene_dir / "raw" / "000000-rgb.jpg"
+    image = Image.new("RGB", (16, 12))
+    image.putdata(
+        [
+            (x * 11 % 256, y * 17 % 256, (x + y) * 13 % 256)
+            for y in range(12)
+            for x in range(16)
+        ]
+    )
+    image.save(source_path, format="JPEG", quality=73)
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_ids": ["000000"]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    output_path = Path(payload["frames"][0]["image_path"])
+    assert output_path.read_bytes() == source_path.read_bytes()
+    assert payload["frames"][0]["image_width"] == 16
+    assert payload["frames"][0]["image_height"] == 12
+
+
 def test_cli_view_frame_exposes_raw_geometry_paths(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
