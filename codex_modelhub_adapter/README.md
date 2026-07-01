@@ -23,31 +23,25 @@ POST /v1/responses/compact
 GET  /health
 ```
 
-For `gpt-5.4*` and `gpt-5.5*`, the default route is:
+The default route is a Responses API passthrough:
 
 ```text
 Codex SDK Responses API
   -> http://127.0.0.1:8787/v1/responses
-  -> AIDP ModelHub platform-selected endpoint /api/modelhub/online/v2/crawl
-  -> Chat Completions response/SSE
+  -> AIDP ModelHub platform-selected endpoint /api/modelhub/online/responses
   -> Responses response/SSE
 ```
 
-The migrated logic mirrors the Case-Reviewer AIDP Codex proxy behavior:
+The default path keeps the request body unchanged and only handles gateway
+concerns:
 
 - office/online base URL switching
-- `auto` routing from `gpt-5.4*` / `gpt-5.5*` to `/v2/crawl`
-- Responses input to Chat Completions messages
-- Responses tools to Chat Completions tools
-- paired `function_call` / `function_call_output` preservation
-- unpaired function-call cleanup for Chat Completions compatibility
-- Chat Completions response to Responses output conversion
-- complete Responses SSE lifecycle for streamed chat chunks
-- local `/responses/compact` checkpoint response
-- context-length retry with stronger trimming
-- invalid encrypted state retry after removing opaque state
+- Responses request body passthrough
+- Responses response/SSE passthrough
+- upstream `/responses/compact` proxying
 - optional TOML upstream pool with `url`, `model_name`, `ak`, and `weight`
 - optional sticky AK pool selected by `extra.session_id`
+- 429 retry/failover
 
 ## Install
 
@@ -182,7 +176,7 @@ uv run python examples/run_codex_sdk.py
 
 `[[upstreams]]` entries use:
 
-- `url`: ModelHub base URL, or a legacy full URL ending in `/v2/crawl` or `/responses`
+- `url`: ModelHub base URL or a full URL ending in `/responses`
 - `model_name`: exact model name or a wildcard pattern such as `gpt-5.4*`
 - `ak`: upstream ModelHub AK
 - `weight`: positive integer traffic weight
@@ -212,16 +206,15 @@ configured, it falls back to `AIDP_GPT_AK`.
 
 ## Compatibility Notes
 
-The adapter can make Codex SDK talk to an AIDP Chat Completions-style model, but
-actual coding-agent behavior still depends on the upstream model returning tool
-calls in a compatible shape. Plain text-only upstream responses can answer
-questions but cannot reliably drive shell, patch, and file-edit actions.
+The adapter expects ModelHub's Responses API. Chat Completions crawl endpoints
+(`/v2/crawl`) are intentionally unsupported; configuring one fails closed at
+startup/request-build time.
 
 Legacy variables still work:
 
 ```bash
 MODELHUB_AK=replace-with-modelhub-ak
-MODELHUB_URL=https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online/v2/crawl
+MODELHUB_URL=https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online/responses
 ```
 
 ## Test

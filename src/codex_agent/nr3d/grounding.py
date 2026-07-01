@@ -90,12 +90,17 @@ class Nr3dGroundingTask:
         scene_dir: Path | None = None,
         tool_cli_module: str = DEFAULT_TOOL_CLI_MODULE,
     ) -> None:
+        resolved_tools_enabled = tools_enabled and scene_dir is not None
+        if skill is not None and not resolved_tools_enabled:
+            raise ValueError(
+                "NR3D skill mode requires tools_enabled=True and a scene_dir"
+            )
         self.sample = sample
         self.scene = scene
         self.skill = skill
         self.note_max_chars = note_max_chars
         self.visible_frames_preview = visible_frames_preview
-        self.tools_enabled = tools_enabled and scene_dir is not None
+        self.tools_enabled = resolved_tools_enabled
         self.scene_dir = scene_dir
         self.tool_cli_module = tool_cli_module
 
@@ -104,15 +109,18 @@ class Nr3dGroundingTask:
         return TASK_NAME
 
     def build_turn_request(self) -> CodexTurnRequest:
-        # Tool mode inlines the playbook into the prompt (see
-        # codex_agent.nr3d.playbook) and never attaches an on-disk skill:
-        # advertising a SKILL.md path re-introduces the unbounded re-read loop
-        # once Codex windows the context. Prompt-only mode may still attach the
-        # lightweight reasoning skill.
+        # Default tool mode inlines the playbook into the prompt (see
+        # codex_agent.nr3d.playbook) and attaches no on-disk skill: advertising
+        # a SKILL.md path was the bait for the historical re-read loop once
+        # Codex windowed the context. An explicitly supplied skill is still
+        # honored, but only in tool mode where skill instructions can invoke
+        # the NR3D tool workflow.
         if self.tools_enabled:
-            skills: tuple[CodexSkill, ...] = ()
+            skills: tuple[CodexSkill, ...] = (
+                (self.skill,) if self.skill is not None else ()
+            )
         else:
-            skills = (self.skill,) if self.skill is not None else ()
+            skills = ()
         return CodexTurnRequest(
             prompt=self._build_prompt(),
             output_schema=Nr3dGroundingDecision.model_json_schema(),
@@ -180,6 +188,7 @@ class Nr3dGroundingTask:
             f"- scene_category: {self.scene.scene_category or 'unknown'}\n"
             f"- total_frames: {self._fmt(self.scene.total_frames)}\n"
             f"- frame_id_range: {self._fmt_range(self.scene.frame_id_range)}\n"
+            + self._skill_scene_dir_line()
             + self._tools_section()
             + "\nProposals by category:\n"
             + "\n".join(category_lines)
@@ -223,6 +232,8 @@ class Nr3dGroundingTask:
     def _tools_section(self) -> str:
         if not self.tools_enabled or self.scene_dir is None:
             return ""
+        if self.skill is not None:
+            return ""
         return (
             "\nHow to run a tool (in the shell):\n"
             f"- scene_dir: {self.scene_dir}\n"
@@ -244,6 +255,11 @@ class Nr3dGroundingTask:
             "approach instead of retrying.\n"
             "\n" + NR3D_TOOLS_PLAYBOOK + "\n"
         )
+
+    def _skill_scene_dir_line(self) -> str:
+        if self.skill is None or not self.tools_enabled or self.scene_dir is None:
+            return ""
+        return f"- scene_dir: {self.scene_dir}\n"
 
     def _format_proposal(self, proposal: Proposal) -> str:
         cx, cy, cz, sx, sy, sz, rx, ry, rz = proposal.bbox_3d_9dof
