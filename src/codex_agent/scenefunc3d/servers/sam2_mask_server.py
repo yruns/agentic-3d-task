@@ -10,6 +10,7 @@ import time
 from collections.abc import Iterable, Sequence
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from threading import Lock
 from types import ModuleType
 from typing import (
@@ -26,6 +27,7 @@ import numpy as np
 from numpy.typing import NDArray
 from pydantic import ValidationError
 
+from codex_agent.scenefunc3d.backends.image_payload import materialize_inline_image
 from codex_agent.scenefunc3d.servers.http_json import (
     JsonHttpError,
     JsonObject,
@@ -352,12 +354,12 @@ class OfficialSam2Runner:
 
     def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
         staging_dir = _resolve_staging_dir(
-            request.staging_dir,
+            request.require_staging_dir(),
             staging_root=self._staging_root,
         )
         try:
             image_module = cast(_ImageModule, importlib.import_module("PIL.Image"))
-            with image_module.open(request.image_path) as image:
+            with image_module.open(request.require_image_path()) as image:
                 rgb_image = image.convert("RGB")
                 image_array = _image_to_rgb_array(rgb_image)
         except SamImageLoadError:
@@ -449,12 +451,12 @@ class TransformersSam2Runner:
 
     def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
         staging_dir = _resolve_staging_dir(
-            request.staging_dir,
+            request.require_staging_dir(),
             staging_root=self._staging_root,
         )
         try:
             image_module = cast(_ImageModule, importlib.import_module("PIL.Image"))
-            with image_module.open(request.image_path) as image:
+            with image_module.open(request.require_image_path()) as image:
                 rgb_image = image.convert("RGB")
                 image_array = _image_to_rgb_array(rgb_image)
         except SamImageLoadError:
@@ -579,7 +581,7 @@ def _handle_masks(runner: Sam2Runner, payload: JsonObject) -> JsonObject:
 
     start_time = time.perf_counter()
     try:
-        candidates = runner.masks(request)
+        candidates = run_sam_mask_request(runner, request)
     except SamStagingPathError as exc:
         raise JsonHttpError(
             400,
@@ -624,6 +626,28 @@ def _handle_masks(runner: Sam2Runner, payload: JsonObject) -> JsonObject:
         latency_ms=latency_ms,
     )
     return cast(JsonObject, response.model_dump(mode="json"))
+
+
+def run_sam_mask_request(
+    runner: Sam2Runner,
+    request: SamMaskRequest,
+) -> tuple[SamMaskCandidateResponse, ...]:
+    """Run SAM with path-backed inputs, using temporary files for inline requests."""
+    if request.image_source == "path" and request.staging_dir is not None:
+        return runner.masks(request)
+
+    with TemporaryDirectory(prefix="scenefunc3d-sam-request-") as temporary_dir:
+        temporary_root = Path(temporary_dir)
+        path_request = request
+        if request.image_source == "inline":
+            image_path = materialize_inline_image(
+                request.require_inline_image(),
+                parent_dir=temporary_root / "image",
+            )
+            path_request = request.with_image_path(image_path)
+        if path_request.staging_dir is None:
+            path_request = path_request.with_staging_dir(temporary_root / "staging")
+        return runner.masks(path_request)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -1009,5 +1033,6 @@ __all__ = [
     "TransformersSam2Runner",
     "build_arg_parser",
     "main",
+    "run_sam_mask_request",
     "serve",
 ]

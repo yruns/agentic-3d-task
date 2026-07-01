@@ -13,11 +13,13 @@ from dataclasses import dataclass
 from http.server import ThreadingHTTPServer
 from numbers import Real
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Literal, Protocol, TypedDict, cast, runtime_checkable
 
 from pydantic import ValidationError
 
+from codex_agent.scenefunc3d.backends.image_payload import materialize_inline_image
 from codex_agent.scenefunc3d.servers.http_json import (
     JsonHttpError,
     JsonObject,
@@ -316,7 +318,7 @@ class TransformersMolmoRunner:
 
     def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
         image_module = cast(_ImageModule, importlib.import_module("PIL.Image"))
-        with image_module.open(request.image_path) as image:
+        with image_module.open(request.require_image_path()) as image:
             rgb_image = image.convert("RGB")
             raw_inputs = self._processor.apply_chat_template(
                 _build_molmopoint_messages(rgb_image, request.prompt),
@@ -418,7 +420,7 @@ def _handle_point(runner: MolmoRunner, payload: JsonObject) -> JsonObject:
         ) from exc
     start_time = time.perf_counter()
     try:
-        point_result = runner.point(request)
+        point_result = run_molmo_point_request(runner, request)
     except RuntimeError as exc:
         if _is_gpu_resource_error(exc):
             raise JsonHttpError(503, {"error": "molmo_resource_unavailable"}) from exc
@@ -432,6 +434,22 @@ def _handle_point(runner: MolmoRunner, payload: JsonObject) -> JsonObject:
         latency_ms=latency_ms,
     )
     return response.model_dump(mode="json")
+
+
+def run_molmo_point_request(
+    runner: MolmoRunner,
+    request: MolmoPointRequest,
+) -> MolmoRunnerPointResult:
+    """Run Molmo with a path-backed request, materializing inline images briefly."""
+    if request.image_source == "path":
+        return runner.point(request)
+
+    with TemporaryDirectory(prefix="scenefunc3d-molmo-image-") as temporary_dir:
+        image_path = materialize_inline_image(
+            request.require_inline_image(),
+            parent_dir=Path(temporary_dir),
+        )
+        return runner.point(request.with_image_path(image_path))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -790,5 +808,6 @@ __all__ = [
     "force_legacy_generation_cache",
     "main",
     "patch_molmo_remote_code",
+    "run_molmo_point_request",
     "serve",
 ]

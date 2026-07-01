@@ -30,8 +30,12 @@ class _FakeSamRunner:
     model_name: str = "fake-sam2"
 
     def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
-        request.staging_dir.mkdir(parents=True, exist_ok=True)
-        mask_path = request.staging_dir / "mask_00.npz"
+        image_path = request.require_image_path()
+        if not image_path.is_file():
+            raise AssertionError(f"expected materialized image file: {image_path}")
+        staging_dir = request.require_staging_dir()
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        mask_path = staging_dir / "mask_00.npz"
         mask = np.array([[True, False, True], [False, False, True]], dtype=np.bool_)
         np.savez_compressed(mask_path, mask=mask)
         return (
@@ -50,6 +54,19 @@ class _OutOfMemorySamRunner:
 
     def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
         raise RuntimeError("CUDA out of memory while allocating SAM tensors")
+
+
+class _RecordingSamRunner(_FakeSamRunner):
+    seen_image_path: Path | None = None
+    seen_staging_dir: Path | None = None
+    image_existed_during_call: bool = False
+
+    def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
+        image_path = request.require_image_path()
+        self.seen_image_path = image_path
+        self.seen_staging_dir = request.require_staging_dir()
+        self.image_existed_during_call = image_path.is_file()
+        return super().masks(request)
 
 
 def test_build_arg_parser_accepts_runtime_options() -> None:
@@ -738,6 +755,39 @@ def test_handler_supports_health_and_masks_routes(tmp_path: Path) -> None:
     assert isinstance(mask_payload["latency_ms"], float)
 
 
+def test_handler_materializes_inline_mask_request() -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import _build_routes
+
+    runner = _RecordingSamRunner()
+    server = _start_json_server(_build_routes(runner))
+    try:
+        mask_payload = _post_json(
+            f"http://127.0.0.1:{server.server_port}/v1/masks",
+            {
+                "request_id": "req-inline",
+                "image": _inline_image_payload(b"inline image bytes"),
+                "points": [
+                    {
+                        "x_px": 10.0,
+                        "y_px": 20.0,
+                        "label": "drawer",
+                        "source": '<point x="10" y="20">drawer</point>',
+                    }
+                ],
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert mask_payload["request_id"] == "req-inline"
+    assert runner.image_existed_during_call is True
+    assert runner.seen_image_path is not None
+    assert runner.seen_staging_dir is not None
+    assert not runner.seen_image_path.exists()
+    assert not runner.seen_staging_dir.exists()
+
+
 def test_invalid_mask_request_returns_recoverable_http_error(
     tmp_path: Path,
 ) -> None:
@@ -904,6 +954,15 @@ def _sam_request(*, image_path: Path, staging_dir: Path) -> SamMaskRequest:
             "staging_dir": staging_dir,
         }
     )
+
+
+def _inline_image_payload(image_bytes: bytes) -> dict[str, object]:
+    return {
+        "filename": "frame.jpg",
+        "mime_type": "image/jpeg",
+        "sha256": hashlib.sha256(image_bytes).hexdigest(),
+        "data_base64": base64.b64encode(image_bytes).decode("ascii"),
+    }
 
 
 def _install_fake_runtime(

@@ -24,6 +24,7 @@ from codex_agent.scenefunc3d.servers.molmo_point_server import (
     MolmoRunner,
     MolmoRunnerPointResult,
     TransformersMolmoRunner,
+    run_molmo_point_request,
 )
 from codex_agent.scenefunc3d.servers.molmo_point_server import (
     DEFAULT_MODEL_NAME as DEFAULT_MOLMO_MODEL_NAME,
@@ -40,6 +41,7 @@ from codex_agent.scenefunc3d.servers.sam2_mask_server import (
     SamInvalidOutputError,
     SamStagingPathError,
     TransformersSam2Runner,
+    run_sam_mask_request,
 )
 from codex_agent.scenefunc3d.servers.schemas import (
     HealthResponse,
@@ -258,7 +260,7 @@ def _handle_molmo_point(
         ) from exc
     start_time = time.perf_counter()
     try:
-        point_result = runner.point(request)
+        point_result = run_molmo_point_request(runner, request)
     except RuntimeError as exc:
         if _is_gpu_resource_error(exc):
             raise JsonHttpError(503, {"error": "molmo_resource_unavailable"}) from exc
@@ -287,7 +289,7 @@ def _handle_sam_masks(
         ) from exc
     start_time = time.perf_counter()
     try:
-        candidates = runner.masks(request)
+        candidates = run_sam_mask_request(runner, request)
     except SamStagingPathError as exc:
         raise JsonHttpError(
             400,

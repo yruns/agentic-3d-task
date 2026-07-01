@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import threading
 import urllib.error
@@ -28,6 +30,7 @@ class _FakeMolmoRunner:
     model_name: str = "fake-molmo"
 
     def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
+        request.require_image_path()
         raw_text = f'<point x="25" y="50">{request.prompt}</point>'
         return MolmoRunnerPointResult(
             raw_text=raw_text,
@@ -46,8 +49,10 @@ class _FakeSamRunner:
     model_name: str = "fake-sam"
 
     def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
-        request.staging_dir.mkdir(parents=True, exist_ok=True)
-        mask_path = request.staging_dir / "mask_00.npz"
+        staging_dir = request.require_staging_dir()
+        request.require_image_path()
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        mask_path = staging_dir / "mask_00.npz"
         mask_path.write_bytes(b"fake-mask")
         return (
             SamMaskCandidateResponse(
@@ -65,6 +70,30 @@ class _OutOfMemoryMolmoRunner:
 
     def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
         raise RuntimeError("CUDA out of memory")
+
+
+class _RecordingMolmoRunner(_FakeMolmoRunner):
+    seen_image_path: Path | None = None
+    image_existed_during_call: bool = False
+
+    def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
+        image_path = request.require_image_path()
+        self.seen_image_path = image_path
+        self.image_existed_during_call = image_path.is_file()
+        return super().point(request)
+
+
+class _RecordingSamRunner(_FakeSamRunner):
+    seen_image_path: Path | None = None
+    seen_staging_dir: Path | None = None
+    image_existed_during_call: bool = False
+
+    def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
+        image_path = request.require_image_path()
+        self.seen_image_path = image_path
+        self.seen_staging_dir = request.require_staging_dir()
+        self.image_existed_during_call = image_path.is_file()
+        return super().masks(request)
 
 
 def test_combined_server_exposes_aggregate_and_component_health() -> None:
@@ -180,6 +209,58 @@ def test_combined_server_routes_molmo_and_sam_requests(tmp_path: Path) -> None:
     )
 
 
+def test_combined_server_materializes_inline_molmo_and_sam_requests() -> None:
+    from codex_agent.scenefunc3d.servers.scenefunc_sidecar_server import (
+        SceneFuncSidecarRunners,
+        build_routes,
+    )
+
+    molmo_runner = _RecordingMolmoRunner()
+    sam_runner = _RecordingSamRunner()
+    runners = SceneFuncSidecarRunners(
+        molmo_runner=molmo_runner,
+        sam_runner=sam_runner,
+    )
+
+    with _running_server(build_routes(runners)) as base_url:
+        molmo_response = _post_json(
+            f"{base_url}/molmo/v1/point",
+            payload={
+                "request_id": "molmo-inline",
+                "image": _inline_image_payload(b"molmo image bytes"),
+                "prompt": "green dial",
+                "image_width": 200,
+                "image_height": 100,
+            },
+        )
+        sam_response = _post_json(
+            f"{base_url}/sam/v1/masks",
+            payload={
+                "request_id": "sam-inline",
+                "image": _inline_image_payload(b"sam image bytes"),
+                "points": [
+                    {
+                        "x_px": 50.0,
+                        "y_px": 50.0,
+                        "label": "green dial",
+                        "source": "fake",
+                    }
+                ],
+            },
+        )
+
+    assert molmo_response["request_id"] == "molmo-inline"
+    assert sam_response["request_id"] == "sam-inline"
+    assert molmo_runner.image_existed_during_call is True
+    assert sam_runner.image_existed_during_call is True
+    assert molmo_runner.seen_image_path is not None
+    assert sam_runner.seen_image_path is not None
+    assert sam_runner.seen_staging_dir is not None
+    assert not molmo_runner.seen_image_path.exists()
+    assert not sam_runner.seen_image_path.exists()
+    assert not sam_runner.seen_staging_dir.exists()
+
+
 def test_combined_server_maps_gpu_resource_errors_to_503(tmp_path: Path) -> None:
     from codex_agent.scenefunc3d.servers.scenefunc_sidecar_server import (
         SceneFuncSidecarRunners,
@@ -268,3 +349,12 @@ def _post_json_expect_error(
             raise AssertionError("expected JSON object error response") from exc
         return dict(error_payload)
     raise AssertionError("expected HTTP error")
+
+
+def _inline_image_payload(image_bytes: bytes) -> dict[str, object]:
+    return {
+        "filename": "frame.jpg",
+        "mime_type": "image/jpeg",
+        "sha256": hashlib.sha256(image_bytes).hexdigest(),
+        "data_base64": base64.b64encode(image_bytes).decode("ascii"),
+    }

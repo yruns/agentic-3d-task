@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -9,6 +11,7 @@ from pydantic import ValidationError
 
 from codex_agent.scenefunc3d.servers.schemas import (
     HealthResponse,
+    InlineImagePayload,
     MolmoImagePoint,
     MolmoPointRequest,
     MolmoPointResponse,
@@ -47,6 +50,69 @@ def test_molmo_point_schema_round_trip(tmp_path: Path) -> None:
     assert request.model_dump(mode="json")["image_path"] == str(image_path)
     assert response.model_dump(mode="json")["raw_text"].startswith("<point")
     assert response.model_dump(mode="json")["image_points"][0]["x_px"] == 320.0
+
+
+def test_inline_image_payload_rejects_sha256_mismatch() -> None:
+    image_bytes = b"not really an image"
+    payload = _inline_image_payload(image_bytes).model_dump(mode="json")
+
+    with pytest.raises(ValidationError, match="sha256"):
+        InlineImagePayload.model_validate(
+            {
+                **payload,
+                "sha256": hashlib.sha256(b"different").hexdigest(),
+            }
+        )
+
+
+def test_molmo_point_request_accepts_inline_image_without_image_path() -> None:
+    request = MolmoPointRequest(
+        request_id="req-inline",
+        image=_inline_image_payload(b"image"),
+        prompt="point to the handle",
+        image_width=640,
+        image_height=480,
+    )
+
+    assert request.image_source == "inline"
+    assert request.require_inline_image().filename == "frame.jpg"
+    assert "image_path" not in request.model_dump(mode="json", exclude_none=True)
+
+
+def test_molmo_point_request_rejects_missing_image() -> None:
+    with pytest.raises(ValidationError, match="exactly one"):
+        MolmoPointRequest(
+            request_id="req-missing",
+            prompt="point to the handle",
+            image_width=640,
+            image_height=480,
+        )
+
+
+def test_molmo_point_request_rejects_both_image_sources(tmp_path: Path) -> None:
+    image_path = tmp_path / "frame.jpg"
+    image_path.write_bytes(b"image")
+
+    with pytest.raises(ValidationError, match="exactly one"):
+        MolmoPointRequest(
+            request_id="req-both",
+            image_path=image_path,
+            image=_inline_image_payload(b"image"),
+            prompt="point to the handle",
+            image_width=640,
+            image_height=480,
+        )
+
+
+def test_molmo_point_request_rejects_nonexistent_image_path(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError):
+        MolmoPointRequest(
+            request_id="req-missing-file",
+            image_path=tmp_path / "missing.jpg",
+            prompt="point to the handle",
+            image_width=640,
+            image_height=480,
+        )
 
 
 def test_molmo_point_request_rejects_extra_fields(tmp_path: Path) -> None:
@@ -140,6 +206,52 @@ def test_sam_mask_schema_round_trip(tmp_path: Path) -> None:
     assert (
         response.model_dump(mode="json")["candidates"][0]["candidate_id"] == "mask_00"
     )
+
+
+def test_sam_mask_request_accepts_inline_image_without_image_path() -> None:
+    request = SamMaskRequest(
+        request_id="req-inline",
+        image=_inline_image_payload(b"image"),
+        points=(SamPointPrompt(x_px=10.0, y_px=20.0),),
+    )
+
+    assert request.image_source == "inline"
+    assert request.staging_dir is None
+    assert request.require_inline_image().filename == "frame.jpg"
+    assert "image_path" not in request.model_dump(mode="json", exclude_none=True)
+
+
+def test_sam_mask_request_rejects_missing_image(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError, match="exactly one"):
+        SamMaskRequest(
+            request_id="req-missing",
+            points=(SamPointPrompt(x_px=10.0, y_px=20.0),),
+            staging_dir=tmp_path / "staging",
+        )
+
+
+def test_sam_mask_request_rejects_both_image_sources(tmp_path: Path) -> None:
+    image_path = tmp_path / "frame.jpg"
+    image_path.write_bytes(b"image")
+
+    with pytest.raises(ValidationError, match="exactly one"):
+        SamMaskRequest(
+            request_id="req-both",
+            image_path=image_path,
+            image=_inline_image_payload(b"image"),
+            points=(SamPointPrompt(x_px=10.0, y_px=20.0),),
+            staging_dir=tmp_path / "staging",
+        )
+
+
+def test_sam_mask_request_rejects_nonexistent_image_path(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError):
+        SamMaskRequest(
+            request_id="req-missing-file",
+            image_path=tmp_path / "missing.jpg",
+            points=(SamPointPrompt(x_px=10.0, y_px=20.0),),
+            staging_dir=tmp_path / "staging",
+        )
 
 
 def test_sam_point_prompt_defaults_empty_label_and_source() -> None:
@@ -301,3 +413,12 @@ def test_sam_request_requires_point(tmp_path: Path) -> None:
             points=(),
             staging_dir=staging_dir,
         )
+
+
+def _inline_image_payload(image_bytes: bytes) -> InlineImagePayload:
+    return InlineImagePayload(
+        filename="frame.jpg",
+        mime_type="image/jpeg",
+        sha256=hashlib.sha256(image_bytes).hexdigest(),
+        data_base64=base64.b64encode(image_bytes).decode("ascii"),
+    )
