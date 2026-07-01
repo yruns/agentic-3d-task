@@ -476,12 +476,17 @@ def _candidate_mask_materialization_error(
     remote_backend_response: bool,
 ) -> ToolInputError:
     source_summary = " from remote HTTPS backend" if remote_backend_response else ""
+    path_summary = (
+        "; mask_npz_path=<redacted_remote_path>"
+        if remote_backend_response and mask_npz_path is not None
+        else f"; mask_npz_path={mask_npz_path}"
+    )
     return ToolInputError(
         f"SAM mask candidate payload{source_summary} could not be materialized "
         "on this host: "
         f"candidate_id={candidate_response.candidate_id!r}; "
-        f"payloads={_candidate_mask_payload_summary(candidate_response)}; "
-        f"mask_npz_path={mask_npz_path}"
+        f"payloads={_candidate_mask_payload_summary(candidate_response)}"
+        f"{path_summary}"
     )
 
 
