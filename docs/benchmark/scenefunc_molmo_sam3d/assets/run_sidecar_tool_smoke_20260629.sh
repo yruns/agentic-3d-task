@@ -9,7 +9,7 @@ DEFAULT_REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 
 REPO_ROOT="${REPO_ROOT:-${DEFAULT_REPO_ROOT}}"
 DATASET_ROOT="${DATASET_ROOT:-${REPO_ROOT}/data/SceneFuncVal-CG}"
-RUN_ROOT="${RUN_ROOT:-${DATASET_ROOT}/sidecar_tool_smoke_20260629}"
+RUN_ROOT="${RUN_ROOT:-${REPO_ROOT}/tmp/scenefunc3d/sidecar_tool_smoke_20260629}"
 MOLMO_PROCESSOR_SNAPSHOT="${MOLMO_PROCESSOR_SNAPSHOT:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home/transformers/models--allenai--MolmoPoint-8B/snapshots/188130f961c8e0888a34e11121a1423c461a01ba}"
 MOLMO_CODE_SNAPSHOT="${MOLMO_CODE_SNAPSHOT:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home/hub/models--allenai--MolmoPoint-8B/snapshots/188130f961c8e0888a34e11121a1423c461a01ba}"
 MOLMO_MODEL_PATH="${MOLMO_MODEL_PATH:-${RUN_ROOT}/molmopoint_merged_model}"
@@ -142,7 +142,6 @@ def write_config() -> None:
                 'molmo_url = "http://127.0.0.1:8711"',
                 'sam_url = "http://127.0.0.1:8712"',
                 "request_timeout_seconds = 300.0",
-                f'artifact_staging_root = "{run_root}"',
                 f'allowed_image_roots = ["{dataset_root.parent}", "{run_root}"]',
                 f'allowed_output_roots = ["{run_root}"]',
                 "",

@@ -4051,7 +4051,6 @@ def _write_backend_config(
                 f"sam_url = {json.dumps(sam_url)}",
                 *header_lines,
                 "request_timeout_seconds = 2.0",
-                f"artifact_staging_root = {json.dumps(str(root / 'stage'))}",
                 f"allowed_image_roots = [{json.dumps(str(root))}]",
                 f"allowed_output_roots = [{json.dumps(str(root / 'out'))}]",
                 "",

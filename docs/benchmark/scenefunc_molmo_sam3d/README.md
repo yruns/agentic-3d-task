@@ -51,6 +51,10 @@ from TASA is intentionally out of scope for this smoke.
   `data/SceneFuncVal-CG` under the repo, but a real run needs the scene JSON
   files, raw RGB/depth/pose/intrinsics, filtered mesh assets, crop masks, and
   hidden GT masks for scoring.
+- Runtime artifacts default to `tmp/scenefunc3d/...` under the repo. Override
+  `RUN_ROOT` only when you need a different output location; keep it outside
+  the dataset root so generated masks, overlays, and logs do not mix with input
+  data.
 - Provide Codex access through either `USE_CODEX_AUTH=1` with an authenticated
   `CODEX_HOME`, or the project-local ModelHub adapter credentials in gitignored
   adapter config. `PRECHECK_ONLY=1` validates only this auth/adapter boundary.

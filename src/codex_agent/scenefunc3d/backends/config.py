@@ -46,7 +46,6 @@ class SceneFunc3dBackendSettings:
     molmo_url: str
     sam_url: str
     request_timeout_seconds: float
-    artifact_staging_root: Path
     allowed_image_roots: tuple[Path, ...]
     allowed_output_roots: tuple[Path, ...]
     request_headers: tuple[HttpHeader, ...] = ()
@@ -61,13 +60,6 @@ class SceneFunc3dBackendSettings:
                 "request_timeout_seconds must be a finite positive number; "
                 f"got {self.request_timeout_seconds}"
             )
-        object.__setattr__(
-            self,
-            "artifact_staging_root",
-            _normalize_path(
-                self.artifact_staging_root, field_name="artifact_staging_root"
-            ),
-        )
         object.__setattr__(
             self,
             "allowed_image_roots",
@@ -96,7 +88,6 @@ class _BackendSettingsDocument(BaseModel):
     sam_url: str = ""
     request_headers_path: Path | None = None
     request_timeout_seconds: float = Field(gt=0)
-    artifact_staging_root: Path
     allowed_image_roots: tuple[Path, ...] = Field(min_length=1)
     allowed_output_roots: tuple[Path, ...] = Field(min_length=1)
 
@@ -111,7 +102,6 @@ class _BackendSettingsDocument(BaseModel):
             molmo_url=molmo_url,
             sam_url=sam_url,
             request_timeout_seconds=self.request_timeout_seconds,
-            artifact_staging_root=self.artifact_staging_root,
             allowed_image_roots=self.allowed_image_roots,
             allowed_output_roots=self.allowed_output_roots,
             request_headers=_load_request_headers(

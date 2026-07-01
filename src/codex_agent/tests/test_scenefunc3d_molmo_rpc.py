@@ -155,7 +155,6 @@ def test_request_molmo_point_rejects_image_outside_allowed_roots(
         molmo_url="http://127.0.0.1:8711",
         sam_url="http://127.0.0.1:8712",
         request_timeout_seconds=2.0,
-        artifact_staging_root=tmp_path,
         allowed_image_roots=(tmp_path / "allowed-images",),
         allowed_output_roots=(tmp_path,),
     )
@@ -176,7 +175,6 @@ def _settings(tmp_path: Path, *, molmo_url: str) -> SceneFunc3dBackendSettings:
         molmo_url=molmo_url,
         sam_url="http://127.0.0.1:8712",
         request_timeout_seconds=2.0,
-        artifact_staging_root=tmp_path,
         allowed_image_roots=(tmp_path,),
         allowed_output_roots=(tmp_path,),
     )

@@ -9,7 +9,7 @@ DEFAULT_REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 
 REPO_ROOT="${REPO_ROOT:-${DEFAULT_REPO_ROOT}}"
 DATASET_ROOT="${DATASET_ROOT:-${REPO_ROOT}/data/SceneFuncVal-CG}"
-RUN_ROOT="${RUN_ROOT:-${DATASET_ROOT}/agent_runner_e2e_20260629}"
+RUN_ROOT="${RUN_ROOT:-${REPO_ROOT}/tmp/scenefunc3d/agent_runner_e2e_20260629}"
 SAMPLE_ID_RAW="${SAMPLE_ID-}"
 SAMPLE_ID_WAS_SET="0"
 if [[ "${SAMPLE_ID+x}" == "x" ]]; then
@@ -307,7 +307,6 @@ def write_backend_config() -> None:
             f"sidecar_base_url = {json.dumps(sidecar_base_url)}",
             f"request_headers_path = {json.dumps(str(sidecar_headers_path))}",
             "request_timeout_seconds = 300.0",
-            f"artifact_staging_root = {json.dumps(str(run_root))}",
             (
                 "allowed_image_roots = "
                 f"[{json.dumps(str(dataset_root.parent))}, {json.dumps(str(run_root))}]"
@@ -320,7 +319,6 @@ def write_backend_config() -> None:
             'molmo_url = "http://127.0.0.1:8711"',
             'sam_url = "http://127.0.0.1:8712"',
             "request_timeout_seconds = 300.0",
-            f"artifact_staging_root = {json.dumps(str(run_root))}",
             (
                 "allowed_image_roots = "
                 f"[{json.dumps(str(dataset_root.parent))}, {json.dumps(str(run_root))}]"

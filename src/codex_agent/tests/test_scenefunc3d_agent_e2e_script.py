@@ -120,6 +120,18 @@ def test_agent_e2e_script_allows_agent_generated_frame_artifacts() -> None:
     assert "json.dumps(str(run_root))" in script_text
 
 
+def test_agent_e2e_script_defaults_outputs_to_repo_tmp() -> None:
+    script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
+
+    assert (
+        'RUN_ROOT="${RUN_ROOT:-${REPO_ROOT}/tmp/scenefunc3d/agent_runner_e2e_20260629}"'
+        in script_text
+    )
+    assert 'RUN_ROOT="${RUN_ROOT:-${DATASET_ROOT}/agent_runner_e2e_20260629}"' not in (
+        script_text
+    )
+
+
 def test_agent_e2e_script_defaults_are_repo_relative() -> None:
     script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
 

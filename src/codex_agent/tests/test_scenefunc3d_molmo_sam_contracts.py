@@ -1806,7 +1806,6 @@ def _write_backend_config(tmp_path: Path, *, molmo_url: str, sam_url: str) -> Pa
 molmo_url = "{molmo_url}"
 sam_url = "{sam_url}"
 request_timeout_seconds = 2.0
-artifact_staging_root = "{output_root}"
 allowed_image_roots = ["{tmp_path}"]
 allowed_output_roots = ["{output_root}"]
 """,
