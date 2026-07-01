@@ -74,6 +74,19 @@ def test_bool_mask_rle_codec_rejects_non_2d_encode_input() -> None:
         encode_bool_mask_rle(mask)
 
 
+@pytest.mark.parametrize("shape", [(0, 3), (3, 0), (0, 0)])
+def test_bool_mask_rle_codec_rejects_empty_2d_encode_input(
+    shape: tuple[int, int],
+) -> None:
+    np = pytest.importorskip("numpy")
+    from codex_agent.scenefunc3d.backends.mask_codec import encode_bool_mask_rle
+
+    mask = np.zeros(shape, dtype=np.bool_)
+
+    with pytest.raises(ValueError, match="empty"):
+        encode_bool_mask_rle(mask)
+
+
 def test_molmo_point_schema_round_trip(tmp_path: Path) -> None:
     image_path = tmp_path / "frame.jpg"
     image_path.write_bytes(b"image")

@@ -335,6 +335,7 @@ def sam_mask(
             safe_candidate_id=safe_candidate_id,
             staging_dir=staging_dir,
             allowed_output_roots=settings.allowed_output_roots,
+            allow_path_payload=not response.is_remote_backend_response,
         )
         boolean_mask = _load_boolean_mask(mask_npz_path)
         candidate_mask_npz_path = mask_npz_path
@@ -389,6 +390,7 @@ def _resolve_candidate_mask_npz_path(
     safe_candidate_id: str,
     staging_dir: Path,
     allowed_output_roots: tuple[Path, ...],
+    allow_path_payload: bool,
 ) -> Path:
     from codex_agent.scenefunc3d.backends.config import ensure_path_under_roots
 
@@ -407,6 +409,12 @@ def _resolve_candidate_mask_npz_path(
             allowed_output_roots=allowed_output_roots,
         )
     candidate_mask_path = candidate_response.mask_npz_path
+    if candidate_mask_path is not None and not allow_path_payload:
+        raise _candidate_mask_materialization_error(
+            candidate_response,
+            mask_npz_path=candidate_mask_path,
+            remote_backend_response=True,
+        )
     if candidate_mask_path is not None and candidate_mask_path.is_file():
         try:
             return ensure_path_under_roots(
@@ -418,10 +426,12 @@ def _resolve_candidate_mask_npz_path(
             raise _candidate_mask_materialization_error(
                 candidate_response,
                 mask_npz_path=candidate_mask_path,
+                remote_backend_response=False,
             ) from exc
     raise _candidate_mask_materialization_error(
         candidate_response,
         mask_npz_path=candidate_mask_path,
+        remote_backend_response=False,
     )
 
 
@@ -463,9 +473,12 @@ def _candidate_mask_materialization_error(
     candidate_response: SamMaskCandidateResponse,
     *,
     mask_npz_path: Path | None,
+    remote_backend_response: bool,
 ) -> ToolInputError:
+    source_summary = " from remote HTTPS backend" if remote_backend_response else ""
     return ToolInputError(
-        "SAM mask candidate payload could not be materialized on this host: "
+        f"SAM mask candidate payload{source_summary} could not be materialized "
+        "on this host: "
         f"candidate_id={candidate_response.candidate_id!r}; "
         f"payloads={_candidate_mask_payload_summary(candidate_response)}; "
         f"mask_npz_path={mask_npz_path}"

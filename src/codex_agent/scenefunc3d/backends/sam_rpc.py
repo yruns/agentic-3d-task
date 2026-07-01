@@ -30,11 +30,12 @@ def request_sam_masks(
         roots=settings.allowed_output_roots,
         field_name="staging_dir",
     )
+    is_remote_backend = is_remote_backend_url(settings.sam_url)
     payload: dict[str, object] = {
         "request_id": request_id,
         "points": [point.to_payload() for point in args.points],
     }
-    if is_remote_backend_url(settings.sam_url):
+    if is_remote_backend:
         payload["image"] = build_inline_image_payload(
             args.image_path,
             allowed_roots=settings.allowed_image_roots,
@@ -54,6 +55,9 @@ def request_sam_masks(
         response_model=SamMaskResponse,
         timeout_seconds=settings.request_timeout_seconds,
         request_headers=settings.request_headers,
+    )
+    response = response.with_backend_source(
+        "remote_https" if is_remote_backend else "local_http"
     )
     if response.request_id != request_id:
         raise ToolInputError(

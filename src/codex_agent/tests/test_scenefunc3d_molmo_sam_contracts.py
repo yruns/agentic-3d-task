@@ -17,7 +17,10 @@ import pytest
 from pydantic import ValidationError
 
 from codex_agent.errors import SceneFunc3dDataError
+from codex_agent.scenefunc3d.backends import sam_rpc
+from codex_agent.scenefunc3d.backends.config import HttpHeader
 from codex_agent.scenefunc3d.servers.http_json import JsonRoute, make_json_handler
+from codex_agent.scenefunc3d.servers.schemas import SamMaskResponse
 from codex_agent.scenefunc3d.tools.__main__ import main
 from codex_agent.scenefunc3d.tools.models import ToolInputError
 from codex_agent.scenefunc3d.tools.molmo_pointing import (
@@ -939,6 +942,80 @@ def test_sam_mask_rejects_remote_path_only_candidate(
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_sam_mask_rejects_https_path_only_candidate_even_when_path_exists(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    np = pytest.importorskip("numpy")
+    _, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    stale_mask_path = output_root / "stale_remote_masks" / "mask_00.npz"
+    stale_mask_path.parent.mkdir(parents=True)
+    np.savez_compressed(
+        stale_mask_path,
+        mask=np.zeros((80, 100), dtype=np.bool_),
+    )
+
+    captured_payload: dict[str, object] = {}
+
+    def fake_post_json(
+        url: str,
+        *,
+        payload: dict[str, object],
+        response_model: type[SamMaskResponse],
+        timeout_seconds: float,
+        request_headers: tuple[HttpHeader, ...] = (),
+    ) -> SamMaskResponse:
+        captured_payload.update(payload)
+        return response_model.model_validate(
+            {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(stale_mask_path),
+                        "pixel_count": 0,
+                        "coverage_percent": 0.0,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        )
+
+    monkeypatch.setattr(sam_rpc, "post_json", fake_post_json)
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url="https://sidecar.example/sam",
+    )
+    args = SamMaskArgs.model_validate(
+        {
+            "frame_id": "000000",
+            "image_path": image_path,
+            "points": [
+                {
+                    "x_px": 10.0,
+                    "y_px": 20.0,
+                    "source": '<point x="10" y="20">drawer</point>',
+                    "label": "drawer",
+                },
+            ],
+        }
+    )
+
+    with pytest.raises(
+        ToolInputError,
+        match="remote HTTPS.*candidate_id='mask_00'.*payloads=mask_npz_path",
+    ):
+        sam_mask(args, out_dir=output_root, backend_config_path=config_path)
+
+    assert stale_mask_path.is_file()
+    assert "image" in captured_payload
+    assert "image_path" not in captured_payload
 
 
 def test_cli_sam_mask_expands_crop_mask_to_full_frame(

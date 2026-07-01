@@ -23,6 +23,8 @@ def encode_bool_mask_rle(mask: npt.NDArray[np.bool_]) -> MaskRlePayload:
         raise ValueError(f"mask must be 2D; got ndim={mask.ndim}")
     if mask.dtype != np.bool_:
         raise ValueError(f"mask dtype must be bool; got dtype={mask.dtype}")
+    if mask.shape[0] <= 0 or mask.shape[1] <= 0:
+        raise ValueError(f"mask must be a non-empty 2D array; got shape={mask.shape}")
 
     flat_mask = mask.reshape(-1, order="C")
     counts: list[int] = []

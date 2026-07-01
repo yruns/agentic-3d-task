@@ -15,6 +15,7 @@ from pydantic import (
     ConfigDict,
     Field,
     FilePath,
+    PrivateAttr,
     field_validator,
     model_validator,
 )
@@ -26,6 +27,7 @@ NonEmptyString: TypeAlias = Annotated[
 ]
 InlineImageMimeType: TypeAlias = Literal["image/jpeg", "image/png", "image/webp"]
 ImageSourceKind: TypeAlias = Literal["path", "inline"]
+SamMaskResponseBackendSource: TypeAlias = Literal["local_http", "remote_https"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -314,6 +316,8 @@ class SamMaskCandidateResponse(_StrictSchema):
 class SamMaskResponse(_StrictSchema):
     """Response body for the SAM mask sidecar endpoint."""
 
+    _backend_source: SamMaskResponseBackendSource = PrivateAttr(default="local_http")
+
     request_id: NonEmptyString
     model_name: NonEmptyString
     candidates: tuple[SamMaskCandidateResponse, ...]
@@ -323,6 +327,20 @@ class SamMaskResponse(_StrictSchema):
     @classmethod
     def _require_finite_latency(cls, value: float) -> float:
         return _require_finite_float(value, field_name="latency_ms")
+
+    @property
+    def is_remote_backend_response(self) -> bool:
+        """Return whether this response came from a remote HTTPS backend."""
+        return self._backend_source == "remote_https"
+
+    def with_backend_source(
+        self,
+        backend_source: SamMaskResponseBackendSource,
+    ) -> SamMaskResponse:
+        """Return this response with client-only backend source metadata."""
+        response = self.model_copy()
+        response._backend_source = backend_source
+        return response
 
 
 def _require_finite_float(value: float, *, field_name: str) -> float:
@@ -352,5 +370,6 @@ __all__ = [
     "SamMaskRle",
     "SamMaskRequest",
     "SamMaskResponse",
+    "SamMaskResponseBackendSource",
     "SamPointPrompt",
 ]

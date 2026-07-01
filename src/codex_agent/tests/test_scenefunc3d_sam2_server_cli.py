@@ -56,6 +56,28 @@ class _OutOfMemorySamRunner:
         raise RuntimeError("CUDA out of memory while allocating SAM tensors")
 
 
+class _EmptyMaskSamRunner:
+    model_name: str = "fake-sam2"
+
+    def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
+        staging_dir = request.require_staging_dir()
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        mask_path = staging_dir / "mask_00.npz"
+        np.savez_compressed(
+            mask_path,
+            mask=np.zeros((0, 3), dtype=np.bool_),
+        )
+        return (
+            SamMaskCandidateResponse(
+                candidate_id="mask_00",
+                score=0.91,
+                mask_npz_path=mask_path,
+                pixel_count=0,
+                coverage_percent=0.0,
+            ),
+        )
+
+
 class _RecordingSamRunner(_FakeSamRunner):
     seen_image_path: Path | None = None
     seen_staging_dir: Path | None = None
@@ -902,6 +924,45 @@ def test_runner_invalid_output_returns_structured_http_error(tmp_path: Path) -> 
 
     assert exc_info.value.code == 500
     assert error_payload == {"error": "sam_invalid_output", "request_id": "req-1"}
+
+
+def test_empty_mask_artifact_returns_structured_invalid_output_error(
+    tmp_path: Path,
+) -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import _build_routes
+
+    image_path = tmp_path / "frame.jpg"
+    staging_dir = tmp_path / "out" / "sam" / "000050" / "candidates"
+    image_path.write_bytes(b"image")
+    server = _start_json_server(_build_routes(_EmptyMaskSamRunner()))
+    try:
+        with pytest.raises(urllib.error.HTTPError) as exc_info:
+            _post_json(
+                f"http://127.0.0.1:{server.server_port}/v1/masks",
+                {
+                    "request_id": "req-empty-mask",
+                    "image_path": str(image_path),
+                    "points": [
+                        {
+                            "x_px": 10.0,
+                            "y_px": 20.0,
+                            "label": "drawer",
+                            "source": '<point x="10" y="20">drawer</point>',
+                        }
+                    ],
+                    "staging_dir": str(staging_dir),
+                },
+            )
+        error_payload = json.loads(exc_info.value.read().decode("utf-8"))
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert exc_info.value.code == 500
+    assert error_payload == {
+        "error": "sam_invalid_output",
+        "request_id": "req-empty-mask",
+    }
 
 
 def _restore_modules(modules_by_name: dict[str, ModuleType]) -> None:

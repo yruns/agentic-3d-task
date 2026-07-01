@@ -1024,7 +1024,13 @@ def _response_candidate_by_value(
         return candidate
 
     mask = _load_candidate_mask_for_response(candidate.mask_npz_path)
-    mask_rle_payload = encode_bool_mask_rle(mask)
+    try:
+        mask_rle_payload = encode_bool_mask_rle(mask)
+    except ValueError as exc:
+        raise SamInvalidOutputError(
+            "SAM2 response mask artifact could not be encoded as RLE: "
+            f"path={candidate.mask_npz_path}; error_type={exc.__class__.__name__}"
+        ) from exc
     return SamMaskCandidateResponse(
         candidate_id=candidate.candidate_id,
         score=candidate.score,
@@ -1070,6 +1076,11 @@ def _validate_single_mask_array_for_response(
         raise SamInvalidOutputError(
             "SAM2 response mask artifact must contain a 2D mask: "
             f"path={path}; ndim={mask_array.ndim}"
+        )
+    if mask_array.shape[0] <= 0 or mask_array.shape[1] <= 0:
+        raise SamInvalidOutputError(
+            "SAM2 response mask artifact must contain a non-empty 2D mask: "
+            f"path={path}; shape={mask_array.shape}"
         )
     if mask_array.dtype == np.bool_:
         return cast(NDArray[np.bool_], mask_array)
