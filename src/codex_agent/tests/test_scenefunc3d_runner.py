@@ -120,6 +120,51 @@ def test_build_arg_parser_accepts_all_samples_batch_runtime_options(
     assert args.score is True
 
 
+def test_build_arg_parser_accepts_positive_workers(
+    tmp_path: Path,
+) -> None:
+    parser = build_arg_parser()
+
+    args = parser.parse_args(
+        [
+            "--dataset-root",
+            str(tmp_path / "data"),
+            "--sample-ids-path",
+            str(tmp_path / "sample_ids.json"),
+            "--backend-config",
+            str(tmp_path / "backends.toml"),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--workers",
+            "20",
+        ]
+    )
+
+    assert args.workers == 20
+
+
+def test_build_arg_parser_rejects_non_positive_workers(
+    tmp_path: Path,
+) -> None:
+    parser = build_arg_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(
+            [
+                "--dataset-root",
+                str(tmp_path / "data"),
+                "--sample-ids-path",
+                str(tmp_path / "sample_ids.json"),
+                "--backend-config",
+                str(tmp_path / "backends.toml"),
+                "--output-dir",
+                str(tmp_path / "out"),
+                "--workers",
+                "0",
+            ]
+        )
+
+
 def test_build_arg_parser_help_omits_skip_sidecar_health_check() -> None:
     parser = build_arg_parser()
 
@@ -256,6 +301,7 @@ def test_run_from_args_always_checks_sidecars_for_batch(
         backend_config=tmp_path / "backends.toml",
         output_dir=tmp_path / "out",
         score=True,
+        workers=3,
         skip_sidecar_health_check=True,
     )
 
@@ -270,11 +316,13 @@ def test_run_from_args_always_checks_sidecars_for_batch(
         check_sidecars: bool = True,
         score: bool = True,
         continue_on_error: bool = True,
+        workers: int = 1,
     ) -> runner.SceneFunc3dBatchRunSummary:
         assert config.output_dir == tmp_path / "out"
         assert sample_ids == ("421254::desc-a",)
         assert check_sidecars is True
         assert score is True
+        assert workers == 3
         _ = (executor, continue_on_error)
         return runner.SceneFunc3dBatchRunSummary(
             scoring_enabled=True,
@@ -293,6 +341,82 @@ def test_run_from_args_always_checks_sidecars_for_batch(
     monkeypatch.setattr(runner, "run_samples", _fake_run_samples)
 
     assert runner.run_from_args(args) == 0
+
+
+def test_run_samples_rejects_non_positive_workers(tmp_path: Path) -> None:
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(ValueError, match="workers must be positive"):
+        run_samples(
+            config,
+            sample_ids=("421254::desc-a",),
+            executor=cast(CodexExecutor, object()),
+            check_sidecars=False,
+            score=False,
+            workers=0,
+        )
+
+
+def test_run_samples_uses_workers_for_multiple_samples(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+    active_count = 0
+    max_active_count = 0
+    lock = threading.Lock()
+    first_sample_started = threading.Event()
+    allow_first_sample_to_finish = threading.Event()
+
+    def _fake_run_single_sample(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_id: str,
+        executor: CodexExecutor,
+        check_sidecars: bool,
+    ) -> Path:
+        nonlocal active_count, max_active_count
+        assert check_sidecars is False
+        _ = (config, executor)
+        with lock:
+            active_count += 1
+            max_active_count = max(max_active_count, active_count)
+        if sample_id == "421254::desc-a":
+            first_sample_started.set()
+            assert allow_first_sample_to_finish.wait(timeout=2.0)
+        else:
+            assert first_sample_started.wait(timeout=2.0)
+            allow_first_sample_to_finish.set()
+        with lock:
+            active_count -= 1
+        return tmp_path / "out" / sample_id.replace("::", "_") / "result.json"
+
+    monkeypatch.setattr(runner, "run_single_sample", _fake_run_single_sample)
+
+    summary = run_samples(
+        config,
+        sample_ids=("421254::desc-a", "421254::desc-b"),
+        executor=cast(CodexExecutor, object()),
+        check_sidecars=False,
+        score=False,
+        workers=2,
+    )
+
+    assert max_active_count == 2
+    assert summary.sample_count == 2
+    assert summary.completed_count == 2
+    assert [result.sample_id for result in summary.results] == [
+        "421254::desc-a",
+        "421254::desc-b",
+    ]
 
 
 def test_mask_task_prompt_inlines_tools_without_attachments(
@@ -3030,9 +3154,11 @@ def test_main_all_samples_prints_batch_summary_path(
         check_sidecars: bool = True,
         score: bool = True,
         continue_on_error: bool = True,
+        workers: int = 1,
     ) -> runner.SceneFunc3dBatchRunSummary:
         _ = executor
         _ = continue_on_error
+        assert workers == 1
         assert config.dataset_root == tmp_path / "data"
         assert config.output_dir == tmp_path / "out"
         assert config.backend_config_path == tmp_path / "backends.toml"
@@ -3100,12 +3226,14 @@ def test_main_sample_ids_path_strips_file_entries_before_batch_run(
         check_sidecars: bool = True,
         score: bool = True,
         continue_on_error: bool = True,
+        workers: int = 1,
     ) -> runner.SceneFunc3dBatchRunSummary:
         _ = config
         _ = executor
         _ = check_sidecars
         _ = score
         _ = continue_on_error
+        assert workers == 1
         captured_sample_ids.extend(sample_ids)
         return runner.SceneFunc3dBatchRunSummary(
             scoring_enabled=True,
@@ -4645,4 +4773,22 @@ def _write_scene_root(
     raw_dir.mkdir(parents=True, exist_ok=True)
     for frame_id in frame_ids:
         (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"fake-png")
+    _write_raw_mesh(raw_dir / "mesh.ply", vertex_count=100)
     return scene_dir
+
+
+def _write_raw_mesh(path: Path, *, vertex_count: int) -> None:
+    points = np.zeros(
+        vertex_count,
+        dtype=np.dtype([("x", "<f4"), ("y", "<f4"), ("z", "<f4")]),
+    )
+    header = (
+        "ply\n"
+        "format binary_little_endian 1.0\n"
+        f"element vertex {vertex_count}\n"
+        "property float x\n"
+        "property float y\n"
+        "property float z\n"
+        "end_header\n"
+    )
+    path.write_bytes(header.encode("ascii") + points.tobytes())

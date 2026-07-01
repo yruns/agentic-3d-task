@@ -69,9 +69,12 @@ def test_main_parses_with_cli_prog_and_runs_parsed_args(
             str(tmp_path / "backends.toml"),
             "--output-dir",
             str(tmp_path / "out"),
+            "--workers",
+            "20",
         ]
     )
 
     assert exit_code == 17
     assert captured["args"].dataset_root == tmp_path / "data"
     assert captured["args"].sample_id == "421254::desc-a"
+    assert captured["args"].workers == 20

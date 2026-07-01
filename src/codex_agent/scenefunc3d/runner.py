@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import math
 from collections.abc import Mapping, Sequence
@@ -1038,72 +1039,100 @@ def run_samples(
     check_sidecars: bool = True,
     score: bool = True,
     continue_on_error: bool = True,
+    workers: int = 1,
 ) -> SceneFunc3dBatchRunSummary:
-    """Run and optionally score multiple SceneFunc3D samples sequentially."""
+    """Run and optionally score multiple SceneFunc3D samples."""
+    if workers <= 0:
+        raise ValueError("workers must be positive")
     normalized_sample_ids = _normalized_batch_sample_ids(sample_ids)
     config.output_dir.mkdir(parents=True, exist_ok=True)
     if check_sidecars:
         check_sidecar_health(config.backend_config_path)
 
-    results: list[SceneFunc3dBatchSampleResult] = []
-    for sample_id in normalized_sample_ids:
-        try:
-            result_path = run_single_sample(
+    if workers == 1 or len(normalized_sample_ids) == 1:
+        results = tuple(
+            _run_batch_sample(
                 config,
                 sample_id=sample_id,
                 executor=executor,
-                check_sidecars=False,
+                score=score,
+                continue_on_error=continue_on_error,
+            )
+            for sample_id in normalized_sample_ids
+        )
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [
+                pool.submit(
+                    _run_batch_sample,
+                    config,
+                    sample_id=sample_id,
+                    executor=executor,
+                    score=score,
+                    continue_on_error=continue_on_error,
+                )
+                for sample_id in normalized_sample_ids
+            ]
+            results = tuple(future.result() for future in futures)
+
+    summary = _summarize_batch_results(results, scoring_enabled=score)
+    _write_batch_summary(config.output_dir / "evaluation_summary.json", summary)
+    return summary
+
+
+def _run_batch_sample(
+    config: SceneFunc3dRunnerConfig,
+    *,
+    sample_id: str,
+    executor: CodexExecutor,
+    score: bool,
+    continue_on_error: bool,
+) -> SceneFunc3dBatchSampleResult:
+    try:
+        result_path = run_single_sample(
+            config,
+            sample_id=sample_id,
+            executor=executor,
+            check_sidecars=False,
+        )
+    except Exception as exc:
+        if not continue_on_error:
+            raise
+        failure_path = _existing_failure_artifact_path(config, sample_id)
+        return SceneFunc3dBatchSampleResult(
+            sample_id=sample_id,
+            status="failed",
+            failure_stage="run",
+            result_path=None,
+            score=None,
+            failure_path=failure_path,
+            error=_format_batch_error(exc),
+        )
+
+    sample_score: SceneFunc3dScore | None = None
+    if score:
+        try:
+            sample_score = score_result_file(
+                data_root=config.dataset_root, result_path=result_path
             )
         except Exception as exc:
             if not continue_on_error:
                 raise
-            failure_path = _existing_failure_artifact_path(config, sample_id)
-            results.append(
-                SceneFunc3dBatchSampleResult(
-                    sample_id=sample_id,
-                    status="failed",
-                    failure_stage="run",
-                    result_path=None,
-                    score=None,
-                    failure_path=failure_path,
-                    error=_format_batch_error(exc),
-                )
-            )
-            continue
-
-        sample_score: SceneFunc3dScore | None = None
-        if score:
-            try:
-                sample_score = score_result_file(
-                    data_root=config.dataset_root, result_path=result_path
-                )
-            except Exception as exc:
-                if not continue_on_error:
-                    raise
-                results.append(
-                    SceneFunc3dBatchSampleResult(
-                        sample_id=sample_id,
-                        status="failed",
-                        failure_stage="score",
-                        result_path=result_path,
-                        score=None,
-                        error=_format_batch_error(exc),
-                    )
-                )
-                continue
-        results.append(
-            SceneFunc3dBatchSampleResult(
+            return SceneFunc3dBatchSampleResult(
                 sample_id=sample_id,
-                status="completed",
-                failure_stage="",
+                status="failed",
+                failure_stage="score",
                 result_path=result_path,
-                score=sample_score,
+                score=None,
+                error=_format_batch_error(exc),
             )
-        )
-
-    summary = _summarize_batch_results(tuple(results), scoring_enabled=score)
-    _write_batch_summary(config.output_dir / "evaluation_summary.json", summary)
-    return summary
+    return SceneFunc3dBatchSampleResult(
+        sample_id=sample_id,
+        status="completed",
+        failure_stage="",
+        result_path=result_path,
+        score=sample_score,
+    )
 
 
 def _normalized_batch_sample_ids(sample_ids: Sequence[str]) -> tuple[str, ...]:
@@ -2827,6 +2856,12 @@ def build_arg_parser(
         action="store_true",
         help="Score the written result.json against hidden GT and include metrics.",
     )
+    parser.add_argument(
+        "--workers",
+        type=_positive_int,
+        default=1,
+        help="Number of concurrent SceneFunc3D samples to run for batch inputs.",
+    )
     return parser
 
 
@@ -2877,6 +2912,7 @@ def _run_from_config_and_args(
             executor=executor,
             check_sidecars=True,
             score=_namespace_bool(args, "score"),
+            workers=_namespace_int(args, "workers"),
         )
         payload = _batch_run_payload(
             config.output_dir / "evaluation_summary.json", summary
@@ -3061,6 +3097,13 @@ def _namespace_bool(args: argparse.Namespace, name: str) -> bool:
     return value
 
 
+def _namespace_int(args: argparse.Namespace, name: str) -> int:
+    value: object = getattr(args, name)
+    if not isinstance(value, int):
+        raise TypeError(f"argparse field {name!r} must be an int")
+    return value
+
+
 def _namespace_optional_path(args: argparse.Namespace, name: str) -> Path | None:
     value: object = getattr(args, name)
     if value is None:
@@ -3076,6 +3119,20 @@ def _namespace_optional_str(args: argparse.Namespace, name: str) -> str | None:
         return None
     if not isinstance(value, str):
         raise TypeError(f"argparse field {name!r} must be a string or None")
+    return value
+
+
+def _positive_int(raw_value: str) -> int:
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"workers must be a positive integer, got {raw_value!r}"
+        ) from exc
+    if value <= 0:
+        raise argparse.ArgumentTypeError(
+            f"workers must be a positive integer, got {value}"
+        )
     return value
 
 
