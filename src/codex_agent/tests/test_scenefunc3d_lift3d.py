@@ -360,6 +360,12 @@ def test_resolve_frame_geometry_assets_reports_missing_asset(tmp_path: Path) -> 
         resolve_frame_geometry_assets(scene, "000050")
 
 
+def test_tool_scene_exposes_raw_mesh_path(tmp_path: Path) -> None:
+    scene = _make_tool_scene(tmp_path)
+
+    assert scene.raw_mesh_path == tmp_path / "scene" / "raw" / "mesh.ply"
+
+
 def _make_tool_scene(tmp_path: Path) -> SceneFunc3dToolScene:
     raw_dir = tmp_path / "scene" / "raw"
     raw_dir.mkdir(parents=True)
