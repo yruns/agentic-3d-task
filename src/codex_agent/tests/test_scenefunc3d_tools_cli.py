@@ -2014,7 +2014,7 @@ def test_cli_view_frame_exposes_mixed_raw_and_source_geometry_paths(
     assert frame_payload["pose_path"] == str(source_pose_path)
 
 
-def test_cli_view_frame_uses_conceptgraph_visualization_dir(
+def test_cli_view_frame_rejects_conceptgraph_visualization_without_raw_rgb(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     pytest.importorskip("PIL")
@@ -2038,8 +2038,11 @@ def test_cli_view_frame_uses_conceptgraph_visualization_dir(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert payload["frames"][0]["frame_id"] == "000000"
-    assert Path(payload["frames"][0]["image_path"]).exists()
+    assert "no raw RGB image found" in payload["error"]
+    assert (
+        "ConceptGraph visualization images are not valid RGB sources"
+        in payload["error"]
+    )
 
 
 def test_cli_view_frame_uses_source_frame_raw_path(
@@ -2162,7 +2165,7 @@ def test_view_crop_metadata_preserves_frame_id_with_underscores(
     assert metadata["frame_id"] == "frame_with_under_score"
 
 
-def test_cli_view_frame_prefers_conceptgraph_over_source_frame_raw_path(
+def test_cli_view_frame_prefers_source_frame_raw_path_over_conceptgraph_visualization(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     pytest.importorskip("PIL")
@@ -2202,8 +2205,8 @@ def test_cli_view_frame_prefers_conceptgraph_over_source_frame_raw_path(
         red, green, blue = cast(
             tuple[int, int, int], image.convert("RGB").getpixel((0, 0))
         )
-    assert green > red
-    assert green > blue
+    assert red > green
+    assert red > blue
 
 
 def test_cli_view_frame_missing_image_is_recoverable(
@@ -2225,7 +2228,11 @@ def test_cli_view_frame_missing_image_is_recoverable(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert "no RGB image found" in payload["error"]
+    assert "no raw RGB image found" in payload["error"]
+    assert (
+        "ConceptGraph visualization images are not valid RGB sources"
+        in payload["error"]
+    )
 
 
 def test_cli_frame_objects_reports_unavailable_index(
