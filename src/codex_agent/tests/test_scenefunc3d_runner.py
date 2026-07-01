@@ -419,6 +419,47 @@ def test_run_samples_uses_workers_for_multiple_samples(
     ]
 
 
+def test_run_samples_fail_stop_does_not_start_later_samples_with_workers(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+    started_sample_ids: list[str] = []
+
+    def _fake_run_single_sample(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_id: str,
+        executor: CodexExecutor,
+        check_sidecars: bool,
+    ) -> Path:
+        assert check_sidecars is False
+        _ = (config, executor)
+        started_sample_ids.append(sample_id)
+        if sample_id == "421254::desc-a":
+            raise CodexTurnError("first sample failed")
+        return tmp_path / "out" / sample_id.replace("::", "_") / "result.json"
+
+    monkeypatch.setattr(runner, "run_single_sample", _fake_run_single_sample)
+
+    with pytest.raises(CodexTurnError, match="first sample failed"):
+        run_samples(
+            config,
+            sample_ids=("421254::desc-a", "421254::desc-b"),
+            executor=cast(CodexExecutor, object()),
+            check_sidecars=False,
+            score=False,
+            continue_on_error=False,
+            workers=2,
+        )
+
+    assert started_sample_ids == ["421254::desc-a"]
+
+
 def test_mask_task_prompt_inlines_tools_without_attachments(
     tmp_path: Path,
 ) -> None:

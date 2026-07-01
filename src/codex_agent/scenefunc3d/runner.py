@@ -1049,7 +1049,7 @@ def run_samples(
     if check_sidecars:
         check_sidecar_health(config.backend_config_path)
 
-    if workers == 1 or len(normalized_sample_ids) == 1:
+    if not continue_on_error or workers == 1 or len(normalized_sample_ids) == 1:
         results = tuple(
             _run_batch_sample(
                 config,
