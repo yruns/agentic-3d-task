@@ -16,6 +16,7 @@ from codex_agent.scenefunc3d.backends.lift_3d import (
     assign_nearest_scene_point_indices,
     backproject_mask_to_world,
     load_mask_npz,
+    load_scene_mesh_vertex_count,
     load_scene_mesh_vertices,
     write_lift_npz,
     write_lift_ply,
@@ -211,6 +212,17 @@ def test_load_scene_mesh_vertices_reads_binary_little_endian_ply(
         vertices,
         np.array([[1.0, 0.0, 2.0], [3.5, 4.0, 5.0]], dtype=np.float64),
     )
+
+
+def test_load_scene_mesh_vertex_count_reads_binary_ply_header(
+    tmp_path: Path,
+) -> None:
+    mesh_path = _write_binary_scene_mesh(
+        tmp_path / "mesh.ply",
+        points=((1.0, 0.0, 2.0), (3.5, 4.0, 5.0), (7.0, 8.0, 9.0)),
+    )
+
+    assert load_scene_mesh_vertex_count(mesh_path) == 3
 
 
 def test_assign_nearest_scene_point_indices_returns_vertex_indices() -> None:

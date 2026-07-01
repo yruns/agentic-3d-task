@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import struct
 from collections.abc import Mapping
 from pathlib import Path
 from typing import cast
@@ -152,6 +153,21 @@ def test_score_mask_npz_loads_prediction_and_hidden_gt(tmp_path: Path) -> None:
         predicted_count=3,
         gt_count=5,
     )
+
+
+def test_score_mask_npz_rejects_predicted_ids_outside_raw_mesh(
+    tmp_path: Path,
+) -> None:
+    _write_scoring_scene(tmp_path)
+    mask_npz_path = tmp_path / "mask_data.npz"
+    np.savez_compressed(mask_npz_path, point_indices=np.array([3, 128]))
+
+    with pytest.raises(SceneFunc3dDataError, match="outside raw mesh"):
+        score_mask_npz(
+            data_root=tmp_path,
+            sample_id="421254::desc-a",
+            mask_npz_path=mask_npz_path,
+        )
 
 
 def test_score_mask_artifact_uses_final_artifact_npz_path(tmp_path: Path) -> None:
@@ -821,6 +837,9 @@ def _write_scoring_scene(root: Path) -> None:
     scene_dir = root / "421254"
     scene_dir.mkdir(parents=True)
     (scene_dir / "conceptgraph").mkdir()
+    raw_dir = scene_dir / "raw"
+    raw_dir.mkdir()
+    _write_binary_scene_mesh(raw_dir / "mesh.ply", vertex_count=128)
     (scene_dir / "421254_descriptions.json").write_text(
         json.dumps(
             {
@@ -872,6 +891,36 @@ def _write_scoring_scene(root: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def _write_binary_scene_mesh(path: Path, *, vertex_count: int) -> None:
+    header = (
+        "ply\n"
+        "format binary_little_endian 1.0\n"
+        f"element vertex {vertex_count}\n"
+        "property float x\n"
+        "property float y\n"
+        "property float z\n"
+        "property uchar red\n"
+        "property uchar green\n"
+        "property uchar blue\n"
+        "end_header\n"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("wb") as handle:
+        handle.write(header.encode("ascii"))
+        for index in range(vertex_count):
+            handle.write(
+                struct.pack(
+                    "<fffBBB",
+                    float(index),
+                    0.0,
+                    0.0,
+                    0,
+                    0,
+                    0,
+                )
+            )
 
 
 def _write_scoring_mask_artifact(artifact_path: Path, *, mask_npz_path: Path) -> None:
