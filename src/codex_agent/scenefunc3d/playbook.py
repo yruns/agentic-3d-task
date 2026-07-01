@@ -7,7 +7,6 @@ SCENEFUNC3D_TOOL_NAMES: tuple[str, ...] = (
     "scene_summary",
     "keyframe_selector",
     "view_frame",
-    "view_crop",
     "view_bev",
     "frame_objects",
     "molmo_point",
@@ -22,17 +21,13 @@ SCENEFUNC3D_TOOLS_PLAYBOOK = """\
 Playbook for SceneFunc3D mask generation.
 
 No image is evidence until you open it with view_image. First use scene_summary,
-keyframe_selector, view_frame, view_crop, view_bev, or frame_objects to find
-visual evidence for the task.
+keyframe_selector, view_frame, view_bev, or frame_objects to find visual evidence
+for the task.
 
 Tool catalog
 - scene_summary: summarize available scene assets and task context.
-- keyframe_selector: retrieve task-relevant first-person frames. When it returns
-  matched_objects, use each object's bbox_xyxy and bbox_format as object bbox
-  evidence for view_crop. When keyframe_selector returns recommended_crops,
-  inspect those crops before making any manual crop guess.
+- keyframe_selector: retrieve task-relevant first-person frames.
 - view_frame: inspect selected raw frames.
-- view_crop: zoom into a frame region before judging small affordances.
 - view_bev: inspect the top-down scene layout.
 - frame_objects: list detected objects visible in a frame.
 - molmo_point: propose a task-conditioned point on the target affordance.
@@ -44,8 +39,8 @@ Tool catalog
 
 molmo_point args are exactly image_path, image_width, image_height, prompt. Use
 prompt, not point_prompt or task_description. When calling molmo_point, pass the
-image_path, image_width, and image_height returned by view_frame or view_crop.
-Do not guess evidence image dimensions.
+image_path, image_width, and image_height returned by view_frame. Do not guess
+evidence image dimensions.
 
 sam_mask args are exactly frame_id, image_path, point_xy. point_xy must be
 [x_px, y_px] copied from the approved Molmo point. Use the same evidence
@@ -63,7 +58,7 @@ After a successful molmo_point call, do not spend extra reasoning turns if the
 point lands on the intended affordance; immediately call sam_mask with the
 approved point_xy, the same image_path, and the matching frame_id.
 After at most three successful molmo_point attempts before SAM, stop trying new
-Molmo prompts or crops and call sam_mask with the best approved point_xy.
+Molmo prompts or frames and call sam_mask with the best approved point_xy.
 2. After sam_mask, inspect the SAM candidates contact sheet. You must approve
 one SAM candidate before calling lift_mask_to_3d.
 Do not choose a SAM candidate by highest score alone. Use each candidate's
@@ -81,16 +76,16 @@ Do not call inspect_mask_artifact after sam_mask before lift_mask_to_3d has
 returned mask_npz_path, mask_ply_path, and overlay_path; never guess lifted
 artifact paths.
 After you approve a compact SAM candidate, call lift_mask_to_3d before searching
-again; do not keep searching new crops or frames before the first 3D lift. Use
-the 3D geometry review to reject borderline compact candidates instead of
-remaining in 2D crop search.
+again; do not keep searching new frames before the first 3D lift. Use the 3D
+geometry review to reject borderline compact candidates instead of remaining in
+2D search.
 3. After lift_mask_to_3d, inspect the selected mask overlay and artifact
 summary. You must approve the first 3D lift before any multi-view expansion.
 Use inspect_mask_artifact geometry fields bbox_extent_xyz and max_extent_meters
 before approving a 3D lift. A lift can be too broad for the target affordance.
 For small affordances, this usually means SAM captured a panel, body, pipe, wall
 patch, or shadow instead of the operable component; do not approve it.
-Change the SAM candidate, crop, point prompt, or frame before trying again.
+Change the SAM candidate, point prompt, or frame before trying again.
 inspect_mask_artifact args must include mask_npz_path, mask_ply_path, and
 lift_overlay_path returned by lift_mask_to_3d; do not approve an accepted
 fragment from an inspection without those exact lifted artifact paths.
@@ -109,43 +104,30 @@ inspect_mask_artifact, reuse the same NPZ/PLY paths you inspected. The tool
 validates that the seed lift overlay matches the accepted frame and seed
 fragment, then returns seed_lift_point_count, seed_lift_status, suggested
 views, and an expand/stop recommendation so you can decide whether the target
-part needs more views. When suggested views include views[].matched_objects with
-bbox_xyxy, crop those object bboxes before any follow-up Molmo call. Prefer
-views[].recommended_crops when present; these include the full matched object
-bbox and a targeted right/lower affordance crop for small dials, valves,
-knobs, handles, switches, or buttons.
+part needs more views.
 Use lift_mask_to_3d.mask_npz_path as seed_mask_npz_path,
 lift_mask_to_3d.mask_ply_path as seed_mask_ply_path, lift_mask_to_3d.overlay_path
 as seed_lift_overlay_path, and build seed_fragment_id as
 <frame_id>_<candidate_id> from that same lift result.
 After suggest_additional_views returns action "expand", choose at most two
 follow-up frames before the next Molmo call. Prefer the top-ranked suggested
-views with useful recommended_crops. After that, do not call suggest_additional_views again
-before Molmo or fusion. Once you have opened the selected follow-up evidence,
-call molmo_point on a selected follow-up crop or frame, or call
+views with useful matched_objects and geometry. After that, do not call
+suggest_additional_views again before Molmo or fusion. Once you have opened the
+selected follow-up evidence, call molmo_point on a selected follow-up frame, or call
 fuse_accepted_masks with rejected_suggested_frame_ids if every suggested
 follow-up view has been rejected.
 
 For small knobs, handles, dials, switches, buttons, and pinch_pull annotations,
 first identify the affordance concept, then use a complete task-constrained
-Molmo point prompt. If keyframe_selector returns matched_objects with
-bbox_xyxy, inspect the full frame and at least one view_crop around the matched
-object bbox before calling molmo_point. For tiny affordances on large objects,
-prefer keyframe_selector recommended_crops before making any manual crop guess.
-After view_crop returns an affordance-focused crop from recommended_crops or a
-manual crop around the likely affordance, call molmo_point as the next tool; do
-not spend extra reasoning turns comparing already-opened crops.
-If recommended_crops are missing, try object-bbox subcrops at the likely
-extremities before accepting a point: right/lower end for radiator dials or
-valves, edge/center-line regions for handles, and the visible control panel area
-for switches or buttons. For drawer or cabinet pull tasks, inspect nearby frames
-around the best drawer/cabinet view (+/- 8 frame ids when available) before the
-first Molmo call. Prefer a visible knob, handle, pull tab, or recessed grip; use
-a seam or lip only after the nearby frames do not show a distinct small operable
-component. The target is not the drawer front panel center or the broad cabinet
-body.
+Molmo point prompt. After opening a selected frame, call molmo_point as the next
+tool; do not spend extra reasoning turns comparing already-opened frames. For
+drawer or cabinet pull tasks, inspect nearby frames around the best drawer/cabinet
+view (+/- 8 frame ids when available) before the first Molmo call. Prefer a
+visible knob, handle, pull tab, or recessed grip; use a seam or lip only after
+the nearby frames do not show a distinct small operable component. The target is
+not the drawer front panel center or the broad cabinet body.
 Never repeat an expensive Molmo or SAM call with identical arguments after a
-model-quality failure. Change crop, prompt, or frame.
+model-quality failure. Change prompt or frame.
 
 Final answer must be compact JSON with mask_artifact_path, mask_npz_path,
 mask_ply_path, selected_frame_ids, accepted_fragment_ids, confidence, and

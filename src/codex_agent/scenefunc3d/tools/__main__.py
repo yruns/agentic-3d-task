@@ -32,13 +32,13 @@ _CHECKPOINT_ALLOWED_NEXT_TOOLS: Mapping[str, frozenset[str]] = {
         ("inspect_mask_artifact", "suggest_additional_views", "fuse_accepted_masks")
     ),
     "suggest_additional_views": frozenset(
-        ("view_crop", "view_frame", "molmo_point", "fuse_accepted_masks")
+        ("view_frame", "molmo_point", "fuse_accepted_masks")
     ),
 }
 _CHECKPOINT_TOOL_NAMES = frozenset(
     (*_CHECKPOINT_ALLOWED_NEXT_TOOLS.keys(), "inspect_mask_artifact")
 )
-_MULTIVIEW_FOLLOWUP_EVIDENCE_TOOL_NAMES = frozenset(("view_crop", "view_frame"))
+_MULTIVIEW_FOLLOWUP_EVIDENCE_TOOL_NAMES = frozenset(("view_frame",))
 _MULTIVIEW_PROGRESS_TOOL_NAMES = frozenset(("molmo_point", "fuse_accepted_masks"))
 _MAX_MULTIVIEW_EVIDENCE_EVENTS_BEFORE_POINT = 4
 _IDENTICAL_RETRY_GUARDED_TOOL_NAMES = frozenset(
@@ -291,7 +291,7 @@ def _validate_multiview_followup_sequence(tool_name: str, events_path: Path) -> 
         return
     raise ToolInputError(
         "after successful suggest_additional_views follow-up evidence, call "
-        "molmo_point on a selected follow-up crop or frame, or call "
+        "molmo_point on a selected follow-up frame, or call "
         "fuse_accepted_masks with rejected_suggested_frame_ids; do not keep "
         "opening more follow-up views before Molmo or fusion"
     )
@@ -318,7 +318,7 @@ def _validate_repeated_multiview_followup_evidence(
         if prior_signature == current_signature:
             raise ToolInputError(
                 f"do not repeat follow-up {tool_name} with identical arguments "
-                "after successful suggest_additional_views; change frame or crop, "
+                "after successful suggest_additional_views; change frame, "
                 "or call molmo_point on the selected evidence, or call "
                 "fuse_accepted_masks with rejected_suggested_frame_ids"
             )

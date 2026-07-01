@@ -1638,7 +1638,7 @@ def test_run_single_sample_rejects_standard_fragment_without_evidence_view_event
         tool_name="view_frame",
         event_mutator=_set_failed_tool_event_status,
         result_mutator=_keep_tool_result,
-        match="view_frame or view_crop",
+        match="view_frame",
     )
 
 
@@ -2322,7 +2322,7 @@ def test_run_single_sample_accepts_standard_fragment_with_lift_overlay_path_alia
     assert result_path == sample_output_dir / "result.json"
 
 
-def test_run_single_sample_accepts_standard_fragment_with_crop_evidence_image(
+def test_run_single_sample_rejects_standard_fragment_with_crop_evidence_image(
     tmp_path: Path,
 ) -> None:
     def write_tool_events(sample_output_dir: Path) -> None:
@@ -2346,12 +2346,8 @@ def test_run_single_sample_accepts_standard_fragment_with_crop_evidence_image(
             accepted_frame_ids=("000010",),
         )
 
-    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
-        tmp_path,
-        write_tool_events,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
+    with pytest.raises(CodexResponseError, match="view_frame"):
+        _run_single_sample_with_standard_outcome(tmp_path, write_tool_events)
 
 
 def test_run_single_sample_accepts_standard_fragment_with_molmo_frame_inferred(

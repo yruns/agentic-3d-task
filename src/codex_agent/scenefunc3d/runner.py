@@ -277,7 +277,7 @@ class _ToolPointPayload(BaseModel):
 
 
 class _EvidenceImageFrameResult(BaseModel):
-    """One evidence image returned by ``view_frame`` or ``view_crop``."""
+    """One evidence image returned by ``view_frame``."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -893,7 +893,7 @@ def _hard_limits_section() -> str:
         f"{', '.join(SCENEFUNC3D_ALLOWED_TOOL_NAMES)}.\n"
         "- Never re-run a tool with identical arguments and never re-view an "
         "image you have already seen; if a result is empty or errors, change "
-        "frame, crop, prompt, or mask candidate instead."
+        "frame, prompt, or mask candidate instead."
     )
 
 
@@ -1767,7 +1767,7 @@ def _raise_missing_molmo_point_event(
     raise CodexResponseError(
         "accepted standard fragment must be backed by a successful molmo_point "
         "tool event from this run, using an image_path returned earlier by "
-        "view_frame or view_crop, before fuse_accepted_masks in the required "
+        "view_frame, before fuse_accepted_masks in the required "
         "Molmo point -> SAM mask -> lift_mask_to_3d order: "
         f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
         f"molmo_raw_text_path={fragment.review_artifacts.molmo_raw_text_path}; "
@@ -2169,9 +2169,7 @@ def _successful_evidence_image_tool_events(
     events_path: Path,
 ) -> tuple[_ParsedEvidenceImageToolEvent, ...]:
     events: list[_ParsedEvidenceImageToolEvent] = []
-    for event in _successful_tool_result_events(
-        events_path, tool_names={"view_frame", "view_crop"}
-    ):
+    for event in _successful_tool_result_events(events_path, tool_names={"view_frame"}):
         try:
             result = _EvidenceImageToolResult.model_validate(event.result)
         except ValidationError as exc:

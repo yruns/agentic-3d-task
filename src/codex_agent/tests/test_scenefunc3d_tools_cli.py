@@ -1656,9 +1656,9 @@ def test_cli_bounds_followup_view_search_after_suggest_expand(
         out_dir,
         (
             "suggest_additional_views",
-            "view_crop",
             "view_frame",
-            "view_crop",
+            "view_frame",
+            "view_frame",
             "view_frame",
         ),
     )
@@ -3256,7 +3256,7 @@ def test_cli_keyframe_selector_returns_matched_object_bbox_metadata(
     ]
 
 
-def test_cli_keyframe_selector_returns_initial_recommended_crops(
+def test_cli_keyframe_selector_does_not_return_initial_recommended_crops(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     scene_dir = tmp_path / "421393"
@@ -3310,22 +3310,7 @@ def test_cli_keyframe_selector_returns_initial_recommended_crops(
     payload = json.loads(capsys.readouterr().out.strip())
     selected_frame = payload["frames"][0]
     assert selected_frame["frame_id"] == "000073"
-    assert selected_frame["recommended_crops"] == [
-        {
-            "bbox_xyxy": [380.0, 291.0, 940.0, 1440.0],
-            "bbox_format": "pixel_xyxy",
-            "reason": "matched_object_full_bbox",
-            "source_object_id": "3",
-            "source_object_label": "heater",
-        },
-        {
-            "bbox_xyxy": [744.0, 1095.3, 996.0, 1497.45],
-            "bbox_format": "pixel_xyxy",
-            "reason": "right_lower_affordance_crop_from_matched_object_bbox",
-            "source_object_id": "3",
-            "source_object_label": "heater",
-        },
-    ]
+    assert "recommended_crops" not in selected_frame
 
 
 @pytest.mark.parametrize(
