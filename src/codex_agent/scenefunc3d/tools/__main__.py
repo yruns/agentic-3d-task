@@ -28,6 +28,9 @@ _CHECKPOINT_ALLOWED_NEXT_TOOLS: Mapping[str, frozenset[str]] = {
     "molmo_point": frozenset(("sam_mask", "molmo_point")),
     "sam_mask": frozenset(("lift_mask_to_3d", "sam_mask")),
     "lift_mask_to_3d": frozenset(("inspect_mask_artifact",)),
+    "inspect_mask_artifact": frozenset(
+        ("inspect_mask_artifact", "suggest_additional_views", "fuse_accepted_masks")
+    ),
     "suggest_additional_views": frozenset(
         ("view_crop", "view_frame", "molmo_point", "fuse_accepted_masks")
     ),

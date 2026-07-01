@@ -434,6 +434,34 @@ class _SuggestAdditionalViewsToolArgs(BaseModel):
     seed_mask_ply_path: NonEmptyString
     seed_lift_overlay_path: NonEmptyString
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_seed_frame_aliases(cls, payload: object) -> object:
+        """Mirror the tool args model so runner validation accepts real events."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        if "accepted_frame_id" not in values and "seed_frame_id" in values:
+            values["accepted_frame_id"] = values.pop("seed_frame_id")
+        else:
+            values.pop("seed_frame_id", None)
+        if "accepted_frame_id" not in values:
+            inferred_frame_id = _infer_frame_id_from_seed_fragment(
+                values.get("seed_fragment_id")
+            )
+            if inferred_frame_id is not None:
+                values["accepted_frame_id"] = inferred_frame_id
+        return values
+
+
+def _infer_frame_id_from_seed_fragment(seed_fragment_id: object) -> str | None:
+    if not isinstance(seed_fragment_id, str):
+        return None
+    frame_id, separator, _candidate_id = seed_fragment_id.partition("_")
+    if not separator or not frame_id:
+        return None
+    return frame_id
+
 
 @dataclass(frozen=True)
 class _ParsedFuseToolEvent:

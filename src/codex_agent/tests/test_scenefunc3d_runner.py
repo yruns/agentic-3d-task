@@ -1930,7 +1930,11 @@ def test_run_single_sample_accepts_standard_expand_with_seed_artifact_paths(
             frame_ids=("000020",),
             seed_fragment_id="000010_mask_00",
             accepted_frame_id="000010",
-            args_overrides=_standard_suggest_seed_args(sample_output_dir),
+            include_accepted_frame_id=False,
+            args_overrides=_standard_suggest_seed_args(
+                sample_output_dir,
+                include_accepted_frame_id=False,
+            ),
         )
         _write_standard_upstream_tool_events(
             sample_output_dir,
@@ -3679,12 +3683,14 @@ def _write_suggest_additional_views_event(
     frame_ids: tuple[str, ...],
     seed_fragment_id: str = "frag-a",
     accepted_frame_id: str = "000010",
+    include_accepted_frame_id: bool = True,
     args_overrides: dict[str, object] | None = None,
 ) -> None:
     args_payload: dict[str, object] = {
         "seed_fragment_id": seed_fragment_id,
-        "accepted_frame_id": accepted_frame_id,
     }
+    if include_accepted_frame_id:
+        args_payload["accepted_frame_id"] = accepted_frame_id
     if args_overrides is not None:
         args_payload.update(args_overrides)
     event_payload = {
@@ -3720,11 +3726,13 @@ def _write_suggest_additional_views_event(
 
 
 def _standard_suggest_seed_args(
-    root: Path, *, seed_fragment_id: str = "000010_mask_00"
+    root: Path,
+    *,
+    seed_fragment_id: str = "000010_mask_00",
+    include_accepted_frame_id: bool = True,
 ) -> dict[str, object]:
-    return {
+    payload: dict[str, object] = {
         "seed_fragment_id": seed_fragment_id,
-        "accepted_frame_id": "000010",
         "seed_mask_npz_path": str(
             root / "fragments" / seed_fragment_id / "mask_data.npz"
         ),
@@ -3735,6 +3743,9 @@ def _standard_suggest_seed_args(
             root / "fragments" / seed_fragment_id / "lift_overlay.txt"
         ),
     }
+    if include_accepted_frame_id:
+        payload["accepted_frame_id"] = "000010"
+    return payload
 
 
 def _write_standard_upstream_tool_events(

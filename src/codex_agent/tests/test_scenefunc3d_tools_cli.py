@@ -1235,7 +1235,7 @@ def test_cli_blocks_repeated_inspection_without_new_lift(
     assert event["error"] == payload["error"]
 
 
-def test_cli_allows_frame_search_after_successful_inspection(
+def test_cli_blocks_frame_search_after_successful_inspection_before_multiview_decision(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     pytest.importorskip("PIL")
@@ -1262,7 +1262,14 @@ def test_cli_allows_frame_search_after_successful_inspection(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert payload["frames"][0]["frame_id"] == "000010"
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[-1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "view_frame"
+    assert "after a successful inspect_mask_artifact call" in payload["error"]
+    assert "suggest_additional_views" in payload["error"]
+    assert "fuse_accepted_masks" in payload["error"]
+    assert event["error"] == payload["error"]
 
 
 def test_cli_allows_idempotent_inspection_repeat(
