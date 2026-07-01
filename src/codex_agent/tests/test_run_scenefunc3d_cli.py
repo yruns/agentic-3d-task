@@ -39,26 +39,39 @@ def test_build_arg_parser_uses_scene_func_runner_parser() -> None:
 
     assert isinstance(parser, argparse.ArgumentParser)
     assert parser.prog == "codex_agent.cli.run_scenefunc3d"
+    assert "codex_agent.cli.run_scenefunc3d" in parser.format_usage()
 
 
-def test_main_delegates_to_scene_func_runner(
+def test_main_parses_with_cli_prog_and_runs_parsed_args(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    captured: dict[str, list[str] | None] = {}
+    captured: dict[str, argparse.Namespace] = {}
 
     def _fake_main(argv: list[str] | None = None) -> int:
-        captured["argv"] = argv
+        _ = argv
+        raise AssertionError("CLI must not delegate to runner.main")
+
+    def _fake_run_from_args(args: argparse.Namespace) -> int:
+        captured["args"] = args
         return 17
 
     monkeypatch.setattr(runner, "main", _fake_main)
+    monkeypatch.setattr(runner, "run_from_args", _fake_run_from_args, raising=False)
 
     exit_code = run_scenefunc3d.main(
         [
             "--dataset-root",
             str(tmp_path / "data"),
+            "--sample-id",
+            "421254::desc-a",
+            "--backend-config",
+            str(tmp_path / "backends.toml"),
+            "--output-dir",
+            str(tmp_path / "out"),
         ]
     )
 
     assert exit_code == 17
-    assert captured["argv"] == ["--dataset-root", str(tmp_path / "data")]
+    assert captured["args"].dataset_root == tmp_path / "data"
+    assert captured["args"].sample_id == "421254::desc-a"

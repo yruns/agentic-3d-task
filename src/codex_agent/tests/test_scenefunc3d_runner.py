@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
@@ -17,6 +18,8 @@ import numpy as np
 import pytest
 
 import codex_agent.scenefunc3d.runner as runner
+from codex_agent.cli import runtime_preflight
+from codex_agent.config import CodexAgentConfig
 from codex_agent.errors import CodexResponseError, SceneFunc3dDataError
 from codex_agent.models import CodexTaskResult, CodexTurnMetadata, CodexTurnResult
 from codex_agent.scenefunc3d.runner import (
@@ -49,6 +52,18 @@ _APPROVED_FRAGMENT_ACTIONS = (
     ApprovalAction.CREATE_FIRST_LIFT.value,
     ApprovalAction.APPROVE_FIRST_LIFT.value,
 )
+
+
+def _capture_runtime_preflight(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[CodexAgentConfig]:
+    calls: list[CodexAgentConfig] = []
+
+    def fake_preflight(config: CodexAgentConfig) -> None:
+        calls.append(config)
+
+    monkeypatch.setattr(runtime_preflight, "preflight_codex_runtime", fake_preflight)
+    return calls
 
 
 def test_build_arg_parser_accepts_single_case_runtime_options(
@@ -101,6 +116,12 @@ def test_build_arg_parser_accepts_all_samples_batch_runtime_options(
     assert args.score is True
 
 
+def test_build_arg_parser_help_omits_skip_sidecar_health_check() -> None:
+    parser = build_arg_parser()
+
+    assert "--skip-sidecar-health-check" not in parser.format_help()
+
+
 def test_main_prints_one_json_payload(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -118,7 +139,8 @@ def test_main_prints_one_json_payload(
         executor: CodexExecutor,
         check_sidecars: bool,
     ) -> Path:
-        _ = (config, sample_id, executor, check_sidecars)
+        assert check_sidecars is True
+        _ = (config, sample_id, executor)
         return result_path
 
     monkeypatch.setattr(runner, "_build_executor", _fake_build_executor)
@@ -134,13 +156,103 @@ def test_main_prints_one_json_payload(
             str(tmp_path / "backends.toml"),
             "--output-dir",
             str(tmp_path / "out"),
-            "--skip-sidecar-health-check",
         ]
     )
 
     assert exit_code == 0
     lines = capsys.readouterr().out.splitlines()
     assert lines == [json.dumps({"result_path": str(result_path)})]
+
+
+def test_run_from_args_always_checks_sidecars_for_single_sample(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    result_path = tmp_path / "out" / "result.json"
+    args = argparse.Namespace(
+        dataset_root=tmp_path / "data",
+        sample_id="421254::desc-a",
+        sample_ids_path=None,
+        all_samples=False,
+        backend_config=tmp_path / "backends.toml",
+        output_dir=tmp_path / "out",
+        score=False,
+        skip_sidecar_health_check=True,
+    )
+
+    def _fake_build_executor() -> CodexExecutor:
+        return cast(CodexExecutor, object())
+
+    def _fake_run_single_sample(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_id: str,
+        executor: CodexExecutor,
+        check_sidecars: bool,
+    ) -> Path:
+        assert config.dataset_root == tmp_path / "data"
+        assert sample_id == "421254::desc-a"
+        assert check_sidecars is True
+        _ = executor
+        return result_path
+
+    monkeypatch.setattr(runner, "_build_executor", _fake_build_executor)
+    monkeypatch.setattr(runner, "run_single_sample", _fake_run_single_sample)
+
+    assert runner.run_from_args(args) == 0
+
+
+def test_run_from_args_always_checks_sidecars_for_batch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    sample_ids_path = tmp_path / "sample_ids.json"
+    sample_ids_path.write_text(json.dumps(["421254::desc-a"]), encoding="utf-8")
+    args = argparse.Namespace(
+        dataset_root=tmp_path / "data",
+        sample_id=None,
+        sample_ids_path=sample_ids_path,
+        all_samples=False,
+        backend_config=tmp_path / "backends.toml",
+        output_dir=tmp_path / "out",
+        score=True,
+        skip_sidecar_health_check=True,
+    )
+
+    def _fake_build_executor() -> CodexExecutor:
+        return cast(CodexExecutor, object())
+
+    def _fake_run_samples(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_ids: tuple[str, ...],
+        executor: CodexExecutor,
+        check_sidecars: bool = True,
+        score: bool = True,
+        continue_on_error: bool = True,
+    ) -> runner.SceneFunc3dBatchRunSummary:
+        assert config.output_dir == tmp_path / "out"
+        assert sample_ids == ("421254::desc-a",)
+        assert check_sidecars is True
+        assert score is True
+        _ = (executor, continue_on_error)
+        return runner.SceneFunc3dBatchRunSummary(
+            scoring_enabled=True,
+            sample_count=1,
+            completed_count=1,
+            failed_count=0,
+            scored_count=1,
+            mean_iou=0.25,
+            mean_precision=0.5,
+            mean_recall=0.75,
+            mean_f1=0.6,
+            results=(),
+        )
+
+    monkeypatch.setattr(runner, "_build_executor", _fake_build_executor)
+    monkeypatch.setattr(runner, "run_samples", _fake_run_samples)
+
+    assert runner.run_from_args(args) == 0
 
 
 def test_mask_task_prompt_inlines_tools_without_attachments(
@@ -2594,7 +2706,7 @@ def test_main_with_score_prints_result_path_and_score(
         check_sidecars: bool = True,
     ) -> Path:
         assert sample_id == "421254::desc-a"
-        assert check_sidecars is False
+        assert check_sidecars is True
         _ = executor
         sample_output_dir = config.output_dir / "421254" / "desc-a"
         _write_outcome_artifacts(sample_output_dir)
@@ -2628,7 +2740,6 @@ def test_main_with_score_prints_result_path_and_score(
             str(tmp_path / "backends.toml"),
             "--output-dir",
             str(tmp_path / "out"),
-            "--skip-sidecar-health-check",
             "--score",
         ]
     )
@@ -2667,7 +2778,7 @@ def test_main_all_samples_prints_batch_summary_path(
         assert config.dataset_root == tmp_path / "data"
         assert config.output_dir == tmp_path / "out"
         assert config.backend_config_path == tmp_path / "backends.toml"
-        assert check_sidecars is False
+        assert check_sidecars is True
         assert score is True
         captured_sample_ids.extend(sample_ids)
         return runner.SceneFunc3dBatchRunSummary(
@@ -2698,7 +2809,6 @@ def test_main_all_samples_prints_batch_summary_path(
             str(tmp_path / "backends.toml"),
             "--output-dir",
             str(tmp_path / "out"),
-            "--skip-sidecar-health-check",
             "--score",
         ]
     )
@@ -2768,7 +2878,6 @@ def test_main_sample_ids_path_strips_file_entries_before_batch_run(
             str(tmp_path / "backends.toml"),
             "--output-dir",
             str(tmp_path / "out"),
-            "--skip-sidecar-health-check",
             "--score",
         ]
     )
@@ -2799,7 +2908,6 @@ def test_main_validates_sample_ids_path_before_building_executor(
                 str(tmp_path / "backends.toml"),
                 "--output-dir",
                 str(tmp_path / "out"),
-                "--skip-sidecar-health-check",
             ]
         )
 
@@ -2825,7 +2933,6 @@ def test_main_rejects_empty_all_samples_before_building_executor(
                 str(tmp_path / "backends.toml"),
                 "--output-dir",
                 str(tmp_path / "out"),
-                "--skip-sidecar-health-check",
             ]
         )
 
@@ -2839,10 +2946,12 @@ def test_build_executor_uses_tool_writable_runtime_defaults(
     monkeypatch.setenv("CODEX_HOME", str(config_path))
     monkeypatch.delenv("CODEX_AGENT_SANDBOX", raising=False)
     monkeypatch.delenv("CODEX_AGENT_SANDBOX_NETWORK", raising=False)
+    preflight_calls = _capture_runtime_preflight(monkeypatch)
 
     executor = runner._build_executor()
 
     assert isinstance(executor, CodexAgentRuntime)
+    assert preflight_calls == [executor.config]
     assert executor.config.sandbox == "workspace_write"
     assert executor.config.sandbox_network_access is True
 
@@ -2856,10 +2965,12 @@ def test_build_executor_preserves_full_access_runtime_override(
     monkeypatch.setenv("CODEX_HOME", str(config_path))
     monkeypatch.setenv("CODEX_AGENT_SANDBOX", "full_access")
     monkeypatch.delenv("CODEX_AGENT_SANDBOX_NETWORK", raising=False)
+    preflight_calls = _capture_runtime_preflight(monkeypatch)
 
     executor = runner._build_executor()
 
     assert isinstance(executor, CodexAgentRuntime)
+    assert preflight_calls == [executor.config]
     assert executor.config.sandbox == "full_access"
     assert executor.config.sandbox_network_access is False
 
@@ -2873,10 +2984,12 @@ def test_build_executor_upgrades_read_only_runtime_override(
     monkeypatch.setenv("CODEX_HOME", str(config_path))
     monkeypatch.setenv("CODEX_AGENT_SANDBOX", "read_only")
     monkeypatch.setenv("CODEX_AGENT_SANDBOX_NETWORK", "false")
+    preflight_calls = _capture_runtime_preflight(monkeypatch)
 
     executor = runner._build_executor()
 
     assert isinstance(executor, CodexAgentRuntime)
+    assert preflight_calls == [executor.config]
     assert executor.config.sandbox == "workspace_write"
     assert executor.config.sandbox_network_access is True
 

@@ -27,6 +27,7 @@ from ..evaluation.sample_ids import load_sample_ids
 from ..models import CodexSkill
 from ..nr3d.sample import DEFAULT_PACK_NAME
 from ..runtime import CodexAgentRuntime
+from .runtime_preflight import preflight_codex_runtime
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -140,18 +141,18 @@ def main(argv: list[str] | None = None) -> int:
     if not sample_ids:
         parser.error("no sample ids selected to run")
 
-    runtime = CodexAgentRuntime(
-        _build_config(
-            model=args.model,
-            sandbox=args.sandbox,
-            tools=args.tools,
-            turn_timeout=args.turn_timeout,
-            reasoning_effort=args.reasoning_effort,
-            reasoning_summary=args.reasoning_summary,
-            max_tool_calls=args.max_tool_calls,
-            max_repeated_tool_calls=args.max_repeated_tool_calls,
-        )
+    config = _build_config(
+        model=args.model,
+        sandbox=args.sandbox,
+        tools=args.tools,
+        turn_timeout=args.turn_timeout,
+        reasoning_effort=args.reasoning_effort,
+        reasoning_summary=args.reasoning_summary,
+        max_tool_calls=args.max_tool_calls,
+        max_repeated_tool_calls=args.max_repeated_tool_calls,
     )
+    preflight_codex_runtime(config)
+    runtime = CodexAgentRuntime(config)
 
     logger.info(
         "running {} NR3D samples (pack={}, skill={}, tools={})",

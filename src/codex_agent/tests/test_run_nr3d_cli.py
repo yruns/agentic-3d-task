@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from codex_agent.cli import run_nr3d
 from codex_agent.cli.run_nr3d import (
     _DEFAULT_TOOLS_MAX_REPEATED_TOOL_CALLS,
     _DEFAULT_TOOLS_MAX_TOOL_CALLS,
@@ -13,6 +14,9 @@ from codex_agent.cli.run_nr3d import (
     _resolve_skill,
     main,
 )
+from codex_agent.config import CodexAgentConfig
+from codex_agent.evaluation.nr3d_runner import Nr3dRunSummary
+from codex_agent.tasks.base import CodexExecutor
 
 
 def test_build_config_tools_enables_workspace_write_and_network() -> None:
@@ -214,3 +218,65 @@ def test_main_exits_when_skill_path_is_passed_without_tools(
 
 def test_resolve_skill_no_skill_returns_none() -> None:
     assert _resolve_skill(skill_path=None, no_skill=True, tools=True) is None
+
+
+def test_main_preflights_runtime_config_before_constructing_runtime(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sample_ids_path = tmp_path / "sample_ids.json"
+    sample_ids_path.write_text('["scene0000_00-0"]', encoding="utf-8")
+    call_order: list[str] = []
+
+    def fake_preflight(config: CodexAgentConfig) -> None:
+        assert isinstance(config, CodexAgentConfig)
+        call_order.append("preflight")
+
+    class FakeRuntime:
+        def __init__(self, config: CodexAgentConfig) -> None:
+            assert isinstance(config, CodexAgentConfig)
+            call_order.append("runtime")
+
+    def fake_run_samples(
+        *,
+        sample_ids: tuple[str, ...],
+        data_root: Path,
+        output_dir: Path,
+        runtime: CodexExecutor,
+        pack_name: str,
+        skill: object,
+        workers: int,
+        sample_retries: int,
+        tools_enabled: bool,
+    ) -> Nr3dRunSummary:
+        _ = (
+            sample_ids,
+            data_root,
+            output_dir,
+            runtime,
+            pack_name,
+            skill,
+            workers,
+            sample_retries,
+            tools_enabled,
+        )
+        return Nr3dRunSummary(n=1, mean_iou=0.0, acc_025=0.0, acc_050=0.0)
+
+    monkeypatch.setattr(
+        run_nr3d, "preflight_codex_runtime", fake_preflight, raising=False
+    )
+    monkeypatch.setattr(run_nr3d, "CodexAgentRuntime", FakeRuntime)
+    monkeypatch.setattr(run_nr3d, "run_samples", fake_run_samples)
+
+    exit_code = run_nr3d.main(
+        [
+            "--sample-ids",
+            str(sample_ids_path),
+            "--data-root",
+            str(tmp_path / "data"),
+            "--output-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert exit_code == 0
+    assert call_order == ["preflight", "runtime"]

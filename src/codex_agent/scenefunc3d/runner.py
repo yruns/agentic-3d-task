@@ -2633,10 +2633,12 @@ def _artifact_payload(
     }
 
 
-def build_arg_parser() -> argparse.ArgumentParser:
+def build_arg_parser(
+    *, prog: str = "codex_agent.scenefunc3d.runner"
+) -> argparse.ArgumentParser:
     """Build the SceneFunc3D runner CLI parser."""
     parser = argparse.ArgumentParser(
-        prog="codex_agent.scenefunc3d.runner",
+        prog=prog,
         description="Run SceneFunc3D mask-generation cases with Codex.",
     )
     parser.add_argument(
@@ -2673,11 +2675,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Directory where the sample result.json and tool artifacts are written.",
     )
     parser.add_argument(
-        "--skip-sidecar-health-check",
-        action="store_true",
-        help="Skip Molmo/SAM /health checks before launching Codex.",
-    )
-    parser.add_argument(
         "--score",
         action="store_true",
         help="Score the written result.json against hidden GT and include metrics.",
@@ -2689,11 +2686,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run SceneFunc3D samples from the command line."""
     parser = build_arg_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
+    return run_from_args(args)
+
+
+def run_from_args(args: argparse.Namespace) -> int:
+    """Run SceneFunc3D samples from parsed command-line arguments."""
     config = SceneFunc3dRunnerConfig(
         dataset_root=args.dataset_root,
         output_dir=args.output_dir,
         backend_config_path=args.backend_config,
     )
+    return _run_from_config_and_args(config, args)
+
+
+def _run_from_config_and_args(
+    config: SceneFunc3dRunnerConfig, args: argparse.Namespace
+) -> int:
+    """Run SceneFunc3D samples with validated runner config and parsed arguments."""
     sample_ids = _sample_ids_from_args(args, data_root=config.dataset_root)
     executor = _build_executor()
     if len(sample_ids) == 1 and _namespace_optional_str(args, "sample_id") is not None:
@@ -2701,7 +2710,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             config,
             sample_id=sample_ids[0],
             executor=executor,
-            check_sidecars=not args.skip_sidecar_health_check,
+            check_sidecars=True,
         )
         if _namespace_bool(args, "score"):
             payload: (
@@ -2718,7 +2727,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             config,
             sample_ids=sample_ids,
             executor=executor,
-            check_sidecars=not args.skip_sidecar_health_check,
+            check_sidecars=True,
             score=_namespace_bool(args, "score"),
         )
         payload = _batch_run_payload(
@@ -2770,9 +2779,12 @@ def _load_sample_ids_file(path: Path) -> tuple[str, ...]:
 
 
 def _build_executor() -> CodexExecutor:
+    from ..cli.runtime_preflight import preflight_codex_runtime
     from ..runtime import CodexAgentRuntime
 
-    return CodexAgentRuntime(_tool_writable_runtime_config(CodexAgentConfig.from_env()))
+    config = _tool_writable_runtime_config(CodexAgentConfig.from_env())
+    preflight_codex_runtime(config)
+    return CodexAgentRuntime(config)
 
 
 def _tool_writable_runtime_config(config: CodexAgentConfig) -> CodexAgentConfig:
@@ -2953,6 +2965,7 @@ __all__ = [
     "check_sidecar_health",
     "load_runner_sample",
     "main",
+    "run_from_args",
     "run_samples",
     "run_single_sample",
 ]

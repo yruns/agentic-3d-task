@@ -23,14 +23,14 @@ from ..scenefunc3d import runner
 
 def build_arg_parser() -> argparse.ArgumentParser:
     """Build the SceneFunc3D CLI parser."""
-    parser = runner.build_arg_parser()
-    parser.prog = "codex_agent.cli.run_scenefunc3d"
-    return parser
+    return runner.build_arg_parser(prog="codex_agent.cli.run_scenefunc3d")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run SceneFunc3D samples from the command line."""
-    return runner.main(list(argv) if argv is not None else None)
+    parser = build_arg_parser()
+    args = parser.parse_args(list(argv) if argv is not None else None)
+    return runner.run_from_args(args)
 
 
 if __name__ == "__main__":
