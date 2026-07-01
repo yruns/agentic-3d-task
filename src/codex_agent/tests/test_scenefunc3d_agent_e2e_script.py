@@ -23,6 +23,13 @@ def test_agent_e2e_script_runs_runner_with_sidecars_and_scoring() -> None:
     assert "ensure_codex_home()" in script_text
 
 
+def test_benchmark_readme_documents_cli_module_entrypoint() -> None:
+    readme_text = _benchmark_readme_path().read_text(encoding="utf-8")
+
+    assert "PYTHONPATH=src python -m codex_agent.cli.run_scenefunc3d" in readme_text
+    assert "python -m codex_agent.scenefunc3d.runner" not in readme_text
+
+
 def test_agent_e2e_script_allows_full_molmo_sam_fuse_tool_budget() -> None:
     script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
 
@@ -693,6 +700,10 @@ def _agent_e2e_script_path() -> Path:
         / "assets"
         / "run_agent_runner_e2e_20260629.sh"
     )
+
+
+def _benchmark_readme_path() -> Path:
+    return Path.cwd() / "docs" / "benchmark" / "scenefunc_molmo_sam3d" / "README.md"
 
 
 def _benchmark_asset_script_paths() -> tuple[Path, ...]:

@@ -40,8 +40,8 @@ from TASA is intentionally out of scope for this smoke.
   private credentials from the gitignored `codex_modelhub_adapter/.env` or
   `codex_modelhub_adapter/.modelhub_upstreams.toml`. The sidecar mode defaults
   to the configured remote workspace proxy; set `SIDECAR_MODE=local` to launch
-  local MolmoPoint and SAM2.1-Hiera-L sidecars before
-  `codex_agent.cli.run_scenefunc3d --score`.
+  local MolmoPoint and SAM2.1-Hiera-L sidecars before invoking the canonical
+  benchmark CLI with `--score`.
 - `assets/test_molmo_sam3d_smoke.py` — unit tests for point parsing, SAM
   candidate selection, success assessment, and Molmo remote-code patching.
 
@@ -55,6 +55,14 @@ from TASA is intentionally out of scope for this smoke.
   `RUN_ROOT` only when you need a different output location; keep it outside
   the dataset root so generated masks, overlays, and logs do not mix with input
   data.
+- Use the canonical benchmark entrypoint:
+
+  ```bash
+  PYTHONPATH=src python -m codex_agent.cli.run_scenefunc3d
+  ```
+
+  The provided runner script appends `--score` plus dataset, sample, backend,
+  and output options.
 - Provide Codex access through either `USE_CODEX_AUTH=1` with an authenticated
   `CODEX_HOME`, or the project-local ModelHub adapter credentials in gitignored
   adapter config. `PRECHECK_ONLY=1` validates only this auth/adapter boundary.
