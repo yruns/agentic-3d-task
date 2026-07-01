@@ -20,7 +20,11 @@ import pytest
 import codex_agent.scenefunc3d.runner as runner
 from codex_agent.cli import runtime_preflight
 from codex_agent.config import CodexAgentConfig
-from codex_agent.errors import CodexResponseError, SceneFunc3dDataError
+from codex_agent.errors import (
+    CodexResponseError,
+    CodexTurnError,
+    SceneFunc3dDataError,
+)
 from codex_agent.models import CodexTaskResult, CodexTurnMetadata, CodexTurnResult
 from codex_agent.scenefunc3d.runner import (
     SCENEFUNC3D_ALLOWED_TOOL_NAMES,
@@ -162,6 +166,42 @@ def test_main_prints_one_json_payload(
     assert exit_code == 0
     lines = capsys.readouterr().out.splitlines()
     assert lines == [json.dumps({"result_path": str(result_path)})]
+
+
+def test_main_propagates_single_sample_failure_without_success_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_scene(tmp_path / "data")
+    turn_error = CodexTurnError("cli turn failed")
+
+    def _fake_build_executor() -> CodexExecutor:
+        return _FailingCodexTurnExecutor(turn_error)
+
+    def _skip_sidecar_health(_backend_config_path: Path) -> None:
+        return None
+
+    monkeypatch.setattr(runner, "_build_executor", _fake_build_executor)
+    monkeypatch.setattr(runner, "check_sidecar_health", _skip_sidecar_health)
+
+    with pytest.raises(CodexTurnError, match="cli turn failed") as exc_info:
+        main(
+            [
+                "--dataset-root",
+                str(tmp_path / "data"),
+                "--sample-id",
+                "421254::desc-a",
+                "--backend-config",
+                str(tmp_path / "backends.toml"),
+                "--output-dir",
+                str(tmp_path / "out"),
+            ]
+        )
+
+    assert exc_info.value is turn_error
+    assert capsys.readouterr().out == ""
+    assert (tmp_path / "out" / "421254" / "desc-a" / "failure.json").is_file()
 
 
 def test_run_from_args_always_checks_sidecars_for_single_sample(
@@ -1391,6 +1431,96 @@ def test_run_single_sample_writes_tool_context_before_task_execution(
 
     assert result_path == sample_output_dir / "result.json"
     assert f"--context {sample_output_dir / 'tool_context.json'}" in executor.prompt
+
+
+def test_run_single_sample_writes_failure_json_when_codex_turn_fails(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    turn_error = CodexTurnError("executor turn failed")
+    executor = _FailingCodexTurnExecutor(turn_error)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexTurnError, match="executor turn failed") as exc_info:
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
+
+    assert exc_info.value is turn_error
+    failure_path = sample_output_dir / "failure.json"
+    payload = json.loads(failure_path.read_text(encoding="utf-8"))
+    assert payload == {
+        "task_name": "scenefunc3d_mask_generation",
+        "sample_id": "421254::desc-a",
+        "status": "failed",
+        "failure_stage": "codex_turn",
+        "error_type": "CodexTurnError",
+        "error_message": "executor turn failed",
+        "events_path": str(sample_output_dir / "events.jsonl"),
+        "tool_context_path": str(sample_output_dir / "tool_context.json"),
+        "turn": _empty_failure_turn_payload(),
+    }
+
+
+def test_run_single_sample_writes_failure_json_when_response_validation_fails(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_outcome_artifacts(sample_output_dir)
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("frag-a",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+    executor = _FakeExecutor(outcome)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(CodexResponseError, match="fuse_accepted_masks"):
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
+
+    failure_path = sample_output_dir / "failure.json"
+    payload = json.loads(failure_path.read_text(encoding="utf-8"))
+    assert payload["task_name"] == "scenefunc3d_mask_generation"
+    assert payload["sample_id"] == "421254::desc-a"
+    assert payload["status"] == "failed"
+    assert payload["failure_stage"] == "response_validation"
+    assert payload["error_type"] == "CodexResponseError"
+    assert "fuse_accepted_masks" in payload["error_message"]
+    assert payload["events_path"] == str(sample_output_dir / "events.jsonl")
+    assert payload["tool_context_path"] == str(sample_output_dir / "tool_context.json")
+    assert payload["turn"] == {
+        "turn_id": "fake-turn",
+        "status": "completed",
+        "duration_ms": None,
+        "usage": None,
+        "input_tokens": None,
+        "cached_input_tokens": None,
+        "reasoning_summary": None,
+        "run_home": None,
+        "attempts": [],
+    }
 
 
 def test_run_single_sample_rejects_final_artifact_without_fuse_tool_event(
@@ -2735,6 +2865,53 @@ def test_run_samples_preserves_result_path_when_scoring_fails(
     assert payload["results"][0]["failure_stage"] == "score"
 
 
+def test_run_samples_records_failure_path_when_run_writes_failure_json(
+    tmp_path: Path,
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    _write_outcome_artifacts(sample_output_dir)
+    outcome = SceneFunc3dMaskOutcome(
+        mask_artifact_path=sample_output_dir / "mask_artifact.json",
+        mask_npz_path=sample_output_dir / "mask.npz",
+        mask_ply_path=sample_output_dir / "mask.ply",
+        selected_frame_ids=("000010",),
+        accepted_fragment_ids=("frag-a",),
+        confidence=0.87,
+        uncertainties=("partial occlusion",),
+    )
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    summary = run_samples(
+        config,
+        sample_ids=("421254::desc-a",),
+        executor=_FakeExecutor(outcome),
+        check_sidecars=False,
+        score=False,
+    )
+
+    failure_path = sample_output_dir / "failure.json"
+    assert failure_path.is_file()
+    assert summary.sample_count == 1
+    assert summary.completed_count == 0
+    assert summary.failed_count == 1
+    assert summary.results[0].status == "failed"
+    assert summary.results[0].failure_stage == "run"
+    assert summary.results[0].result_path is None
+    assert summary.results[0].failure_path == failure_path
+    assert summary.results[0].score is None
+
+    payload = json.loads(
+        (tmp_path / "out" / "evaluation_summary.json").read_text(encoding="utf-8")
+    )
+    assert payload["results"][0]["result_path"] is None
+    assert payload["results"][0]["failure_path"] == str(failure_path)
+
+
 def test_run_samples_marks_unscored_batch_metrics_as_not_computed(
     tmp_path: Path,
 ) -> None:
@@ -3173,6 +3350,29 @@ class _FakeExecutor:
                 metadata=CodexTurnMetadata(turn_id="fake-turn", status="completed"),
             ),
         )
+
+
+class _FailingCodexTurnExecutor:
+    def __init__(self, error: CodexTurnError) -> None:
+        self.error = error
+
+    def execute(self, task: CodexTask[ResultT]) -> CodexTaskResult[ResultT]:
+        _ = task.build_turn_request()
+        raise self.error
+
+
+def _empty_failure_turn_payload() -> dict[str, object]:
+    return {
+        "turn_id": None,
+        "status": None,
+        "duration_ms": None,
+        "usage": None,
+        "input_tokens": None,
+        "cached_input_tokens": None,
+        "reasoning_summary": None,
+        "run_home": None,
+        "attempts": [],
+    }
 
 
 class _DynamicSceneFuncExecutor:

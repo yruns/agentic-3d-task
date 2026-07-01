@@ -24,13 +24,24 @@ from pydantic import (
 from pydantic.types import StringConstraints
 
 from ..config import CodexAgentConfig
-from ..errors import CodexResponseError, SceneFunc3dDataError
+from ..errors import (
+    CodexAgentError,
+    CodexResponseError,
+    CodexTurnError,
+    SceneFunc3dDataError,
+)
 from ..json_extraction import extract_json_object
 from ..models import CodexTurnMetadata, CodexTurnRequest
 from ..tasks.base import CodexExecutor
 from .backends.config import HttpHeader, load_backend_settings
 from .evaluation.payloads import SceneFunc3dScorePayload, score_to_payload
 from .evaluation.scorer import SceneFunc3dScore, score_result_file
+from .failure_artifacts import (
+    SceneFunc3dFailureArtifact,
+    SceneFunc3dFailureStage,
+    SceneFunc3dFailureTurnPayload,
+    write_failure_artifact,
+)
 from .final_mask_artifacts import (
     FinalMaskAcceptedFragment,
     FinalMaskArtifactDocument,
@@ -138,6 +149,7 @@ class SceneFunc3dBatchSampleResultPayload(TypedDict):
     status: str
     failure_stage: str
     result_path: str | None
+    failure_path: str | None
     score: SceneFunc3dScorePayload | None
     error: str
 
@@ -583,6 +595,7 @@ class SceneFunc3dBatchSampleResult:
     failure_stage: SceneFunc3dBatchFailureStage
     result_path: Path | None
     score: SceneFunc3dScore | None
+    failure_path: Path | None = None
     error: str = ""
 
     def to_payload(self) -> SceneFunc3dBatchSampleResultPayload:
@@ -593,6 +606,9 @@ class SceneFunc3dBatchSampleResult:
             "failure_stage": self.failure_stage,
             "result_path": (
                 str(self.result_path) if self.result_path is not None else None
+            ),
+            "failure_path": (
+                str(self.failure_path) if self.failure_path is not None else None
             ),
             "score": score_to_payload(self.score) if self.score is not None else None,
             "error": self.error,
@@ -915,9 +931,45 @@ def run_single_sample(
         backend_config_path=config.backend_config_path,
         tool_context_path=tool_context_path,
     )
-    result = executor.execute(task)
-    validated_outcome = task.validate_outcome(result.outcome)
-    validated_artifact = _validate_outcome_artifact(validated_outcome)
+    turn_metadata: CodexTurnMetadata | None = None
+    try:
+        result = executor.execute(task)
+        turn_metadata = result.turn.metadata
+        validated_outcome = task.validate_outcome(result.outcome)
+        validated_artifact = _validate_outcome_artifact(validated_outcome)
+    except CodexTurnError as exc:
+        _write_sample_failure_artifact(
+            sample=sample,
+            failure_path=sample_output_dir / "failure.json",
+            failure_stage="codex_turn",
+            exc=exc,
+            events_path=artifact_paths.events_jsonl,
+            tool_context_path=tool_context_path,
+            turn_metadata=turn_metadata,
+        )
+        raise
+    except CodexResponseError as exc:
+        _write_sample_failure_artifact(
+            sample=sample,
+            failure_path=sample_output_dir / "failure.json",
+            failure_stage="response_validation",
+            exc=exc,
+            events_path=artifact_paths.events_jsonl,
+            tool_context_path=tool_context_path,
+            turn_metadata=turn_metadata,
+        )
+        raise
+    except CodexAgentError as exc:
+        _write_sample_failure_artifact(
+            sample=sample,
+            failure_path=sample_output_dir / "failure.json",
+            failure_stage="run",
+            exc=exc,
+            events_path=artifact_paths.events_jsonl,
+            tool_context_path=tool_context_path,
+            turn_metadata=turn_metadata,
+        )
+        raise
     result_path = sample_output_dir / "result.json"
     result_payload: SceneFunc3dRunResultPayload = {
         "task_name": result.task_name,
@@ -977,6 +1029,7 @@ def run_samples(
         except Exception as exc:
             if not continue_on_error:
                 raise
+            failure_path = _existing_failure_artifact_path(config, sample_id)
             results.append(
                 SceneFunc3dBatchSampleResult(
                     sample_id=sample_id,
@@ -984,6 +1037,7 @@ def run_samples(
                     failure_stage="run",
                     result_path=None,
                     score=None,
+                    failure_path=failure_path,
                     error=_format_batch_error(exc),
                 )
             )
@@ -1041,6 +1095,55 @@ def _normalized_batch_sample_ids(sample_ids: Sequence[str]) -> tuple[str, ...]:
             f"duplicate SceneFunc3D sample ids: {tuple(duplicate_sample_ids)}"
         )
     return normalized_sample_ids
+
+
+def _write_sample_failure_artifact(
+    *,
+    sample: SceneFunc3dSample,
+    failure_path: Path,
+    failure_stage: SceneFunc3dFailureStage,
+    exc: CodexAgentError,
+    events_path: Path,
+    tool_context_path: Path,
+    turn_metadata: CodexTurnMetadata | None,
+) -> Path:
+    return write_failure_artifact(
+        failure_path,
+        SceneFunc3dFailureArtifact(
+            task_name=TASK_NAME,
+            sample_id=sample.sample_id,
+            failure_stage=failure_stage,
+            error_type=exc.__class__.__name__,
+            error_message=str(exc),
+            events_path=str(events_path),
+            tool_context_path=str(tool_context_path),
+            turn=_failure_turn_payload(turn_metadata),
+        ),
+    )
+
+
+def _failure_turn_payload(
+    metadata: CodexTurnMetadata | None,
+) -> SceneFunc3dFailureTurnPayload:
+    if metadata is None:
+        return SceneFunc3dFailureTurnPayload()
+    return SceneFunc3dFailureTurnPayload.model_validate(_metadata_payload(metadata))
+
+
+def _existing_failure_artifact_path(
+    config: SceneFunc3dRunnerConfig, sample_id: str
+) -> Path | None:
+    try:
+        sample = load_runner_sample(config, sample_id)
+    except CodexAgentError:
+        return None
+    failure_path = (
+        artifact_paths_for(config.output_dir, sample.visit_id, sample.desc_id).root
+        / "failure.json"
+    )
+    if failure_path.is_file():
+        return failure_path
+    return None
 
 
 def _summarize_batch_results(
