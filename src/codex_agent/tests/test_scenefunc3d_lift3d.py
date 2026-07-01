@@ -20,7 +20,8 @@ from codex_agent.scenefunc3d.backends.lift_3d import (
     write_lift_npz,
     write_lift_ply,
 )
-from codex_agent.scenefunc3d.tools.mask_lifting import LiftMaskArgs, lift_mask_to_3d
+from codex_agent.scenefunc3d.tools import mask_lifting as mask_lifting_module
+from codex_agent.scenefunc3d.tools.dispatch import run_tool
 from codex_agent.scenefunc3d.tools.models import ToolInputError
 from codex_agent.scenefunc3d.tools.scene_context import (
     SceneFunc3dToolScene,
@@ -228,13 +229,10 @@ def test_assign_nearest_scene_point_indices_returns_vertex_indices() -> None:
     np.testing.assert_array_equal(point_indices, np.array([0, 1], dtype=np.int64))
 
 
-def test_lift_mask_to_3d_maps_filtered_mesh_indices_to_source_scan_ids(
+def test_filtered_mesh_source_mapping_uses_crop_mask_when_present(
     tmp_path: Path,
 ) -> None:
     np = pytest.importorskip("numpy")
-    pytest.importorskip("PIL")
-    from PIL import Image
-
     mesh_path = _write_binary_scene_mesh(
         tmp_path / "SceneFuncVal-CG" / "421254" / "conceptgraph" / "mesh.ply",
         points=((0.0, 0.0, 1.0), (1.0, 0.0, 1.0)),
@@ -243,31 +241,74 @@ def test_lift_mask_to_3d_maps_filtered_mesh_indices_to_source_scan_ids(
     crop_mask_path = tmp_path / "SceneFunVal" / "421254" / "421254_crop_mask.npy"
     crop_mask_path.parent.mkdir(parents=True)
     np.save(crop_mask_path, crop_mask)
+
+    mapped_indices = mask_lifting_module._map_filtered_mesh_indices_to_source_scan_ids(
+        np.array([0, 1], dtype=np.int64),
+        scene_mesh_path=mesh_path,
+        scene_point_count=2,
+    )
+
+    np.testing.assert_array_equal(mapped_indices, np.array([1, 3], dtype=np.int64))
+
+
+def test_filtered_mesh_source_mapping_requires_crop_mask(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    mesh_path = _write_binary_scene_mesh(
+        tmp_path / "SceneFun3D" / "421254" / "conceptgraph" / "mesh.ply",
+        points=((0.0, 0.0, 1.0), (1.0, 0.0, 1.0)),
+    )
+
+    with pytest.raises(ToolInputError, match="source crop mask"):
+        mask_lifting_module._map_filtered_mesh_indices_to_source_scan_ids(
+            np.array([0], dtype=np.int64),
+            scene_mesh_path=mesh_path,
+            scene_point_count=2,
+        )
+
+
+def test_run_tool_lift_mask_to_3d_assigns_raw_mesh_point_indices(
+    tmp_path: Path,
+) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene = _make_tool_scene(tmp_path)
+    _write_binary_scene_mesh(
+        scene.raw_mesh_path,
+        points=((9.0, 0.0, 1.0), (0.0, 0.0, 1.0), (1.0, 0.0, 1.0)),
+    )
+    _write_binary_scene_mesh(
+        scene.conceptgraph_dir / "mesh.ply",
+        points=((0.0, 0.0, 1.0), (1.0, 0.0, 1.0)),
+    )
     mask_path = tmp_path / "mask.npz"
-    depth_path = tmp_path / "depth.png"
-    intrinsics_path = tmp_path / "intrinsics.txt"
-    pose_path = tmp_path / "pose.txt"
+    depth_path = scene.raw_dir / "000001-depth.png"
+    intrinsics_path = scene.raw_dir / "000001-intrinsic.txt"
+    pose_path = scene.raw_dir / "pose" / "000001.txt"
     np.savez_compressed(mask_path, mask=np.array([[True, True]], dtype=np.bool_))
     Image.fromarray(np.array([[1000, 1000]], dtype=np.uint16)).save(depth_path)
     intrinsics_path.write_text("1 0 0\n0 1 0\n0 0 1\n", encoding="utf-8")
+    pose_path.parent.mkdir()
     pose_path.write_text("1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1\n", encoding="utf-8")
 
-    result = lift_mask_to_3d(
-        LiftMaskArgs(
-            frame_id="000001",
-            candidate_id="mask_00",
-            mask_path=mask_path,
-            depth_path=depth_path,
-            intrinsics_path=intrinsics_path,
-            pose_path=pose_path,
-        ),
+    payload = run_tool(
+        scene,
+        "lift_mask_to_3d",
+        {
+            "frame_id": "000001",
+            "candidate_id": "mask_00",
+            "mask_npz_path": str(mask_path),
+            "depth_path": str(depth_path),
+            "intrinsics_path": str(intrinsics_path),
+            "pose_path": str(pose_path),
+        },
         out_dir=tmp_path / "out",
-        scene_mesh_path=mesh_path,
-    )
+    ).to_payload()
 
-    with np.load(result.mask_npz_path) as archive:
+    with np.load(Path(str(payload["mask_npz_path"]))) as archive:
         np.testing.assert_array_equal(
-            archive["point_indices"], np.array([1, 3], dtype=np.int64)
+            archive["point_indices"], np.array([1, 2], dtype=np.int64)
         )
 
 

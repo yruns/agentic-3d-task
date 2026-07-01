@@ -112,9 +112,9 @@ class LiftMaskResult:
 
 
 def lift_mask_to_3d(
-    args: LiftMaskArgs, *, out_dir: Path, scene_mesh_path: Path
+    args: LiftMaskArgs, *, out_dir: Path, raw_mesh_path: Path
 ) -> LiftMaskResult:
-    """Lift one 2D mask candidate into deterministic world-space point artifacts."""
+    """Lift one 2D mask candidate into deterministic raw-scene point artifacts."""
     from codex_agent.scenefunc3d.backends.lift_3d import (
         CameraGeometry,
         assign_nearest_scene_point_indices,
@@ -149,16 +149,11 @@ def lift_mask_to_3d(
             f"error={exc}"
         ) from exc
     points_world = backproject_mask_to_world(mask, depth_meters, geometry)
-    scene_points_world = load_scene_mesh_vertices(scene_mesh_path)
-    point_indices = assign_nearest_scene_point_indices(
+    raw_scene_points_world = load_scene_mesh_vertices(raw_mesh_path)
+    raw_point_indices = assign_nearest_scene_point_indices(
         points_world,
-        scene_points_world,
+        raw_scene_points_world,
         max_distance_meters=_MAX_SCENE_POINT_ASSIGNMENT_DISTANCE_METERS,
-    )
-    scoring_point_indices = _map_filtered_mesh_indices_to_source_scan_ids(
-        point_indices,
-        scene_mesh_path=scene_mesh_path,
-        scene_point_count=int(scene_points_world.shape[0]),
     )
     fragment_dir = _fragment_dir(
         out_dir, frame_id=args.frame_id, candidate_id=args.candidate_id
@@ -166,13 +161,13 @@ def lift_mask_to_3d(
     mask_npz_path = write_lift_npz(
         fragment_dir / "mask_data.npz",
         points_world,
-        point_indices=scoring_point_indices,
+        point_indices=raw_point_indices,
     )
     mask_ply_path = write_lift_ply(fragment_dir / "lifted_points.ply", points_world)
     overlay_path = _write_lift_summary(
         fragment_dir / "lift_overlay.txt",
         args=args,
-        scene_mesh_path=scene_mesh_path,
+        raw_mesh_path=raw_mesh_path,
         lifted_point_count=int(points_world.shape[0]),
     )
     return LiftMaskResult(
@@ -277,7 +272,11 @@ def _map_filtered_mesh_indices_to_source_scan_ids(
 ) -> IntArray:
     crop_mask_path = _find_source_crop_mask_path(scene_mesh_path)
     if crop_mask_path is None:
-        return point_indices
+        raise ToolInputError(
+            "SceneFunc3D source crop mask is required to map filtered mesh "
+            "indices back to source scan ids: "
+            f"scene_mesh_path={scene_mesh_path}; scene_point_count={scene_point_count}"
+        )
     try:
         import numpy as np
     except ImportError as exc:
@@ -354,7 +353,7 @@ def _write_lift_summary(
     overlay_path: Path,
     *,
     args: LiftMaskArgs,
-    scene_mesh_path: Path,
+    raw_mesh_path: Path,
     lifted_point_count: int,
 ) -> Path:
     summary = (
@@ -365,7 +364,7 @@ def _write_lift_summary(
         f"depth_path={args.depth_path}\n"
         f"intrinsics_path={args.intrinsics_path}\n"
         f"pose_path={args.pose_path}\n"
-        f"scene_mesh_path={scene_mesh_path}\n"
+        f"raw_mesh_path={raw_mesh_path}\n"
     )
     try:
         overlay_path.parent.mkdir(parents=True, exist_ok=True)
