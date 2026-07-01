@@ -91,6 +91,18 @@ class _RecordingSamRunner(_FakeSamRunner):
         return super().masks(request)
 
 
+class _RootCheckingSamRunner(_FakeSamRunner):
+    def __init__(self, staging_root: Path) -> None:
+        self._staging_root = staging_root.resolve()
+        self.seen_staging_dir: Path | None = None
+
+    def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
+        staging_dir = request.require_staging_dir().resolve()
+        staging_dir.relative_to(self._staging_root)
+        self.seen_staging_dir = staging_dir
+        return super().masks(request)
+
+
 def test_build_arg_parser_accepts_runtime_options() -> None:
     from codex_agent.scenefunc3d.servers.sam2_mask_server import build_arg_parser
 
@@ -815,6 +827,34 @@ def test_handler_materializes_inline_mask_request() -> None:
     assert runner.seen_image_path is not None
     assert runner.seen_staging_dir is not None
     assert not runner.seen_image_path.exists()
+    assert not runner.seen_staging_dir.exists()
+
+
+def test_inline_mask_request_uses_runner_staging_root(tmp_path: Path) -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import run_sam_mask_request
+
+    staging_root = tmp_path / "staging-root"
+    staging_root.mkdir()
+    runner = _RootCheckingSamRunner(staging_root)
+    request = SamMaskRequest.model_validate(
+        {
+            "request_id": "req-inline-root",
+            "image": _inline_image_payload(b"inline image bytes"),
+            "points": [
+                {
+                    "x_px": 10.0,
+                    "y_px": 20.0,
+                    "label": "drawer",
+                    "source": '<point x="10" y="20">drawer</point>',
+                }
+            ],
+        }
+    )
+
+    candidates = run_sam_mask_request(runner, request)
+
+    assert candidates[0].candidate_id == "mask_00"
+    assert runner.seen_staging_dir is not None
     assert not runner.seen_staging_dir.exists()
 
 

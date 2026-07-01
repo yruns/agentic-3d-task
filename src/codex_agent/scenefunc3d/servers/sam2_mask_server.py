@@ -638,7 +638,10 @@ def run_sam_mask_request(
     if request.image_source == "path" and request.staging_dir is not None:
         return _response_candidates_by_value(runner.masks(request))
 
-    with TemporaryDirectory(prefix="scenefunc3d-sam-request-") as temporary_dir:
+    with TemporaryDirectory(
+        prefix="scenefunc3d-sam-request-",
+        dir=_runner_temporary_root_parent(runner),
+    ) as temporary_dir:
         temporary_root = Path(temporary_dir)
         path_request = request
         if request.image_source == "inline":
@@ -650,6 +653,13 @@ def run_sam_mask_request(
         if path_request.staging_dir is None:
             path_request = path_request.with_staging_dir(temporary_root / "staging")
         return _response_candidates_by_value(runner.masks(path_request))
+
+
+def _runner_temporary_root_parent(runner: Sam2Runner) -> Path | None:
+    staging_root = getattr(runner, "_staging_root", None)
+    if isinstance(staging_root, Path):
+        return staging_root
+    return None
 
 
 def main(argv: Sequence[str] | None = None) -> int:
