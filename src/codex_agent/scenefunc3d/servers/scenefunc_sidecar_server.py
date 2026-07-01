@@ -320,7 +320,7 @@ def _handle_sam_masks(
         candidates=candidates,
         latency_ms=(time.perf_counter() - start_time) * 1000,
     )
-    return cast(JsonObject, response.model_dump(mode="json"))
+    return cast(JsonObject, response.model_dump(mode="json", exclude_none=True))
 
 
 def _molmo_point_response(

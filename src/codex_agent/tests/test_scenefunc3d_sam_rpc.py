@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import threading
+import urllib.request
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from typing import cast
@@ -18,9 +20,37 @@ from codex_agent.scenefunc3d.backends.config import (
 )
 from codex_agent.scenefunc3d.backends.sam_rpc import request_sam_masks
 from codex_agent.scenefunc3d.servers.http_json import JsonRoute, make_json_handler
-from codex_agent.scenefunc3d.servers.schemas import SamMaskResponse
+from codex_agent.scenefunc3d.servers.schemas import (
+    SamMaskCandidateResponse,
+    SamMaskRequest,
+    SamMaskResponse,
+)
 from codex_agent.scenefunc3d.tools.models import ToolInputError
 from codex_agent.scenefunc3d.tools.sam_masking import SamMaskArgs
+
+
+class _LocalNpzSamRunner:
+    model_name = "fake-sam2"
+
+    def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
+        np = pytest.importorskip("numpy")
+        staging_dir = request.require_staging_dir()
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        mask_path = staging_dir / "mask_00.npz"
+        mask = np.array(
+            [[True, False, True], [False, False, True]],
+            dtype=np.bool_,
+        )
+        np.savez_compressed(mask_path, mask=mask)
+        return (
+            SamMaskCandidateResponse(
+                candidate_id="mask_00",
+                score=0.91,
+                mask_npz_path=mask_path,
+                pixel_count=3,
+                coverage_percent=50.0,
+            ),
+        )
 
 
 def test_request_sam_masks_returns_candidate_paths(tmp_path: Path) -> None:
@@ -62,6 +92,50 @@ def test_request_sam_masks_returns_candidate_paths(tmp_path: Path) -> None:
 
     assert response.candidates[0].candidate_id == "mask_00"
     assert response.candidates[0].mask_npz_path == mask_path
+
+
+def test_sam_server_response_returns_rle_without_server_local_path(
+    tmp_path: Path,
+) -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import _build_routes
+
+    image_path = tmp_path / "frame.jpg"
+    staging_dir = tmp_path / "out" / "sam" / "000050" / "candidates"
+    image_path.write_bytes(b"image")
+    server = _start_server(_build_routes(_LocalNpzSamRunner()))
+    try:
+        payload = _post_json(
+            f"http://127.0.0.1:{server.server_port}/v1/masks",
+            payload={
+                "request_id": "req-rle",
+                "image_path": str(image_path),
+                "points": [
+                    {
+                        "x_px": 10.0,
+                        "y_px": 20.0,
+                        "label": "drawer",
+                        "source": '<point x="10" y="20">drawer</point>',
+                    }
+                ],
+                "staging_dir": str(staging_dir),
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    candidates = cast(list[dict[str, object]], payload["candidates"])
+    candidate = candidates[0]
+    mask_rle = cast(dict[str, object], candidate["mask_rle"])
+    assert "mask_npz_path" not in candidate
+    assert mask_rle == {
+        "encoding": "row_major_counts",
+        "height": 2,
+        "width": 3,
+        "counts": [0, 1, 1, 1, 2, 1],
+    }
+    assert candidate["pixel_count"] == 3
+    assert candidate["coverage_percent"] == 50.0
 
 
 def test_request_sam_masks_sends_inline_image_to_remote_https_backend(
@@ -365,3 +439,17 @@ def _start_server(routes: dict[str, JsonRoute]) -> ThreadingHTTPServer:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     return server
+
+
+def _post_json(url: str, *, payload: dict[str, object]) -> dict[str, object]:
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=2.0) as response:
+        response_payload: object = json.loads(response.read().decode("utf-8"))
+    if not isinstance(response_payload, dict):
+        raise AssertionError("expected JSON object response")
+    return dict(response_payload)

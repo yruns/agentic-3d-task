@@ -118,6 +118,7 @@ def test_write_candidate_masks_includes_inline_npz_payload(tmp_path: Path) -> No
     )
 
     candidate = candidates[0]
+    assert candidate.mask_npz_path is not None
     mask_npz_bytes = candidate.mask_npz_path.read_bytes()
     assert candidate.mask_npz_base64 == base64.b64encode(mask_npz_bytes).decode("ascii")
     assert candidate.mask_npz_sha256 == hashlib.sha256(mask_npz_bytes).hexdigest()
@@ -350,6 +351,7 @@ def test_official_runner_writes_valid_candidate_masks_with_fake_runtime(
     assert candidates[1].score == 0.25
     assert candidates[1].pixel_count == 2
     assert candidates[1].coverage_percent == pytest.approx(33.33333333333333)
+    assert candidates[0].mask_npz_path is not None
     first_mask = _load_saved_mask(candidates[0].mask_npz_path)
     assert first_mask.dtype == np.bool_
     assert first_mask.shape == (2, 3)
@@ -556,6 +558,7 @@ def test_transformers_runner_writes_valid_candidate_masks_with_fake_runtime(
     assert candidates[1].score == pytest.approx(0.25)
     assert candidates[1].pixel_count == 2
     assert candidates[1].coverage_percent == pytest.approx(33.33333333333333)
+    assert candidates[0].mask_npz_path is not None
     assert _load_saved_mask(candidates[0].mask_npz_path).tolist() == [
         [True, False, True],
         [False, False, True],
@@ -745,7 +748,12 @@ def test_handler_supports_health_and_masks_routes(tmp_path: Path) -> None:
         {
             "candidate_id": "mask_00",
             "score": 0.91,
-            "mask_npz_path": str(staging_dir / "mask_00.npz"),
+            "mask_rle": {
+                "encoding": "row_major_counts",
+                "height": 2,
+                "width": 3,
+                "counts": [0, 1, 1, 1, 2, 1],
+            },
             "mask_npz_base64": "",
             "mask_npz_sha256": "",
             "pixel_count": 3,

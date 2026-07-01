@@ -22,6 +22,58 @@ from codex_agent.scenefunc3d.servers.schemas import (
 )
 
 
+def test_bool_mask_rle_codec_round_trips_2d_bool_mask() -> None:
+    np = pytest.importorskip("numpy")
+    from codex_agent.scenefunc3d.backends.mask_codec import (
+        decode_bool_mask_rle,
+        encode_bool_mask_rle,
+    )
+
+    mask = np.array(
+        [
+            [False, True, True, False],
+            [False, False, True, False],
+        ],
+        dtype=np.bool_,
+    )
+
+    payload = encode_bool_mask_rle(mask)
+    decoded_mask = decode_bool_mask_rle(payload)
+
+    assert payload.height == 2
+    assert payload.width == 4
+    assert payload.counts == (1, 2, 3, 1, 1)
+    assert decoded_mask.dtype == np.bool_
+    np.testing.assert_array_equal(decoded_mask, mask)
+
+
+def test_bool_mask_rle_codec_rejects_invalid_payloads() -> None:
+    from codex_agent.scenefunc3d.backends.mask_codec import (
+        MaskRlePayload,
+        decode_bool_mask_rle,
+    )
+
+    invalid_payloads = (
+        MaskRlePayload(height=2, width=2, counts=(0, -1, 5)),
+        MaskRlePayload(height=2, width=2, counts=(0, 2)),
+        MaskRlePayload(height=0, width=2, counts=(0,)),
+    )
+
+    for payload in invalid_payloads:
+        with pytest.raises(ValueError):
+            decode_bool_mask_rle(payload)
+
+
+def test_bool_mask_rle_codec_rejects_non_2d_encode_input() -> None:
+    np = pytest.importorskip("numpy")
+    from codex_agent.scenefunc3d.backends.mask_codec import encode_bool_mask_rle
+
+    mask = np.zeros((1, 2, 3), dtype=np.bool_)
+
+    with pytest.raises(ValueError, match="2D"):
+        encode_bool_mask_rle(mask)
+
+
 def test_molmo_point_schema_round_trip(tmp_path: Path) -> None:
     image_path = tmp_path / "frame.jpg"
     image_path.write_bytes(b"image")
@@ -342,6 +394,31 @@ def test_sam_mask_candidate_rejects_string_pixel_count(tmp_path: Path) -> None:
 
     with pytest.raises(ValidationError):
         SamMaskCandidateResponse.model_validate(payload)
+
+
+def test_sam_mask_candidate_accepts_rle_without_npz_path() -> None:
+    candidate = SamMaskCandidateResponse.model_validate(
+        {
+            "candidate_id": "mask_00",
+            "score": 0.9,
+            "mask_rle": {
+                "encoding": "row_major_counts",
+                "height": 2,
+                "width": 3,
+                "counts": (1, 2, 3),
+            },
+            "pixel_count": 2,
+            "coverage_percent": 33.33333333333333,
+        }
+    )
+
+    assert candidate.mask_npz_path is None
+    assert candidate.mask_rle is not None
+    assert candidate.mask_rle.counts == (1, 2, 3)
+    assert "mask_npz_path" not in candidate.model_dump(
+        mode="json",
+        exclude_none=True,
+    )
 
 
 def test_sam_mask_candidate_accepts_remote_mask_path(tmp_path: Path) -> None:

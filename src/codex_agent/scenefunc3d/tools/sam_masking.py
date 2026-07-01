@@ -24,7 +24,7 @@ from pydantic import (
 )
 
 from ...errors import SceneFunc3dDataError
-from ..servers.schemas import SamMaskCandidateResponse
+from ..servers.schemas import SamMaskCandidateResponse, SamMaskRle
 from .crop_metadata import (
     expand_crop_mask_to_source_frame,
     load_crop_metadata_for_image,
@@ -392,12 +392,12 @@ def _resolve_candidate_mask_npz_path(
 ) -> Path:
     from codex_agent.scenefunc3d.backends.config import ensure_path_under_roots
 
-    candidate_mask_path = Path(candidate_response.mask_npz_path)
-    if candidate_mask_path.is_file():
-        return ensure_path_under_roots(
-            candidate_mask_path,
-            roots=allowed_output_roots,
-            field_name="mask_npz_path",
+    if candidate_response.mask_rle is not None:
+        return _materialize_rle_mask_npz(
+            mask_rle=candidate_response.mask_rle,
+            candidate_id=candidate_response.candidate_id,
+            target_path=staging_dir / f"{safe_candidate_id}.npz",
+            allowed_output_roots=allowed_output_roots,
         )
     if candidate_response.mask_npz_base64:
         return _materialize_inline_mask_npz(
@@ -406,12 +406,85 @@ def _resolve_candidate_mask_npz_path(
             target_path=staging_dir / f"{safe_candidate_id}.npz",
             allowed_output_roots=allowed_output_roots,
         )
-    raise ToolInputError(
-        "SAM mask npz path is not readable on this host and no inline payload "
-        "was provided: "
-        f"candidate_id={candidate_response.candidate_id!r}; "
-        f"mask_npz_path={candidate_mask_path}"
+    candidate_mask_path = candidate_response.mask_npz_path
+    if candidate_mask_path is not None and candidate_mask_path.is_file():
+        try:
+            return ensure_path_under_roots(
+                candidate_mask_path,
+                roots=allowed_output_roots,
+                field_name="mask_npz_path",
+            )
+        except ToolInputError as exc:
+            raise _candidate_mask_materialization_error(
+                candidate_response,
+                mask_npz_path=candidate_mask_path,
+            ) from exc
+    raise _candidate_mask_materialization_error(
+        candidate_response,
+        mask_npz_path=candidate_mask_path,
     )
+
+
+def _materialize_rle_mask_npz(
+    *,
+    mask_rle: SamMaskRle,
+    candidate_id: str,
+    target_path: Path,
+    allowed_output_roots: tuple[Path, ...],
+) -> Path:
+    from codex_agent.scenefunc3d.backends.config import ensure_path_under_roots
+    from codex_agent.scenefunc3d.backends.mask_codec import (
+        MaskRlePayload,
+        decode_bool_mask_rle,
+    )
+
+    mask_npz_path = ensure_path_under_roots(
+        target_path,
+        roots=allowed_output_roots,
+        field_name="mask_npz_path",
+    )
+    try:
+        mask = decode_bool_mask_rle(
+            MaskRlePayload(
+                height=mask_rle.height,
+                width=mask_rle.width,
+                counts=mask_rle.counts,
+            )
+        )
+    except ValueError as exc:
+        raise ToolInputError(
+            "SAM RLE mask payload is invalid: "
+            f"candidate_id={candidate_id!r}; path={mask_npz_path}"
+        ) from exc
+    return _write_boolean_mask_npz(mask_npz_path, mask)
+
+
+def _candidate_mask_materialization_error(
+    candidate_response: SamMaskCandidateResponse,
+    *,
+    mask_npz_path: Path | None,
+) -> ToolInputError:
+    return ToolInputError(
+        "SAM mask candidate payload could not be materialized on this host: "
+        f"candidate_id={candidate_response.candidate_id!r}; "
+        f"payloads={_candidate_mask_payload_summary(candidate_response)}; "
+        f"mask_npz_path={mask_npz_path}"
+    )
+
+
+def _candidate_mask_payload_summary(
+    candidate_response: SamMaskCandidateResponse,
+) -> str:
+    payload_types: list[str] = []
+    if candidate_response.mask_rle is not None:
+        payload_types.append("mask_rle")
+    if candidate_response.mask_npz_base64:
+        payload_types.append("mask_npz_base64")
+    if candidate_response.mask_npz_path is not None:
+        payload_types.append("mask_npz_path")
+    if not payload_types:
+        return "none"
+    return ",".join(payload_types)
 
 
 def _materialize_inline_mask_npz(
@@ -506,7 +579,7 @@ def _write_boolean_mask_npz(mask_npz_path: Path, mask: npt.NDArray[np.bool_]) ->
         np.savez_compressed(mask_npz_path, mask=mask.astype(np.bool_, copy=False))
     except OSError as exc:
         raise ToolInputError(
-            "could not write SAM full-frame mask npz artifact: "
+            "could not write SAM mask npz artifact: "
             f"path={mask_npz_path}; error_type={exc.__class__.__name__}"
         ) from exc
     return mask_npz_path

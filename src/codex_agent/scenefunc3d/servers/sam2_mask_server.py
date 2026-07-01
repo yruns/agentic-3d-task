@@ -28,6 +28,7 @@ from numpy.typing import NDArray
 from pydantic import ValidationError
 
 from codex_agent.scenefunc3d.backends.image_payload import materialize_inline_image
+from codex_agent.scenefunc3d.backends.mask_codec import encode_bool_mask_rle
 from codex_agent.scenefunc3d.servers.http_json import (
     JsonHttpError,
     JsonObject,
@@ -39,6 +40,7 @@ from codex_agent.scenefunc3d.servers.schemas import (
     SamMaskCandidateResponse,
     SamMaskRequest,
     SamMaskResponse,
+    SamMaskRle,
     SamPointPrompt,
 )
 
@@ -625,7 +627,7 @@ def _handle_masks(runner: Sam2Runner, payload: JsonObject) -> JsonObject:
         candidates=candidates,
         latency_ms=latency_ms,
     )
-    return cast(JsonObject, response.model_dump(mode="json"))
+    return cast(JsonObject, response.model_dump(mode="json", exclude_none=True))
 
 
 def run_sam_mask_request(
@@ -634,7 +636,7 @@ def run_sam_mask_request(
 ) -> tuple[SamMaskCandidateResponse, ...]:
     """Run SAM with path-backed inputs, using temporary files for inline requests."""
     if request.image_source == "path" and request.staging_dir is not None:
-        return runner.masks(request)
+        return _response_candidates_by_value(runner.masks(request))
 
     with TemporaryDirectory(prefix="scenefunc3d-sam-request-") as temporary_dir:
         temporary_root = Path(temporary_dir)
@@ -647,7 +649,7 @@ def run_sam_mask_request(
             path_request = request.with_image_path(image_path)
         if path_request.staging_dir is None:
             path_request = path_request.with_staging_dir(temporary_root / "staging")
-        return runner.masks(path_request)
+        return _response_candidates_by_value(runner.masks(path_request))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -999,6 +1001,90 @@ def _write_candidate_masks(
             )
         )
     return tuple(candidates)
+
+
+def _response_candidates_by_value(
+    candidates: tuple[SamMaskCandidateResponse, ...],
+) -> tuple[SamMaskCandidateResponse, ...]:
+    return tuple(_response_candidate_by_value(candidate) for candidate in candidates)
+
+
+def _response_candidate_by_value(
+    candidate: SamMaskCandidateResponse,
+) -> SamMaskCandidateResponse:
+    if candidate.mask_rle is not None:
+        return SamMaskCandidateResponse(
+            candidate_id=candidate.candidate_id,
+            score=candidate.score,
+            mask_rle=candidate.mask_rle,
+            pixel_count=candidate.pixel_count,
+            coverage_percent=candidate.coverage_percent,
+        )
+    if candidate.mask_npz_path is None:
+        return candidate
+
+    mask = _load_candidate_mask_for_response(candidate.mask_npz_path)
+    mask_rle_payload = encode_bool_mask_rle(mask)
+    return SamMaskCandidateResponse(
+        candidate_id=candidate.candidate_id,
+        score=candidate.score,
+        mask_rle=SamMaskRle(
+            encoding="row_major_counts",
+            height=mask_rle_payload.height,
+            width=mask_rle_payload.width,
+            counts=mask_rle_payload.counts,
+        ),
+        pixel_count=candidate.pixel_count,
+        coverage_percent=candidate.coverage_percent,
+    )
+
+
+def _load_candidate_mask_for_response(
+    mask_npz_path: Path,
+) -> NDArray[np.bool_]:
+    try:
+        with np.load(mask_npz_path) as archive:
+            if "mask" not in archive.files:
+                raise SamArtifactWriteError(
+                    "SAM2 mask artifact is missing required key 'mask': "
+                    f"path={mask_npz_path}"
+                )
+            mask_array = archive["mask"]
+    except SamArtifactWriteError:
+        raise
+    except (OSError, ValueError) as exc:
+        raise SamArtifactWriteError(
+            "could not load SAM2 mask artifact for response: "
+            f"path={mask_npz_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    return _validate_single_mask_array_for_response(mask_array, path=mask_npz_path)
+
+
+def _validate_single_mask_array_for_response(
+    raw_mask: object,
+    *,
+    path: Path,
+) -> NDArray[np.bool_]:
+    mask_array = np.asarray(raw_mask)
+    if mask_array.ndim != 2:
+        raise SamInvalidOutputError(
+            "SAM2 response mask artifact must contain a 2D mask: "
+            f"path={path}; ndim={mask_array.ndim}"
+        )
+    if mask_array.dtype == np.bool_:
+        return cast(NDArray[np.bool_], mask_array)
+    if not np.issubdtype(mask_array.dtype, np.integer):
+        raise SamInvalidOutputError(
+            "SAM2 response mask artifact must contain a binary bool or integer "
+            f"0/1 mask: path={path}"
+        )
+    unique_values = np.unique(mask_array)
+    if not bool(np.all((unique_values == 0) | (unique_values == 1))):
+        raise SamInvalidOutputError(
+            "SAM2 response mask artifact must contain a binary bool or integer "
+            f"0/1 mask: path={path}"
+        )
+    return cast(NDArray[np.bool_], mask_array.astype(np.bool_, copy=False))
 
 
 def _validation_error_details(exc: ValidationError) -> list[ValidationIssuePayload]:

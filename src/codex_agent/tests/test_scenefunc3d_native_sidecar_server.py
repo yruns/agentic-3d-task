@@ -14,6 +14,8 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from typing import cast
 
+import numpy as np
+
 from codex_agent.scenefunc3d.servers.http_json import JsonRoute, make_json_handler
 from codex_agent.scenefunc3d.servers.molmo_point_server import (
     MolmoRunnerPointResult,
@@ -53,14 +55,18 @@ class _FakeSamRunner:
         request.require_image_path()
         staging_dir.mkdir(parents=True, exist_ok=True)
         mask_path = staging_dir / "mask_00.npz"
-        mask_path.write_bytes(b"fake-mask")
+        mask = np.array(
+            [[True, False, True], [False, False, True]],
+            dtype=np.bool_,
+        )
+        np.savez_compressed(mask_path, mask=mask)
         return (
             SamMaskCandidateResponse(
                 candidate_id="mask_00",
                 score=0.875,
                 mask_npz_path=mask_path,
-                pixel_count=7,
-                coverage_percent=1.25,
+                pixel_count=3,
+                coverage_percent=50.0,
             ),
         )
 
@@ -203,10 +209,15 @@ def test_combined_server_routes_molmo_and_sam_requests(tmp_path: Path) -> None:
     assert sam_response["request_id"] == "sam-1"
     assert sam_response["model_name"] == "fake-sam"
     assert cast(float, sam_response["latency_ms"]) >= 0.0
-    assert (
-        cast(list[dict[str, object]], sam_response["candidates"])[0]["candidate_id"]
-        == "mask_00"
-    )
+    sam_candidates = cast(list[dict[str, object]], sam_response["candidates"])
+    assert sam_candidates[0]["candidate_id"] == "mask_00"
+    assert "mask_npz_path" not in sam_candidates[0]
+    assert sam_candidates[0]["mask_rle"] == {
+        "encoding": "row_major_counts",
+        "height": 2,
+        "width": 3,
+        "counts": [0, 1, 1, 1, 2, 1],
+    }
 
 
 def test_combined_server_materializes_inline_molmo_and_sam_requests() -> None:

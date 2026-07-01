@@ -248,16 +248,67 @@ class SamMaskRequest(_StrictSchema):
         )
 
 
+class SamMaskRle(_StrictSchema):
+    """Row-major run-length encoded SAM mask payload."""
+
+    encoding: Literal["row_major_counts"]
+    height: int = Field(gt=0, strict=True)
+    width: int = Field(gt=0, strict=True)
+    counts: tuple[int, ...] = Field(min_length=1)
+
+    @field_validator("counts", mode="before")
+    @classmethod
+    def _require_strict_integer_counts(cls, value: object) -> object:
+        if not isinstance(value, (list, tuple)):
+            return value
+        for count in value:
+            if not isinstance(count, int) or isinstance(count, bool):
+                raise ValueError("RLE counts must be integers")
+        return value
+
+    @field_validator("counts")
+    @classmethod
+    def _require_non_negative_counts(cls, value: tuple[int, ...]) -> tuple[int, ...]:
+        if any(count < 0 for count in value):
+            raise ValueError("RLE counts must be non-negative")
+        return value
+
+    @model_validator(mode="after")
+    def _require_matching_pixel_count(self) -> Self:
+        expected_pixel_count = self.height * self.width
+        actual_pixel_count = sum(self.counts)
+        if actual_pixel_count != expected_pixel_count:
+            raise ValueError(
+                "RLE counts must sum to height * width: "
+                f"sum={actual_pixel_count}; expected={expected_pixel_count}"
+            )
+        return self
+
+
 class SamMaskCandidateResponse(_StrictSchema):
     """Metadata for one SAM candidate mask written to disk."""
 
     candidate_id: NonEmptyString
     score: float = Field(ge=0.0, le=1.0)
-    mask_npz_path: Path
+    mask_npz_path: Path | None = None
+    mask_rle: SamMaskRle | None = None
     mask_npz_base64: str = ""
     mask_npz_sha256: str = ""
     pixel_count: int = Field(ge=0, strict=True)
     coverage_percent: float = Field(ge=0.0, le=100.0)
+
+    @model_validator(mode="after")
+    def _require_mask_payload(self) -> Self:
+        if (
+            self.mask_rle is None
+            and not self.mask_npz_base64
+            and self.mask_npz_path is None
+        ):
+            raise ValueError(
+                "SAM mask candidate must include mask_rle, mask_npz_base64, "
+                "or mask_npz_path"
+            )
+        return self
 
 
 class SamMaskResponse(_StrictSchema):
@@ -298,6 +349,7 @@ __all__ = [
     "MolmoPointRequest",
     "MolmoPointResponse",
     "SamMaskCandidateResponse",
+    "SamMaskRle",
     "SamMaskRequest",
     "SamMaskResponse",
     "SamPointPrompt",
