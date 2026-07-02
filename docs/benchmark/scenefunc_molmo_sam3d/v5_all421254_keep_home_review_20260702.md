@@ -38,6 +38,10 @@ remote Molmo/SAM sidecar from `configs/scenefunc3d_backends.toml`.
 
 `evaluation_summary.json`:
 
+The aggregate metrics below use successful scored samples only. The denominator
+is `scored_count=12`; the 11 failed samples are reported as failures, not
+zero-valued scores.
+
 | Metric | Value |
 |---|---:|
 | Samples | 23 |
@@ -45,9 +49,15 @@ remote Molmo/SAM sidecar from `configs/scenefunc3d_backends.toml`.
 | Failed | 11 |
 | Scored | 12 |
 | Mean IoU | 0.12577322279095213 |
+| AP25 | 0.16666666666666666 |
+| AP50 | 0.0 |
 | Mean precision | 0.1970906101792578 |
 | Mean recall | 0.23287560602089719 |
 | Mean F1 | 0.19641372995755657 |
+
+For this single-final-mask runner, `AP25` counts scored samples with
+`IoU >= 0.25` (`2/12`) and `AP50` counts scored samples with `IoU >= 0.50`
+(`0/12`).
 
 Completed-case IoU distribution:
 

@@ -8,6 +8,24 @@ language-conditioned Molmo pointing, SAM mask generation from the point, then
 depth/pose lifting into a 3D point cloud. The Point Transformer refinement stage
 from TASA is intentionally out of scope for this smoke.
 
+## Metric reporting contract
+
+SceneFunc3D benchmark reports must include `Mean IoU`, `AP25`, and `AP50` for
+the mask-generation task. These aggregate metrics are computed over successful
+samples only: the denominator is `scored_count`, meaning samples whose Codex turn
+completed and whose final mask was scored. Failed samples must be reported in
+the same run summary as failures, but they are not converted to zero-valued
+scores for these aggregate metrics.
+
+For the current Codex runner, each successful sample emits one final mask.
+`Mean IoU` is the arithmetic mean of final-mask IoU across scored samples.
+`AP25` is the fraction of scored samples whose final-mask IoU is at least
+`0.25`, and `AP50` is the fraction whose final-mask IoU is at least `0.50`.
+If the runner later emits ranked multi-mask predictions with confidence scores,
+`AP25` and `AP50` should be produced by the official SceneFun3D AP evaluator
+while keeping this internal-reporting denominator restricted to successful
+scored samples.
+
 ## Version timeline
 
 | Version | Date | Scope | Headline |
