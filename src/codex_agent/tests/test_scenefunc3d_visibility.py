@@ -12,6 +12,7 @@ from codex_agent.scenefunc3d.backends.lift_3d import CameraGeometry
 from codex_agent.scenefunc3d.backends.visibility import (
     FrameCamera,
     FrameVisibility,
+    count_vertex_visibility,
     point_visibility,
     project_world_to_pixels,
     score_anchor_visibility,
@@ -186,3 +187,22 @@ def test_select_scene_visible_frames_always_includes_seed(tmp_path: Path) -> Non
     )
     selected = select_scene_visible_frames(anchor, scene, frame_cap=10)
     assert "000001" in {v.frame_id for v in selected}
+
+
+def test_count_vertex_visibility_counts_unoccluded_frames(tmp_path: Path) -> None:
+    scene = _pipeline_scene(tmp_path)
+    # Vertex 0 at z=2.0 is visible in 000000 (depth 2.0) but occluded in 000001
+    # (near wall at 1.0). Vertex ids are arbitrary raw-mesh ids for the counter.
+    vertex_ids = [7, 9]
+    vertex_coords = np.array([[0.0, 0.0, 2.0], [0.02, 0.0, 2.0]])
+    counts = count_vertex_visibility(
+        vertex_ids, vertex_coords, scene, ("000000", "000001")
+    )
+    assert counts[7] == 1
+    assert counts[9] == 1
+
+
+def test_count_vertex_visibility_rejects_length_mismatch(tmp_path: Path) -> None:
+    scene = _pipeline_scene(tmp_path)
+    with pytest.raises(ValueError):
+        count_vertex_visibility([1], np.zeros((2, 3)), scene, ("000000",))

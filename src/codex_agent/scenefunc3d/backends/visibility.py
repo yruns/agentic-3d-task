@@ -270,9 +270,52 @@ def select_scene_visible_frames(
     return tuple(selected)
 
 
+def count_vertex_visibility(
+    vertex_ids: Sequence[int],
+    vertex_coords: FloatArray,
+    scene: SceneFunc3dToolScene,
+    frame_ids: Sequence[str],
+    *,
+    depth_tolerance: float = _DEFAULT_DEPTH_TOLERANCE,
+) -> dict[int, int]:
+    """Count, per candidate vertex, how many ``frame_ids`` see it un-occluded.
+
+    Reads each frame's depth once (streamed, discarded) and tests all vertices
+    against it. ``vertex_ids[k]`` labels row ``k`` of ``vertex_coords``.
+    """
+    coords = np.asarray(vertex_coords, dtype=np.float64)
+    if coords.ndim != 2 or coords.shape[1] != 3:
+        raise ValueError(f"vertex_coords must have shape (N, 3): {coords.shape}")
+    if len(vertex_ids) != coords.shape[0]:
+        raise ValueError(
+            "vertex_ids length must match vertex_coords rows: "
+            f"ids={len(vertex_ids)}; rows={coords.shape[0]}"
+        )
+    if coords.shape[0] == 0:
+        return {}
+
+    from codex_agent.scenefunc3d.backends.frame_loader import (
+        load_frame_geometry,
+        read_frame_depth,
+    )
+
+    counts = {int(vertex_id): 0 for vertex_id in vertex_ids}
+    for frame_id in frame_ids:
+        geometry = load_frame_geometry(scene, frame_id)
+        depth = read_frame_depth(scene, frame_id)
+        visible = point_visibility(
+            coords, geometry, depth, depth_tolerance=depth_tolerance
+        )
+        for row, vertex_id in enumerate(vertex_ids):
+            if bool(visible[row]):
+                counts[int(vertex_id)] += 1
+    return counts
+
+
 __all__ = [
     "FrameCamera",
     "FrameVisibility",
+    "count_vertex_visibility",
     "point_visibility",
     "project_world_to_pixels",
     "score_anchor_visibility",
