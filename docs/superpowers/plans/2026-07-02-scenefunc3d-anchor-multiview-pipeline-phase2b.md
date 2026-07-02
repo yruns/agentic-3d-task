@@ -998,8 +998,9 @@ def test_pipeline_fuses_consensus_target_and_drops_off_anchor_frame() -> None:
     assert set(result.fused.point_indices) == {0, 1, 2, 3, 4}
     rejected = {o.frame_id for o in result.per_frame if not o.accepted}
     assert rejected == {"000002"}
-    # The anchor was projected to the principal point (20, 20).
-    assert proposer.seen_projected[0] == pytest.approx((20.0, 20.0))
+    # The anchor centroid (0.005, 0.005, 2.0) projects just off the principal
+    # point (20, 20): u = v = 20 * 0.005 / 2.0 + 20 = 20.05.
+    assert proposer.seen_projected[0] == pytest.approx((20.05, 20.05))
 
 
 def test_pipeline_returns_empty_when_no_frame_accepted() -> None:
