@@ -24,7 +24,6 @@ EXPECTED_TOOL_NAMES: tuple[str, ...] = (
     "scene_summary",
     "keyframe_selector",
     "view_frame",
-    "view_crop",
     "view_bev",
     "frame_objects",
     "molmo_point",
@@ -41,7 +40,7 @@ def test_tool_names_are_current_task7_contract() -> None:
 
 
 def test_dispatcher_registers_every_playbook_tool() -> None:
-    assert TOOL_NAMES == SCENEFUNC3D_TOOL_NAMES
+    assert set(SCENEFUNC3D_TOOL_NAMES).issubset(set(TOOL_NAMES))
 
 
 def test_playbook_mentions_every_tool() -> None:
@@ -117,17 +116,11 @@ def test_playbook_tells_agent_to_target_pinch_pull_affordance_points() -> None:
     assert "not the drawer front panel center" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
-def test_playbook_tells_agent_to_crop_from_matched_object_bboxes() -> None:
+def test_playbook_does_not_expose_crop_guidance() -> None:
     assert "matched_objects" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "bbox_xyxy" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "object bbox" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "right/lower" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "recommended_crops" in SCENEFUNC3D_TOOLS_PLAYBOOK
-
-
-def test_playbook_tells_agent_to_prefer_initial_keyframe_recommended_crops() -> None:
-    assert "keyframe_selector returns recommended_crops" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "before making any manual crop guess" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "view_crop" not in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "recommended_crops" not in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "crop" not in SCENEFUNC3D_TOOLS_PLAYBOOK.lower()
 
 
 def test_playbook_requires_nearby_frame_sweep_before_accepting_drawer_seams() -> None:
@@ -151,7 +144,7 @@ def test_playbook_forces_compact_sam_candidate_to_lift_before_more_search() -> N
     assert "After you approve a compact SAM candidate, call lift_mask_to_3d" in (
         normalized_playbook
     )
-    assert "do not keep searching new crops or frames before the first 3D lift" in (
+    assert "do not keep searching new frames before the first 3D lift" in (
         normalized_playbook
     )
     assert "Use the 3D geometry review to reject borderline compact candidates" in (
@@ -219,11 +212,11 @@ def test_playbook_documents_exact_lift_argument_shape() -> None:
     assert "Use mask_npz_path, not mask_path" in normalized_playbook
 
 
-def test_playbook_prevents_reasoning_spin_after_evidence_crop() -> None:
+def test_playbook_prevents_reasoning_spin_after_opened_frame() -> None:
     normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
-    assert "After view_crop returns an affordance-focused crop" in normalized_playbook
+    assert "After opening a selected frame" in normalized_playbook
     assert "call molmo_point as the next tool" in normalized_playbook
-    assert "do not spend extra reasoning turns comparing already-opened crops" in (
+    assert "do not spend extra reasoning turns comparing already-opened frames" in (
         normalized_playbook
     )
 
@@ -239,9 +232,7 @@ def test_playbook_bounds_followup_view_search_after_expand() -> None:
     assert "do not call suggest_additional_views again before Molmo or fusion" in (
         normalized_playbook
     )
-    assert "call molmo_point on a selected follow-up crop or frame" in (
-        normalized_playbook
-    )
+    assert "call molmo_point on a selected follow-up frame" in (normalized_playbook)
 
 
 def test_playbook_tells_agent_to_review_lift_geometry_summary() -> None:
@@ -251,7 +242,7 @@ def test_playbook_tells_agent_to_review_lift_geometry_summary() -> None:
     assert "recorded in the final artifact" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "too broad for the target affordance" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "do not approve it" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "Change the SAM candidate, crop, point prompt, or frame" in (
+    assert "Change the SAM candidate, point prompt, or frame" in (
         SCENEFUNC3D_TOOLS_PLAYBOOK
     )
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import math
 from collections.abc import Mapping, Sequence
@@ -24,13 +25,24 @@ from pydantic import (
 from pydantic.types import StringConstraints
 
 from ..config import CodexAgentConfig
-from ..errors import CodexResponseError, SceneFunc3dDataError
+from ..errors import (
+    CodexAgentError,
+    CodexResponseError,
+    CodexTurnError,
+    SceneFunc3dDataError,
+)
 from ..json_extraction import extract_json_object
 from ..models import CodexTurnMetadata, CodexTurnRequest
 from ..tasks.base import CodexExecutor
-from .backends.config import load_backend_settings
+from .backends.config import HttpHeader, load_backend_settings
 from .evaluation.payloads import SceneFunc3dScorePayload, score_to_payload
 from .evaluation.scorer import SceneFunc3dScore, score_result_file
+from .failure_artifacts import (
+    SceneFunc3dFailureArtifact,
+    SceneFunc3dFailureStage,
+    SceneFunc3dFailureTurnPayload,
+    write_failure_artifact,
+)
 from .final_mask_artifacts import (
     FinalMaskAcceptedFragment,
     FinalMaskArtifactDocument,
@@ -42,6 +54,7 @@ from .final_mask_artifacts import (
 from .playbook import SCENEFUNC3D_TOOL_NAMES, SCENEFUNC3D_TOOLS_PLAYBOOK
 from .sample import SceneFunc3dSample, list_sample_ids, load_sample, scene_dir_for
 from .servers.schemas import HealthResponse
+from .tool_context import SceneFunc3dToolContext, write_tool_context
 from .tools.mask_artifacts import (
     SceneFunc3dCompletedRunSummary,
     SceneFunc3dRunCompletionEvent,
@@ -54,6 +67,7 @@ from .tools.scene_context import SceneFunc3dToolScene
 
 TASK_NAME = "scenefunc3d_mask_generation"
 DEFAULT_TOOL_CLI_MODULE = "codex_agent.scenefunc3d.tools"
+DEFAULT_TOOL_CONTEXT_FILENAME = "tool_context.json"
 SCENEFUNC3D_ALLOWED_TOOL_NAMES = SCENEFUNC3D_TOOL_NAMES
 
 NonEmptyString: TypeAlias = Annotated[
@@ -136,6 +150,7 @@ class SceneFunc3dBatchSampleResultPayload(TypedDict):
     status: str
     failure_stage: str
     result_path: str | None
+    failure_path: str | None
     score: SceneFunc3dScorePayload | None
     error: str
 
@@ -263,7 +278,7 @@ class _ToolPointPayload(BaseModel):
 
 
 class _EvidenceImageFrameResult(BaseModel):
-    """One evidence image returned by ``view_frame`` or ``view_crop``."""
+    """One evidence image returned by ``view_frame``."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -419,6 +434,34 @@ class _SuggestAdditionalViewsToolArgs(BaseModel):
     seed_mask_npz_path: NonEmptyString
     seed_mask_ply_path: NonEmptyString
     seed_lift_overlay_path: NonEmptyString
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_seed_frame_aliases(cls, payload: object) -> object:
+        """Mirror the tool args model so runner validation accepts real events."""
+        if not isinstance(payload, Mapping):
+            return payload
+        values = dict(payload)
+        if "accepted_frame_id" not in values and "seed_frame_id" in values:
+            values["accepted_frame_id"] = values.pop("seed_frame_id")
+        else:
+            values.pop("seed_frame_id", None)
+        if "accepted_frame_id" not in values:
+            inferred_frame_id = _infer_frame_id_from_seed_fragment(
+                values.get("seed_fragment_id")
+            )
+            if inferred_frame_id is not None:
+                values["accepted_frame_id"] = inferred_frame_id
+        return values
+
+
+def _infer_frame_id_from_seed_fragment(seed_fragment_id: object) -> str | None:
+    if not isinstance(seed_fragment_id, str):
+        return None
+    frame_id, separator, _candidate_id = seed_fragment_id.partition("_")
+    if not separator or not frame_id:
+        return None
+    return frame_id
 
 
 @dataclass(frozen=True)
@@ -581,6 +624,7 @@ class SceneFunc3dBatchSampleResult:
     failure_stage: SceneFunc3dBatchFailureStage
     result_path: Path | None
     score: SceneFunc3dScore | None
+    failure_path: Path | None = None
     error: str = ""
 
     def to_payload(self) -> SceneFunc3dBatchSampleResultPayload:
@@ -591,6 +635,9 @@ class SceneFunc3dBatchSampleResult:
             "failure_stage": self.failure_stage,
             "result_path": (
                 str(self.result_path) if self.result_path is not None else None
+            ),
+            "failure_path": (
+                str(self.failure_path) if self.failure_path is not None else None
             ),
             "score": score_to_payload(self.score) if self.score is not None else None,
             "error": self.error,
@@ -651,12 +698,14 @@ class SceneFunc3dMaskTask:
         scene_root: Path,
         output_dir: Path,
         backend_config_path: Path,
+        tool_context_path: Path,
         tool_cli_module: str = DEFAULT_TOOL_CLI_MODULE,
     ) -> None:
         self.sample = sample
         self.scene_root = Path(scene_root)
         self.output_dir = Path(output_dir)
         self.backend_config_path = Path(backend_config_path)
+        self.tool_context_path = Path(tool_context_path)
         self.tool_cli_module = tool_cli_module
 
     @property
@@ -664,11 +713,20 @@ class SceneFunc3dMaskTask:
         return TASK_NAME
 
     def build_turn_request(self) -> CodexTurnRequest:
+        self._require_tool_context_file()
         return CodexTurnRequest(
             prompt=self._build_prompt(),
             output_schema=SceneFunc3dMaskDecision.model_json_schema(),
             skills=(),
             image_paths=(),
+        )
+
+    def _require_tool_context_file(self) -> None:
+        if self.tool_context_path.is_file():
+            return
+        raise SceneFunc3dDataError(
+            "SceneFunc3D tool context is missing before prompt generation: "
+            f"path={self.tool_context_path}"
         )
 
     def is_valid_response(self, response_text: str) -> bool:
@@ -791,14 +849,10 @@ class SceneFunc3dMaskTask:
         schema = SceneFunc3dMaskDecision.model_json_schema()
         return (
             build_prompt(self.sample) + "\n\nRuntime paths:\n"
-            f"- scene_root: {self.scene_root}\n"
-            f"- backend_config: {self.backend_config_path}\n"
-            f"- out_dir: {self.output_dir}\n"
+            f"- tool_context: {self.tool_context_path}\n"
             "\nHow to run a tool (in the shell):\n"
             f"- invoke: python -m {self.tool_cli_module} <tool> "
-            f"--scene-root {self.scene_root} "
-            f"--backend-config {self.backend_config_path} "
-            f"--out-dir {self.output_dir} --args '<json>'\n"
+            f"--context {self.tool_context_path} --args '<json>'\n"
             "- For molmo_point, sam_mask, lift_mask_to_3d, "
             "inspect_mask_artifact, suggest_additional_views, and "
             "fuse_accepted_masks, set yield_time_ms=30000 on the shell call so "
@@ -840,7 +894,7 @@ def _hard_limits_section() -> str:
         f"{', '.join(SCENEFUNC3D_ALLOWED_TOOL_NAMES)}.\n"
         "- Never re-run a tool with identical arguments and never re-view an "
         "image you have already seen; if a result is empty or errors, change "
-        "frame, crop, prompt, or mask candidate instead."
+        "frame, prompt, or mask candidate instead."
     )
 
 
@@ -860,11 +914,13 @@ def check_sidecar_health(backend_config_path: Path) -> None:
         settings.molmo_url,
         service_name="molmo",
         timeout_seconds=settings.request_timeout_seconds,
+        request_headers=settings.request_headers,
     )
     sam_health = _fetch_sidecar_health(
         settings.sam_url,
         service_name="sam",
         timeout_seconds=settings.request_timeout_seconds,
+        request_headers=settings.request_headers,
     )
     _require_model_loaded(molmo_health, service_name="molmo")
     _require_model_loaded(sam_health, service_name="sam")
@@ -888,15 +944,61 @@ def run_single_sample(
     sample_output_dir = artifact_paths.root
     sample_output_dir.mkdir(parents=True, exist_ok=True)
     _initialize_run_events(artifact_paths.events_jsonl)
+    tool_context_path = write_tool_context(
+        sample_output_dir / DEFAULT_TOOL_CONTEXT_FILENAME,
+        SceneFunc3dToolContext(
+            sample_id=sample.sample_id,
+            scene_root=scene_dir_for(config.dataset_root, sample.visit_id),
+            backend_config_path=config.backend_config_path,
+            out_dir=sample_output_dir,
+        ),
+    )
     task = SceneFunc3dMaskTask(
         sample=sample,
         scene_root=scene_dir_for(config.dataset_root, sample.visit_id),
         output_dir=sample_output_dir,
         backend_config_path=config.backend_config_path,
+        tool_context_path=tool_context_path,
     )
-    result = executor.execute(task)
-    validated_outcome = task.validate_outcome(result.outcome)
-    validated_artifact = _validate_outcome_artifact(validated_outcome)
+    turn_metadata: CodexTurnMetadata | None = None
+    try:
+        result = executor.execute(task)
+        turn_metadata = result.turn.metadata
+        validated_outcome = task.validate_outcome(result.outcome)
+        validated_artifact = _validate_outcome_artifact(validated_outcome)
+    except CodexTurnError as exc:
+        _write_sample_failure_artifact(
+            sample=sample,
+            failure_path=sample_output_dir / "failure.json",
+            failure_stage="codex_turn",
+            exc=exc,
+            events_path=artifact_paths.events_jsonl,
+            tool_context_path=tool_context_path,
+            turn_metadata=turn_metadata,
+        )
+        raise
+    except CodexResponseError as exc:
+        _write_sample_failure_artifact(
+            sample=sample,
+            failure_path=sample_output_dir / "failure.json",
+            failure_stage="response_validation",
+            exc=exc,
+            events_path=artifact_paths.events_jsonl,
+            tool_context_path=tool_context_path,
+            turn_metadata=turn_metadata,
+        )
+        raise
+    except CodexAgentError as exc:
+        _write_sample_failure_artifact(
+            sample=sample,
+            failure_path=sample_output_dir / "failure.json",
+            failure_stage="run",
+            exc=exc,
+            events_path=artifact_paths.events_jsonl,
+            tool_context_path=tool_context_path,
+            turn_metadata=turn_metadata,
+        )
+        raise
     result_path = sample_output_dir / "result.json"
     result_payload: SceneFunc3dRunResultPayload = {
         "task_name": result.task_name,
@@ -937,70 +1039,100 @@ def run_samples(
     check_sidecars: bool = True,
     score: bool = True,
     continue_on_error: bool = True,
+    workers: int = 1,
 ) -> SceneFunc3dBatchRunSummary:
-    """Run and optionally score multiple SceneFunc3D samples sequentially."""
+    """Run and optionally score multiple SceneFunc3D samples."""
+    if workers <= 0:
+        raise ValueError("workers must be positive")
     normalized_sample_ids = _normalized_batch_sample_ids(sample_ids)
     config.output_dir.mkdir(parents=True, exist_ok=True)
     if check_sidecars:
         check_sidecar_health(config.backend_config_path)
 
-    results: list[SceneFunc3dBatchSampleResult] = []
-    for sample_id in normalized_sample_ids:
-        try:
-            result_path = run_single_sample(
+    if not continue_on_error or workers == 1 or len(normalized_sample_ids) == 1:
+        results = tuple(
+            _run_batch_sample(
                 config,
                 sample_id=sample_id,
                 executor=executor,
-                check_sidecars=False,
+                score=score,
+                continue_on_error=continue_on_error,
+            )
+            for sample_id in normalized_sample_ids
+        )
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [
+                pool.submit(
+                    _run_batch_sample,
+                    config,
+                    sample_id=sample_id,
+                    executor=executor,
+                    score=score,
+                    continue_on_error=continue_on_error,
+                )
+                for sample_id in normalized_sample_ids
+            ]
+            results = tuple(future.result() for future in futures)
+
+    summary = _summarize_batch_results(results, scoring_enabled=score)
+    _write_batch_summary(config.output_dir / "evaluation_summary.json", summary)
+    return summary
+
+
+def _run_batch_sample(
+    config: SceneFunc3dRunnerConfig,
+    *,
+    sample_id: str,
+    executor: CodexExecutor,
+    score: bool,
+    continue_on_error: bool,
+) -> SceneFunc3dBatchSampleResult:
+    try:
+        result_path = run_single_sample(
+            config,
+            sample_id=sample_id,
+            executor=executor,
+            check_sidecars=False,
+        )
+    except Exception as exc:
+        if not continue_on_error:
+            raise
+        failure_path = _existing_failure_artifact_path(config, sample_id)
+        return SceneFunc3dBatchSampleResult(
+            sample_id=sample_id,
+            status="failed",
+            failure_stage="run",
+            result_path=None,
+            score=None,
+            failure_path=failure_path,
+            error=_format_batch_error(exc),
+        )
+
+    sample_score: SceneFunc3dScore | None = None
+    if score:
+        try:
+            sample_score = score_result_file(
+                data_root=config.dataset_root, result_path=result_path
             )
         except Exception as exc:
             if not continue_on_error:
                 raise
-            results.append(
-                SceneFunc3dBatchSampleResult(
-                    sample_id=sample_id,
-                    status="failed",
-                    failure_stage="run",
-                    result_path=None,
-                    score=None,
-                    error=_format_batch_error(exc),
-                )
-            )
-            continue
-
-        sample_score: SceneFunc3dScore | None = None
-        if score:
-            try:
-                sample_score = score_result_file(
-                    data_root=config.dataset_root, result_path=result_path
-                )
-            except Exception as exc:
-                if not continue_on_error:
-                    raise
-                results.append(
-                    SceneFunc3dBatchSampleResult(
-                        sample_id=sample_id,
-                        status="failed",
-                        failure_stage="score",
-                        result_path=result_path,
-                        score=None,
-                        error=_format_batch_error(exc),
-                    )
-                )
-                continue
-        results.append(
-            SceneFunc3dBatchSampleResult(
+            return SceneFunc3dBatchSampleResult(
                 sample_id=sample_id,
-                status="completed",
-                failure_stage="",
+                status="failed",
+                failure_stage="score",
                 result_path=result_path,
-                score=sample_score,
+                score=None,
+                error=_format_batch_error(exc),
             )
-        )
-
-    summary = _summarize_batch_results(tuple(results), scoring_enabled=score)
-    _write_batch_summary(config.output_dir / "evaluation_summary.json", summary)
-    return summary
+    return SceneFunc3dBatchSampleResult(
+        sample_id=sample_id,
+        status="completed",
+        failure_stage="",
+        result_path=result_path,
+        score=sample_score,
+    )
 
 
 def _normalized_batch_sample_ids(sample_ids: Sequence[str]) -> tuple[str, ...]:
@@ -1020,6 +1152,55 @@ def _normalized_batch_sample_ids(sample_ids: Sequence[str]) -> tuple[str, ...]:
             f"duplicate SceneFunc3D sample ids: {tuple(duplicate_sample_ids)}"
         )
     return normalized_sample_ids
+
+
+def _write_sample_failure_artifact(
+    *,
+    sample: SceneFunc3dSample,
+    failure_path: Path,
+    failure_stage: SceneFunc3dFailureStage,
+    exc: CodexAgentError,
+    events_path: Path,
+    tool_context_path: Path,
+    turn_metadata: CodexTurnMetadata | None,
+) -> Path:
+    return write_failure_artifact(
+        failure_path,
+        SceneFunc3dFailureArtifact(
+            task_name=TASK_NAME,
+            sample_id=sample.sample_id,
+            failure_stage=failure_stage,
+            error_type=exc.__class__.__name__,
+            error_message=str(exc),
+            events_path=str(events_path),
+            tool_context_path=str(tool_context_path),
+            turn=_failure_turn_payload(turn_metadata),
+        ),
+    )
+
+
+def _failure_turn_payload(
+    metadata: CodexTurnMetadata | None,
+) -> SceneFunc3dFailureTurnPayload:
+    if metadata is None:
+        return SceneFunc3dFailureTurnPayload()
+    return SceneFunc3dFailureTurnPayload.model_validate(_metadata_payload(metadata))
+
+
+def _existing_failure_artifact_path(
+    config: SceneFunc3dRunnerConfig, sample_id: str
+) -> Path | None:
+    try:
+        sample = load_runner_sample(config, sample_id)
+    except CodexAgentError:
+        return None
+    failure_path = (
+        artifact_paths_for(config.output_dir, sample.visit_id, sample.desc_id).root
+        / "failure.json"
+    )
+    if failure_path.is_file():
+        return failure_path
+    return None
 
 
 def _summarize_batch_results(
@@ -1615,7 +1796,7 @@ def _raise_missing_molmo_point_event(
     raise CodexResponseError(
         "accepted standard fragment must be backed by a successful molmo_point "
         "tool event from this run, using an image_path returned earlier by "
-        "view_frame or view_crop, before fuse_accepted_masks in the required "
+        "view_frame, before fuse_accepted_masks in the required "
         "Molmo point -> SAM mask -> lift_mask_to_3d order: "
         f"fragment_id={fragment.fragment_id}; frame_id={fragment.frame_id}; "
         f"molmo_raw_text_path={fragment.review_artifacts.molmo_raw_text_path}; "
@@ -2017,9 +2198,7 @@ def _successful_evidence_image_tool_events(
     events_path: Path,
 ) -> tuple[_ParsedEvidenceImageToolEvent, ...]:
     events: list[_ParsedEvidenceImageToolEvent] = []
-    for event in _successful_tool_result_events(
-        events_path, tool_names={"view_frame", "view_crop"}
-    ):
+    for event in _successful_tool_result_events(events_path, tool_names={"view_frame"}):
         try:
             result = _EvidenceImageToolResult.model_validate(event.result)
         except ValidationError as exc:
@@ -2631,10 +2810,12 @@ def _artifact_payload(
     }
 
 
-def build_arg_parser() -> argparse.ArgumentParser:
+def build_arg_parser(
+    *, prog: str = "codex_agent.scenefunc3d.runner"
+) -> argparse.ArgumentParser:
     """Build the SceneFunc3D runner CLI parser."""
     parser = argparse.ArgumentParser(
-        prog="codex_agent.scenefunc3d.runner",
+        prog=prog,
         description="Run SceneFunc3D mask-generation cases with Codex.",
     )
     parser.add_argument(
@@ -2671,14 +2852,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Directory where the sample result.json and tool artifacts are written.",
     )
     parser.add_argument(
-        "--skip-sidecar-health-check",
-        action="store_true",
-        help="Skip Molmo/SAM /health checks before launching Codex.",
-    )
-    parser.add_argument(
         "--score",
         action="store_true",
         help="Score the written result.json against hidden GT and include metrics.",
+    )
+    parser.add_argument(
+        "--workers",
+        type=_positive_int,
+        default=1,
+        help="Number of concurrent SceneFunc3D samples to run for batch inputs.",
     )
     return parser
 
@@ -2687,11 +2869,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run SceneFunc3D samples from the command line."""
     parser = build_arg_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
+    return run_from_args(args)
+
+
+def run_from_args(args: argparse.Namespace) -> int:
+    """Run SceneFunc3D samples from parsed command-line arguments."""
     config = SceneFunc3dRunnerConfig(
         dataset_root=args.dataset_root,
         output_dir=args.output_dir,
         backend_config_path=args.backend_config,
     )
+    return _run_from_config_and_args(config, args)
+
+
+def _run_from_config_and_args(
+    config: SceneFunc3dRunnerConfig, args: argparse.Namespace
+) -> int:
+    """Run SceneFunc3D samples with validated runner config and parsed arguments."""
     sample_ids = _sample_ids_from_args(args, data_root=config.dataset_root)
     executor = _build_executor()
     if len(sample_ids) == 1 and _namespace_optional_str(args, "sample_id") is not None:
@@ -2699,7 +2893,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             config,
             sample_id=sample_ids[0],
             executor=executor,
-            check_sidecars=not args.skip_sidecar_health_check,
+            check_sidecars=True,
         )
         if _namespace_bool(args, "score"):
             payload: (
@@ -2716,8 +2910,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             config,
             sample_ids=sample_ids,
             executor=executor,
-            check_sidecars=not args.skip_sidecar_health_check,
+            check_sidecars=True,
             score=_namespace_bool(args, "score"),
+            workers=_namespace_int(args, "workers"),
         )
         payload = _batch_run_payload(
             config.output_dir / "evaluation_summary.json", summary
@@ -2768,9 +2963,12 @@ def _load_sample_ids_file(path: Path) -> tuple[str, ...]:
 
 
 def _build_executor() -> CodexExecutor:
+    from ..cli.runtime_preflight import preflight_codex_runtime
     from ..runtime import CodexAgentRuntime
 
-    return CodexAgentRuntime(_tool_writable_runtime_config(CodexAgentConfig.from_env()))
+    config = _tool_writable_runtime_config(CodexAgentConfig.from_env())
+    preflight_codex_runtime(config)
+    return CodexAgentRuntime(config)
 
 
 def _tool_writable_runtime_config(config: CodexAgentConfig) -> CodexAgentConfig:
@@ -2809,11 +3007,12 @@ def _fetch_sidecar_health(
     *,
     service_name: str,
     timeout_seconds: float,
+    request_headers: tuple[HttpHeader, ...],
 ) -> HealthResponse:
     endpoint = _health_endpoint(base_url)
     request = Request(
         endpoint,
-        headers={"Accept": "application/json"},
+        headers=_health_request_headers(request_headers),
         method="GET",
     )
     try:
@@ -2843,6 +3042,13 @@ def _fetch_sidecar_health(
         raise RuntimeError(
             f"{service_name} sidecar health response failed validation"
         ) from exc
+
+
+def _health_request_headers(request_headers: tuple[HttpHeader, ...]) -> dict[str, str]:
+    headers = {"Accept": "application/json"}
+    for header in request_headers:
+        headers[header.name] = header.value
+    return headers
 
 
 def _decode_health_payload(response_body: bytes, *, service_name: str) -> object:
@@ -2891,6 +3097,13 @@ def _namespace_bool(args: argparse.Namespace, name: str) -> bool:
     return value
 
 
+def _namespace_int(args: argparse.Namespace, name: str) -> int:
+    value: object = getattr(args, name)
+    if not isinstance(value, int):
+        raise TypeError(f"argparse field {name!r} must be an int")
+    return value
+
+
 def _namespace_optional_path(args: argparse.Namespace, name: str) -> Path | None:
     value: object = getattr(args, name)
     if value is None:
@@ -2906,6 +3119,20 @@ def _namespace_optional_str(args: argparse.Namespace, name: str) -> str | None:
         return None
     if not isinstance(value, str):
         raise TypeError(f"argparse field {name!r} must be a string or None")
+    return value
+
+
+def _positive_int(raw_value: str) -> int:
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"workers must be a positive integer, got {raw_value!r}"
+        ) from exc
+    if value <= 0:
+        raise argparse.ArgumentTypeError(
+            f"workers must be a positive integer, got {value}"
+        )
     return value
 
 
@@ -2943,6 +3170,7 @@ __all__ = [
     "check_sidecar_health",
     "load_runner_sample",
     "main",
+    "run_from_args",
     "run_samples",
     "run_single_sample",
 ]

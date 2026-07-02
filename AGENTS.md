@@ -100,6 +100,21 @@ Follow the guide's §12 workflow:
 - **Long-running tasks** (training, evaluation, batch processing, large test
   suites, data prep) must run inside `tmux` — see `CLAUDE.md` §Long-Running
   Tasks.
+- **ModelHub adapter preflight:** before starting project workflows that use
+  the Codex Agent SDK or benchmark CLIs, first check the local adapter health:
+  `curl -sf http://127.0.0.1:8787/health`. If the service is not listening or
+  the health check fails, start it from the repo-local adapter directory before
+  launching the run:
+
+  ```bash
+  cd codex_modelhub_adapter
+  python3 -m uvicorn adapter.app:app --host 127.0.0.1 --port 8787
+  ```
+
+  For long benchmark runs, keep this adapter process in `tmux`. Do not proceed
+  to `codex_agent.cli.run_*` commands while this health check is down; runtime
+  preflight will fail before a Codex turn. Never commit adapter `.env` or
+  upstream TOML files.
 - **Documentation organization:** project documentation under `docs/` is managed
   as a MkDocs Material site (`mkdocs.yml`) while keeping Markdown as the single
   source of truth. Agents should continue reading/editing the source `.md` files

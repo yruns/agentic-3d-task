@@ -1,0 +1,70 @@
+{
+  "diagnostic": "v10_skill10_minprompt",
+  "date": "2026-07-01",
+  "head": "9b262f4cb46b42ab17b9f086b75a1c03e498b240",
+  "worktree_dirty": true,
+  "output_dir": "tmp/nr3d_tools_skill10_minprompt_20260701",
+  "n": 10,
+  "mode": {
+    "tools": true,
+    "skill_name": "nr3d-codex-tools",
+    "skill_path": ".agents/skills/nr3d-codex-tools/SKILL.md",
+    "prompt_tool_context": false,
+    "prompt_inline_playbook": false,
+    "workers": 10,
+    "limit": 10,
+    "reasoning_summary": "auto",
+    "turn_timeout_s": 900
+  },
+  "summary": {
+    "mean_iou": 0.8000000000000005,
+    "acc_at_025": 0.8,
+    "acc_at_050": 0.8,
+    "cache_hit_rate": 1.0,
+    "mean_cache_ratio": 0.9725181644788334
+  },
+  "first10_comparison": {
+    "v8_correct": 8,
+    "v9_skill20_correct": 8,
+    "v10_skill10_minprompt_correct": 8,
+    "same_wrong_samples_as_v8_and_v9_first10": true
+  },
+  "health": {
+    "status_completed": 10,
+    "status_failed": 0,
+    "reasoning_summary_count": 9,
+    "business_summary_count": 10,
+    "latency_s_median": 88.2,
+    "latency_s_mean": 98.0,
+    "latency_s_max": 190.6
+  },
+  "transport": {
+    "responses_posts": 92,
+    "chat_or_chat_completions_posts": 0,
+    "crawl_posts": 0,
+    "http_400": 0,
+    "http_5xx": 0,
+    "invalid_encrypted_content": 0
+  },
+  "loop_signals": {
+    "skill_md_loop_matches": 0,
+    "max_tool_call_interrupts": 0,
+    "repeated_tool_call_interrupts": 0,
+    "turn_timeout_interrupts": 0,
+    "permanent_failures": 0
+  },
+  "wrong_samples": [
+    {
+      "sample_id": "scannet/scene0500_00::25::13471",
+      "selected_object_id": 26,
+      "iou": 0.0,
+      "query": "The middle rectangular window on the wall left of the chalkboard."
+    },
+    {
+      "sample_id": "scannet/scene0608_00::9::17679",
+      "selected_object_id": 8,
+      "iou": 0.0,
+      "query": "Looking for a black ottoman, it's right in front of the love seat sofa with the green pillow"
+    }
+  ]
+}

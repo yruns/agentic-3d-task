@@ -20,7 +20,7 @@ from pydantic import (
 )
 
 from ...errors import SceneFunc3dDataError
-from ..servers.schemas import MolmoImagePoint
+from ..servers.schemas import MolmoImagePoint, MolmoPointResponse
 from .models import ToolInputError
 
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -269,6 +269,33 @@ def parse_molmo_points(
     return tuple(points)
 
 
+def points_from_molmo_response(
+    response: MolmoPointResponse, *, image_width: int, image_height: int
+) -> tuple[MolmoPoint, ...]:
+    """Return parsed points from a Molmo response, or ``()`` when it found none.
+
+    Prefers the structured ``image_points``; falls back to parsing ``raw_text``.
+    A *successful* response with no usable points yields ``()`` (the caller
+    records a designed anchor fallback). Transport/sidecar failures raise
+    earlier in ``request_molmo_point`` and are not reached here.
+    """
+    try:
+        points = _points_from_sidecar_image_points(
+            response.image_points,
+            image_width=image_width,
+            image_height=image_height,
+        )
+        if not points:
+            points = parse_molmo_points(
+                response.raw_text,
+                image_width=image_width,
+                image_height=image_height,
+            )
+    except SceneFunc3dDataError:
+        return ()
+    return points
+
+
 def _points_from_sidecar_image_points(
     image_points: tuple[MolmoImagePoint, ...],
     *,
@@ -460,5 +487,6 @@ __all__ = [
     "MolmoPointResultPayload",
     "molmo_point",
     "parse_molmo_points",
+    "points_from_molmo_response",
     "run_molmo_backend",
 ]

@@ -126,6 +126,11 @@ class SceneFunc3dToolScene:
         return self.scene_root / _RAW_DIRNAME
 
     @property
+    def raw_mesh_path(self) -> Path:
+        """Raw/source scan mesh whose vertex ids align with annotation indices."""
+        return self.raw_dir / "mesh.ply"
+
+    @property
     def conceptgraph_dir(self) -> Path:
         """Directory containing the prepared ConceptGraph scene pack."""
         return self.scene_root / _CONCEPTGRAPH_DIRNAME

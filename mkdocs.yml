@@ -35,6 +35,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Latest Handoff: handoff_2026-07-02_1313.md
   - Development Standards:
       - Python Code Agent Quality Guide: python_code_agent_quality_guide.md
   - Codex Agent:
@@ -57,6 +58,13 @@ nav:
           - v4 Network Fix Strat600: benchmark/nr3d/v4_network_fix_strat600_20260610.md
           - v5 Summary Responses Strat600: benchmark/nr3d/v5_summary_responses_strat600_20260611.md
           - v6 Effort Ablation Chat Strat600: benchmark/nr3d/v6_effort_ablation_chat_strat600_20260611.md
+          - v7 Responses Passthrough Strat600: benchmark/nr3d/v7_responses_passthrough_strat600_20260630.md
+          - v8 Fail Closed Encrypted State Strat600: benchmark/nr3d/v8_failclosed_encrypted_state_strat600_20260701.md
+          - v8 Flip41 Repeat: benchmark/nr3d/v8_flip41_repeat_20260701.md
+          - v9 Skill20 Explicit Skill: benchmark/nr3d/v9_skill20_explicit_skill_20260701.md
+          - v10 Skill10 Minimal Prompt: benchmark/nr3d/v10_skill10_minprompt_20260701.md
+          - v11 Skill600 Minimal Prompt: benchmark/nr3d/v11_skill600_minprompt_20260701.md
+          - v12 Skill10 Keep Run Home: benchmark/nr3d/v12_skill10_keep_home_20260701.md
       - OpenEQA:
           - Timeline: benchmark/openeqa/README.md
           - v1 SDK Migration Smoke: benchmark/openeqa/v1_codex_sdk_migration_smoke10_20260611.md
@@ -71,3 +79,5 @@ nav:
           - Sidecar E2E Status: benchmark/scenefunc_molmo_sam3d/sidecar_e2e_20260628.md
           - Agent Runner E2E: benchmark/scenefunc_molmo_sam3d/agent_runner_e2e_20260629.md
           - v3 Agent Loop Status: benchmark/scenefunc_molmo_sam3d/v3_agent_loop_status_20260630.md
+          - v4 Raw Point ID Alignment: benchmark/scenefunc_molmo_sam3d/v4_raw_point_id_alignment_20260702.md
+          - v5 All 421254 Keep Home Review: benchmark/scenefunc_molmo_sam3d/v5_all421254_keep_home_review_20260702.md

@@ -14,6 +14,7 @@ from typing import cast
 import pytest
 from pydantic import ValidationError
 
+import codex_agent.scenefunc3d.tools.__main__ as tools_cli
 from codex_agent.scenefunc3d.task import ApprovalAction
 from codex_agent.scenefunc3d.tools.__main__ import main
 from codex_agent.scenefunc3d.tools.frame_views import (
@@ -333,6 +334,46 @@ def _write_source_frame_scene(root: Path, source_frames: object) -> Path:
     return scene_dir
 
 
+def _write_tool_backend_config(path: Path, *, allowed_output_root: Path) -> None:
+    path.write_text(
+        "\n".join(
+            (
+                'molmo_url = "http://127.0.0.1:8001"',
+                'sam_url = "http://127.0.0.1:8002"',
+                "request_timeout_seconds = 2.0",
+                f"allowed_image_roots = [{json.dumps(str(path.parent))}]",
+                f"allowed_output_roots = [{json.dumps(str(allowed_output_root))}]",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_tool_context(
+    path: Path,
+    *,
+    scene_root: Path,
+    backend_config_path: Path,
+    out_dir: Path,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "sample_id": "421254::desc-a",
+                "scene_root": str(scene_root),
+                "backend_config_path": str(backend_config_path),
+                "out_dir": str(out_dir),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _write_pose(
     path: Path,
     *,
@@ -382,7 +423,17 @@ def test_cli_scene_summary_reads_source_frame_index(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     scene_dir = _write_source_frame_scene(tmp_path, _source_frame_records())
-    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
     assert payload["visit_id"] == "421254"
@@ -401,6 +452,162 @@ def test_cli_scene_summary_reads_source_frame_index(
     assert payload["visible_object_total_count"] == 0
 
 
+def test_cli_context_loads_scene_backend_config_and_out_dir(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    scene_dir = _write_source_frame_scene(tmp_path, _source_frame_records())
+    out_dir = tmp_path / "out" / "421254" / "desc-a"
+    backend_config_path = tmp_path / "backend.toml"
+    context_path = tmp_path / "context" / "tool_context.json"
+    _write_tool_backend_config(
+        backend_config_path, allowed_output_root=tmp_path / "out"
+    )
+    _write_tool_context(
+        context_path,
+        scene_root=scene_dir.resolve(),
+        backend_config_path=backend_config_path.resolve(),
+        out_dir=out_dir.resolve(),
+    )
+    captured_scene_roots: list[Path] = []
+    captured_backend_config_paths: list[Path | None] = []
+    captured_out_dirs: list[Path] = []
+
+    class Payload:
+        def to_payload(self) -> dict[str, object]:
+            return {"ok": True}
+
+    def fake_run_tool(
+        tool_scene: SceneFunc3dToolScene,
+        name: str,
+        raw_args: Mapping[str, object],
+        *,
+        out_dir: Path,
+        backend_config_path: Path | None = None,
+    ) -> Payload:
+        captured_scene_roots.append(tool_scene.scene_root)
+        captured_backend_config_paths.append(backend_config_path)
+        captured_out_dirs.append(out_dir)
+        return Payload()
+
+    monkeypatch.setattr(tools_cli, "run_tool", fake_run_tool)
+
+    code = tools_cli.main(
+        ["scene_summary", "--context", str(context_path), "--args", "{}"]
+    )
+
+    assert code == 0
+    assert json.loads(capsys.readouterr().out.strip()) == {"ok": True}
+    assert captured_scene_roots == [scene_dir.resolve()]
+    assert captured_backend_config_paths == [backend_config_path.resolve()]
+    assert captured_out_dirs == [out_dir.resolve()]
+
+
+def test_cli_missing_context_exits_nonzero(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        main(
+            [
+                "scene_summary",
+                "--context",
+                str(tmp_path / "missing_context.json"),
+                "--args",
+                "{}",
+            ]
+        )
+
+    assert excinfo.value.code == 1
+
+
+def test_cli_context_validation_error_does_not_echo_secret_values(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_source_frame_scene(tmp_path, _source_frame_records())
+    backend_config_path = tmp_path / "backend.toml"
+    _write_tool_backend_config(
+        backend_config_path, allowed_output_root=tmp_path / "out"
+    )
+    context_path = tmp_path / "context" / "tool_context.json"
+    secret_value = "secret-token-123"
+    context_path.parent.mkdir(parents=True)
+    context_path.write_text(
+        json.dumps(
+            {
+                "sample_id": "421254::desc-a",
+                "scene_root": str(scene_dir.resolve()),
+                "backend_config_path": str(backend_config_path.resolve()),
+                "out_dir": str((tmp_path / "out" / "421254" / "desc-a").resolve()),
+                "api_key": secret_value,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(["scene_summary", "--context", str(context_path), "--args", "{}"])
+
+    stderr = capsys.readouterr().err
+    assert excinfo.value.code == 1
+    assert "api_key" in stderr
+    assert secret_value not in stderr
+
+
+def test_cli_context_rejects_out_dir_outside_allowed_roots(
+    tmp_path: Path,
+) -> None:
+    scene_dir = _write_source_frame_scene(tmp_path, _source_frame_records())
+    backend_config_path = tmp_path / "backend.toml"
+    _write_tool_backend_config(
+        backend_config_path, allowed_output_root=tmp_path / "out"
+    )
+    context_path = tmp_path / "context" / "tool_context.json"
+    _write_tool_context(
+        context_path,
+        scene_root=scene_dir.resolve(),
+        backend_config_path=backend_config_path.resolve(),
+        out_dir=(tmp_path / "not_allowed" / "desc-a").resolve(),
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(["scene_summary", "--context", str(context_path), "--args", "{}"])
+
+    assert excinfo.value.code == 1
+
+
+def test_cli_direct_invocation_requires_explicit_scene_root_and_out_dir(
+    tmp_path: Path,
+) -> None:
+    scene_dir = _write_source_frame_scene(tmp_path, _source_frame_records())
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+
+    assert excinfo.value.code != 0
+
+
+def test_cli_direct_invocation_accepts_explicit_scene_root_and_out_dir(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene_dir = _write_source_frame_scene(tmp_path, _source_frame_records())
+    out_dir = tmp_path / "direct_out"
+
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(out_dir),
+            "--args",
+            "{}",
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["visit_id"] == "421254"
+
+
 def test_cli_source_frame_list_rejects_invalid_record(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -411,7 +618,17 @@ def test_cli_source_frame_list_rejects_invalid_record(
     scene_dir = _write_source_frame_scene(tmp_path, source_frames)
 
     with pytest.raises(SystemExit) as excinfo:
-        main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+        main(
+            [
+                "scene_summary",
+                "--scene-root",
+                str(scene_dir),
+                "--out-dir",
+                str(tmp_path / "direct_out"),
+                "--args",
+                "{}",
+            ]
+        )
 
     assert excinfo.value.code == 1
     assert "source frame record 1" in capsys.readouterr().err
@@ -427,7 +644,17 @@ def test_cli_source_frame_mapping_rejects_invalid_entry(
     scene_dir = _write_source_frame_scene(tmp_path, source_frames)
 
     with pytest.raises(SystemExit) as excinfo:
-        main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+        main(
+            [
+                "scene_summary",
+                "--scene-root",
+                str(scene_dir),
+                "--out-dir",
+                str(tmp_path / "direct_out"),
+                "--args",
+                "{}",
+            ]
+        )
 
     assert excinfo.value.code == 1
     assert "source frame entry 'bad-entry'" in capsys.readouterr().err
@@ -443,7 +670,17 @@ def test_cli_source_frame_index_rejects_duplicate_frame_ids(
     scene_dir = _write_source_frame_scene(tmp_path, source_frames)
 
     with pytest.raises(SystemExit) as excinfo:
-        main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+        main(
+            [
+                "scene_summary",
+                "--scene-root",
+                str(scene_dir),
+                "--out-dir",
+                str(tmp_path / "direct_out"),
+                "--args",
+                "{}",
+            ]
+        )
 
     assert excinfo.value.code == 1
     assert "duplicate frame id '000000'" in capsys.readouterr().err
@@ -464,7 +701,17 @@ def test_cli_scene_summary_reports_schematic_bev_fallback(
         ],
     )
 
-    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
@@ -492,7 +739,17 @@ def test_cli_scene_summary_reports_schematic_bev_dependency_gap(
 
     monkeypatch.setattr(importlib.util, "find_spec", fake_find_spec)
 
-    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
@@ -519,7 +776,17 @@ def test_cli_scene_summary_reports_broken_schematic_bev_dependency(
 
     monkeypatch.setattr(importlib, "import_module", fake_import_module)
 
-    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
@@ -539,7 +806,17 @@ def test_cli_scene_summary_rejects_invalid_schematic_bev_pose(
         tmp_path, [{"frame_id": "000000", "pose": str(pose_path)}]
     )
 
-    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
@@ -560,7 +837,17 @@ def test_cli_scene_summary_prefers_prepared_bev_over_invalid_fallback_pose(
     bev_path.parent.mkdir()
     bev_path.write_bytes(b"prepared-bev")
 
-    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
@@ -574,7 +861,17 @@ def test_cli_scene_summary_falls_back_to_raw_rgb_frames(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     scene_dir = _write_raw_rgb_scene(tmp_path)
-    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
     assert payload["visit_id"] == "421254"
@@ -632,7 +929,17 @@ def test_cli_scene_summary_exposes_indexed_evidence_assets(
         encoding="utf-8",
     )
 
-    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
@@ -674,7 +981,17 @@ def test_cli_scene_summary_validates_visible_object_index(
         encoding="utf-8",
     )
 
-    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
@@ -686,7 +1003,17 @@ def test_cli_bad_args_json_is_recoverable(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     scene_dir = _write_raw_rgb_scene(tmp_path)
-    code = main(["scene_summary", "--scene-root", str(scene_dir), "--args", "not-json"])
+    code = main(
+        [
+            "scene_summary",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "not-json",
+        ]
+    )
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
     assert "must be valid JSON" in payload["error"]
@@ -908,7 +1235,7 @@ def test_cli_blocks_repeated_inspection_without_new_lift(
     assert event["error"] == payload["error"]
 
 
-def test_cli_allows_frame_search_after_successful_inspection(
+def test_cli_blocks_frame_search_after_successful_inspection_before_multiview_decision(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     pytest.importorskip("PIL")
@@ -935,7 +1262,14 @@ def test_cli_allows_frame_search_after_successful_inspection(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert payload["frames"][0]["frame_id"] == "000010"
+    event_lines = (out_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    event = json.loads(event_lines[-1])
+    assert event["event_type"] == "tool_failed"
+    assert event["tool_name"] == "view_frame"
+    assert "after a successful inspect_mask_artifact call" in payload["error"]
+    assert "suggest_additional_views" in payload["error"]
+    assert "fuse_accepted_masks" in payload["error"]
+    assert event["error"] == payload["error"]
 
 
 def test_cli_allows_idempotent_inspection_repeat(
@@ -1322,9 +1656,9 @@ def test_cli_bounds_followup_view_search_after_suggest_expand(
         out_dir,
         (
             "suggest_additional_views",
-            "view_crop",
             "view_frame",
-            "view_crop",
+            "view_frame",
+            "view_frame",
             "view_frame",
         ),
     )
@@ -1463,7 +1797,15 @@ def test_cli_tool_failed_event_write_error_exits_cleanly(
 def test_cli_missing_scene_root_exits_nonzero(tmp_path: Path) -> None:
     with pytest.raises(SystemExit) as excinfo:
         main(
-            ["scene_summary", "--scene-root", str(tmp_path / "missing"), "--args", "{}"]
+            [
+                "scene_summary",
+                "--scene-root",
+                str(tmp_path / "missing"),
+                "--out-dir",
+                str(tmp_path / "direct_out"),
+                "--args",
+                "{}",
+            ]
         )
     assert excinfo.value.code == 1
 
@@ -1497,6 +1839,45 @@ def test_cli_view_frame_returns_image_path(
     assert Path(payload["frames"][0]["image_path"]).exists()
     assert payload["frames"][0]["image_width"] == 12
     assert payload["frames"][0]["image_height"] == 10
+
+
+def test_cli_view_frame_preserves_raw_jpeg_bytes(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    scene_dir = _write_raw_rgb_scene(tmp_path)
+    (scene_dir / "raw" / "000000-rgb.png").unlink()
+    source_path = scene_dir / "raw" / "000000-rgb.jpg"
+    image = Image.new("RGB", (16, 12))
+    image.putdata(
+        [
+            (x * 11 % 256, y * 17 % 256, (x + y) * 13 % 256)
+            for y in range(12)
+            for x in range(16)
+        ]
+    )
+    image.save(source_path, format="JPEG", quality=73)
+
+    code = main(
+        [
+            "view_frame",
+            "--scene-root",
+            str(scene_dir),
+            "--args",
+            json.dumps({"frame_ids": ["000000"]}),
+            "--out-dir",
+            str(tmp_path / "scratch"),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    output_path = Path(payload["frames"][0]["image_path"])
+    assert output_path.read_bytes() == source_path.read_bytes()
+    assert payload["frames"][0]["image_width"] == 16
+    assert payload["frames"][0]["image_height"] == 12
 
 
 def test_cli_view_frame_exposes_raw_geometry_paths(
@@ -1672,7 +2053,7 @@ def test_cli_view_frame_exposes_mixed_raw_and_source_geometry_paths(
     assert frame_payload["pose_path"] == str(source_pose_path)
 
 
-def test_cli_view_frame_uses_conceptgraph_visualization_dir(
+def test_cli_view_frame_rejects_conceptgraph_visualization_without_raw_rgb(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     pytest.importorskip("PIL")
@@ -1696,8 +2077,11 @@ def test_cli_view_frame_uses_conceptgraph_visualization_dir(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert payload["frames"][0]["frame_id"] == "000000"
-    assert Path(payload["frames"][0]["image_path"]).exists()
+    assert "no raw RGB image found" in payload["error"]
+    assert (
+        "ConceptGraph visualization images are not valid RGB sources"
+        in payload["error"]
+    )
 
 
 def test_cli_view_frame_uses_source_frame_raw_path(
@@ -1820,7 +2204,7 @@ def test_view_crop_metadata_preserves_frame_id_with_underscores(
     assert metadata["frame_id"] == "frame_with_under_score"
 
 
-def test_cli_view_frame_prefers_conceptgraph_over_source_frame_raw_path(
+def test_cli_view_frame_prefers_source_frame_raw_path_over_conceptgraph_visualization(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     pytest.importorskip("PIL")
@@ -1857,9 +2241,11 @@ def test_cli_view_frame_prefers_conceptgraph_over_source_frame_raw_path(
     payload = json.loads(capsys.readouterr().out.strip())
     output_path = Path(payload["frames"][0]["image_path"])
     with Image.open(output_path) as image:
-        red, green, blue = image.convert("RGB").getpixel((0, 0))
-    assert green > red
-    assert green > blue
+        red, green, blue = cast(
+            tuple[int, int, int], image.convert("RGB").getpixel((0, 0))
+        )
+    assert red > green
+    assert red > blue
 
 
 def test_cli_view_frame_missing_image_is_recoverable(
@@ -1872,6 +2258,8 @@ def test_cli_view_frame_missing_image_is_recoverable(
             "view_frame",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"frame_ids": ["000000"]}),
         ]
@@ -1879,7 +2267,11 @@ def test_cli_view_frame_missing_image_is_recoverable(
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
-    assert "no RGB image found" in payload["error"]
+    assert "no raw RGB image found" in payload["error"]
+    assert (
+        "ConceptGraph visualization images are not valid RGB sources"
+        in payload["error"]
+    )
 
 
 def test_cli_frame_objects_reports_unavailable_index(
@@ -1892,6 +2284,8 @@ def test_cli_frame_objects_reports_unavailable_index(
             "frame_objects",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"frame_id": "000000"}),
         ]
@@ -1944,6 +2338,8 @@ def test_cli_frame_objects_reads_conceptgraph_object_frame_map(
             "frame_objects",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"frame_id": "000000"}),
         ]
@@ -2004,6 +2400,8 @@ def test_cli_frame_objects_rejects_invalid_object_bbox(
             "frame_objects",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"frame_id": "000000"}),
         ]
@@ -2049,6 +2447,8 @@ def test_cli_frame_objects_rejects_non_finite_score(
             "frame_objects",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"frame_id": "000000"}),
         ]
@@ -2104,6 +2504,8 @@ def test_cli_frame_objects_prefers_frame_name_over_numeric_key_collision(
             "frame_objects",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"frame_id": "000010"}),
         ]
@@ -2131,6 +2533,8 @@ def test_cli_view_crop_requires_frame_id(
             "view_crop",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"bbox": [0.1, 0.1, 0.5, 0.5]}),
         ]
@@ -2151,6 +2555,8 @@ def test_cli_view_crop_rejects_invalid_bbox(
             "view_crop",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"frame_id": "000000", "bbox": [-1.0, 0.1, 2.0, 0.5]}),
         ]
@@ -2178,6 +2584,8 @@ def test_cli_view_crop_renders_normalized_rgb_crop(
             "view_crop",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"frame_id": "000000", "bbox": [0.5, 0.0, 0.9, 0.4]}),
         ]
@@ -2192,7 +2600,9 @@ def test_cli_view_crop_renders_normalized_rgb_crop(
     assert crop_path.exists()
     with Image.open(crop_path) as crop_image:
         assert crop_image.size == (40, 32)
-        red_mean, green_mean, _ = crop_image.resize((1, 1)).getpixel((0, 0))
+        red_mean, green_mean, _ = cast(
+            tuple[int, int, int], crop_image.resize((1, 1)).getpixel((0, 0))
+        )
         assert green_mean > red_mean
 
 
@@ -2237,6 +2647,8 @@ def test_cli_view_crop_accepts_frame_object_pixel_bbox(
             "frame_objects",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"frame_id": "000000"}),
         ]
@@ -2249,6 +2661,8 @@ def test_cli_view_crop_accepts_frame_object_pixel_bbox(
             "view_crop",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps(
                 {
@@ -2265,7 +2679,9 @@ def test_cli_view_crop_accepts_frame_object_pixel_bbox(
     crop_path = Path(payload["frames"][0]["image_path"])
     with Image.open(crop_path) as crop_image:
         assert crop_image.size == (40, 32)
-        red_mean, green_mean, _ = crop_image.resize((1, 1)).getpixel((0, 0))
+        red_mean, green_mean, _ = cast(
+            tuple[int, int, int], crop_image.resize((1, 1)).getpixel((0, 0))
+        )
         assert green_mean > red_mean
 
 
@@ -2318,7 +2734,17 @@ def test_cli_view_bev_reports_unavailable_without_bev_asset(
 ) -> None:
     scene_dir = _write_raw_rgb_scene(tmp_path)
 
-    code = main(["view_bev", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "view_bev",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
@@ -2378,7 +2804,17 @@ def test_cli_view_bev_prefers_prepared_bev_over_pose_fallback(
     bev_path.parent.mkdir()
     bev_path.write_bytes(b"prepared-bev")
 
-    code = main(["view_bev", "--scene-root", str(scene_dir), "--args", "{}"])
+    code = main(
+        [
+            "view_bev",
+            "--scene-root",
+            str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
+            "--args",
+            "{}",
+        ]
+    )
 
     assert code == 0
     payload = json.loads(capsys.readouterr().out.strip())
@@ -2859,7 +3295,7 @@ def test_cli_keyframe_selector_returns_matched_object_bbox_metadata(
     ]
 
 
-def test_cli_keyframe_selector_returns_initial_recommended_crops(
+def test_cli_keyframe_selector_does_not_return_initial_recommended_crops(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     scene_dir = tmp_path / "421393"
@@ -2913,22 +3349,7 @@ def test_cli_keyframe_selector_returns_initial_recommended_crops(
     payload = json.loads(capsys.readouterr().out.strip())
     selected_frame = payload["frames"][0]
     assert selected_frame["frame_id"] == "000073"
-    assert selected_frame["recommended_crops"] == [
-        {
-            "bbox_xyxy": [380.0, 291.0, 940.0, 1440.0],
-            "bbox_format": "pixel_xyxy",
-            "reason": "matched_object_full_bbox",
-            "source_object_id": "3",
-            "source_object_label": "heater",
-        },
-        {
-            "bbox_xyxy": [744.0, 1095.3, 996.0, 1497.45],
-            "bbox_format": "pixel_xyxy",
-            "reason": "right_lower_affordance_crop_from_matched_object_bbox",
-            "source_object_id": "3",
-            "source_object_label": "heater",
-        },
-    ]
+    assert "recommended_crops" not in selected_frame
 
 
 @pytest.mark.parametrize(
@@ -3356,6 +3777,8 @@ def test_cli_keyframe_selector_rejects_blank_query(
             "keyframe_selector",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"query": "   ", "k": 1}),
         ]
@@ -3376,6 +3799,8 @@ def test_cli_keyframe_selector_rejects_string_k(
             "keyframe_selector",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps({"query": "drawer handle", "k": "2"}),
         ]
@@ -3611,6 +4036,8 @@ def test_cli_suggest_additional_views_returns_scene_neighbors(
             "suggest_additional_views",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps(
                 {

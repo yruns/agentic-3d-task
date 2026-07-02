@@ -4,12 +4,15 @@ set -euo pipefail
 export NO_COLOR=1
 export TERM=dumb
 
-REPO_ROOT="${REPO_ROOT:-/mlx_devbox/users/yueshuhao/playground/repos/agentic-3d-task/.worktrees/scenefunc3d-agent-tools}"
-DATASET_ROOT="${DATASET_ROOT:-/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+
+REPO_ROOT="${REPO_ROOT:-${DEFAULT_REPO_ROOT}}"
+DATASET_ROOT="${DATASET_ROOT:-${REPO_ROOT}/data/SceneFuncVal-CG}"
 RUN_ROOT="${RUN_ROOT:-${DATASET_ROOT}/sam_transformers_debug_20260629}"
 SAM_MODEL_PATH="${SAM_MODEL_PATH:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home/transformers/models--facebook--sam2.1-hiera-large/snapshots/665f8e2ad61cf5f53d65644ff27c8ee525124610}"
 HF_HOME="${HF_HOME:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home}"
-PYTHON_BIN="${PYTHON_BIN:-/usr/bin/python}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 export REPO_ROOT
 export DATASET_ROOT

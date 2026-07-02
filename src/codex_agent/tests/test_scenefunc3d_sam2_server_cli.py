@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import importlib
 import json
 import sys
@@ -28,8 +30,12 @@ class _FakeSamRunner:
     model_name: str = "fake-sam2"
 
     def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
-        request.staging_dir.mkdir(parents=True, exist_ok=True)
-        mask_path = request.staging_dir / "mask_00.npz"
+        image_path = request.require_image_path()
+        if not image_path.is_file():
+            raise AssertionError(f"expected materialized image file: {image_path}")
+        staging_dir = request.require_staging_dir()
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        mask_path = staging_dir / "mask_00.npz"
         mask = np.array([[True, False, True], [False, False, True]], dtype=np.bool_)
         np.savez_compressed(mask_path, mask=mask)
         return (
@@ -48,6 +54,53 @@ class _OutOfMemorySamRunner:
 
     def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
         raise RuntimeError("CUDA out of memory while allocating SAM tensors")
+
+
+class _EmptyMaskSamRunner:
+    model_name: str = "fake-sam2"
+
+    def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
+        staging_dir = request.require_staging_dir()
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        mask_path = staging_dir / "mask_00.npz"
+        np.savez_compressed(
+            mask_path,
+            mask=np.zeros((0, 3), dtype=np.bool_),
+        )
+        return (
+            SamMaskCandidateResponse(
+                candidate_id="mask_00",
+                score=0.91,
+                mask_npz_path=mask_path,
+                pixel_count=0,
+                coverage_percent=0.0,
+            ),
+        )
+
+
+class _RecordingSamRunner(_FakeSamRunner):
+    seen_image_path: Path | None = None
+    seen_staging_dir: Path | None = None
+    image_existed_during_call: bool = False
+
+    def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
+        image_path = request.require_image_path()
+        self.seen_image_path = image_path
+        self.seen_staging_dir = request.require_staging_dir()
+        self.image_existed_during_call = image_path.is_file()
+        return super().masks(request)
+
+
+class _RootCheckingSamRunner(_FakeSamRunner):
+    def __init__(self, staging_root: Path) -> None:
+        self._staging_root = staging_root.resolve()
+        self.seen_staging_dir: Path | None = None
+
+    def masks(self, request: SamMaskRequest) -> tuple[SamMaskCandidateResponse, ...]:
+        staging_dir = request.require_staging_dir().resolve()
+        staging_dir.relative_to(self._staging_root)
+        self.seen_staging_dir = staging_dir
+        return super().masks(request)
 
 
 def test_build_arg_parser_accepts_runtime_options() -> None:
@@ -83,6 +136,26 @@ def test_build_arg_parser_accepts_runtime_options() -> None:
     assert args.config_path == Path("/models/sam2.yaml")
     assert args.staging_root == Path("/runs/scenefunc3d")
     assert args.device == "cuda:0"
+
+
+def test_write_candidate_masks_includes_inline_npz_payload(tmp_path: Path) -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import _write_candidate_masks
+
+    mask_batch = np.array(
+        [[[True, False, True], [False, False, True]]],
+        dtype=np.bool_,
+    )
+    candidates = _write_candidate_masks(
+        mask_batch,
+        np.array([0.91], dtype=np.float64),
+        staging_dir=tmp_path,
+    )
+
+    candidate = candidates[0]
+    assert candidate.mask_npz_path is not None
+    mask_npz_bytes = candidate.mask_npz_path.read_bytes()
+    assert candidate.mask_npz_base64 == base64.b64encode(mask_npz_bytes).decode("ascii")
+    assert candidate.mask_npz_sha256 == hashlib.sha256(mask_npz_bytes).hexdigest()
 
 
 def test_build_arg_parser_accepts_transformers_model_path() -> None:
@@ -312,6 +385,7 @@ def test_official_runner_writes_valid_candidate_masks_with_fake_runtime(
     assert candidates[1].score == 0.25
     assert candidates[1].pixel_count == 2
     assert candidates[1].coverage_percent == pytest.approx(33.33333333333333)
+    assert candidates[0].mask_npz_path is not None
     first_mask = _load_saved_mask(candidates[0].mask_npz_path)
     assert first_mask.dtype == np.bool_
     assert first_mask.shape == (2, 3)
@@ -518,6 +592,7 @@ def test_transformers_runner_writes_valid_candidate_masks_with_fake_runtime(
     assert candidates[1].score == pytest.approx(0.25)
     assert candidates[1].pixel_count == 2
     assert candidates[1].coverage_percent == pytest.approx(33.33333333333333)
+    assert candidates[0].mask_npz_path is not None
     assert _load_saved_mask(candidates[0].mask_npz_path).tolist() == [
         [True, False, True],
         [False, False, True],
@@ -707,12 +782,80 @@ def test_handler_supports_health_and_masks_routes(tmp_path: Path) -> None:
         {
             "candidate_id": "mask_00",
             "score": 0.91,
-            "mask_npz_path": str(staging_dir / "mask_00.npz"),
+            "mask_rle": {
+                "encoding": "row_major_counts",
+                "height": 2,
+                "width": 3,
+                "counts": [0, 1, 1, 1, 2, 1],
+            },
+            "mask_npz_base64": "",
+            "mask_npz_sha256": "",
             "pixel_count": 3,
             "coverage_percent": 50.0,
         }
     ]
     assert isinstance(mask_payload["latency_ms"], float)
+
+
+def test_handler_materializes_inline_mask_request() -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import _build_routes
+
+    runner = _RecordingSamRunner()
+    server = _start_json_server(_build_routes(runner))
+    try:
+        mask_payload = _post_json(
+            f"http://127.0.0.1:{server.server_port}/v1/masks",
+            {
+                "request_id": "req-inline",
+                "image": _inline_image_payload(b"inline image bytes"),
+                "points": [
+                    {
+                        "x_px": 10.0,
+                        "y_px": 20.0,
+                        "label": "drawer",
+                        "source": '<point x="10" y="20">drawer</point>',
+                    }
+                ],
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert mask_payload["request_id"] == "req-inline"
+    assert runner.image_existed_during_call is True
+    assert runner.seen_image_path is not None
+    assert runner.seen_staging_dir is not None
+    assert not runner.seen_image_path.exists()
+    assert not runner.seen_staging_dir.exists()
+
+
+def test_inline_mask_request_uses_runner_staging_root(tmp_path: Path) -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import run_sam_mask_request
+
+    staging_root = tmp_path / "staging-root"
+    staging_root.mkdir()
+    runner = _RootCheckingSamRunner(staging_root)
+    request = SamMaskRequest.model_validate(
+        {
+            "request_id": "req-inline-root",
+            "image": _inline_image_payload(b"inline image bytes"),
+            "points": [
+                {
+                    "x_px": 10.0,
+                    "y_px": 20.0,
+                    "label": "drawer",
+                    "source": '<point x="10" y="20">drawer</point>',
+                }
+            ],
+        }
+    )
+
+    candidates = run_sam_mask_request(runner, request)
+
+    assert candidates[0].candidate_id == "mask_00"
+    assert runner.seen_staging_dir is not None
+    assert not runner.seen_staging_dir.exists()
 
 
 def test_invalid_mask_request_returns_recoverable_http_error(
@@ -823,6 +966,45 @@ def test_runner_invalid_output_returns_structured_http_error(tmp_path: Path) -> 
     assert error_payload == {"error": "sam_invalid_output", "request_id": "req-1"}
 
 
+def test_empty_mask_artifact_returns_structured_invalid_output_error(
+    tmp_path: Path,
+) -> None:
+    from codex_agent.scenefunc3d.servers.sam2_mask_server import _build_routes
+
+    image_path = tmp_path / "frame.jpg"
+    staging_dir = tmp_path / "out" / "sam" / "000050" / "candidates"
+    image_path.write_bytes(b"image")
+    server = _start_json_server(_build_routes(_EmptyMaskSamRunner()))
+    try:
+        with pytest.raises(urllib.error.HTTPError) as exc_info:
+            _post_json(
+                f"http://127.0.0.1:{server.server_port}/v1/masks",
+                {
+                    "request_id": "req-empty-mask",
+                    "image_path": str(image_path),
+                    "points": [
+                        {
+                            "x_px": 10.0,
+                            "y_px": 20.0,
+                            "label": "drawer",
+                            "source": '<point x="10" y="20">drawer</point>',
+                        }
+                    ],
+                    "staging_dir": str(staging_dir),
+                },
+            )
+        error_payload = json.loads(exc_info.value.read().decode("utf-8"))
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert exc_info.value.code == 500
+    assert error_payload == {
+        "error": "sam_invalid_output",
+        "request_id": "req-empty-mask",
+    }
+
+
 def _restore_modules(modules_by_name: dict[str, ModuleType]) -> None:
     for module_name, module in modules_by_name.items():
         sys.modules[module_name] = module
@@ -881,6 +1063,15 @@ def _sam_request(*, image_path: Path, staging_dir: Path) -> SamMaskRequest:
             "staging_dir": staging_dir,
         }
     )
+
+
+def _inline_image_payload(image_bytes: bytes) -> dict[str, object]:
+    return {
+        "filename": "frame.jpg",
+        "mime_type": "image/jpeg",
+        "sha256": hashlib.sha256(image_bytes).hexdigest(),
+        "data_base64": base64.b64encode(image_bytes).decode("ascii"),
+    }
 
 
 def _install_fake_runtime(

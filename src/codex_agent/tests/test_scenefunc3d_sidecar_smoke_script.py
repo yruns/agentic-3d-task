@@ -37,6 +37,19 @@ def test_sidecar_smoke_allows_generated_crop_artifacts_as_inputs() -> None:
     )
 
 
+def test_sidecar_smoke_defaults_outputs_to_repo_tmp() -> None:
+    script_text = _sidecar_smoke_script_path().read_text(encoding="utf-8")
+
+    assert (
+        'RUN_ROOT="${RUN_ROOT:-${REPO_ROOT}/tmp/scenefunc3d/sidecar_tool_smoke_20260629}"'
+        in script_text
+    )
+    assert (
+        'RUN_ROOT="${RUN_ROOT:-${DATASET_ROOT}/sidecar_tool_smoke_20260629}"'
+        not in (script_text)
+    )
+
+
 def _sidecar_smoke_script_path() -> Path:
     return (
         Path.cwd()

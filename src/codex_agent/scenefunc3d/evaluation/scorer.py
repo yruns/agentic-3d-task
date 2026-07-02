@@ -14,11 +14,13 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic.types import StringConstraints
 
 from codex_agent.errors import CodexResponseError, SceneFunc3dDataError
+from codex_agent.scenefunc3d.backends.lift_3d import load_scene_mesh_vertex_count
 from codex_agent.scenefunc3d.final_mask_artifacts import (
     FinalMaskArtifactDocument,
     validate_final_mask_artifact,
 )
 from codex_agent.scenefunc3d.sample import load_sample, scene_dir_for
+from codex_agent.scenefunc3d.tools.models import ToolInputError
 
 from .metrics import MaskMetrics, compute_mask_metrics
 
@@ -202,13 +204,51 @@ def score_mask_npz(
     mask_npz_path: Path,
     failure_type: str = "",
 ) -> SceneFunc3dScore:
-    """Score a mask NPZ containing predicted point ids against hidden GT."""
+    """Score a mask NPZ containing raw/source-scene point ids against hidden GT."""
+    predicted_ids = load_predicted_point_ids(mask_npz_path)
+    _validate_predicted_point_ids_within_raw_mesh(
+        data_root=data_root,
+        sample_id=sample_id,
+        predicted_ids=predicted_ids,
+        mask_npz_path=mask_npz_path,
+    )
     return score_point_ids(
         sample_id=sample_id,
-        predicted_ids=load_predicted_point_ids(mask_npz_path),
+        predicted_ids=predicted_ids,
         gt_ids=load_gt_point_ids(data_root, sample_id),
         failure_type=failure_type,
     )
+
+
+def _validate_predicted_point_ids_within_raw_mesh(
+    *,
+    data_root: Path,
+    sample_id: str,
+    predicted_ids: Set[int],
+    mask_npz_path: Path,
+) -> None:
+    if not predicted_ids:
+        return
+    root = Path(data_root)
+    sample = load_sample(root, sample_id)
+    raw_mesh_path = scene_dir_for(root, sample.visit_id) / "raw" / "mesh.ply"
+    try:
+        raw_vertex_count = load_scene_mesh_vertex_count(raw_mesh_path)
+    except ToolInputError as exc:
+        raise SceneFunc3dDataError(
+            "could not validate predicted point ids against raw SceneFunc3D mesh: "
+            f"sample_id={sample_id!r}; mask_npz_path={mask_npz_path}; "
+            f"raw_mesh_path={raw_mesh_path}; error={exc}"
+        ) from exc
+
+    max_predicted_id = max(predicted_ids)
+    if max_predicted_id >= raw_vertex_count:
+        raise SceneFunc3dDataError(
+            "predicted point id is outside raw mesh vertex range: "
+            f"sample_id={sample_id!r}; mask_npz_path={mask_npz_path}; "
+            f"raw_mesh_path={raw_mesh_path}; raw_vertex_count={raw_vertex_count}; "
+            f"max_predicted_id={max_predicted_id}"
+        )
 
 
 def score_mask_artifact(

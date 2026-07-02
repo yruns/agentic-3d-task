@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import socket
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -15,11 +16,18 @@ def test_agent_e2e_script_runs_runner_with_sidecars_and_scoring() -> None:
 
     assert "codex_agent.scenefunc3d.servers.molmo_point_server" in script_text
     assert "codex_agent.scenefunc3d.servers.sam2_mask_server" in script_text
-    assert "codex_agent.scenefunc3d.runner" in script_text
+    assert "codex_agent.cli.run_scenefunc3d" in script_text
     assert '"--score"' in script_text
     assert "--backend-config" in script_text
     assert "check_adapter_ready()" in script_text
     assert "ensure_codex_home()" in script_text
+
+
+def test_benchmark_readme_documents_cli_module_entrypoint() -> None:
+    readme_text = _benchmark_readme_path().read_text(encoding="utf-8")
+
+    assert "PYTHONPATH=src python -m codex_agent.cli.run_scenefunc3d" in readme_text
+    assert "python -m codex_agent.scenefunc3d.runner" not in readme_text
 
 
 def test_agent_e2e_script_allows_full_molmo_sam_fuse_tool_budget() -> None:
@@ -96,13 +104,74 @@ def test_agent_e2e_script_can_use_codex_auth_provider() -> None:
     assert 'PRECHECK_ONLY="${PRECHECK_ONLY:-0}"' in script_text
 
 
+def test_agent_e2e_script_supports_remote_workspace_proxy_sidecars() -> None:
+    script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
+
+    assert 'SIDECAR_MODE="${SIDECAR_MODE:-remote}"' in script_text
+    assert "SCENEFUNC3D_SIDECAR_BASE_URL" in script_text
+    assert "workspace-proxy-candy-maliva-tce.tiktok-row.org" in script_text
+    assert "SCENEFUNC3D_SIDECAR_HEADERS_PATH" in script_text
+    assert "sidecar_base_url = {json.dumps(sidecar_base_url)}" in script_text
+    assert "request_headers_path = {json.dumps(str(sidecar_headers_path))}" in (
+        script_text
+    )
+    assert "check_remote_sidecars_ready()" in script_text
+    assert 'if sidecar_mode == "remote":' in script_text
+
+
 def test_agent_e2e_script_allows_agent_generated_frame_artifacts() -> None:
     script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
 
+    assert "allowed_image_roots = " in script_text
+    assert "json.dumps(str(dataset_root.parent))" in script_text
+    assert "json.dumps(str(run_root))" in script_text
+
+
+def test_agent_e2e_script_defaults_outputs_to_repo_tmp() -> None:
+    script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
+
     assert (
-        'f\'allowed_image_roots = ["{dataset_root.parent}", "{run_root}"]\''
+        'RUN_ROOT="${RUN_ROOT:-${REPO_ROOT}/tmp/scenefunc3d/agent_runner_e2e_20260629}"'
         in script_text
     )
+    assert 'RUN_ROOT="${RUN_ROOT:-${DATASET_ROOT}/agent_runner_e2e_20260629}"' not in (
+        script_text
+    )
+
+
+def test_agent_e2e_script_defaults_are_repo_relative() -> None:
+    script_text = _agent_e2e_script_path().read_text(encoding="utf-8")
+
+    assert "/mlx_devbox/" not in script_text
+    assert "/usr/bin/python" not in script_text
+    assert "/home/tiger/.codex" not in script_text
+    assert "BASH_SOURCE[0]" in script_text
+    assert 'RUNNER_PYTHON_BIN="${RUNNER_PYTHON_BIN:-python3}"' in script_text
+
+
+def test_benchmark_asset_shell_scripts_use_portable_defaults() -> None:
+    for script_path in _benchmark_asset_script_paths():
+        script_text = script_path.read_text(encoding="utf-8")
+
+        assert "/mlx_devbox/" not in script_text
+        assert "/usr/bin/python" not in script_text
+        assert "BASH_SOURCE[0]" in script_text
+        assert "python3" in script_text
+
+
+def test_benchmark_python_smoke_uses_portable_defaults() -> None:
+    smoke_script = (
+        Path.cwd()
+        / "docs"
+        / "benchmark"
+        / "scenefunc_molmo_sam3d"
+        / "assets"
+        / "molmo_sam3d_smoke.py"
+    )
+    script_text = smoke_script.read_text(encoding="utf-8")
+
+    assert "/mlx_devbox/" not in script_text
+    assert "DATASET_ROOT" in script_text
 
 
 def test_agent_e2e_script_preflight_stops_before_gpu_sidecars(
@@ -111,7 +180,7 @@ def test_agent_e2e_script_preflight_stops_before_gpu_sidecars(
     _skip_without_adapter_runtime()
     port = _unused_port()
     run_root = tmp_path / "run"
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "START_ADAPTER": "1",
@@ -148,7 +217,7 @@ def test_agent_e2e_script_linux_defaults_to_project_local_adapter(
     _skip_without_adapter_runtime()
     port = _unused_port()
     run_root = tmp_path / "run"
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "HOST_UNAME": "Linux",
@@ -187,7 +256,7 @@ def test_agent_e2e_script_codex_auth_preflight_stops_before_sidecars(
     codex_home = tmp_path / ".codex-home"
     codex_home.mkdir()
     (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "USE_CODEX_AUTH": "1",
@@ -221,7 +290,7 @@ def test_agent_e2e_script_codex_auth_precheck_only_succeeds(
     codex_home.mkdir()
     (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
     (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "USE_CODEX_AUTH": "1",
@@ -258,7 +327,7 @@ def test_agent_e2e_script_precheck_rejects_conflicting_batch_sources(
     (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
     sample_ids_path = tmp_path / "sample_ids.json"
     sample_ids_path.write_text('["421254::desc-a"]\n', encoding="utf-8")
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "USE_CODEX_AUTH": "1",
@@ -294,7 +363,7 @@ def test_agent_e2e_script_precheck_rejects_explicit_sample_id_with_all_samples(
     codex_home.mkdir()
     (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
     (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "USE_CODEX_AUTH": "1",
@@ -332,7 +401,7 @@ def test_agent_e2e_script_precheck_rejects_missing_sample_ids_path(
     codex_home.mkdir()
     (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
     (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "USE_CODEX_AUTH": "1",
@@ -363,7 +432,7 @@ def test_agent_e2e_script_precheck_rejects_missing_sample_ids_path(
 def test_agent_e2e_script_precheck_rejects_invalid_all_samples_value(
     tmp_path: Path,
 ) -> None:
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "HOST_UNAME": "Linux",
@@ -399,7 +468,7 @@ def test_agent_e2e_script_codex_auth_precheck_accepts_sample_ids_path(
     (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
     sample_ids_path = tmp_path / "sample_ids.json"
     sample_ids_path.write_text('["421254::desc-a"]\n', encoding="utf-8")
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "USE_CODEX_AUTH": "1",
@@ -439,7 +508,7 @@ def test_agent_e2e_script_precheck_accepts_empty_sample_id_with_sample_ids_path(
     (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
     sample_ids_path = tmp_path / "sample_ids.json"
     sample_ids_path.write_text('["421254::desc-a"]\n', encoding="utf-8")
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "USE_CODEX_AUTH": "1",
@@ -479,7 +548,7 @@ def test_agent_e2e_script_precheck_rejects_duplicate_sample_ids(
         '["421254::desc-a", " 421254::desc-a "]\n',
         encoding="utf-8",
     )
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "SAMPLE_IDS_PATH": str(sample_ids_path),
@@ -510,7 +579,7 @@ def test_agent_e2e_script_precheck_rejects_malformed_sample_id(
 ) -> None:
     sample_ids_path = tmp_path / "sample_ids.json"
     sample_ids_path.write_text('["not-a-sample-id"]\n', encoding="utf-8")
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "SAMPLE_IDS_PATH": str(sample_ids_path),
@@ -543,7 +612,7 @@ def test_agent_e2e_script_codex_auth_precheck_accepts_all_samples(
     codex_home.mkdir()
     (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
     (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "USE_CODEX_AUTH": "1",
@@ -579,7 +648,7 @@ def test_agent_e2e_script_codex_auth_overrides_inherited_modelhub_env(
     codex_home.mkdir()
     (codex_home / "config.toml").write_text('model = "gpt-5.5"\n', encoding="utf-8")
     (codex_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
-    env = os.environ.copy()
+    env = _script_env(tmp_path)
     env.update(
         {
             "USE_CODEX_AUTH": "1",
@@ -633,15 +702,66 @@ def _agent_e2e_script_path() -> Path:
     )
 
 
+def _benchmark_readme_path() -> Path:
+    return Path.cwd() / "docs" / "benchmark" / "scenefunc_molmo_sam3d" / "README.md"
+
+
+def _benchmark_asset_script_paths() -> tuple[Path, ...]:
+    asset_dir = Path.cwd() / "docs" / "benchmark" / "scenefunc_molmo_sam3d" / "assets"
+    return (
+        asset_dir / "run_full_421254_000050.sh",
+        asset_dir / "run_sam_transformers_debug_20260629.sh",
+        asset_dir / "run_sidecar_tool_smoke_20260629.sh",
+    )
+
+
+def _script_env(tmp_path: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    for name in _SCRIPT_ENV_KEYS:
+        env.pop(name, None)
+    repo_root = Path.cwd()
+    env.update(
+        {
+            "REPO_ROOT": str(repo_root),
+            "DATASET_ROOT": str(tmp_path / "dataset"),
+            "RUNNER_PYTHON_BIN": sys.executable,
+            "SIDECAR_PYTHON_BIN": sys.executable,
+            "ADAPTER_PYTHON_BIN": sys.executable,
+        }
+    )
+    return env
+
+
+_SCRIPT_ENV_KEYS: tuple[str, ...] = (
+    "ADAPTER_PYTHON_BIN",
+    "ALL_SAMPLES",
+    "CODEX_AGENT_COPY_AUTH",
+    "CODEX_AGENT_ENABLE_PREFIX_CACHE",
+    "CODEX_AGENT_KEEP_RUN_HOME",
+    "CODEX_AGENT_MODEL_PROVIDER",
+    "CODEX_HOME",
+    "DATASET_ROOT",
+    "HOST_UNAME",
+    "PRECHECK_ONLY",
+    "REPO_ROOT",
+    "RUNNER_PYTHON_BIN",
+    "SAMPLE_ID",
+    "SAMPLE_IDS_PATH",
+    "SIDECAR_PYTHON_BIN",
+    "START_ADAPTER",
+    "USE_CODEX_AUTH",
+)
+
+
 def _skip_without_adapter_runtime() -> None:
     completed = subprocess.run(
-        ["/usr/bin/python", "-c", "import fastapi, uvicorn"],
+        [sys.executable, "-c", "import fastapi, uvicorn"],
         check=False,
         capture_output=True,
         text=True,
     )
     if completed.returncode != 0:
-        pytest.skip("/usr/bin/python cannot import fastapi and uvicorn")
+        pytest.skip(f"{sys.executable} cannot import fastapi and uvicorn")
 
 
 def _unused_port() -> int:

@@ -12,6 +12,8 @@ files directly while people browse the rendered MkDocs Material site.
   runtime investigations for Codex-based 3D reasoning agents.
 - [Benchmarks](benchmark/index.md): durable evaluation records for NR3D and
   OpenEQA, including timelines, version notes, and preserved artifacts.
+- [Latest Handoff](handoff_2026-07-02_1313.md): current SceneFunc3D/Codex
+  Agent SDK state, risks, metrics, and next steps for agent continuity.
 
 ## Local Preview
 

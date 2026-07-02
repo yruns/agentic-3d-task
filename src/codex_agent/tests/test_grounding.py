@@ -84,30 +84,50 @@ def test_tool_mode_inlines_playbook_and_anti_exploration_rules(
     assert "NOT exploring or editing a codebase" in prompt
 
 
-def test_tool_mode_never_attaches_on_disk_skill(nr3d_fixture: Nr3dFixture) -> None:
+def test_tool_mode_defaults_to_no_on_disk_skill(nr3d_fixture: Nr3dFixture) -> None:
     sample = load_sample(nr3d_fixture.data_root, nr3d_fixture.sample_id)
     scene = Nr3dScene.load(scene_dir_for(nr3d_fixture.data_root, nr3d_fixture.scene_id))
-    leftover_skill = CodexSkill(
+    task = Nr3dGroundingTask(
+        sample=sample,
+        scene=scene,
+        tools_enabled=True,
+        scene_dir=nr3d_fixture.scene_dir,
+    )
+    assert task.build_turn_request().skills == ()
+
+
+def test_tool_mode_attaches_explicit_skill(nr3d_fixture: Nr3dFixture) -> None:
+    sample = load_sample(nr3d_fixture.data_root, nr3d_fixture.sample_id)
+    scene = Nr3dScene.load(scene_dir_for(nr3d_fixture.data_root, nr3d_fixture.scene_id))
+    explicit_skill = CodexSkill(
         name="nr3d-codex-tools", path=nr3d_fixture.scene_dir / "SKILL.md"
     )
     task = Nr3dGroundingTask(
         sample=sample,
         scene=scene,
-        skill=leftover_skill,
+        skill=explicit_skill,
         tools_enabled=True,
         scene_dir=nr3d_fixture.scene_dir,
     )
-    # Tool mode inlines the playbook; an advertised SKILL.md path is the re-read
-    # bait, so no skill is attached even when one is supplied.
-    assert task.build_turn_request().skills == ()
+    request = task.build_turn_request()
+    assert request.skills == (explicit_skill,)
+    assert str(nr3d_fixture.scene_dir) in request.prompt
+    assert "Use the attached Codex skill" not in request.prompt
+    assert "Tool context" not in request.prompt
+    assert "invoke:" not in request.prompt
+    assert "python -m codex_agent.nr3d.tools" not in request.prompt
+    assert "Do NOT read" not in request.prompt
+    assert "Tool catalog" not in request.prompt
+    assert "Recommended loop" not in request.prompt
+    assert "Tool budget" not in request.prompt
 
 
-def test_prompt_only_mode_attaches_supplied_skill(nr3d_fixture: Nr3dFixture) -> None:
+def test_prompt_only_mode_rejects_supplied_skill(nr3d_fixture: Nr3dFixture) -> None:
     sample = load_sample(nr3d_fixture.data_root, nr3d_fixture.sample_id)
     scene = Nr3dScene.load(scene_dir_for(nr3d_fixture.data_root, nr3d_fixture.scene_id))
     skill = CodexSkill(name="nr3d-codex-sdk", path=nr3d_fixture.scene_dir / "SKILL.md")
-    task = Nr3dGroundingTask(sample=sample, scene=scene, skill=skill)
-    assert task.build_turn_request().skills == (skill,)
+    with pytest.raises(ValueError, match="tools_enabled=True"):
+        Nr3dGroundingTask(sample=sample, scene=scene, skill=skill)
 
 
 def test_prompt_only_mode_keeps_no_write_rule(nr3d_fixture: Nr3dFixture) -> None:

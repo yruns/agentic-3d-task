@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import importlib
 import json
 import sys
@@ -24,6 +26,7 @@ class _FakeMolmoRunner:
     model_name: str = "fake-molmo"
 
     def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
+        request.require_image_path()
         raw_text = f'<point x="50" y="50">{request.prompt}</point>'
         return MolmoRunnerPointResult(
             raw_text=raw_text,
@@ -43,6 +46,17 @@ class _OutOfMemoryMolmoRunner:
 
     def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
         raise RuntimeError("CUDA out of memory while allocating tensor")
+
+
+class _RecordingMolmoRunner(_FakeMolmoRunner):
+    seen_image_path: Path | None = None
+    image_existed_during_call: bool = False
+
+    def point(self, request: MolmoPointRequest) -> MolmoRunnerPointResult:
+        image_path = request.require_image_path()
+        self.seen_image_path = image_path
+        self.image_existed_during_call = image_path.is_file()
+        return super().point(request)
 
 
 def test_build_arg_parser_accepts_runtime_options() -> None:
@@ -356,6 +370,32 @@ def test_handler_supports_health_and_point_routes(tmp_path: Path) -> None:
     assert isinstance(point_payload["latency_ms"], float)
 
 
+def test_handler_materializes_inline_point_request() -> None:
+    from codex_agent.scenefunc3d.servers.molmo_point_server import _build_routes
+
+    runner = _RecordingMolmoRunner()
+    server = _start_json_server(_build_routes(runner))
+    try:
+        point_payload = _post_json(
+            f"http://127.0.0.1:{server.server_port}/v1/point",
+            {
+                "request_id": "req-inline",
+                "image": _inline_image_payload(b"inline image bytes"),
+                "prompt": "drawer handle",
+                "image_width": 640,
+                "image_height": 480,
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert point_payload["request_id"] == "req-inline"
+    assert runner.image_existed_during_call is True
+    assert runner.seen_image_path is not None
+    assert not runner.seen_image_path.exists()
+
+
 def test_invalid_point_request_returns_recoverable_http_error(tmp_path: Path) -> None:
     from codex_agent.scenefunc3d.servers.molmo_point_server import _build_routes
 
@@ -469,6 +509,15 @@ def _post_json(url: str, payload: dict[str, object]) -> dict[str, object]:
     if not isinstance(response_payload, dict):
         raise AssertionError("expected JSON object response")
     return response_payload
+
+
+def _inline_image_payload(image_bytes: bytes) -> dict[str, object]:
+    return {
+        "filename": "frame.jpg",
+        "mime_type": "image/jpeg",
+        "sha256": hashlib.sha256(image_bytes).hexdigest(),
+        "data_base64": base64.b64encode(image_bytes).decode("ascii"),
+    }
 
 
 class _FakeContext:
