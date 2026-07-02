@@ -715,7 +715,10 @@ def test_run_single_sample_fails_closed_on_missing_seed_sam_event(
         run_single_sample(
             config, sample_id="421254::desc-a", executor=executor, check_sidecars=False
         )
-    assert (tmp_path / "out" / "421254" / "desc-a" / "failure.json").is_file()
+    failure_path = tmp_path / "out" / "421254" / "desc-a" / "failure.json"
+    assert failure_path.is_file()
+    failure_payload = json.loads(failure_path.read_text(encoding="utf-8"))
+    assert failure_payload["failure_stage"] == "response_validation"
 
 
 def test_run_single_sample_fails_closed_on_empty_fused_mask(
@@ -743,6 +746,7 @@ def test_run_single_sample_fails_closed_on_empty_fused_mask(
         run_single_sample(
             config, sample_id="421254::desc-a", executor=executor, check_sidecars=False
         )
+    assert (tmp_path / "out" / "421254" / "desc-a" / "failure.json").is_file()
 
 
 def test_run_samples_writes_batch_evaluation_summary(

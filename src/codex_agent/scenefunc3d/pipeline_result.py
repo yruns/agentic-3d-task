@@ -151,7 +151,15 @@ def write_pipeline_fused_mask(
             f"closed instead of writing a zero-point artifact: fused_dir={fused_dir}"
         )
     index_array = np.asarray(point_indices, dtype=np.int64)
-    points_world = np.asarray(scene_vertices, dtype=np.float64)[index_array]
+    scene_points = np.asarray(scene_vertices, dtype=np.float64)
+    vertex_count = int(scene_points.shape[0])
+    if int(index_array.min()) < 0 or int(index_array.max()) >= vertex_count:
+        raise SceneFunc3dDataError(
+            "fused mask point index is outside the scene mesh vertex range: "
+            f"vertex_count={vertex_count}; min_index={int(index_array.min())}; "
+            f"max_index={int(index_array.max())}; fused_dir={fused_dir}"
+        )
+    points_world = scene_points[index_array]
     fused_dir.mkdir(parents=True, exist_ok=True)
     mask_npz_path = write_lift_npz(
         fused_dir / "mask_data.npz", points_world, point_indices=index_array

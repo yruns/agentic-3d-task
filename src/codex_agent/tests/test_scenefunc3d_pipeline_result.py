@@ -94,6 +94,16 @@ def test_write_pipeline_fused_mask_rejects_empty(tmp_path: Path) -> None:
     assert not (tmp_path / "fused").exists()
 
 
+def test_write_pipeline_fused_mask_rejects_out_of_range_index(tmp_path: Path) -> None:
+    with pytest.raises(
+        SceneFunc3dDataError, match="outside the scene mesh vertex range"
+    ):
+        write_pipeline_fused_mask(
+            tmp_path / "fused", point_indices=(0, 999), scene_vertices=_SCENE_VERTICES
+        )
+    assert not (tmp_path / "fused").exists()
+
+
 def test_write_pipeline_result_writes_scorable_payload(tmp_path: Path) -> None:
     npz_path, ply_path = write_pipeline_fused_mask(
         tmp_path / "fused", point_indices=(0, 1, 2), scene_vertices=_SCENE_VERTICES
