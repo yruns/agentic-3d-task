@@ -232,7 +232,8 @@ class SceneFunc3dBatchRunSummary:
 
 
 class SceneFunc3dMaskTask:
-    """A Codex task for producing one SceneFunc3D 3D mask artifact."""
+    """A Codex task for confirming one 2D seed that drives the SceneFunc3D
+    mask pipeline."""
 
     def __init__(
         self,
