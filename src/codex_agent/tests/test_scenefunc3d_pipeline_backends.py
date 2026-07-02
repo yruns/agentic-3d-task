@@ -9,6 +9,8 @@ import pytest
 from PIL import Image
 
 from codex_agent.scenefunc3d.backends.lift_3d import CameraGeometry
+from codex_agent.scenefunc3d.pipeline_backends import _select_prompt_point
+from codex_agent.scenefunc3d.tools.molmo_pointing import MolmoPoint
 
 
 def _write_rgb(path: Path, size: tuple[int, int] = (40, 40)) -> None:
@@ -89,6 +91,8 @@ def test_sidecar_proposer_picks_nearest_molmo_point_and_smallest_sam(
         )
 
     def _fake_lift(args, *, out_dir, raw_mesh_path):
+        assert args.candidate_id == "csmall"
+        assert Path(args.mask_path).name == "small.npz"
         npz = tmp_path / "fragments_000000_csmall.npz"
         np.savez_compressed(
             npz,
@@ -216,3 +220,46 @@ def test_sidecar_proposer_falls_back_to_projected_anchor(
     assert proposal.molmo_fallback_used is True
     assert captured_points[0] == pytest.approx((15.0, 16.0))
     assert proposal.point_indices == (1,)
+
+
+def test_select_prompt_point_uses_nearest_when_within_threshold() -> None:
+    points = (
+        MolmoPoint(x_px=21.0, y_px=20.0, source="molmo", label="a"),
+        MolmoPoint(x_px=39.0, y_px=39.0, source="molmo", label="b"),
+    )
+    xy, fallback = _select_prompt_point(
+        points, projected_anchor_xy=(20.0, 20.0), image_width=40, image_height=40
+    )
+    assert xy == (21.0, 20.0)
+    assert fallback is False
+
+
+def test_select_prompt_point_falls_back_when_all_molmo_too_far() -> None:
+    # Both points are far from the projected anchor (0,0); diagonal of a 40x40
+    # image is ~56.6, threshold 0.15*diag ~= 8.5, so a point at (39,39) is too far.
+    points = (MolmoPoint(x_px=39.0, y_px=39.0, source="molmo", label="a"),)
+    xy, fallback = _select_prompt_point(
+        points, projected_anchor_xy=(0.0, 0.0), image_width=40, image_height=40
+    )
+    assert xy == (0.0, 0.0)
+    assert fallback is True
+
+
+def test_select_prompt_point_none_anchor_uses_first_molmo_point() -> None:
+    points = (
+        MolmoPoint(x_px=5.0, y_px=6.0, source="molmo", label="a"),
+        MolmoPoint(x_px=7.0, y_px=8.0, source="molmo", label="b"),
+    )
+    xy, fallback = _select_prompt_point(
+        points, projected_anchor_xy=None, image_width=40, image_height=40
+    )
+    assert xy == (5.0, 6.0)
+    assert fallback is False
+
+
+def test_select_prompt_point_none_anchor_no_points_returns_none_no_fallback() -> None:
+    xy, fallback = _select_prompt_point(
+        (), projected_anchor_xy=None, image_width=40, image_height=40
+    )
+    assert xy is None
+    assert fallback is False  # nothing available is NOT an anchor fallback

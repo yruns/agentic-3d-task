@@ -148,7 +148,7 @@ def _select_prompt_point(
     if projected_anchor_xy is None:
         if molmo_points:
             return (molmo_points[0].x_px, molmo_points[0].y_px), False
-        return None, True
+        return None, False
     if molmo_points:
         anchor = np.asarray(projected_anchor_xy, dtype=np.float64)
         distances = [
