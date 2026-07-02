@@ -86,6 +86,31 @@ def test_write_pipeline_fused_mask_writes_npz_and_ply(tmp_path: Path) -> None:
         assert np.array_equal(archive["points_world"], _SCENE_VERTICES[[0, 3]])
 
 
+def test_write_pipeline_fused_mask_returns_absolute_paths_for_relative_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A relative --output-dir must still yield absolute artifact paths in the
+    # durable result.json; a CWD-relative member path makes
+    # score_pipeline_result_file re-join it under the result dir and double the
+    # path (the FileNotFoundError the Phase-2c online smoke hit).
+    monkeypatch.chdir(tmp_path)
+    npz_path, ply_path = write_pipeline_fused_mask(
+        Path("run/fused"), point_indices=(0, 3), scene_vertices=_SCENE_VERTICES
+    )
+    assert npz_path.is_absolute() and ply_path.is_absolute()
+    assert npz_path.is_file() and ply_path.is_file()
+    outcome = SceneFunc3dPipelineOutcome(
+        seed=_seed_outcome(),
+        seed_point_count=2,
+        mask_npz_path=npz_path,
+        mask_ply_path=ply_path,
+        result=_pipeline_result((0, 3)),
+    )
+    payload = outcome.to_payload()
+    assert Path(payload["mask_npz_path"]).is_absolute()
+    assert Path(payload["mask_ply_path"]).is_absolute()
+
+
 def test_write_pipeline_fused_mask_rejects_empty(tmp_path: Path) -> None:
     with pytest.raises(SceneFunc3dDataError, match="empty fused mask"):
         write_pipeline_fused_mask(

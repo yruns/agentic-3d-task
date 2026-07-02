@@ -144,7 +144,17 @@ class SceneFunc3dPipelineOutcome:
 def write_pipeline_fused_mask(
     fused_dir: Path, *, point_indices: tuple[int, ...], scene_vertices: FloatArray
 ) -> tuple[Path, Path]:
-    """Write the fused mask NPZ (points + ids) and ASCII PLY; fail on empty."""
+    """Write the fused mask NPZ (points + ids) and ASCII PLY; fail on empty.
+
+    Returns absolute artifact paths (resolved against the current working
+    directory when ``fused_dir`` is relative) so the durable ``result.json``
+    references them unambiguously. Storing a CWD-relative path there breaks
+    ``score_pipeline_result_file``, whose ``_resolve_artifact_member_path``
+    re-joins a relative member under the ``result.json`` directory (path
+    doubling) — the failure the Phase-2c online smoke hit with a relative
+    ``--output-dir``.
+    """
+    fused_dir = fused_dir.absolute()
     if not point_indices:
         raise SceneFunc3dDataError(
             "anchor multi-view pipeline produced an empty fused mask; failing "
