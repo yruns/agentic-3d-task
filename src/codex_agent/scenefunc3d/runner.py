@@ -532,17 +532,25 @@ def _lift_seed_fragment(
 ) -> LiftMaskResult:
     """Lift the confirmed 2D SAM mask to a raw-mesh fragment (deterministic)."""
     assets = resolve_frame_geometry_assets(scene, seed_outcome.seed_frame_id)
-    return lift_mask_to_3d(
-        LiftMaskArgs(
+    try:
+        lift_args = LiftMaskArgs(
             frame_id=seed_outcome.seed_frame_id,
             candidate_id=seed_outcome.seed_candidate_id,
             mask_path=seed_outcome.seed_sam_mask_npz_path,
             depth_path=assets.depth_path,
             intrinsics_path=assets.intrinsics_path,
             pose_path=assets.pose_path,
-        ),
-        out_dir=out_dir,
-        raw_mesh_path=scene.raw_mesh_path,
+        )
+    except ValidationError as exc:
+        raise SceneFunc3dDataError(
+            "confirmed seed lift inputs are missing or invalid on disk: "
+            f"frame_id={seed_outcome.seed_frame_id!r}; "
+            f"candidate_id={seed_outcome.seed_candidate_id!r}; "
+            f"seed_sam_mask_npz_path={seed_outcome.seed_sam_mask_npz_path}; "
+            f"error={exc}"
+        ) from exc
+    return lift_mask_to_3d(
+        lift_args, out_dir=out_dir, raw_mesh_path=scene.raw_mesh_path
     )
 
 

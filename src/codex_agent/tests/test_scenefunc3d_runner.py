@@ -749,6 +749,41 @@ def test_run_single_sample_fails_closed_on_empty_fused_mask(
     assert (tmp_path / "out" / "421254" / "desc-a" / "failure.json").is_file()
 
 
+def test_lift_seed_fragment_fails_closed_when_seed_mask_missing(
+    tmp_path: Path,
+) -> None:
+    from codex_agent.scenefunc3d.seed_contract import SceneFunc3dSeedOutcome
+    from codex_agent.tests.scenefunc3d_synthetic_scene import (
+        SyntheticFrame,
+        write_synthetic_scene,
+    )
+
+    intrinsics = np.array([[20.0, 0.0, 20.0], [0.0, 20.0, 20.0], [0.0, 0.0, 1.0]])
+    vertices = np.array(
+        [[0.0, 0.0, 2.0], [0.01, 0.0, 2.0], [0.0, 0.01, 2.0]], dtype=np.float64
+    )
+    scene = write_synthetic_scene(
+        tmp_path / "scene",
+        frames=(SyntheticFrame("000000", np.eye(4), depth_value_m=2.0),),
+        vertices_world=vertices,
+        intrinsics=intrinsics,
+    )
+    outcome = SceneFunc3dSeedOutcome(
+        seed_frame_id="000000",
+        seed_candidate_id="cand-a",
+        seed_fragment_id="000000_cand-a",
+        affordance_concept="the drawer handle",
+        approval_actions=SEED_APPROVAL_ACTIONS,
+        uncertainties=(),
+        seed_sam_mask_npz_path=tmp_path / "missing" / "cand-a.npz",
+    )
+
+    with pytest.raises(SceneFunc3dDataError, match="missing or invalid on disk"):
+        runner._lift_seed_fragment(
+            scene=scene, seed_outcome=outcome, out_dir=tmp_path / "out"
+        )
+
+
 def test_run_samples_writes_batch_evaluation_summary(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
