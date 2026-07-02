@@ -98,6 +98,32 @@ def test_playbook_tells_agent_to_record_seed_approval_actions() -> None:
     assert "approve_sam_candidate" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
+def test_playbook_approval_actions_prose_matches_seed_approval_actions() -> None:
+    from codex_agent.scenefunc3d.task import (
+        FRAGMENT_APPROVAL_ACTIONS,
+        SEED_APPROVAL_ACTIONS,
+    )
+
+    seed_values = [action.value for action in SEED_APPROVAL_ACTIONS]
+    assert len(seed_values) == 5
+
+    indices: list[int] = []
+    for value in seed_values:
+        assert value in SCENEFUNC3D_TOOLS_PLAYBOOK, value
+        indices.append(SCENEFUNC3D_TOOLS_PLAYBOOK.index(value))
+    for earlier_index, later_index in zip(indices, indices[1:]):
+        assert earlier_index < later_index
+
+    first_lift_only_values = tuple(
+        action.value
+        for action in FRAGMENT_APPROVAL_ACTIONS
+        if action not in SEED_APPROVAL_ACTIONS
+    )
+    assert "approve_first_lift" in first_lift_only_values
+    for value in first_lift_only_values:
+        assert value not in SCENEFUNC3D_TOOLS_PLAYBOOK, value
+
+
 def test_playbook_tells_agent_to_target_pinch_pull_affordance_points() -> None:
     assert "pinch_pull" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "handle" in SCENEFUNC3D_TOOLS_PLAYBOOK
