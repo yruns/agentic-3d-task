@@ -137,5 +137,37 @@ def validate_fragment_approval_actions(
         )
 
 
+SEED_APPROVAL_ACTIONS: tuple[ApprovalAction, ...] = (
+    ApprovalAction.SELECT_EVIDENCE,
+    ApprovalAction.PROPOSE_MOLMO_POINT,
+    ApprovalAction.APPROVE_MOLMO_POINT,
+    ApprovalAction.PROPOSE_SAM_CANDIDATES,
+    ApprovalAction.APPROVE_SAM_CANDIDATE,
+)
+
+
+def validate_seed_approval_actions(
+    seed_fragment_id: str, approval_actions: tuple[ApprovalAction, ...]
+) -> None:
+    """Validate one confirmed 2D seed's approval action sequence."""
+    if approval_actions != SEED_APPROVAL_ACTIONS:
+        raise SceneFunc3dDataError(
+            "seed approval_actions must exactly replay the SceneFun3D point/SAM "
+            "approval gates ending at approve_sam_candidate: "
+            f"seed_fragment_id={seed_fragment_id}; "
+            f"expected={_approval_action_values(SEED_APPROVAL_ACTIONS)}; "
+            f"actual={_approval_action_values(approval_actions)}"
+        )
+    state = SceneFunc3dState.initial(seed_fragment_id)
+    for action in approval_actions:
+        state = state.transition(action)
+    if state.stage is not SceneFunc3dStage.SAM_CANDIDATE_AGENT_APPROVED:
+        raise SceneFunc3dDataError(
+            "seed approval_actions must end at "
+            f"{SceneFunc3dStage.SAM_CANDIDATE_AGENT_APPROVED.value}: "
+            f"seed_fragment_id={seed_fragment_id}; stage={state.stage.value}"
+        )
+
+
 def _approval_action_values(actions: tuple[ApprovalAction, ...]) -> tuple[str, ...]:
     return tuple(action.value for action in actions)

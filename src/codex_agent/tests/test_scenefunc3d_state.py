@@ -89,3 +89,25 @@ def test_final_answer_cannot_emit_before_fused_mask() -> None:
 
     with pytest.raises(SceneFunc3dDataError, match="invalid transition"):
         state.transition(ApprovalAction.EMIT_FINAL_ANSWER)
+
+
+def test_validate_seed_approval_actions_accepts_five_gate_sequence() -> None:
+    from codex_agent.scenefunc3d.task import (
+        SEED_APPROVAL_ACTIONS,
+        validate_seed_approval_actions,
+    )
+
+    validate_seed_approval_actions("000010_cand-a", SEED_APPROVAL_ACTIONS)
+
+
+def test_validate_seed_approval_actions_rejects_first_lift_sequence() -> None:
+    import pytest
+
+    from codex_agent.errors import SceneFunc3dDataError
+    from codex_agent.scenefunc3d.task import (
+        FRAGMENT_APPROVAL_ACTIONS,
+        validate_seed_approval_actions,
+    )
+
+    with pytest.raises(SceneFunc3dDataError, match="approve_sam_candidate"):
+        validate_seed_approval_actions("000010_cand-a", FRAGMENT_APPROVAL_ACTIONS)
