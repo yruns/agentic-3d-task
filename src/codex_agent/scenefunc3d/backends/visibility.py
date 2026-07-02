@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -14,6 +15,9 @@ from codex_agent.scenefunc3d.backends.lift_3d import (
     FloatArray,
     _validate_points_world,
 )
+
+if TYPE_CHECKING:
+    from codex_agent.scenefunc3d.tools.scene_context import SceneFunc3dToolScene
 
 _DEFAULT_DEPTH_TOLERANCE = 0.25
 
@@ -204,11 +208,74 @@ def select_visible_frames(
     return tuple(visible[:frame_cap])
 
 
+def select_scene_visible_frames(
+    anchor: TargetAnchor,
+    scene: SceneFunc3dToolScene,
+    *,
+    frame_cap: int,
+    depth_tolerance: float = _DEFAULT_DEPTH_TOLERANCE,
+) -> tuple[FrameVisibility, ...]:
+    """Stream a scene's frames, score anchor visibility, return top-N + seed.
+
+    Depth is read one frame at a time and discarded to bound memory. The
+    anchor's ``seed_frame_id`` is always included (when it has geometry) so a
+    fully-occluded scene degrades to the single-frame seed rather than an empty
+    selection.
+    """
+    if frame_cap <= 0:
+        raise ValueError(f"frame_cap must be positive: {frame_cap!r}")
+
+    from codex_agent.scenefunc3d.backends.frame_loader import (
+        iter_frame_geometry,
+        load_frame_geometry,
+        read_frame_depth,
+    )
+
+    scored: list[FrameVisibility] = []
+    seen_frame_ids: set[str] = set()
+    for frame_id, geometry in iter_frame_geometry(scene):
+        depth = read_frame_depth(scene, frame_id)
+        scored.append(
+            score_anchor_visibility(
+                frame_id, anchor, geometry, depth, depth_tolerance=depth_tolerance
+            )
+        )
+        seen_frame_ids.add(frame_id)
+
+    visible = [result for result in scored if result.visible]
+    visible.sort(key=lambda result: (-result.quality_score, result.frame_id))
+    selected = list(visible[:frame_cap])
+    selected_ids = {result.frame_id for result in selected}
+
+    if anchor.seed_frame_id not in selected_ids:
+        seed_score = next(
+            (r for r in scored if r.frame_id == anchor.seed_frame_id), None
+        )
+        if seed_score is not None:
+            selected.append(seed_score)
+        elif anchor.seed_frame_id not in seen_frame_ids:
+            # Seed frame absent from the streamed set: score it directly so the
+            # pipeline can still process it (fail-closed handled by loaders).
+            seed_geometry = load_frame_geometry(scene, anchor.seed_frame_id)
+            seed_depth = read_frame_depth(scene, anchor.seed_frame_id)
+            selected.append(
+                score_anchor_visibility(
+                    anchor.seed_frame_id,
+                    anchor,
+                    seed_geometry,
+                    seed_depth,
+                    depth_tolerance=depth_tolerance,
+                )
+            )
+    return tuple(selected)
+
+
 __all__ = [
     "FrameCamera",
     "FrameVisibility",
     "point_visibility",
     "project_world_to_pixels",
     "score_anchor_visibility",
+    "select_scene_visible_frames",
     "select_visible_frames",
 ]

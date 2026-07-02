@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from codex_agent.scenefunc3d.backends.anchor import build_anchor
+from codex_agent.scenefunc3d.backends.anchor import TargetAnchor, build_anchor
 from codex_agent.scenefunc3d.backends.lift_3d import CameraGeometry
 from codex_agent.scenefunc3d.backends.visibility import (
     FrameCamera,
@@ -13,7 +15,13 @@ from codex_agent.scenefunc3d.backends.visibility import (
     point_visibility,
     project_world_to_pixels,
     score_anchor_visibility,
+    select_scene_visible_frames,
     select_visible_frames,
+)
+from codex_agent.scenefunc3d.tools.scene_context import SceneFunc3dToolScene
+from codex_agent.tests.scenefunc3d_synthetic_scene import (
+    SyntheticFrame,
+    write_synthetic_scene,
 )
 
 
@@ -28,7 +36,7 @@ def _flat_depth(value: float = 2.0, size: int = 100) -> np.ndarray:
     return np.full((size, size), value, dtype=np.float64)
 
 
-def _centered_anchor() -> object:
+def _centered_anchor() -> TargetAnchor:
     # Symmetric points -> centroid exactly (0, 0, 2) -> projects to (50, 50),
     # so centeredness is exactly 1.0.
     points = np.array(
@@ -137,3 +145,44 @@ def test_selection_respects_frame_cap() -> None:
     )
     selected = select_visible_frames(anchor, cameras, frame_cap=3)
     assert len(selected) == 3
+
+
+def _pipeline_scene(tmp_path: Path) -> SceneFunc3dToolScene:
+    intrinsics = np.array([[20.0, 0.0, 20.0], [0.0, 20.0, 20.0], [0.0, 0.0, 1.0]])
+    frames = (
+        # 000000 sees the anchor at depth 2.0 (unoccluded).
+        SyntheticFrame("000000", np.eye(4), depth_value_m=2.0),
+        # 000001 has a near wall at 1.0 -> anchor at z=2.0 is occluded.
+        SyntheticFrame("000001", np.eye(4), depth_value_m=1.0),
+    )
+    return write_synthetic_scene(
+        tmp_path / "scene",
+        frames=frames,
+        vertices_world=np.array([[0.0, 0.0, 2.0], [0.02, 0.0, 2.0]]),
+        intrinsics=intrinsics,
+    )
+
+
+def test_select_scene_visible_frames_streams_and_ranks(tmp_path: Path) -> None:
+    scene = _pipeline_scene(tmp_path)
+    anchor = build_anchor(
+        np.array([[0.0, 0.0, 2.0], [0.02, 0.0, 2.0], [-0.02, 0.0, 2.0]]),
+        motion_type="pinch_pull",
+        seed_frame_id="000000",
+    )
+    selected = select_scene_visible_frames(anchor, scene, frame_cap=10)
+    assert "000000" in {v.frame_id for v in selected}
+    # The occluded frame must be dropped unless it is the seed frame.
+    assert "000001" not in {v.frame_id for v in selected}
+
+
+def test_select_scene_visible_frames_always_includes_seed(tmp_path: Path) -> None:
+    scene = _pipeline_scene(tmp_path)
+    # Seed is the occluded frame; it must still appear (single-frame degrade).
+    anchor = build_anchor(
+        np.array([[0.0, 0.0, 2.0], [0.02, 0.0, 2.0], [-0.02, 0.0, 2.0]]),
+        motion_type="pinch_pull",
+        seed_frame_id="000001",
+    )
+    selected = select_scene_visible_frames(anchor, scene, frame_cap=10)
+    assert "000001" in {v.frame_id for v in selected}
