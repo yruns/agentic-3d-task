@@ -81,3 +81,6 @@ nav:
           - v3 Agent Loop Status: benchmark/scenefunc_molmo_sam3d/v3_agent_loop_status_20260630.md
           - v4 Raw Point ID Alignment: benchmark/scenefunc_molmo_sam3d/v4_raw_point_id_alignment_20260702.md
           - v5 All 421254 Keep Home Review: benchmark/scenefunc_molmo_sam3d/v5_all421254_keep_home_review_20260702.md
+          - v6 Offline Fusion Sweep: benchmark/scenefunc_molmo_sam3d/v6_offline_fusion_sweep_20260702.md
+          - v7 Semi-Online Pipeline: benchmark/scenefunc_molmo_sam3d/v7_semi_online_pipeline_20260702.md
+          - v8 Seed Confirmation Online: benchmark/scenefunc_molmo_sam3d/v8_seed_confirmation_online_20260703.md

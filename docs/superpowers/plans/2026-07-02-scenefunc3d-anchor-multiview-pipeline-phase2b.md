@@ -2287,6 +2287,12 @@ git commit -m "docs(scenefunc3d): link phase 2b plan from phase 2a roadmap"
 
 ## Phase 2c (separate plan — agent SeedConfirmation contract)
 
+Implemented in `docs/superpowers/plans/2026-07-02-scenefunc3d-seed-confirmation-contract-phase2c.md`.
+
+> Note: the shipped Phase 2c contract confirms only a **2D seed** — the agent approval gate ends
+> at `SAM_CANDIDATE_AGENT_APPROVED` (not `FIRST_LIFT_AGENT_APPROVED`) and the deterministic 3D lift
+> moved into the runner. The high-level sketch below predates that decision.
+
 Out of scope here; write a dedicated plan after semi-online validation. High-level shape:
 
 - New `SeedConfirmation` output schema: `frame_id`, `candidate_id`, `affordance_concept`,
