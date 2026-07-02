@@ -56,18 +56,34 @@ def _pipeline_result(point_indices: tuple[int, ...]) -> AnchorMultiViewResult:
                 reject_reason="",
                 molmo_fallback_used=False,
             ),
+            PerFrameOutcome(
+                frame_id="000020",
+                point_indices=(),
+                centroid=None,
+                accepted=False,
+                reject_reason="anchor_gate",
+                molmo_fallback_used=False,
+            ),
+            PerFrameOutcome(
+                frame_id="000030",
+                point_indices=point_indices,
+                centroid=(0.0, 0.0, 2.0),
+                accepted=True,
+                reject_reason="",
+                molmo_fallback_used=False,
+            ),
         ),
     )
 
 
 def test_write_pipeline_fused_mask_writes_npz_and_ply(tmp_path: Path) -> None:
     npz_path, ply_path = write_pipeline_fused_mask(
-        tmp_path / "fused", point_indices=(0, 1, 2), scene_vertices=_SCENE_VERTICES
+        tmp_path / "fused", point_indices=(0, 3), scene_vertices=_SCENE_VERTICES
     )
     assert npz_path.is_file() and ply_path.is_file()
     with np.load(npz_path) as archive:
-        assert sorted(int(v) for v in archive["point_indices"]) == [0, 1, 2]
-        assert archive["points_world"].shape == (3, 3)
+        assert [int(v) for v in archive["point_indices"]] == [0, 3]
+        assert np.array_equal(archive["points_world"], _SCENE_VERTICES[[0, 3]])
 
 
 def test_write_pipeline_fused_mask_rejects_empty(tmp_path: Path) -> None:
@@ -75,6 +91,7 @@ def test_write_pipeline_fused_mask_rejects_empty(tmp_path: Path) -> None:
         write_pipeline_fused_mask(
             tmp_path / "fused", point_indices=(), scene_vertices=_SCENE_VERTICES
         )
+    assert not (tmp_path / "fused").exists()
 
 
 def test_write_pipeline_result_writes_scorable_payload(tmp_path: Path) -> None:
@@ -99,8 +116,15 @@ def test_write_pipeline_result_writes_scorable_payload(tmp_path: Path) -> None:
     assert payload["result_kind"] == "anchor_multiview_pipeline"
     assert payload["outcome"]["mask_npz_path"] == str(npz_path)
     assert payload["outcome"]["confidence"] == pytest.approx(0.75)
-    assert payload["outcome"]["selected_frame_ids"] == ["000010"]
+    assert payload["outcome"]["selected_frame_ids"] == ["000010", "000030"]
     assert payload["outcome"]["seed"]["seed_fragment_id"] == "000010_cand-a"
     assert payload["outcome"]["seed"]["seed_point_count"] == 2
     assert payload["outcome"]["per_frame"][0]["frame_id"] == "000010"
+    assert payload["outcome"]["per_frame"][1] == {
+        "frame_id": "000020",
+        "point_count": 0,
+        "accepted": False,
+        "reject_reason": "anchor_gate",
+        "molmo_fallback_used": False,
+    }
     assert payload["turn"]["turn_id"] == "fake-turn"
