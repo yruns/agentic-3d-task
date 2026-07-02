@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from codex_agent.errors import SceneFunc3dDataError
 from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz
 from codex_agent.scenefunc3d.evaluation.scorer import (
     score_pipeline_result_file,
@@ -87,3 +88,27 @@ def test_score_result_file_dispatches_on_result_kind(tmp_path: Path) -> None:
     _pipeline_result_json(result_path, mask_npz_path=fused)
     score = score_result_file(data_root=tmp_path / "data", result_path=result_path)
     assert score.metrics.iou == pytest.approx(2.0 / 3.0)
+
+
+def test_score_result_file_rejects_missing_file(tmp_path: Path) -> None:
+    with pytest.raises(SceneFunc3dDataError, match="missing"):
+        score_result_file(
+            data_root=tmp_path / "data", result_path=tmp_path / "nope.json"
+        )
+
+
+def test_score_result_file_rejects_non_json(tmp_path: Path) -> None:
+    result_path = tmp_path / "r.json"
+    result_path.write_text("not json", encoding="utf-8")
+    with pytest.raises(SceneFunc3dDataError, match="not valid JSON"):
+        score_result_file(data_root=tmp_path / "data", result_path=result_path)
+
+
+def test_score_pipeline_result_file_rejects_out_of_range_ids(tmp_path: Path) -> None:
+    write_scoring_scene(tmp_path / "data", gt_point_ids=(0, 1, 2), vertex_count=8)
+    fused = tmp_path / "run" / "fused" / "mask_data.npz"
+    _write_fused(fused, (0, 99))
+    result_path = tmp_path / "run" / "result.json"
+    _pipeline_result_json(result_path, mask_npz_path=fused)
+    with pytest.raises(SceneFunc3dDataError, match="outside raw mesh"):
+        score_pipeline_result_file(data_root=tmp_path / "data", result_path=result_path)

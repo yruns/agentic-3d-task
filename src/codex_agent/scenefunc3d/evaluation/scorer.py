@@ -7,7 +7,7 @@ from collections.abc import Set
 from dataclasses import dataclass
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Annotated, TypeAlias
+from typing import Annotated, Literal, TypeAlias
 from zipfile import BadZipFile
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -87,7 +87,7 @@ class _PipelineScoringResultFile(BaseModel):
 
     task_name: NonEmptyString
     sample_id: NonEmptyString
-    result_kind: NonEmptyString
+    result_kind: Literal["anchor_multiview_pipeline"]
     outcome: _PipelineScoringOutcome
 
 
