@@ -11,7 +11,10 @@ from codex_agent.scenefunc3d.seed_contract import (
     SeedConfirmation,
     parse_seed_confirmation,
 )
-from codex_agent.scenefunc3d.task import SEED_APPROVAL_ACTIONS
+from codex_agent.scenefunc3d.task import (
+    FRAGMENT_APPROVAL_ACTIONS,
+    SEED_APPROVAL_ACTIONS,
+)
 
 _APPROVAL_VALUES = [action.value for action in SEED_APPROVAL_ACTIONS]
 
@@ -44,8 +47,6 @@ def test_parse_seed_confirmation_defaults_uncertainties_to_empty() -> None:
 
 
 def test_parse_seed_confirmation_rejects_first_lift_gate_sequence() -> None:
-    from codex_agent.scenefunc3d.task import FRAGMENT_APPROVAL_ACTIONS
-
     payload = _valid_payload()
     payload["approval_actions"] = [a.value for a in FRAGMENT_APPROVAL_ACTIONS]
     with pytest.raises(CodexResponseError, match="approval_actions"):
@@ -69,3 +70,38 @@ def test_parse_seed_confirmation_rejects_extra_fields() -> None:
 def test_parse_seed_confirmation_rejects_non_json() -> None:
     with pytest.raises(CodexResponseError):
         parse_seed_confirmation("not json at all")
+
+
+def test_parse_seed_confirmation_rejects_empty_approval_actions() -> None:
+    payload = _valid_payload()
+    payload["approval_actions"] = []
+    with pytest.raises(CodexResponseError):
+        parse_seed_confirmation(json.dumps(payload))
+
+
+def test_parse_seed_confirmation_rejects_blank_affordance_concept() -> None:
+    payload = _valid_payload()
+    payload["affordance_concept"] = "   "
+    with pytest.raises(CodexResponseError):
+        parse_seed_confirmation(json.dumps(payload))
+
+
+def test_parse_seed_confirmation_rejects_missing_required_field() -> None:
+    payload = _valid_payload()
+    payload.pop("seed_candidate_id")
+    with pytest.raises(CodexResponseError):
+        parse_seed_confirmation(json.dumps(payload))
+
+
+def test_parse_seed_confirmation_rejects_unknown_enum_value() -> None:
+    payload = _valid_payload()
+    payload["approval_actions"] = [*_APPROVAL_VALUES[:-1], "frobnicate"]
+    with pytest.raises(CodexResponseError):
+        parse_seed_confirmation(json.dumps(payload))
+
+
+def test_parse_seed_confirmation_strips_whitespace_in_string_fields() -> None:
+    payload = _valid_payload()
+    payload["seed_frame_id"] = " 000010 "
+    confirmation = parse_seed_confirmation(json.dumps(payload))
+    assert confirmation.seed_frame_id == "000010"
