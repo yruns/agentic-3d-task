@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from codex_agent.scenefunc3d.tests_support import write_binary_ply_mesh
 from codex_agent.scenefunc3d.tools.scene_context import SceneFunc3dToolScene
 
 
@@ -51,7 +52,7 @@ def write_synthetic_scene(
         Image.fromarray(depth_image).save(raw_dir / f"{frame.frame_id}-depth.png")
         _write_matrix(raw_dir / f"{frame.frame_id}-intrinsic.txt", intrinsics)
         _write_matrix(raw_dir / f"{frame.frame_id}.txt", frame.camera_to_world)
-    _write_binary_ply(raw_dir / "mesh.ply", vertices_world)
+    write_binary_ply_mesh(raw_dir / "mesh.ply", vertices_world)
     _write_source_frames_json(raw_dir / "source_frames.json", frames)
     return SceneFunc3dToolScene.load(scene_root)
 
@@ -77,22 +78,6 @@ def _write_source_frames_json(path: Path, frames: tuple[SyntheticFrame, ...]) ->
         for frame in frames
     ]
     path.write_text(json.dumps(payload), encoding="utf-8")
-
-
-def _write_binary_ply(path: Path, vertices_world: np.ndarray) -> None:
-    vertices = np.asarray(vertices_world, dtype=np.float32)
-    header = (
-        "ply\n"
-        "format binary_little_endian 1.0\n"
-        f"element vertex {vertices.shape[0]}\n"
-        "property float x\n"
-        "property float y\n"
-        "property float z\n"
-        "end_header\n"
-    )
-    with path.open("wb") as handle:
-        handle.write(header.encode("ascii"))
-        handle.write(vertices.tobytes(order="C"))
 
 
 __all__ = ["SyntheticFrame", "write_synthetic_scene"]
