@@ -85,8 +85,11 @@ def point_visibility(
         )
     pixels, camera_z = project_world_to_pixels(points_world, geometry)
     height, width = int(depth.shape[0]), int(depth.shape[1])
-    columns = np.floor(pixels[:, 0]).astype(np.int64, copy=False)
-    rows = np.floor(pixels[:, 1]).astype(np.int64, copy=False)
+    # Non-finite pixels (points behind the camera) are excluded by ``in_bounds``
+    # below; zero them first so the int cast does not emit a NaN-cast warning.
+    finite_pixels = np.where(np.isfinite(pixels), pixels, 0.0)
+    columns = np.floor(finite_pixels[:, 0]).astype(np.int64, copy=False)
+    rows = np.floor(finite_pixels[:, 1]).astype(np.int64, copy=False)
     in_bounds = (
         (camera_z > 0.0)
         & np.isfinite(pixels[:, 0])
