@@ -1,0 +1,139 @@
+"""Tests for SceneFunc3D 3D->2D visibility projection."""
+
+from __future__ import annotations
+
+import numpy as np
+import pytest
+
+from codex_agent.scenefunc3d.backends.anchor import build_anchor
+from codex_agent.scenefunc3d.backends.lift_3d import CameraGeometry
+from codex_agent.scenefunc3d.backends.visibility import (
+    FrameCamera,
+    FrameVisibility,
+    point_visibility,
+    project_world_to_pixels,
+    score_anchor_visibility,
+    select_visible_frames,
+)
+
+
+def _identity_camera(
+    fx: float = 100.0, cx: float = 50.0, cy: float = 50.0
+) -> CameraGeometry:
+    intrinsics = np.array([[fx, 0.0, cx], [0.0, fx, cy], [0.0, 0.0, 1.0]])
+    return CameraGeometry(intrinsics=intrinsics, camera_to_world=np.eye(4))
+
+
+def _flat_depth(value: float = 2.0, size: int = 100) -> np.ndarray:
+    return np.full((size, size), value, dtype=np.float64)
+
+
+def _centered_anchor() -> object:
+    # Symmetric points -> centroid exactly (0, 0, 2) -> projects to (50, 50),
+    # so centeredness is exactly 1.0.
+    points = np.array(
+        [
+            [0.0, 0.0, 2.0],
+            [0.02, 0.0, 2.0],
+            [-0.02, 0.0, 2.0],
+            [0.0, 0.02, 2.0],
+            [0.0, -0.02, 2.0],
+        ]
+    )
+    return build_anchor(points, motion_type="pinch_pull", seed_frame_id="000001")
+
+
+def test_projects_on_axis_point_to_principal_point() -> None:
+    geometry = _identity_camera()
+    pixels, camera_z = project_world_to_pixels(np.array([[0.0, 0.0, 2.0]]), geometry)
+    assert pixels[0] == pytest.approx((50.0, 50.0))
+    assert camera_z[0] == pytest.approx(2.0)
+
+
+def test_projects_off_axis_point_with_perspective() -> None:
+    geometry = _identity_camera()
+    pixels, _camera_z = project_world_to_pixels(np.array([[0.1, 0.0, 2.0]]), geometry)
+    assert pixels[0][0] == pytest.approx(55.0)
+    assert pixels[0][1] == pytest.approx(50.0)
+
+
+def test_behind_camera_point_has_non_positive_z() -> None:
+    geometry = _identity_camera()
+    _pixels, camera_z = project_world_to_pixels(np.array([[0.0, 0.0, -1.0]]), geometry)
+    assert camera_z[0] < 0.0
+
+
+def test_point_on_depth_surface_is_visible() -> None:
+    visible = point_visibility(
+        np.array([[0.0, 0.0, 2.0]]), _identity_camera(), _flat_depth(2.0)
+    )
+    assert bool(visible[0]) is True
+
+
+def test_point_behind_surface_is_occluded() -> None:
+    visible = point_visibility(
+        np.array([[0.0, 0.0, 2.0]]), _identity_camera(), _flat_depth(1.0)
+    )
+    assert bool(visible[0]) is False
+
+
+def test_out_of_frame_point_is_not_visible() -> None:
+    visible = point_visibility(
+        np.array([[10.0, 0.0, 2.0]]), _identity_camera(), _flat_depth(2.0)
+    )
+    assert bool(visible[0]) is False
+
+
+def test_behind_camera_point_is_not_visible() -> None:
+    visible = point_visibility(
+        np.array([[0.0, 0.0, -1.0]]), _identity_camera(), _flat_depth(2.0)
+    )
+    assert bool(visible[0]) is False
+
+
+def test_fully_visible_centered_anchor_scores_high() -> None:
+    result = score_anchor_visibility(
+        "000001", _centered_anchor(), _identity_camera(), _flat_depth(2.0)
+    )
+    assert isinstance(result, FrameVisibility)
+    assert result.visible is True
+    assert result.unoccluded_fraction == pytest.approx(1.0)
+    assert result.centeredness == pytest.approx(1.0)
+    assert result.quality_score == pytest.approx(1.0)
+
+
+def test_occluded_anchor_scores_zero_and_not_visible() -> None:
+    result = score_anchor_visibility(
+        "000001", _centered_anchor(), _identity_camera(), _flat_depth(1.0)
+    )
+    assert result.visible is False
+    assert result.quality_score == pytest.approx(0.0)
+
+
+def test_selection_drops_occluded_and_ranks_by_quality() -> None:
+    anchor = _centered_anchor()
+    geometry = _identity_camera()
+    cameras = (
+        FrameCamera(
+            frame_id="000001", geometry=geometry, depth_meters=_flat_depth(2.0)
+        ),
+        FrameCamera(
+            frame_id="000002", geometry=geometry, depth_meters=_flat_depth(1.0)
+        ),
+    )
+    selected = select_visible_frames(anchor, cameras, frame_cap=10)
+    assert tuple(v.frame_id for v in selected) == ("000001",)
+    assert all(v.visible for v in selected)
+
+
+def test_selection_respects_frame_cap() -> None:
+    anchor = _centered_anchor()
+    geometry = _identity_camera()
+    cameras = tuple(
+        FrameCamera(
+            frame_id=f"{index:06d}", geometry=geometry, depth_meters=_flat_depth(2.0)
+        )
+        for index in range(5)
+    )
+    selected = select_visible_frames(anchor, cameras, frame_cap=3)
+    assert len(selected) == 3

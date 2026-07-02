@@ -1,0 +1,211 @@
+"""3D->2D visibility projection for SceneFun3D anchor-driven frame selection."""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+
+import numpy as np
+
+from codex_agent.scenefunc3d.backends.anchor import TargetAnchor
+from codex_agent.scenefunc3d.backends.lift_3d import (
+    BoolArray,
+    CameraGeometry,
+    FloatArray,
+    _validate_points_world,
+)
+
+_DEFAULT_DEPTH_TOLERANCE = 0.25
+
+
+@dataclass(frozen=True)
+class FrameVisibility:
+    """Anchor visibility of one frame."""
+
+    frame_id: str
+    visible: bool
+    unoccluded_fraction: float
+    centeredness: float
+    quality_score: float
+
+
+@dataclass(frozen=True)
+class FrameCamera:
+    """One frame's in-memory camera + depth, for visibility scoring."""
+
+    frame_id: str
+    geometry: CameraGeometry
+    depth_meters: FloatArray
+
+
+def project_world_to_pixels(
+    points_world: FloatArray, geometry: CameraGeometry
+) -> tuple[FloatArray, FloatArray]:
+    """Project world points into one camera; return (pixels_uv (N,2), camera_z (N,)).
+
+    Inverse of ``lift_3d.backproject_mask_to_world``. Pixel u/v are NaN for
+    points at or behind the image plane (``camera_z <= 0``); callers must gate on
+    ``camera_z > 0`` before using pixels.
+    """
+    points = _validate_points_world(points_world, field_name="points_world")
+    world_to_camera = np.linalg.inv(geometry.camera_to_world)
+    homogeneous = np.column_stack((points, np.ones(points.shape[0], dtype=np.float64)))
+    camera = homogeneous @ world_to_camera.T
+    camera_xyz = camera[:, :3]
+    camera_z = camera_xyz[:, 2]
+    fx = geometry.intrinsics[0, 0]
+    fy = geometry.intrinsics[1, 1]
+    cx = geometry.intrinsics[0, 2]
+    cy = geometry.intrinsics[1, 2]
+    safe_z = np.where(camera_z > 0.0, camera_z, np.nan)
+    u = fx * camera_xyz[:, 0] / safe_z + cx
+    v = fy * camera_xyz[:, 1] / safe_z + cy
+    pixels: FloatArray = np.column_stack((u, v)).astype(np.float64)
+    return pixels, camera_z.astype(np.float64)
+
+
+def point_visibility(
+    points_world: FloatArray,
+    geometry: CameraGeometry,
+    depth_meters: FloatArray,
+    *,
+    depth_tolerance: float = _DEFAULT_DEPTH_TOLERANCE,
+) -> BoolArray:
+    """Per-point un-occluded visibility in one frame.
+
+    Visible = in front of camera, projects inside the image, and camera-space
+    depth matches the observed depth within ``depth_tolerance`` (relative).
+    """
+    depth = np.asarray(depth_meters, dtype=np.float64)
+    if depth.ndim != 2:
+        raise ValueError(f"depth_meters must be 2D; got shape {depth.shape}")
+    if not np.isfinite(depth_tolerance) or depth_tolerance < 0.0:
+        raise ValueError(
+            f"depth_tolerance must be finite and non-negative: {depth_tolerance!r}"
+        )
+    pixels, camera_z = project_world_to_pixels(points_world, geometry)
+    height, width = int(depth.shape[0]), int(depth.shape[1])
+    columns = np.floor(pixels[:, 0]).astype(np.int64, copy=False)
+    rows = np.floor(pixels[:, 1]).astype(np.int64, copy=False)
+    in_bounds = (
+        (camera_z > 0.0)
+        & np.isfinite(pixels[:, 0])
+        & np.isfinite(pixels[:, 1])
+        & (columns >= 0)
+        & (columns < width)
+        & (rows >= 0)
+        & (rows < height)
+    )
+    safe_rows = np.where(in_bounds, rows, 0)
+    safe_columns = np.where(in_bounds, columns, 0)
+    observed = depth[safe_rows, safe_columns]
+    valid_observed = np.isfinite(observed) & (observed > 0.0)
+    occlusion_ok = np.abs(camera_z - observed) <= depth_tolerance * observed
+    visible: BoolArray = (in_bounds & valid_observed & occlusion_ok).astype(np.bool_)
+    return visible
+
+
+def _anchor_probe_points(anchor: TargetAnchor) -> FloatArray:
+    center = np.asarray(anchor.centroid, dtype=np.float64)
+    radius = anchor.radius_m
+    offsets = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [radius, 0.0, 0.0],
+            [-radius, 0.0, 0.0],
+            [0.0, radius, 0.0],
+            [0.0, -radius, 0.0],
+            [0.0, 0.0, radius],
+            [0.0, 0.0, -radius],
+        ],
+        dtype=np.float64,
+    )
+    return (center[np.newaxis, :] + offsets).astype(np.float64)
+
+
+def _centeredness(
+    anchor: TargetAnchor, geometry: CameraGeometry, depth_meters: FloatArray
+) -> float:
+    height, width = int(depth_meters.shape[0]), int(depth_meters.shape[1])
+    pixels, _camera_z = project_world_to_pixels(
+        np.asarray([anchor.centroid], dtype=np.float64), geometry
+    )
+    u, v = float(pixels[0, 0]), float(pixels[0, 1])
+    if not (np.isfinite(u) and np.isfinite(v)):
+        return 0.0
+    center_u, center_v = width / 2.0, height / 2.0
+    distance = float(np.hypot(u - center_u, v - center_v))
+    half_diagonal = float(np.hypot(center_u, center_v))
+    if half_diagonal <= 0.0:
+        return 0.0
+    return max(0.0, 1.0 - distance / half_diagonal)
+
+
+def score_anchor_visibility(
+    frame_id: str,
+    anchor: TargetAnchor,
+    geometry: CameraGeometry,
+    depth_meters: FloatArray,
+    *,
+    depth_tolerance: float = _DEFAULT_DEPTH_TOLERANCE,
+) -> FrameVisibility:
+    """Score how well one frame sees the anchor (probe visibility x centeredness)."""
+    probes = _anchor_probe_points(anchor)
+    visible = point_visibility(
+        probes, geometry, depth_meters, depth_tolerance=depth_tolerance
+    )
+    if not bool(visible[0]):
+        return FrameVisibility(
+            frame_id=frame_id,
+            visible=False,
+            unoccluded_fraction=0.0,
+            centeredness=0.0,
+            quality_score=0.0,
+        )
+    unoccluded_fraction = float(np.mean(visible))
+    centeredness = _centeredness(anchor, geometry, depth_meters)
+    return FrameVisibility(
+        frame_id=frame_id,
+        visible=True,
+        unoccluded_fraction=unoccluded_fraction,
+        centeredness=centeredness,
+        quality_score=unoccluded_fraction * centeredness,
+    )
+
+
+def select_visible_frames(
+    anchor: TargetAnchor,
+    cameras: Sequence[FrameCamera],
+    *,
+    frame_cap: int,
+    depth_tolerance: float = _DEFAULT_DEPTH_TOLERANCE,
+) -> tuple[FrameVisibility, ...]:
+    """Score all frames, keep the ones that see the anchor, return the top N.
+
+    Ties break deterministically by ascending ``frame_id``.
+    """
+    if frame_cap <= 0:
+        raise ValueError(f"frame_cap must be positive: {frame_cap!r}")
+    scored = [
+        score_anchor_visibility(
+            camera.frame_id,
+            anchor,
+            camera.geometry,
+            camera.depth_meters,
+            depth_tolerance=depth_tolerance,
+        )
+        for camera in cameras
+    ]
+    visible = [result for result in scored if result.visible]
+    visible.sort(key=lambda result: (-result.quality_score, result.frame_id))
+    return tuple(visible[:frame_cap])
+
+
+__all__ = [
+    "FrameCamera",
+    "FrameVisibility",
+    "point_visibility",
+    "project_world_to_pixels",
+    "score_anchor_visibility",
+    "select_visible_frames",
+]
