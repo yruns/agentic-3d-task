@@ -534,6 +534,8 @@ To be expanded into a full TDD plan once 2a lands. Requires reading
 - **Agent seed-confirmation contract**: change `SceneFunc3dMaskTask` turn to emit `SeedConfirmation` (frame_id + candidate_id + affordance_concept + approval_actions); bounded correction loop (≤3), fail-closed; `runner.run_single_sample` runs the pipeline after confirmation; trim `playbook.py` to the seed stage.
 - **Semi-online validation**: fix each saved case's confirmed seed as the anchor, run full B/C/D (needs Molmo/SAM sidecar, not the ModelHub adapter), compare to v6.
 
+> **Status:** Implemented in [`docs/superpowers/plans/2026-07-02-scenefunc3d-anchor-multiview-pipeline-phase2b.md`](2026-07-02-scenefunc3d-anchor-multiview-pipeline-phase2b.md) (frame loader, per-vertex visibility counts, pure + scene-backed pipeline driver, sidecar proposer, semi-online harness — landed `0dbe76e`, recorded in [`docs/benchmark/scenefunc_molmo_sam3d/v7_semi_online_pipeline_20260702.md`](../../benchmark/scenefunc_molmo_sam3d/v7_semi_online_pipeline_20260702.md)). The **agent `SeedConfirmation` contract is deferred to Phase 2c** (separate plan).
+
 ---
 
 ## Self-Review
