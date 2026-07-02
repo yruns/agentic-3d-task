@@ -23,8 +23,7 @@ def read_depth_meters(depth_path: Path) -> FloatArray:
         from PIL import Image
     except ImportError as exc:
         raise ToolInputError(
-            "numpy and Pillow are required to read depth images; install the "
-            "'vision' extra"
+            "Pillow is required to read depth images; install the 'vision' extra"
         ) from exc
 
     try:
