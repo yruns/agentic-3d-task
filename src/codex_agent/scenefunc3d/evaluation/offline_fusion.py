@@ -5,12 +5,15 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections.abc import Set
+from collections.abc import Sequence, Set
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypedDict
+from zipfile import BadZipFile
 
 import numpy as np
 
+from codex_agent.errors import CodexAgentError, SceneFunc3dDataError
 from codex_agent.scenefunc3d.backends.anchor import build_anchor
 from codex_agent.scenefunc3d.backends.fusion import (
     FrameLift,
@@ -28,6 +31,35 @@ from codex_agent.scenefunc3d.evaluation.scorer import (
     score_point_ids,
 )
 from codex_agent.scenefunc3d.sample import load_sample, scene_dir_for
+
+_FRAGMENT_GLOB = "*/mask_data.npz"
+_FRAGMENT_POINT_INDICES_KEY = "point_indices"
+
+
+class SweepParamsPayload(TypedDict):
+    """JSON-ready fusion parameters for one offline sweep row."""
+
+    agreement_tau: float
+    radius_scale: float
+    cluster_link_eps_m: float
+    min_cluster_points: int
+
+
+class SweepRowPayload(TypedDict):
+    """JSON-ready metrics for one offline sweep parameter combination."""
+
+    params: SweepParamsPayload
+    mean_iou: float
+    mean_precision: float
+    ap25: float
+    ap50: float
+
+
+class SweepResultPayload(TypedDict):
+    """JSON-ready result of an offline SceneFunc3D fusion sweep."""
+
+    sample_count: int
+    results: list[SweepRowPayload]
 
 
 @dataclass(frozen=True)
@@ -79,28 +111,76 @@ def load_sample_fusion_input(
     sample = load_sample(data_root, sample_id)
     motion_type = sample.motion_hints[0].motion_type if sample.motion_hints else ""
     fragment_dir = run_root / sample.visit_id / sample.desc_id / "fragments"
-    frames: list[tuple[int, ...]] = []
-    for npz_path in sorted(fragment_dir.glob("*/mask_data.npz")):
-        with np.load(npz_path) as archive:
-            indices = np.asarray(archive["point_indices"]).astype(np.int64).ravel()
-        frames.append(tuple(int(value) for value in indices))
+    frames = _load_fragment_frames(fragment_dir)
     # Offline seed proxy: use the largest fragment as the anchor source. In the
     # online pipeline the anchor comes from the agent-confirmed seed instead.
-    anchor_point_indices = max(frames, key=len) if frames else ()
+    anchor_point_indices = max(frames, key=len)
     scene_vertices = load_scene_mesh_vertices(
         scene_dir_for(data_root, sample.visit_id) / "raw" / "mesh.ply"
     )
     return SampleFusionInput(
         sample_id=sample_id,
         motion_type=motion_type,
-        frames_point_indices=tuple(frames),
+        frames_point_indices=frames,
         anchor_point_indices=anchor_point_indices,
         scene_vertices=scene_vertices,
         gt_ids=load_gt_point_ids(data_root, sample_id),
     )
 
 
+def _load_fragment_frames(fragment_dir: Path) -> tuple[tuple[int, ...], ...]:
+    """Load per-fragment raw-mesh vertex ids under one sample's fragments dir.
+
+    Fails closed with :class:`SceneFunc3dDataError` when the directory is
+    missing or holds no ``*/mask_data.npz`` fragments, so an offline sweep never
+    silently scores an empty prediction for a sample with no saved evidence.
+    """
+    if not fragment_dir.is_dir():
+        raise SceneFunc3dDataError(
+            f"SceneFunc3D fragments directory is missing: {fragment_dir}"
+        )
+    frames = [
+        _load_fragment_point_indices(npz_path)
+        for npz_path in sorted(fragment_dir.glob(_FRAGMENT_GLOB))
+    ]
+    if not frames:
+        raise SceneFunc3dDataError(
+            "SceneFunc3D fragments directory contains no "
+            f"{_FRAGMENT_GLOB} fragments: {fragment_dir}"
+        )
+    return tuple(frames)
+
+
+def _load_fragment_point_indices(npz_path: Path) -> tuple[int, ...]:
+    """Load one fragment NPZ's raw-mesh vertex ids, failing closed on bad data."""
+    try:
+        with np.load(npz_path) as archive:
+            if _FRAGMENT_POINT_INDICES_KEY not in archive.files:
+                raise SceneFunc3dDataError(
+                    "SceneFunc3D fragment NPZ is missing required key "
+                    f"{_FRAGMENT_POINT_INDICES_KEY!r}: npz_path={npz_path}"
+                )
+            point_indices_array = np.asarray(archive[_FRAGMENT_POINT_INDICES_KEY])
+            indices = point_indices_array.astype(np.int64).ravel()
+    except SceneFunc3dDataError:
+        raise
+    except (BadZipFile, OSError, ValueError) as exc:
+        raise SceneFunc3dDataError(
+            "could not load SceneFunc3D fragment NPZ: "
+            f"npz_path={npz_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    return tuple(int(value) for value in indices)
+
+
 def _sample_ids_from_run_root(run_root: Path) -> tuple[str, ...]:
+    """Return every ``<visit_id>::<desc_id>`` sample saved under a run root.
+
+    Fails closed with :class:`SceneFunc3dDataError` when the run root is missing
+    or holds no fragment samples, mirroring the results-dir contract in
+    ``evaluation/__main__.py``.
+    """
+    if not run_root.is_dir():
+        raise SceneFunc3dDataError(f"SceneFunc3D run root is missing: {run_root}")
     sample_ids: list[str] = []
     for visit_dir in sorted(
         p for p in run_root.iterdir() if p.is_dir() and p.name.isdigit()
@@ -109,15 +189,19 @@ def _sample_ids_from_run_root(run_root: Path) -> tuple[str, ...]:
             p for p in visit_dir.iterdir() if (p / "fragments").is_dir()
         ):
             sample_ids.append(f"{visit_dir.name}::{desc_dir.name}")
+    if not sample_ids:
+        raise SceneFunc3dDataError(
+            f"SceneFunc3D run root contains no fragment samples: {run_root}"
+        )
     return tuple(sample_ids)
 
 
 def run_offline_sweep(
     *, run_root: Path, data_root: Path, param_grid: tuple[FusionParams, ...]
-) -> dict[str, object]:
+) -> SweepResultPayload:
     """Fuse+score every sample under run_root for each params set."""
     sample_ids = _sample_ids_from_run_root(run_root)
-    results: list[dict[str, object]] = []
+    results: list[SweepRowPayload] = []
     for params in param_grid:
         ious: list[float] = []
         precisions: list[float] = []
@@ -132,7 +216,7 @@ def run_offline_sweep(
             precisions.append(score.metrics.precision)
             hits25 += int(score.metrics.iou >= 0.25)
             hits50 += int(score.metrics.iou >= 0.50)
-        n = max(len(sample_ids), 1)
+        n = len(sample_ids)
         results.append(
             {
                 "params": {
@@ -158,23 +242,66 @@ def _default_param_grid() -> tuple[FusionParams, ...]:
     return tuple(grid)
 
 
-def main(argv: list[str] | None = None) -> int:
-    """CLI entry: run the offline fusion sweep and print JSON."""
+def _sweep_cli_payload(args: argparse.Namespace) -> SweepResultPayload:
+    """Run the sweep from validated CLI arguments (keeps main free of logic)."""
+    return run_offline_sweep(
+        run_root=_namespace_path(args, "run_root"),
+        data_root=_namespace_path(args, "data_root"),
+        param_grid=_default_param_grid(),
+    )
+
+
+def _namespace_path(args: argparse.Namespace, name: str) -> Path:
+    value: object = getattr(args, name)
+    if not isinstance(value, Path):
+        raise TypeError(f"argparse field {name!r} must be a Path")
+    return value
+
+
+def _namespace_optional_path(args: argparse.Namespace, name: str) -> Path | None:
+    value: object = getattr(args, name)
+    if value is None:
+        return None
+    if not isinstance(value, Path):
+        raise TypeError(f"argparse field {name!r} must be a Path or None")
+    return value
+
+
+def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build the offline SceneFunc3D fusion sweep CLI parser."""
     parser = argparse.ArgumentParser(description="Offline SceneFunc3D fusion sweep")
     parser.add_argument("--run-root", type=Path, required=True)
     parser.add_argument("--data-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=None)
-    args = parser.parse_args(argv)
-    summary = run_offline_sweep(
-        run_root=args.run_root,
-        data_root=args.data_root,
-        param_grid=_default_param_grid(),
-    )
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """CLI entry: run the offline fusion sweep and print JSON."""
+    parser = _build_arg_parser()
+    args = parser.parse_args(list(argv) if argv is not None else None)
+    try:
+        summary = _sweep_cli_payload(args)
+    except CodexAgentError as exc:
+        parser.exit(status=1, message=f"ERROR: {exc}\n")
+    output_path = _namespace_optional_path(args, "output")
     text = json.dumps(summary, indent=2)
-    if args.output is not None:
-        args.output.write_text(text, encoding="utf-8")
+    if output_path is not None:
+        output_path.write_text(text, encoding="utf-8")
     print(text)
     return 0
+
+
+__all__ = [
+    "SampleFusionInput",
+    "SweepParamsPayload",
+    "SweepResultPayload",
+    "SweepRowPayload",
+    "fuse_and_score_sample",
+    "load_sample_fusion_input",
+    "main",
+    "run_offline_sweep",
+]
 
 
 if __name__ == "__main__":
