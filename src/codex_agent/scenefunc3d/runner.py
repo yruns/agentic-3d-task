@@ -31,10 +31,13 @@ from ..errors import (
     CodexTurnError,
     SceneFunc3dDataError,
 )
-from ..json_extraction import extract_json_object
 from ..models import CodexTurnMetadata, CodexTurnRequest
 from ..tasks.base import CodexExecutor
+from .backends.anchor import build_anchor
 from .backends.config import HttpHeader, load_backend_settings
+from .backends.frame_assets import resolve_frame_geometry_assets
+from .backends.fusion import FusionParams
+from .backends.lift_3d import load_scene_mesh_vertices
 from .evaluation.payloads import SceneFunc3dScorePayload, score_to_payload
 from .evaluation.scorer import SceneFunc3dScore, score_result_file
 from .failure_artifacts import (
@@ -49,26 +52,43 @@ from .final_mask_artifacts import (
     FinalMaskMultiViewAction,
     FinalMaskMultiViewDecision,
     ValidatedFinalMaskArtifact,
+    load_points_world_npz,
     validate_final_mask_artifact,
+)
+from .pipeline import run_anchor_multiview_pipeline
+from .pipeline_backends import SidecarFrameProposer
+from .pipeline_result import (
+    SceneFunc3dPipelineOutcome,
+    write_pipeline_fused_mask,
+    write_pipeline_result,
 )
 from .playbook import SCENEFUNC3D_TOOL_NAMES, SCENEFUNC3D_TOOLS_PLAYBOOK
 from .sample import SceneFunc3dSample, list_sample_ids, load_sample, scene_dir_for
+from .seed_contract import (
+    SceneFunc3dSeedOutcome,
+    SeedConfirmation,
+    parse_seed_confirmation,
+)
+from .seed_recovery import recover_seed_sam_candidate
 from .servers.schemas import HealthResponse
 from .tool_context import SceneFunc3dToolContext, write_tool_context
 from .tools.mask_artifacts import (
+    MaskArtifactPaths,
     SceneFunc3dCompletedRunSummary,
     SceneFunc3dRunCompletionEvent,
     SceneFunc3dRunMultiViewDecisionPayload,
     append_run_completion_event,
     artifact_paths_for,
-    write_completed_run_summary,
 )
+from .tools.mask_lifting import LiftMaskArgs, LiftMaskResult, lift_mask_to_3d
 from .tools.scene_context import SceneFunc3dToolScene
 
 TASK_NAME = "scenefunc3d_mask_generation"
 DEFAULT_TOOL_CLI_MODULE = "codex_agent.scenefunc3d.tools"
 DEFAULT_TOOL_CONTEXT_FILENAME = "tool_context.json"
 SCENEFUNC3D_ALLOWED_TOOL_NAMES = SCENEFUNC3D_TOOL_NAMES
+_PIPELINE_FRAME_CAP = 30
+_PIPELINE_DEPTH_TOLERANCE = 0.25
 
 NonEmptyString: TypeAlias = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1)
@@ -716,7 +736,7 @@ class SceneFunc3dMaskTask:
         self._require_tool_context_file()
         return CodexTurnRequest(
             prompt=self._build_prompt(),
-            output_schema=SceneFunc3dMaskDecision.model_json_schema(),
+            output_schema=SeedConfirmation.model_json_schema(),
             skills=(),
             image_paths=(),
         )
@@ -736,134 +756,40 @@ class SceneFunc3dMaskTask:
             return False
         return True
 
-    def parse_response(self, response_text: str) -> SceneFunc3dMaskOutcome:
-        decision = self._parse_decision(response_text)
-        mask_artifact_path = self._validate_artifact_path(
-            decision.mask_artifact_path,
-            field_name="mask_artifact_path",
-            suffix=".json",
+    def parse_response(self, response_text: str) -> SceneFunc3dSeedOutcome:
+        confirmation = parse_seed_confirmation(response_text)
+        seed_candidate = recover_seed_sam_candidate(
+            self.output_dir / "events.jsonl",
+            seed_frame_id=confirmation.seed_frame_id,
+            seed_candidate_id=confirmation.seed_candidate_id,
         )
-        mask_npz_path = self._validate_artifact_path(
-            decision.mask_npz_path,
-            field_name="mask_npz_path",
-            suffix=".npz",
+        return SceneFunc3dSeedOutcome(
+            seed_frame_id=confirmation.seed_frame_id,
+            seed_candidate_id=confirmation.seed_candidate_id,
+            seed_fragment_id=confirmation.seed_fragment_id,
+            affordance_concept=confirmation.affordance_concept,
+            approval_actions=confirmation.approval_actions,
+            uncertainties=confirmation.uncertainties,
+            seed_sam_mask_npz_path=seed_candidate.mask_npz_path,
         )
-        mask_ply_path = self._validate_artifact_path(
-            decision.mask_ply_path,
-            field_name="mask_ply_path",
-            suffix=".ply",
-        )
-        selected_frame_ids = tuple(decision.selected_frame_ids)
-        accepted_fragment_ids = tuple(decision.accepted_fragment_ids)
-        self._validate_selected_frame_ids(selected_frame_ids)
-        validate_final_mask_artifact(
-            artifact_path=mask_artifact_path,
-            mask_npz_path=mask_npz_path,
-            mask_ply_path=mask_ply_path,
-            selected_frame_ids=selected_frame_ids,
-            accepted_fragment_ids=accepted_fragment_ids,
-        )
-        return SceneFunc3dMaskOutcome(
-            mask_artifact_path=mask_artifact_path,
-            mask_npz_path=mask_npz_path,
-            mask_ply_path=mask_ply_path,
-            selected_frame_ids=selected_frame_ids,
-            accepted_fragment_ids=accepted_fragment_ids,
-            confidence=decision.confidence,
-            uncertainties=tuple(decision.uncertainties),
-        )
-
-    def validate_outcome(
-        self, outcome: SceneFunc3dMaskOutcome
-    ) -> SceneFunc3dMaskOutcome:
-        """Revalidate a runtime outcome before writing durable result metadata."""
-        validated_outcome = self.parse_response(
-            json.dumps(outcome.to_payload(), ensure_ascii=False)
-        )
-        _validate_outcome_against_fuse_tool_event(
-            validated_outcome, self.output_dir / "events.jsonl"
-        )
-        return validated_outcome
-
-    def _parse_decision(self, response_text: str) -> SceneFunc3dMaskDecision:
-        payload = extract_json_object(response_text)
-        try:
-            return SceneFunc3dMaskDecision.model_validate(payload)
-        except ValidationError as exc:
-            raise CodexResponseError(
-                f"Codex response does not match the SceneFunc3D mask schema: {exc}"
-            ) from exc
-
-    def _validate_artifact_path(
-        self,
-        raw_path: str,
-        *,
-        field_name: str,
-        suffix: str,
-    ) -> Path:
-        output_root = self.output_dir.expanduser().resolve()
-        artifact_path = Path(raw_path).expanduser().resolve()
-        try:
-            artifact_path.relative_to(output_root)
-        except ValueError as exc:
-            raise CodexResponseError(
-                f"{field_name} must be inside the sample output directory: "
-                f"path={artifact_path}; output_dir={output_root}"
-            ) from exc
-        if artifact_path.suffix != suffix:
-            if field_name == "mask_artifact_path":
-                raise CodexResponseError(
-                    "mask_artifact_path must be the .json path returned by "
-                    "fuse_accepted_masks.mask_artifact_path; do not use review "
-                    "artifacts such as lift_overlay.txt: "
-                    f"path={artifact_path}"
-                )
-            raise CodexResponseError(
-                f"{field_name} must have suffix {suffix!r}: path={artifact_path}"
-            )
-        if not artifact_path.is_file():
-            raise CodexResponseError(f"{field_name} does not exist: {artifact_path}")
-        return artifact_path
-
-    def _validate_selected_frame_ids(self, selected_frame_ids: tuple[str, ...]) -> None:
-        try:
-            tool_scene = SceneFunc3dToolScene.load(self.scene_root)
-        except SceneFunc3dDataError as exc:
-            raise CodexResponseError(
-                f"could not validate selected_frame_ids against scene_root: "
-                f"{self.scene_root}"
-            ) from exc
-        available_frame_ids = set(tool_scene.rgb_frame_ids)
-        missing_frame_ids = tuple(
-            frame_id
-            for frame_id in selected_frame_ids
-            if frame_id not in available_frame_ids
-        )
-        if missing_frame_ids:
-            raise CodexResponseError(
-                "selected_frame_ids must exist in the SceneFunc3D scene: "
-                f"missing={missing_frame_ids}; scene_root={self.scene_root}"
-            )
 
     def _build_prompt(self) -> str:
-        schema = SceneFunc3dMaskDecision.model_json_schema()
+        schema = SeedConfirmation.model_json_schema()
         return (
             build_prompt(self.sample) + "\n\nRuntime paths:\n"
             f"- tool_context: {self.tool_context_path}\n"
             "\nHow to run a tool (in the shell):\n"
             f"- invoke: python -m {self.tool_cli_module} <tool> "
             f"--context {self.tool_context_path} --args '<json>'\n"
-            "- For molmo_point, sam_mask, lift_mask_to_3d, "
-            "inspect_mask_artifact, suggest_additional_views, and "
-            "fuse_accepted_masks, set yield_time_ms=30000 on the shell call so "
-            "the command can finish and return JSON. If the shell reports "
-            "Process running with session ID, wait on that same session until "
-            "it exits and returns JSON; do not start another SceneFunc3D tool "
-            "while a previous tool command is still running.\n"
-            "- Tool outputs are JSON. Open any returned image_path with "
-            "view_image before relying on visual evidence.\n"
-            "- Use the Molmo point and SAM candidates approval gates in the "
-            "playbook before accepting mask fragments.\n"
+            "- For molmo_point and sam_mask, set yield_time_ms=30000 on the shell "
+            "call so the command can finish and return JSON. If the shell reports "
+            "Process running with session ID, wait on that same session until it "
+            "exits and returns JSON; do not start another SceneFun3D tool while a "
+            "previous tool command is still running.\n"
+            "- Tool outputs are JSON. Open any returned image_path with view_image "
+            "before relying on visual evidence.\n"
+            "- Use the Molmo point and SAM candidate approval gates in the playbook "
+            "before confirming the seed on the original-image SAM overlay.\n"
             "\n" + _hard_limits_section() + "\n"
             "\nFinal JSON schema:\n" + json.dumps(schema, ensure_ascii=False)
         )
@@ -964,8 +890,14 @@ def run_single_sample(
     try:
         result = executor.execute(task)
         turn_metadata = result.turn.metadata
-        validated_outcome = task.validate_outcome(result.outcome)
-        validated_artifact = _validate_outcome_artifact(validated_outcome)
+        pipeline_outcome = _run_pipeline_for_seed(
+            sample=sample,
+            scene_root=scene_dir_for(config.dataset_root, sample.visit_id),
+            output_dir=sample_output_dir,
+            backend_config_path=config.backend_config_path,
+            seed_outcome=result.outcome,
+            artifact_paths=artifact_paths,
+        )
     except CodexTurnError as exc:
         _write_sample_failure_artifact(
             sample=sample,
@@ -999,36 +931,102 @@ def run_single_sample(
             turn_metadata=turn_metadata,
         )
         raise
-    result_path = sample_output_dir / "result.json"
-    result_payload: SceneFunc3dRunResultPayload = {
-        "task_name": result.task_name,
-        "sample_id": sample_id,
-        "outcome": validated_outcome.to_payload(),
-        "artifact": _artifact_payload(validated_artifact),
-        "turn": _metadata_payload(result.turn.metadata),
-    }
-    result_path.write_text(
-        json.dumps(result_payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    summary_path = write_completed_run_summary(
-        artifact_paths,
-        _completed_run_summary(
-            sample=sample,
-            outcome=validated_outcome,
-            artifact=validated_artifact,
-        ),
+    result_path = write_pipeline_result(
+        sample_output_dir / "result.json",
+        pipeline_outcome,
+        sample_id=sample_id,
+        turn_metadata=result.turn.metadata,
     )
     append_run_completion_event(
         artifact_paths,
         SceneFunc3dRunCompletionEvent(
             sample_id=sample_id,
             result_path=result_path,
-            summary_path=summary_path,
-            mask_artifact_path=validated_outcome.mask_artifact_path,
+            summary_path=result_path,
+            mask_artifact_path=pipeline_outcome.mask_npz_path,
         ),
     )
     return result_path
+
+
+def _run_pipeline_for_seed(
+    *,
+    sample: SceneFunc3dSample,
+    scene_root: Path,
+    output_dir: Path,
+    backend_config_path: Path,
+    seed_outcome: SceneFunc3dSeedOutcome,
+    artifact_paths: MaskArtifactPaths,
+) -> SceneFunc3dPipelineOutcome:
+    """Deterministically lift the confirmed 2D seed, then run the multi-view pipeline."""
+    scene = SceneFunc3dToolScene.load(scene_root)
+    scene_vertices = load_scene_mesh_vertices(scene.raw_mesh_path)
+    seed_lift = _lift_seed_fragment(
+        scene=scene, seed_outcome=seed_outcome, out_dir=output_dir
+    )
+    seed_points = load_points_world_npz(seed_lift.mask_npz_path)
+    anchor = build_anchor(
+        seed_points,
+        motion_type=_anchor_motion_type(sample),
+        seed_frame_id=seed_outcome.seed_frame_id,
+    )
+    proposer = SidecarFrameProposer(
+        scene=scene,
+        out_dir=output_dir,
+        backend_config_path=backend_config_path,
+        affordance_concept=seed_outcome.affordance_concept,
+        task_description=sample.task_description,
+    )
+    result = run_anchor_multiview_pipeline(
+        anchor=anchor,
+        scene=scene,
+        scene_vertices=scene_vertices,
+        proposer=proposer,
+        params=FusionParams(),
+        frame_cap=_PIPELINE_FRAME_CAP,
+        depth_tolerance=_PIPELINE_DEPTH_TOLERANCE,
+    )
+    mask_npz_path, mask_ply_path = write_pipeline_fused_mask(
+        artifact_paths.fused_dir,
+        point_indices=result.fused.point_indices,
+        scene_vertices=scene_vertices,
+    )
+    return SceneFunc3dPipelineOutcome(
+        seed=seed_outcome,
+        seed_point_count=seed_lift.lifted_point_count,
+        mask_npz_path=mask_npz_path,
+        mask_ply_path=mask_ply_path,
+        result=result,
+    )
+
+
+def _lift_seed_fragment(
+    *,
+    scene: SceneFunc3dToolScene,
+    seed_outcome: SceneFunc3dSeedOutcome,
+    out_dir: Path,
+) -> LiftMaskResult:
+    """Lift the confirmed 2D SAM mask to a raw-mesh fragment (deterministic)."""
+    assets = resolve_frame_geometry_assets(scene, seed_outcome.seed_frame_id)
+    return lift_mask_to_3d(
+        LiftMaskArgs(
+            frame_id=seed_outcome.seed_frame_id,
+            candidate_id=seed_outcome.seed_candidate_id,
+            mask_path=seed_outcome.seed_sam_mask_npz_path,
+            depth_path=assets.depth_path,
+            intrinsics_path=assets.intrinsics_path,
+            pose_path=assets.pose_path,
+        ),
+        out_dir=out_dir,
+        raw_mesh_path=scene.raw_mesh_path,
+    )
+
+
+def _anchor_motion_type(sample: SceneFunc3dSample) -> str:
+    """Return the seed anchor's motion type (first motion hint, else empty)."""
+    if sample.motion_hints:
+        return sample.motion_hints[0].motion_type
+    return ""
 
 
 def run_samples(
