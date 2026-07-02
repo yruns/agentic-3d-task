@@ -131,3 +131,35 @@ def test_fusion_empty_when_nothing_passes_agreement() -> None:
     )
     assert fused.point_indices == ()
     assert fused.confidence == pytest.approx(0.0)
+
+
+def test_agreement_clamp_isolated_from_dedup() -> None:
+    # Vertex 5 hit in 3 distinct frames but marked visible only once: without the
+    # min(1.0, ...) clamp this would be 3.0. Per-frame dedup is not involved here.
+    frames = (
+        FrameLift(frame_id="000001", point_indices=(5,)),
+        FrameLift(frame_id="000002", point_indices=(5,)),
+        FrameLift(frame_id="000003", point_indices=(5,)),
+    )
+    scores = agreement_scores(frames, {5: 1})
+    assert scores[5] == pytest.approx(1.0)
+
+
+def test_fusion_emits_instance_metadata() -> None:
+    anchor = build_anchor(
+        _scene_vertices()[:3], motion_type="pinch_pull", seed_frame_id="000001"
+    )
+    frames = (
+        FrameLift(frame_id="000001", point_indices=(0, 1, 2)),
+        FrameLift(frame_id="000002", point_indices=(0, 1, 2)),
+    )
+    bundle = MultiViewLiftBundle(frames=frames, anchor=anchor)
+    params = FusionParams(
+        agreement_tau=0.5, cluster_link_eps_m=0.05, min_cluster_points=2
+    )
+    fused = fuse_multiview_points(bundle, _scene_vertices(), params)
+    assert len(fused.instances) == 1
+    instance = fused.instances[0]
+    assert instance.point_indices == (0, 1, 2)
+    assert instance.bbox_extent_m == pytest.approx(0.01)
+    assert instance.size_prior_ok is True
