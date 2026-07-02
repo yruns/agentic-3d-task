@@ -19,11 +19,16 @@ from pydantic import (
     model_validator,
 )
 
+from codex_agent.scenefunc3d.backends.camera_io import (
+    load_camera_geometry,
+    read_depth_meters,
+)
+
 from ...errors import SceneFunc3dDataError
 from .models import ToolInputError
 
 if TYPE_CHECKING:
-    from codex_agent.scenefunc3d.backends.lift_3d import FloatArray, IntArray
+    from codex_agent.scenefunc3d.backends.lift_3d import IntArray
 
 SafePathComponentText = Annotated[
     str,
@@ -116,7 +121,6 @@ def lift_mask_to_3d(
 ) -> LiftMaskResult:
     """Lift one 2D mask candidate into deterministic raw-scene point artifacts."""
     from codex_agent.scenefunc3d.backends.lift_3d import (
-        CameraGeometry,
         assign_nearest_scene_point_indices,
         backproject_mask_to_world,
         load_mask_npz,
@@ -126,28 +130,11 @@ def lift_mask_to_3d(
     )
 
     mask = load_mask_npz(args.mask_path)
-    depth_meters = _read_depth_meters(args.depth_path)
-    intrinsics = _read_matrix(
-        args.intrinsics_path,
-        expected_shape=(3, 3),
-        field_name="intrinsics",
+    depth_meters = read_depth_meters(args.depth_path)
+    geometry = load_camera_geometry(
+        intrinsics_path=args.intrinsics_path,
+        pose_path=args.pose_path,
     )
-    camera_to_world = _read_matrix(
-        args.pose_path,
-        expected_shape=(4, 4),
-        field_name="camera_to_world",
-    )
-    try:
-        geometry = CameraGeometry(
-            intrinsics=intrinsics,
-            camera_to_world=camera_to_world,
-        )
-    except ToolInputError as exc:
-        raise ToolInputError(
-            "invalid lift camera geometry: "
-            f"intrinsics_path={args.intrinsics_path}; pose_path={args.pose_path}; "
-            f"error={exc}"
-        ) from exc
     points_world = backproject_mask_to_world(mask, depth_meters, geometry)
     raw_scene_points_world = load_scene_mesh_vertices(raw_mesh_path)
     raw_point_indices = assign_nearest_scene_point_indices(
@@ -178,80 +165,6 @@ def lift_mask_to_3d(
         mask_ply_path=mask_ply_path,
         overlay_path=overlay_path,
     )
-
-
-def _read_depth_meters(depth_path: Path) -> FloatArray:
-    try:
-        import numpy as np
-        from PIL import Image
-    except ImportError as exc:
-        raise ToolInputError(
-            "numpy and Pillow are required to read lift depth images; install the "
-            "'vision' extra"
-        ) from exc
-
-    try:
-        with Image.open(depth_path) as image:
-            depth_pixels = np.asarray(image, dtype=np.float64)
-    except OSError as exc:
-        raise ToolInputError(
-            "could not read lift depth image: "
-            f"path={depth_path}; error_type={exc.__class__.__name__}"
-        ) from exc
-    except ValueError as exc:
-        raise ToolInputError(
-            "could not parse lift depth image: "
-            f"path={depth_path}; error_type={exc.__class__.__name__}"
-        ) from exc
-
-    if depth_pixels.ndim != 2:
-        raise ToolInputError(
-            "lift depth image must be a single-channel 2D image: "
-            f"path={depth_path}; shape={depth_pixels.shape}"
-        )
-    depth_meters: FloatArray = depth_pixels / 1000.0
-    return depth_meters
-
-
-def _read_matrix(
-    matrix_path: Path,
-    *,
-    expected_shape: tuple[int, int],
-    field_name: str,
-) -> FloatArray:
-    try:
-        import numpy as np
-    except ImportError as exc:
-        raise ToolInputError(
-            "numpy is required to read lift camera matrices; install the "
-            "'vision' extra"
-        ) from exc
-
-    expected_size = expected_shape[0] * expected_shape[1]
-    try:
-        raw_matrix = np.loadtxt(matrix_path, dtype=np.float64)
-        matrix = np.asarray(raw_matrix, dtype=np.float64)
-    except OSError as exc:
-        raise ToolInputError(
-            "could not read lift matrix file: "
-            f"field={field_name}; path={matrix_path}; "
-            f"error_type={exc.__class__.__name__}"
-        ) from exc
-    except ValueError as exc:
-        raise ToolInputError(
-            "could not parse lift matrix file: "
-            f"field={field_name}; path={matrix_path}; "
-            f"error_type={exc.__class__.__name__}"
-        ) from exc
-
-    if matrix.size != expected_size:
-        raise ToolInputError(
-            "lift matrix has wrong element count: "
-            f"field={field_name}; path={matrix_path}; "
-            f"expected={expected_size}; actual={matrix.size}"
-        )
-    reshaped_matrix: FloatArray = matrix.reshape(expected_shape)
-    return reshaped_matrix
 
 
 def _fragment_dir(out_dir: Path, *, frame_id: str, candidate_id: str) -> Path:
