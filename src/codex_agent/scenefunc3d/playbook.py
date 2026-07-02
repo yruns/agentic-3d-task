@@ -88,7 +88,8 @@ uncertainties.
   every additional view, so make it specific and free of task verbs.
 - approval_actions: exactly, in order: select_evidence, propose_molmo_point,
   approve_molmo_point, propose_sam_candidates, approve_sam_candidate.
-- uncertainties: short notes on anything ambiguous about the seed.
+- uncertainties: short notes on anything ambiguous about the seed. This field
+  is required; emit an empty list [] when nothing is ambiguous.
 You must have approved the SAM candidate on seed_frame_id before emitting this
 JSON; the runner verifies that sam_mask event exists.
 """

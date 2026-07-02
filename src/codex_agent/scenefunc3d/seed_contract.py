@@ -50,7 +50,14 @@ class SeedConfirmation(BaseModel):
             "propose_sam_candidates, approve_sam_candidate."
         ),
     )
-    uncertainties: tuple[str, ...] = ()
+    uncertainties: tuple[str, ...] = Field(
+        description=(
+            "Short notes on anything ambiguous about the seed. Emit an empty "
+            "list when there is nothing to flag; this field is required so the "
+            "strict Codex structured-output schema stays valid (every property "
+            "must appear in 'required')."
+        )
+    )
 
     @property
     def seed_fragment_id(self) -> str:

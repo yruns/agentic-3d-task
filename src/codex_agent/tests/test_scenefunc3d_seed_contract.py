@@ -40,10 +40,27 @@ def test_parse_seed_confirmation_accepts_valid_payload() -> None:
     assert confirmation.uncertainties == ("partial occlusion",)
 
 
-def test_parse_seed_confirmation_defaults_uncertainties_to_empty() -> None:
+def test_parse_seed_confirmation_rejects_missing_uncertainties() -> None:
     payload = _valid_payload()
     payload.pop("uncertainties")
+    with pytest.raises(CodexResponseError):
+        parse_seed_confirmation(json.dumps(payload))
+
+
+def test_parse_seed_confirmation_accepts_empty_uncertainties_list() -> None:
+    payload = _valid_payload()
+    payload["uncertainties"] = []
     assert parse_seed_confirmation(json.dumps(payload)).uncertainties == ()
+
+
+def test_seed_confirmation_schema_marks_every_property_required() -> None:
+    # Codex structured outputs run with ``strict: true``, which rejects a schema
+    # unless every key in ``properties`` also appears in ``required`` (a defaulted
+    # field such as ``uncertainties`` silently drops out of ``required`` and the
+    # live turn fails with ``invalid_json_schema``). Guard the whole contract.
+    schema = SeedConfirmation.model_json_schema()
+    assert set(schema["required"]) == set(schema["properties"])
+    assert schema["additionalProperties"] is False
 
 
 def test_parse_seed_confirmation_rejects_first_lift_gate_sequence() -> None:
