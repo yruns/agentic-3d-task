@@ -28,15 +28,34 @@ EXPECTED_TOOL_NAMES: tuple[str, ...] = (
     "frame_objects",
     "molmo_point",
     "sam_mask",
-    "lift_mask_to_3d",
-    "inspect_mask_artifact",
-    "suggest_additional_views",
-    "fuse_accepted_masks",
 )
 
 
-def test_tool_names_are_current_task7_contract() -> None:
+def test_tool_names_are_2d_seed_contract() -> None:
     assert SCENEFUNC3D_TOOL_NAMES == EXPECTED_TOOL_NAMES
+
+
+def test_playbook_tool_names_are_2d_seed_only() -> None:
+    from codex_agent.scenefunc3d.playbook import SCENEFUNC3D_TOOL_NAMES
+
+    for dropped in (
+        "lift_mask_to_3d",
+        "inspect_mask_artifact",
+        "suggest_additional_views",
+        "fuse_accepted_masks",
+    ):
+        assert dropped not in SCENEFUNC3D_TOOL_NAMES
+    assert SCENEFUNC3D_TOOL_NAMES[-1] == "sam_mask"
+
+
+def test_playbook_ends_at_seed_confirmation() -> None:
+    from codex_agent.scenefunc3d.playbook import SCENEFUNC3D_TOOLS_PLAYBOOK
+
+    assert "seed_frame_id" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "seed_candidate_id" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "affordance_concept" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "lift_mask_to_3d" not in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "fuse_accepted_masks" not in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
 def test_dispatcher_registers_every_playbook_tool() -> None:
@@ -51,7 +70,6 @@ def test_playbook_mentions_every_tool() -> None:
 def test_playbook_requires_agent_approval_gates() -> None:
     assert "Molmo point" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "SAM candidates" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "3D lift" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "must approve" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
@@ -74,39 +92,10 @@ def test_playbook_documents_exact_molmo_and_sam_argument_shapes() -> None:
     assert "point_xy must be [x_px, y_px]" in normalized_playbook
 
 
-def test_playbook_tells_agent_selected_frames_must_match_fused_artifact() -> None:
-    assert "selected_frame_ids" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "accepted_frame_ids" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "fuse_accepted_masks" in SCENEFUNC3D_TOOLS_PLAYBOOK
-
-
-def test_playbook_requires_final_paths_from_fuse_accepted_masks() -> None:
-    assert "mask_artifact_path returned by fuse_accepted_masks" in (
-        SCENEFUNC3D_TOOLS_PLAYBOOK
-    )
-    assert "never use lift_overlay_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
-
-
-def test_playbook_tells_agent_to_record_fragment_approval_actions() -> None:
+def test_playbook_tells_agent_to_record_seed_approval_actions() -> None:
     assert "approval_actions" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "select_evidence" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "approve_first_lift" in SCENEFUNC3D_TOOLS_PLAYBOOK
-
-
-def test_playbook_tells_agent_to_record_fragment_review_artifacts() -> None:
-    assert "review_artifacts" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "molmo_raw_text_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "sam_contact_sheet_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "lift_overlay_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
-
-
-def test_playbook_tells_agent_to_pass_seed_artifact_to_multiview_suggestion() -> None:
-    assert "suggest_additional_views" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "seed_mask_npz_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "seed_mask_ply_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "seed_lift_overlay_path" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "task_description" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "matched_objects" in SCENEFUNC3D_TOOLS_PLAYBOOK
+    assert "approve_sam_candidate" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
 def test_playbook_tells_agent_to_target_pinch_pull_affordance_points() -> None:
@@ -117,7 +106,6 @@ def test_playbook_tells_agent_to_target_pinch_pull_affordance_points() -> None:
 
 
 def test_playbook_does_not_expose_crop_guidance() -> None:
-    assert "matched_objects" in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "view_crop" not in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "recommended_crops" not in SCENEFUNC3D_TOOLS_PLAYBOOK
     assert "crop" not in SCENEFUNC3D_TOOLS_PLAYBOOK.lower()
@@ -139,52 +127,6 @@ def test_playbook_warns_against_score_only_sam_candidate_choice() -> None:
     assert "broad panel" in SCENEFUNC3D_TOOLS_PLAYBOOK
 
 
-def test_playbook_forces_compact_sam_candidate_to_lift_before_more_search() -> None:
-    normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
-    assert "After you approve a compact SAM candidate, call lift_mask_to_3d" in (
-        normalized_playbook
-    )
-    assert "do not keep searching new frames before the first 3D lift" in (
-        normalized_playbook
-    )
-    assert "Use the 3D geometry review to reject borderline compact candidates" in (
-        normalized_playbook
-    )
-
-
-def test_playbook_prevents_reasoning_spin_after_successful_sam() -> None:
-    normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
-    assert "After a successful sam_mask call, do not spend extra reasoning turns" in (
-        normalized_playbook
-    )
-    assert (
-        "immediately call lift_mask_to_3d for the most plausible compact candidate"
-        in (normalized_playbook)
-    )
-    assert "do not write a text-only analysis or plan after sam_mask" in (
-        normalized_playbook
-    )
-    assert "your next assistant action must be lift_mask_to_3d" in normalized_playbook
-
-
-def test_playbook_fuses_after_two_valid_small_affordance_fragments() -> None:
-    normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
-    assert "Once two inspected fragments are valid for the same small affordance" in (
-        normalized_playbook
-    )
-    assert "call fuse_accepted_masks immediately" in normalized_playbook
-    assert "do not try a third view unless the first two valid fragments conflict" in (
-        normalized_playbook
-    )
-
-
-def test_playbook_forbids_inspection_before_lifted_paths_exist() -> None:
-    normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
-    assert "Do not call inspect_mask_artifact after sam_mask" in normalized_playbook
-    assert "before lift_mask_to_3d has returned mask_npz_path" in normalized_playbook
-    assert "never guess lifted artifact paths" in normalized_playbook
-
-
 def test_playbook_prevents_reasoning_spin_after_successful_molmo_point() -> None:
     normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
     assert (
@@ -204,14 +146,6 @@ def test_playbook_limits_molmo_retries_before_sam() -> None:
     assert "call sam_mask with the best approved point_xy" in normalized_playbook
 
 
-def test_playbook_documents_exact_lift_argument_shape() -> None:
-    normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
-    assert "lift_mask_to_3d args are exactly frame_id, candidate_id, mask_npz_path" in (
-        normalized_playbook
-    )
-    assert "Use mask_npz_path, not mask_path" in normalized_playbook
-
-
 def test_playbook_prevents_reasoning_spin_after_opened_frame() -> None:
     normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
     assert "After opening a selected frame" in normalized_playbook
@@ -221,73 +155,24 @@ def test_playbook_prevents_reasoning_spin_after_opened_frame() -> None:
     )
 
 
-def test_playbook_bounds_followup_view_search_after_expand() -> None:
+def test_playbook_tells_agent_seed_confirmation_needs_prior_sam_approval() -> None:
     normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
-    assert 'After suggest_additional_views returns action "expand"' in (
-        normalized_playbook
+    assert "STOP. Do not lift to 3D" in normalized_playbook
+    assert "The runner takes your confirmed 2D seed" in normalized_playbook
+    assert (
+        "You must have approved the SAM candidate on seed_frame_id before "
+        "emitting this JSON" in normalized_playbook
     )
-    assert "choose at most two follow-up frames before the next Molmo call" in (
-        normalized_playbook
-    )
-    assert "do not call suggest_additional_views again before Molmo or fusion" in (
-        normalized_playbook
-    )
-    assert "call molmo_point on a selected follow-up frame" in (normalized_playbook)
+    assert "the runner verifies that sam_mask event exists" in normalized_playbook
 
 
-def test_playbook_tells_agent_to_review_lift_geometry_summary() -> None:
-    assert "bbox_extent_xyz" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "max_extent_meters" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "lift_geometry" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "recorded in the final artifact" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "too broad for the target affordance" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "do not approve it" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "Change the SAM candidate, point prompt, or frame" in (
-        SCENEFUNC3D_TOOLS_PLAYBOOK
-    )
-
-
-def test_playbook_requires_lift_overlay_when_inspecting_fragments() -> None:
+def test_playbook_warns_against_repeating_failed_molmo_or_sam_calls() -> None:
     normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
     assert (
-        "inspect_mask_artifact args must include mask_npz_path, mask_ply_path, "
-        "and lift_overlay_path returned by lift_mask_to_3d"
-    ) in normalized_playbook
-    assert "do not approve an accepted fragment from an inspection without" in (
-        normalized_playbook
+        "Never repeat an expensive Molmo or SAM call with identical arguments"
+        in normalized_playbook
     )
-
-
-def test_playbook_requires_multi_view_decision_reason_for_fuse() -> None:
-    normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
-    assert "multi_view_decision.reason is required" in normalized_playbook
-    assert "explain why follow-up views were accepted or rejected" in (
-        normalized_playbook
-    )
-
-
-def test_playbook_tells_agent_stop_decision_has_no_suggested_frame_ids() -> None:
-    assert 'When multi_view_decision.action is "stop"' in (SCENEFUNC3D_TOOLS_PLAYBOOK)
-    assert "suggested_frame_ids must be empty" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "rejected_suggested_frame_ids" in SCENEFUNC3D_TOOLS_PLAYBOOK
-    assert "record every suggested follow-up frame you inspected and rejected" in (
-        SCENEFUNC3D_TOOLS_PLAYBOOK
-    )
-    assert "every frame returned by an expand recommendation" in (
-        SCENEFUNC3D_TOOLS_PLAYBOOK
-    )
-    assert 'Use action "expand" when you accepted fragments from later frames' in (
-        SCENEFUNC3D_TOOLS_PLAYBOOK
-    )
-
-
-def test_playbook_tells_agent_expand_decision_accounts_for_suggested_frames() -> None:
-    normalized_playbook = " ".join(SCENEFUNC3D_TOOLS_PLAYBOOK.split())
-    assert 'When multi_view_decision.action is "expand"' in normalized_playbook
-    assert "exactly one of suggested_frame_ids or rejected_suggested_frame_ids" in (
-        normalized_playbook
-    )
-    assert "Do not put a frame in both lists" in normalized_playbook
+    assert "Change prompt or frame" in normalized_playbook
 
 
 def test_runner_config_is_frozen(tmp_path: Path) -> None:
