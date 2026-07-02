@@ -73,29 +73,37 @@ PYTHONPATH=src python -m codex_agent.scenefunc3d.evaluation.semi_online_pipeline
 
 ## Headline
 
-| Metric | Value |
+**End-to-end status: VERIFIED.** The first smoke attempt hit a transient SAM
+outage (`BrokenPipeError` on `/sam/v1/masks`); a **rerun completed the full real
+chain to a scored result** — seed → 170-frame streaming selection → per-frame
+Molmo → SAM → lift → fusion → score, with per-frame `fragments/` + `sam/`
+artifacts written. So the SAM failure was confirmed a **sidecar-availability
+blip, not a pipeline defect** (Molmo and SAM are separate path-routed upstreams
+behind one workspace proxy; the SAM upstream was momentarily down).
+
+Single-sample smoke on `421254::4668a5f5-0555-48c1-82c2-3ba60bbd4645`
+(`--frame-cap 4 --agreement-tau 0.5`):
+
+| Metric | Value (n=1 smoke) |
 |---|---|
-| Mean IoU | — (full run not completed; see below) |
-| Mean precision | — |
-| AP50 | — |
+| Mean IoU | **0.0** |
+| Mean precision | 0.0 |
+| Recall | 0.0 |
+| Predicted point count | 116 |
+| Full 13-sample fold | pending (decision-grade metrics) |
 
-**No full-run metrics were fabricated.** The single-sample smoke on
-`421254::4668a5f5-…` exercised the pipeline end-to-end and **validated the
-wiring up to the SAM sidecar call**:
+**No numbers fabricated.** The IoU=0 is a *semantic miss*, not a crash: the
+anchor gate kept the fused mask to a coherent ~116-point blob near the anchor,
+but it has zero overlap with GT. Most likely a **wrong-seed case** — the tier-2
+seed is the largest saved fragment, and v6 already flagged that wrong-seed cases
+stay at IoU 0 regardless of fusion quality — with the **degenerate affordance
+prompt** (see caveats: `affordance_concept = task_description`) as a secondary
+suspect. **n=1 proves the wiring, not the accuracy.** A full 13-sample fold
+(comparable to the v6 offline fold) is required before any online-vs-v6 claim;
+fixing the affordance prompt first is the recommended next step.
 
-1. seed selection → **passed** (after the fix below),
-2. `allowed_output_roots` boundary check → **passed** (with the corrected out-dir),
-3. streaming frame selection over all 170 frames + the per-frame Molmo call →
-   **succeeded** against the real remote sidecar proxy,
-4. the SAM sidecar call → **failed** with
-   `sidecar HTTP request failed: url=…/sam/v1/masks; reason_type=BrokenPipeError`.
-
-The SAM failure is a **remote-proxy connection drop (sidecar availability), not
-a pipeline defect** — the engine reached SAM correctly with a well-formed
-request. Per the plan's rule ("if sidecars are unavailable, skip and state so;
-do not fabricate numbers"), the full semi-online metrics are **pending stable
-Molmo/SAM sidecar availability**. The engine itself is validated by 688 passing
-`scenefunc3d` unit tests (see below) plus the pure-assembly semi-online test
+The engine is additionally validated by 688 passing `scenefunc3d` unit tests
+(see below) plus the pure-assembly semi-online test
 `test_score_semi_online_sample_recovers_target` (IoU ≈ 1.0 on a synthetic scene).
 
 ## Bug found and fixed by the smoke run
