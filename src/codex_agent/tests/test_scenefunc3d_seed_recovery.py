@@ -14,12 +14,14 @@ from codex_agent.scenefunc3d.seed_recovery import (
 )
 
 
-def _sam_event(*, frame_id: str, candidates: list[tuple[str, str]]) -> str:
+def _sam_event(
+    *, frame_id: str, candidates: list[tuple[str, str]], status: str = "success"
+) -> str:
     return json.dumps(
         {
             "event_type": "tool_completed",
             "tool_name": "sam_mask",
-            "status": "success",
+            "status": status,
             "args": {"frame_id": frame_id, "image_path": f"{frame_id}-rgb.jpg"},
             "result": {
                 "frame_id": frame_id,
@@ -89,3 +91,50 @@ def test_recover_seed_sam_candidate_rejects_missing_events_file(tmp_path: Path) 
             seed_frame_id="000010",
             seed_candidate_id="cand-a",
         )
+
+
+def test_recover_seed_sam_candidate_rejects_non_json_line(tmp_path: Path) -> None:
+    events = tmp_path / "events.jsonl"
+    events.write_text("{not json\n", encoding="utf-8")
+    with pytest.raises(CodexResponseError, match="not valid JSON"):
+        recover_seed_sam_candidate(
+            events, seed_frame_id="000010", seed_candidate_id="cand-a"
+        )
+
+
+def test_recover_seed_sam_candidate_rejects_bad_result_schema(tmp_path: Path) -> None:
+    events = tmp_path / "events.jsonl"
+    events.write_text(
+        _sam_event(frame_id="000010", candidates=[]) + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(CodexResponseError, match="expected result schema"):
+        recover_seed_sam_candidate(
+            events, seed_frame_id="000010", seed_candidate_id="cand-a"
+        )
+
+
+def test_recover_seed_sam_candidate_skips_failed_and_other_frame_events(
+    tmp_path: Path,
+) -> None:
+    events = tmp_path / "events.jsonl"
+    lines = [
+        _sam_event(
+            frame_id="000010",
+            candidates=[("cand-a", "/run/before-err.npz")],
+            status="error",
+        ),
+        _sam_event(frame_id="000099", candidates=[("cand-a", "/run/before.npz")]),
+        _sam_event(frame_id="000010", candidates=[("cand-a", "/run/fresh.npz")]),
+        _sam_event(
+            frame_id="000010",
+            candidates=[("cand-a", "/run/after-err.npz")],
+            status="error",
+        ),
+        _sam_event(frame_id="000099", candidates=[("cand-a", "/run/after.npz")]),
+    ]
+    events.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    seed = recover_seed_sam_candidate(
+        events, seed_frame_id="000010", seed_candidate_id="cand-a"
+    )
+    assert seed.mask_npz_path == Path("/run/fresh.npz")

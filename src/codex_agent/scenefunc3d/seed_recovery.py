@@ -56,9 +56,10 @@ def recover_seed_sam_candidate(
     """Return the confirmed seed's last successful SAM candidate mask.
 
     Raises:
-        CodexResponseError: If the event log is missing/unreadable, or no
-            successful ``sam_mask`` event on ``seed_frame_id`` contains
-            ``seed_candidate_id``.
+        CodexResponseError: If the event log is missing/unreadable, a tool-event
+            line is not valid JSON, a successful ``sam_mask`` result violates the
+            expected schema, or no successful ``sam_mask`` event on
+            ``seed_frame_id`` contains ``seed_candidate_id``.
     """
     if not events_path.is_file():
         raise CodexResponseError(
