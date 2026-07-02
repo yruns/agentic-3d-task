@@ -58,7 +58,11 @@ def iter_frame_geometry(
 
 
 def load_frame_geometry(scene: SceneFunc3dToolScene, frame_id: str) -> CameraGeometry:
-    """Load one frame's validated camera geometry."""
+    """Load one frame's validated camera geometry.
+
+    Requires a fully-prepared frame (depth + intrinsics + pose all present) and
+    raises ``ToolInputError`` otherwise.
+    """
     assets = resolve_frame_geometry_assets(scene, frame_id)
     return load_camera_geometry(
         intrinsics_path=assets.intrinsics_path,
@@ -67,7 +71,11 @@ def load_frame_geometry(scene: SceneFunc3dToolScene, frame_id: str) -> CameraGeo
 
 
 def read_frame_depth(scene: SceneFunc3dToolScene, frame_id: str) -> FloatArray:
-    """Read one frame's depth image as float64 metres."""
+    """Read one frame's depth image as float64 metres.
+
+    Requires a fully-prepared frame (depth + intrinsics + pose all present) and
+    raises ``ToolInputError`` otherwise.
+    """
     assets = resolve_frame_geometry_assets(scene, frame_id)
     return read_depth_meters(assets.depth_path)
 

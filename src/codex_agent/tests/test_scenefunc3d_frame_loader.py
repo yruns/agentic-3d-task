@@ -15,6 +15,7 @@ from codex_agent.scenefunc3d.backends.frame_loader import (
     read_frame_depth,
 )
 from codex_agent.scenefunc3d.backends.lift_3d import CameraGeometry
+from codex_agent.scenefunc3d.tools.scene_context import SceneFunc3dToolScene
 from codex_agent.tests.scenefunc3d_synthetic_scene import (
     SyntheticFrame,
     write_synthetic_scene,
@@ -23,7 +24,7 @@ from codex_agent.tests.scenefunc3d_synthetic_scene import (
 _INTRINSICS = np.array([[20.0, 0.0, 20.0], [0.0, 20.0, 20.0], [0.0, 0.0, 1.0]])
 
 
-def _scene(tmp_path: Path) -> object:
+def _scene(tmp_path: Path) -> SceneFunc3dToolScene:
     frames = (
         SyntheticFrame("000000", np.eye(4), depth_value_m=2.0),
         SyntheticFrame("000001", np.eye(4), depth_value_m=3.0),
@@ -63,6 +64,13 @@ def test_frame_rgb_path_exists(tmp_path: Path) -> None:
     assert rgb.name == "000000-rgb.jpg"
 
 
+def test_iter_frame_geometry_skips_incomplete_frames(tmp_path: Path) -> None:
+    scene = _scene(tmp_path)
+    (scene.raw_dir / "000001.txt").unlink()
+    items = list(iter_frame_geometry(scene))
+    assert [frame_id for frame_id, _geometry in items] == ["000000"]
+
+
 def test_iter_frame_geometry_fails_closed_when_no_geometry(tmp_path: Path) -> None:
     scene_root = tmp_path / "empty"
     (scene_root / "raw").mkdir(parents=True)
@@ -70,8 +78,6 @@ def test_iter_frame_geometry_fails_closed_when_no_geometry(tmp_path: Path) -> No
     (scene_root / "raw" / "source_frames.json").write_text(
         '[{"frame_id": "000000", "rgb": "000000-rgb.jpg"}]', encoding="utf-8"
     )
-    from codex_agent.scenefunc3d.tools.scene_context import SceneFunc3dToolScene
-
     scene = SceneFunc3dToolScene.load(scene_root)
     with pytest.raises(SceneFunc3dDataError):
         list(iter_frame_geometry(scene))

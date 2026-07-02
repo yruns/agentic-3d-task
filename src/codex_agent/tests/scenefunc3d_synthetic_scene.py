@@ -41,10 +41,14 @@ def write_synthetic_scene(
         Image.new("RGB", (width, height), (10, 20, 30)).save(
             raw_dir / f"{frame.frame_id}-rgb.jpg"
         )
-        depth_mm = np.full(
-            (height, width), int(round(frame.depth_value_m * 1000.0)), dtype=np.uint16
-        )
-        Image.fromarray(depth_mm).save(raw_dir / f"{frame.frame_id}-depth.png")
+        depth_mm = int(round(frame.depth_value_m * 1000.0))
+        if not (0 <= depth_mm <= 65535):
+            raise ValueError(
+                f"synthetic depth out of uint16 range: frame_id={frame.frame_id!r}; "
+                f"depth_m={frame.depth_value_m}; depth_mm={depth_mm}"
+            )
+        depth_image = np.full((height, width), depth_mm, dtype=np.uint16)
+        Image.fromarray(depth_image).save(raw_dir / f"{frame.frame_id}-depth.png")
         _write_matrix(raw_dir / f"{frame.frame_id}-intrinsic.txt", intrinsics)
         _write_matrix(raw_dir / f"{frame.frame_id}.txt", frame.camera_to_world)
     _write_binary_ply(raw_dir / "mesh.ply", vertices_world)
