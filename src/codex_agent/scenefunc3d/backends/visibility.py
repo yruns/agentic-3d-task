@@ -299,16 +299,17 @@ def count_vertex_visibility(
         read_frame_depth,
     )
 
-    counts = {int(vertex_id): 0 for vertex_id in vertex_ids}
+    int_ids = [int(vertex_id) for vertex_id in vertex_ids]
+    counts = dict.fromkeys(int_ids, 0)
     for frame_id in frame_ids:
         geometry = load_frame_geometry(scene, frame_id)
         depth = read_frame_depth(scene, frame_id)
         visible = point_visibility(
             coords, geometry, depth, depth_tolerance=depth_tolerance
         )
-        for row, vertex_id in enumerate(vertex_ids):
+        for row, vertex_id in enumerate(int_ids):
             if bool(visible[row]):
-                counts[int(vertex_id)] += 1
+                counts[vertex_id] += 1
     return counts
 
 

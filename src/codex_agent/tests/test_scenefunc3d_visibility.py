@@ -202,6 +202,24 @@ def test_count_vertex_visibility_counts_unoccluded_frames(tmp_path: Path) -> Non
     assert counts[9] == 1
 
 
+def test_count_vertex_visibility_accumulates_across_frames(tmp_path: Path) -> None:
+    intrinsics = np.array([[20.0, 0.0, 20.0], [0.0, 20.0, 20.0], [0.0, 0.0, 1.0]])
+    frames = (
+        SyntheticFrame("000000", np.eye(4), depth_value_m=2.0),
+        SyntheticFrame("000001", np.eye(4), depth_value_m=2.0),
+    )
+    scene = write_synthetic_scene(
+        tmp_path / "scene",
+        frames=frames,
+        vertices_world=np.array([[0.0, 0.0, 2.0]]),
+        intrinsics=intrinsics,
+    )
+    counts = count_vertex_visibility(
+        [5], np.array([[0.0, 0.0, 2.0]]), scene, ("000000", "000001")
+    )
+    assert counts[5] == 2
+
+
 def test_count_vertex_visibility_rejects_length_mismatch(tmp_path: Path) -> None:
     scene = _pipeline_scene(tmp_path)
     with pytest.raises(ValueError):
