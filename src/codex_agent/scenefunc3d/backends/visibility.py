@@ -218,21 +218,19 @@ def select_scene_visible_frames(
     """Stream a scene's frames, score anchor visibility, return top-N + seed.
 
     Depth is read one frame at a time and discarded to bound memory. The
-    anchor's ``seed_frame_id`` is always included (when it has geometry) so a
-    fully-occluded scene degrades to the single-frame seed rather than an empty
-    selection.
+    anchor's ``seed_frame_id`` is included on a best-effort basis (when it is
+    among the scene's geometry-complete frames) so a fully-occluded scene
+    degrades to the single-frame seed rather than an empty selection.
     """
     if frame_cap <= 0:
         raise ValueError(f"frame_cap must be positive: {frame_cap!r}")
 
     from codex_agent.scenefunc3d.backends.frame_loader import (
         iter_frame_geometry,
-        load_frame_geometry,
         read_frame_depth,
     )
 
     scored: list[FrameVisibility] = []
-    seen_frame_ids: set[str] = set()
     for frame_id, geometry in iter_frame_geometry(scene):
         depth = read_frame_depth(scene, frame_id)
         scored.append(
@@ -240,7 +238,6 @@ def select_scene_visible_frames(
                 frame_id, anchor, geometry, depth, depth_tolerance=depth_tolerance
             )
         )
-        seen_frame_ids.add(frame_id)
 
     visible = [result for result in scored if result.visible]
     visible.sort(key=lambda result: (-result.quality_score, result.frame_id))
@@ -251,22 +248,11 @@ def select_scene_visible_frames(
         seed_score = next(
             (r for r in scored if r.frame_id == anchor.seed_frame_id), None
         )
+        # Seed inclusion is best-effort: only frames that were streamed (i.e. have
+        # complete geometry) can be scored/lifted. A seed with no complete geometry
+        # (or a synthetic Tier-2 seed id) is simply not force-included.
         if seed_score is not None:
             selected.append(seed_score)
-        elif anchor.seed_frame_id not in seen_frame_ids:
-            # Seed frame absent from the streamed set: score it directly so the
-            # pipeline can still process it (fail-closed handled by loaders).
-            seed_geometry = load_frame_geometry(scene, anchor.seed_frame_id)
-            seed_depth = read_frame_depth(scene, anchor.seed_frame_id)
-            selected.append(
-                score_anchor_visibility(
-                    anchor.seed_frame_id,
-                    anchor,
-                    seed_geometry,
-                    seed_depth,
-                    depth_tolerance=depth_tolerance,
-                )
-            )
     return tuple(selected)
 
 

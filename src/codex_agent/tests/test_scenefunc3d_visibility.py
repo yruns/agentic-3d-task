@@ -224,3 +224,21 @@ def test_count_vertex_visibility_rejects_length_mismatch(tmp_path: Path) -> None
     scene = _pipeline_scene(tmp_path)
     with pytest.raises(ValueError):
         count_vertex_visibility([1], np.zeros((2, 3)), scene, ("000000",))
+
+
+def test_select_scene_visible_frames_tolerates_seed_without_geometry(
+    tmp_path: Path,
+) -> None:
+    scene = _pipeline_scene(tmp_path)
+    # Tier-2 semi-online builds the anchor with a synthetic seed id that is not a
+    # real geometry-complete frame; this must NOT crash. Seed force-inclusion is
+    # best-effort and skipped when the seed was not streamed.
+    anchor = build_anchor(
+        np.array([[0.0, 0.0, 2.0], [0.02, 0.0, 2.0], [-0.02, 0.0, 2.0]]),
+        motion_type="pinch_pull",
+        seed_frame_id="semi_online_seed",
+    )
+    selected = select_scene_visible_frames(anchor, scene, frame_cap=10)
+    ids = {v.frame_id for v in selected}
+    assert "semi_online_seed" not in ids
+    assert "000000" in ids
