@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
 
@@ -29,9 +29,18 @@ from codex_agent.scenefunc3d.backends.visibility import (
     project_world_to_pixels,
 )
 
+if TYPE_CHECKING:
+    from codex_agent.scenefunc3d.tools.scene_context import SceneFunc3dToolScene
+
 VisibilityCounter = Callable[
     [Sequence[int], FloatArray, Sequence[str]], Mapping[int, int]
 ]
+
+_DEFAULT_FRAME_CAP = 30
+# Inert placeholder frame id for the empty-result bundle: satisfies FrameLift's
+# non-empty-id and MultiViewLiftBundle's non-empty-frames validators while
+# carrying zero lifted points, so fusion yields an empty mask.
+_EMPTY_BUNDLE_FRAME_ID = "__none__"
 
 
 @dataclass(frozen=True)
@@ -129,32 +138,28 @@ def fuse_selected_frames(
             )
 
     if not accepted_lifts:
-        empty = fuse_multiview_points(
+        fused = fuse_multiview_points(
             MultiViewLiftBundle(
-                frames=(FrameLift(frame_id="__none__", point_indices=()),),
+                frames=(FrameLift(frame_id=_EMPTY_BUNDLE_FRAME_ID, point_indices=()),),
                 anchor=anchor,
             ),
             vertices,
             params,
         )
-        return AnchorMultiViewResult(
-            fused=empty,
-            selected_frames=tuple(selected_frames),
-            per_frame=tuple(per_frame),
+    else:
+        union_ids = sorted(
+            {index for lift in accepted_lifts for index in lift.point_indices}
         )
+        union_coords = vertices[union_ids]
+        accepted_frame_ids = [lift.frame_id for lift in accepted_lifts]
+        counts = visibility_counts_fn(union_ids, union_coords, accepted_frame_ids)
+        bundle = MultiViewLiftBundle(
+            frames=tuple(accepted_lifts),
+            anchor=anchor,
+            visibility_counts=dict(counts),
+        )
+        fused = fuse_multiview_points(bundle, vertices, params)
 
-    union_ids = sorted(
-        {index for lift in accepted_lifts for index in lift.point_indices}
-    )
-    union_coords = vertices[union_ids]
-    accepted_frame_ids = [lift.frame_id for lift in accepted_lifts]
-    counts = visibility_counts_fn(union_ids, union_coords, accepted_frame_ids)
-    bundle = MultiViewLiftBundle(
-        frames=tuple(accepted_lifts),
-        anchor=anchor,
-        visibility_counts=dict(counts),
-    )
-    fused = fuse_multiview_points(bundle, vertices, params)
     return AnchorMultiViewResult(
         fused=fused,
         selected_frames=tuple(selected_frames),
@@ -195,10 +200,63 @@ def _evaluate_proposal(
     )
 
 
+def run_anchor_multiview_pipeline(
+    *,
+    anchor: TargetAnchor,
+    scene: SceneFunc3dToolScene,
+    scene_vertices: FloatArray,
+    proposer: FrameProposer,
+    params: FusionParams,
+    frame_cap: int = _DEFAULT_FRAME_CAP,
+    depth_tolerance: float = 0.25,
+    gate_radius_scale: float = 1.0,
+) -> AnchorMultiViewResult:
+    """Scene-backed Stage B->C->D: select frames, propose, gate, fuse."""
+    from codex_agent.scenefunc3d.backends.frame_loader import load_frame_geometry
+    from codex_agent.scenefunc3d.backends.visibility import (
+        count_vertex_visibility,
+        select_scene_visible_frames,
+    )
+
+    selected = select_scene_visible_frames(
+        anchor, scene, frame_cap=frame_cap, depth_tolerance=depth_tolerance
+    )
+    geometry_by_frame = {
+        frame_vis.frame_id: load_frame_geometry(scene, frame_vis.frame_id)
+        for frame_vis in selected
+    }
+
+    def _counts(
+        vertex_ids: Sequence[int],
+        vertex_coords: FloatArray,
+        frame_ids: Sequence[str],
+    ) -> Mapping[int, int]:
+        return count_vertex_visibility(
+            vertex_ids,
+            vertex_coords,
+            scene,
+            frame_ids,
+            depth_tolerance=depth_tolerance,
+        )
+
+    return fuse_selected_frames(
+        anchor=anchor,
+        scene_vertices=scene_vertices,
+        selected_frames=selected,
+        geometry_by_frame=geometry_by_frame,
+        proposer=proposer,
+        params=params,
+        visibility_counts_fn=_counts,
+        gate_radius_scale=gate_radius_scale,
+    )
+
+
 __all__ = [
     "AnchorMultiViewResult",
     "FrameProposal",
     "FrameProposer",
     "PerFrameOutcome",
+    "VisibilityCounter",
     "fuse_selected_frames",
+    "run_anchor_multiview_pipeline",
 ]
