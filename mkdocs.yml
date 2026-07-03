@@ -74,6 +74,7 @@ nav:
           - v4 Failure Trace Analysis: benchmark/openeqa/v4_failure_trace_analysis_20260612.md
       - SceneFunc Molmo SAM3D:
           - Timeline: benchmark/scenefunc_molmo_sam3d/README.md
+          - Leaderboard vs SceneFun3D baselines: benchmark/scenefunc_molmo_sam3d/leaderboard.md
           - v1 Smoke: benchmark/scenefunc_molmo_sam3d/v1_smoke_20260627.md
           - v2 Full Molmo: benchmark/scenefunc_molmo_sam3d/v2_full_molmo_20260627.md
           - Sidecar E2E Status: benchmark/scenefunc_molmo_sam3d/sidecar_e2e_20260628.md
@@ -84,3 +85,5 @@ nav:
           - v6 Offline Fusion Sweep: benchmark/scenefunc_molmo_sam3d/v6_offline_fusion_sweep_20260702.md
           - v7 Semi-Online Pipeline: benchmark/scenefunc_molmo_sam3d/v7_semi_online_pipeline_20260702.md
           - v8 Seed Confirmation Online: benchmark/scenefunc_molmo_sam3d/v8_seed_confirmation_online_20260703.md
+          - v8.1 Full 20 (421254): benchmark/scenefunc_molmo_sam3d/v8_1_full20_421254_20260703.md
+          - v8.1 Case Traces: benchmark/scenefunc_molmo_sam3d/v8_1_case_traces_20260703.md
