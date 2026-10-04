@@ -15,7 +15,7 @@ import runpy
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Final, Protocol, cast
 
 import openai
 from openai import OpenAI
@@ -30,6 +30,10 @@ _UPSTREAM_API_MODULES = (
     "src.eval_utils_gpt_goatbench",
     "src.potential_estimation_gpt_goal",
 )
+# Permit two SDK transport retries, then surface the final error to FailClosed.
+_MODEL_TRANSPORT_MAX_RETRIES: Final[int] = 2
+# Leave a response margin above the Mac bridge's 180-second upstream timeout.
+_MODEL_TRANSPORT_TIMEOUT_SECONDS: Final[float] = 240.0
 
 
 class BridgeConnection(BaseModel):
@@ -145,8 +149,8 @@ def run_upstream(settings: RunSettings) -> None:
     with OpenAI(
         base_url=str(connection.endpoint),
         api_key=connection.bridge_token.get_secret_value(),
-        max_retries=0,
-        timeout=180,
+        max_retries=_MODEL_TRANSPORT_MAX_RETRIES,
+        timeout=_MODEL_TRANSPORT_TIMEOUT_SECONDS,
     ) as client:
         injected = ScopeClient(
             ChatEndpoint(
