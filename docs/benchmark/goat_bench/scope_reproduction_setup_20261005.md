@@ -208,6 +208,29 @@ The [parallel revision checks](assets/scope_20261005/parallel_validation_2026100
 include 76 targeted tests and five controller integration cases on Linux with
 real file locking. The dispatch case uses synthetic terminal workers and
 checks six distinct GPU/config/output assignments per batch.
+The [parallel controller launch](assets/scope_20261005/parallel_controller_launch_20261005.json)
+records its deployed SHA, matching script hashes and retained first-split PIDs.
+
+## A-EQA release and asset boundary
+
+The paper also reports A-EQA, but the official repository's A-EQA instructions
+are commented out and neither the evaluator nor config exists in its eight
+public commits. The author's [open issue response](https://github.com/mrwangyou/SCOPE/issues/2#issuecomment-3688968547)
+says that evaluation code was being prepared. This check found no official
+public A-EQA release or predictions.
+
+A [third-party fork](https://github.com/NohJanghan/SCOPE/tree/60cc58cd0af615ee0755eca5639ba61c8b70c5e3)
+added A-EQA code in September 2026 and uses SCOPE's potential graph and
+refinement. Its model defaults, API-failure handling and blind-LLM answer
+replacement during judging differ materially from the current transport and
+coverage requirements. It has not been executed here and cannot establish
+reproduction of the paper's A-EQA results.
+
+The existing OpenEQA subset matches all 184 question IDs and their metadata;
+its 57 distinct HM3D scenes have valid GLB headers/file lengths and navmeshes
+that load in Habitat with finite positive navigable area. This verifies assets,
+not complete rendering or navigation. Detailed sources and bounds are in the
+[A-EQA audit](assets/scope_20261005/aeqa_release_audit_20261005.json).
 
 Remote control records:
 

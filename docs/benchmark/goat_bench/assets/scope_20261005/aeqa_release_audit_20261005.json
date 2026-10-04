@@ -1,0 +1,39 @@
+{
+  "official_repository": "https://github.com/mrwangyou/SCOPE",
+  "official_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "public_branches": ["main"],
+  "tags_or_releases": 0,
+  "public_commits_checked": 8,
+  "official_aeqa_entrypoint_or_config_in_history": false,
+  "official_release_issue": "https://github.com/mrwangyou/SCOPE/issues/2#issuecomment-3688968547",
+  "third_party_candidate": {
+    "repository": "https://github.com/NohJanghan/SCOPE",
+    "commit": "60cc58cd0af615ee0755eca5639ba61c8b70c5e3",
+    "aeqa_implementation_added": "2026-09-10",
+    "uses_scope_potential_graph_and_refinement": true,
+    "author_official_release": false,
+    "navigation_or_judging_run_started": false,
+    "material_differences": [
+      "Qwen/Ollama and external ../3dmem/.env defaults",
+      "API failure can confirm a candidate",
+      "three repeated rejections can force acceptance",
+      "failed-question judging can use blind-LLM cache answers",
+      "ground-truth path-length generation provenance not confirmed"
+    ]
+  },
+  "local_assets": {
+    "subset": "/home/ysh/Datasets/open-eqa/assets/open-eqa-v0-184-questions.json",
+    "full_questions": "/home/ysh/Datasets/open-eqa/data/open-eqa-v0.json",
+    "scene_root": "/home/ysh/Datasets/open-eqa/data/scene_datasets/hm3d/val",
+    "unique_subset_ids": 184,
+    "matching_questions_and_metadata": 184,
+    "independent_scenes": 57,
+    "valid_glb_headers_and_lengths": 57,
+    "habitat_pathfinder_loaded_navmeshes": 57,
+    "finite_positive_navigable_areas": 57,
+    "navigable_area_min_m2": 31.317,
+    "navigable_area_max_m2": 276.919,
+    "all_scene_rendering_or_navigation_verified": false
+  },
+  "scope": "Read-only release and asset audit. This is not evidence of SCOPE A-EQA accuracy, efficiency, or paper-number reproduction."
+}

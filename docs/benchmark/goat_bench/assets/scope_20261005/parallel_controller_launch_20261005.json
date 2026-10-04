@@ -1,0 +1,23 @@
+{
+  "controller_code_commit": "82860f002a4fec57ece1f455c330ae425e7b5650",
+  "branch": "feat/realtime-model",
+  "runtime_source_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "original_firstsplit_head_commit": "89dd5337df953374c26b0ebcb67b3bb8663b9ad8",
+  "controller_replaced_local_time": "2026-10-05 04:13 Asia/Shanghai",
+  "controller_pid": 2675364,
+  "retained_worker_pids": [2655312, 2655314],
+  "worker_restarts_during_replacement": 0,
+  "prior_controller_lock_release_verified": true,
+  "tmux_session": "scope-full-20261005",
+  "command": "bash /home/ysh/Datasets/SCOPE/scripts/run_full.sh > /home/ysh/Datasets/SCOPE/logs/full_run.log 2>&1",
+  "model": "gemini-3.8-flash",
+  "source_hashes": {
+    "run_full.sh": "4c1018adbbf4d1d10b4b2f8a2242c848c50a30107257b8047e843786c9aee2a4",
+    "run_worker.sh": "50f4b10756b3273be9c1c8a631e16e2330eeba7652e5c90eff39ed7b18740803",
+    "prepare_parallel_outputs.sh": "2e0f61dfc4720dd3aed24481219b7b42c5ed18fc921d8ae0858362b81ac92e59"
+  },
+  "remote_and_local_code_hashes_match": true,
+  "firstsplit_coverage_complete_at_replacement": false,
+  "six_worker_batch_started_at_replacement": false,
+  "full_run_complete_at_replacement": false
+}
