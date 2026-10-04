@@ -56,6 +56,8 @@ class WorkerStage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     split: int
     worker: int
+    physical_gpu: int
+    cfg_file: Path
     source_output_dir: Path
     logger_suffix: str
     gate_dir: Path
@@ -187,20 +189,21 @@ def controller_fixture(tmp_path: Path) -> ControllerFixture:
     _write_json(manifests / "canonical278_ids.json", canonical_ids)
     for name in ("full_project_commit.txt", "full_controller_commit.txt"):
         (manifests / name).write_text("0123456789abcdef\n", encoding="utf-8")
-    subprocess.run(
-        [
-            "bash",
-            str(_PROJECT_ROOT / "scripts/scope/prepare_worker_outputs.sh"),
-            "--assets-root",
-            str(assets_root),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
+    for preparation in ("prepare_worker_outputs.sh", "prepare_parallel_outputs.sh"):
+        subprocess.run(
+            [
+                "bash",
+                str(_PROJECT_ROOT / "scripts/scope" / preparation),
+                "--assets-root",
+                str(assets_root),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
     stages = FixturePlan.model_validate_json(
-        (manifests / "storage_plan.json").read_text(encoding="utf-8")
+        (manifests / "storage_plan_parallel_v2.json").read_text(encoding="utf-8")
     ).stages
     for stage in stages:
         ids = ExpectedIds.model_validate_json(
@@ -351,3 +354,56 @@ def test_conflicting_immutable_primary_copy_is_rejected(
     assert "Conflicting primary shard" in result.stderr
     assert conflicting.read_bytes() == altered
     _assert_no_worker_started(fixture)
+
+
+def test_future_batches_launch_six_disjoint_gpu_workers_before_collection(
+    controller_fixture: ControllerFixture,
+) -> None:
+    """Exercise tmux dispatch with synthetic terminal workers, without GPUs."""
+    fixture = controller_fixture
+    for stage in fixture.stages:
+        if stage.split != 1:
+            (
+                fixture.assets_root
+                / f"logs/full_split{stage.split}_worker{stage.worker}.exit"
+            ).unlink()
+    fakebin = Path(fixture.environment["PATH"].split(os.pathsep)[0])
+    (fakebin / "tmux").write_text(
+        "#!/usr/bin/env bash\n"
+        f"printf '%s\\n' \"$*\" >> {shlex.quote(str(fixture.tmux_calls))}\n"
+        'if [[ "$1" == new-session && "$*" =~ scope-s([0-9]+)-w([01])- ]]; then\n'
+        f"  printf '0\\n' > {shlex.quote(str(fixture.assets_root / 'logs'))}"
+        "/full_split${BASH_REMATCH[1]}_worker${BASH_REMATCH[2]}.exit\n"
+        "  exit 0\n"
+        "fi\n"
+        "exit 1\n",
+        encoding="utf-8",
+    )
+    result = _run_controller(fixture)
+    assert result.returncode == 0, result.stderr[-2000:]
+    events = [
+        line
+        for line in result.stdout.splitlines()
+        if line.startswith(("Started worker:", "Finished split"))
+    ]
+    expected_events = ["Finished split 1"]
+    for first_split in (2, 5, 8):
+        batch = tuple(range(first_split, first_split + 3))
+        stages = [stage for stage in fixture.stages if stage.split in batch]
+        assert {stage.physical_gpu for stage in stages} == {0, 2, 3, 4, 5, 6}
+        assert len({stage.source_output_dir for stage in stages}) == 6
+        assert len({stage.cfg_file for stage in stages}) == 6
+        for split in batch:
+            for worker in (0, 1):
+                expected_events.append(
+                    f"Started worker: scope-s{split}-w{worker}-20261005"
+                )
+        expected_events.extend(f"Finished split {split}" for split in batch)
+    assert events == expected_events
+    launches = [
+        line
+        for line in fixture.tmux_calls.read_text().splitlines()
+        if line.startswith("new-session")
+    ]
+    assert len(launches) == 18
+    assert not any("scope-s1-w" in line for line in launches)

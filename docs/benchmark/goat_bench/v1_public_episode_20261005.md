@@ -51,14 +51,24 @@ The original paper model is `gpt-4o-2024-11-20`; this run uses
 `gemini-3.8-flash`, requesting `include_thoughts=true` and
 `budget_tokens=2000`, through the Mac bridge and SSH reverse tunnel. No LLM
 judge is used. The bridge rejects failed or empty API responses, and the
-bootstrap terminates on API errors instead of accepting upstream default
-potential or confirmation values.
+bootstrap terminates on infrastructure API errors before upstream API-failure
+defaults can be accepted. Nonempty semantic-format fallbacks remain part of
+the pinned implementation; their scope is described in the
+[effective protocol record](scope_reproduction_setup_20261005.md#effective-protocol-and-fidelity-boundaries).
 
 The original SCOPE prompts and navigation algorithm are retained, including
-persistent memory, potential estimation, self-refinement, temperature 0.7
-and maximum output tokens 4,096. RGB-D observations are 1,280 × 1,280 with
-HFOV 120 degrees, seven initial views and three subsequent views. Execution
-uses TSDF waypoints and the Habitat pathfinder. Its macro-step budget follows
+potential estimation and self-refinement. Memory persists across subtasks
+within an episode; scene memory, TSDF and potential graph are initialized
+again for each new episode. Requested sampling settings are temperature 0.7,
+`top_p=0.95`, maximum output tokens 4,096 and frequency/presence penalties 0.
+The shared fields follow [paper Appendix A, Table 3](https://arxiv.org/html/2511.08935v1);
+all settings are explicit in the
+[pinned API request](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/eval_utils_gpt_goatbench.py#L49-L57).
+RGB-D observations are 1,280 × 1,280 with HFOV 120 degrees. The
+[per-subtask observation loop](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L207-L255)
+captures seven views at each subtask's first step and three at subsequent
+steps. Execution uses TSDF waypoints and the Habitat pathfinder. Its macro-step
+budget follows
 the original scene-size setting; it is not the original GOAT-Bench budget of
 500 discrete movement actions.
 

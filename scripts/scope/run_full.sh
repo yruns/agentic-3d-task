@@ -5,6 +5,7 @@ scope_assets=/home/ysh/Datasets/SCOPE
 scope_full=$scope_assets/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669
 scope_public=$scope_assets/outputs/REPRO_20261005_SCOPE_Gemini38Flash_public_example_ep0
 scope_gate_python=/home/ysh/miniconda3/envs/conceptgraph/bin/python
+scope_plan=$scope_assets/manifests/storage_plan_parallel_v2.json
 read -r scope_project_commit < "$scope_assets/manifests/full_project_commit.txt"
 read -r scope_controller_commit < "$scope_assets/manifests/full_controller_commit.txt"
 exec 9>"$scope_assets/logs/full_controller.lock"
@@ -43,7 +44,7 @@ collect_worker() {
   local scope_split=$1 scope_worker=$2 scope_commit=$3
   local scope_source scope_suffix scope_gate scope_expected scope_metric
   read -r scope_source scope_suffix scope_gate scope_expected < <(
-    "$scope_gate_python" - "$scope_assets/manifests/storage_plan.json" "$scope_split" "$scope_worker" <<'PY'
+    "$scope_gate_python" - "$scope_plan" "$scope_split" "$scope_worker" <<'PY'
 from pathlib import Path
 import json
 import sys
@@ -85,20 +86,8 @@ print(summary.model_dump_json())
 PY
 }
 
-wait_for_exit "$scope_assets/logs/public_episode.exit" scope-public-ep0-20261005
-scope_public_commit=$(
-  "$scope_gate_python" - "$scope_public/run_manifest.json" <<'PY'
-from pathlib import Path
-import json
-import sys
-print(json.loads(Path(sys.argv[1]).read_text())['head_commit_at_launch'])
-PY
-)
-ingest_and_check "$scope_public" REPRO_20261005_SCOPE_Gemini38Flash_public_example_ep0 5 "$scope_public_commit"
-
-for scope_split in {1..10}; do
-  scope_stage_commit=$scope_controller_commit
-  [[ "$scope_split" != 1 ]] || scope_stage_commit=$scope_project_commit
+launch_split() {
+  local scope_split=$1 scope_worker scope_session scope_status
   for scope_worker in 0 1; do
     scope_session=scope-s${scope_split}-w${scope_worker}-20261005
     scope_status=$scope_assets/logs/full_split${scope_split}_worker${scope_worker}.exit
@@ -109,8 +98,15 @@ for scope_split in {1..10}; do
     else
       tmux new-session -d -s "$scope_session" \
         "bash $scope_assets/scripts/run_worker.sh $scope_split $scope_worker > $scope_assets/logs/full_split${scope_split}_worker${scope_worker}.log 2>&1"
+      printf 'Started worker: %s\n' "$scope_session"
     fi
   done
+}
+
+complete_split() {
+  local scope_split=$1 scope_worker scope_canonical scope_suffix scope_metric
+  local scope_stage_commit=$scope_controller_commit
+  [[ "$scope_split" != 1 ]] || scope_stage_commit=$scope_project_commit
   for scope_worker in 0 1; do
     wait_for_exit "$scope_assets/logs/full_split${scope_split}_worker${scope_worker}.exit" "scope-s${scope_split}-w${scope_worker}-20261005"
     collect_worker "$scope_split" "$scope_worker" "$scope_stage_commit"
@@ -128,5 +124,29 @@ for scope_split in {1..10}; do
     ingest_and_check "$scope_canonical" REPRO_20261005_SCOPE_Gemini38Flash_canonical278 278 "$scope_project_commit"
   fi
   printf 'Finished split %s\n' "$scope_split"
+}
+
+wait_for_exit "$scope_assets/logs/public_episode.exit" scope-public-ep0-20261005
+scope_public_commit=$(
+  "$scope_gate_python" - "$scope_public/run_manifest.json" <<'PY'
+from pathlib import Path
+import json
+import sys
+print(json.loads(Path(sys.argv[1]).read_text())['head_commit_at_launch'])
+PY
+)
+ingest_and_check "$scope_public" REPRO_20261005_SCOPE_Gemini38Flash_public_example_ep0 5 "$scope_public_commit"
+
+# Retain the two active first-episode workers. Subsequent batches run three
+# independent episodes per scene, with one process per physical GPU and output.
+launch_split 1
+complete_split 1
+for scope_batch_start in 2 5 8; do
+  for scope_split in "$scope_batch_start" "$((scope_batch_start + 1))" "$((scope_batch_start + 2))"; do
+    launch_split "$scope_split"
+  done
+  for scope_split in "$scope_batch_start" "$((scope_batch_start + 1))" "$((scope_batch_start + 2))"; do
+    complete_split "$scope_split"
+  done
 done
 ingest_and_check "$scope_full" REPRO_20261005_SCOPE_Gemini38Flash_full2669 2669 "$scope_project_commit"

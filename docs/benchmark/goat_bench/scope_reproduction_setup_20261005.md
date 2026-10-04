@@ -76,15 +76,68 @@ removed that runtime blocker.
   ID, creation time and choice index are filled as transport metadata only.
 - The existing local GPT-4o credential returned HTTP 401 in a preflight;
   it is not used as evidence that the paper model is available.
-- Algorithm settings retain upstream prompts, temperature 0.7, max tokens
-  4,096, persistent memory, potential estimation and self-refinement.
-- Original observations: 1,280 × 1,280 RGB-D, HFOV 120 degrees; seven initial
-  views and three subsequent views.
+- Algorithm settings retain upstream prompts, temperature 0.7, `top_p=0.95`,
+  max tokens 4,096, frequency/presence penalties 0, persistent memory,
+  potential estimation and self-refinement.
+- Original observations: 1,280 × 1,280 RGB-D, HFOV 120 degrees; seven views at
+  the first step of each subtask and three at its subsequent steps.
 - Primary metrics: `success_by_distance` and `spl_by_distance`, using
   geodesic distance to annotated goal viewpoints and a 1 m threshold.
-- API failure must terminate the run or invalidate it; upstream defaults that
-  silently replace failed potential estimates or confirmations do not count
-  as a successful reproduction.
+- Infrastructure API failure terminates the bootstrap before upstream
+  API-failure defaults can be accepted. Nonempty semantic-format fallbacks
+  remain part of the pinned upstream implementation, as detailed below.
+
+### Effective protocol and fidelity boundaries
+
+The settings below were checked against the pinned official source and the
+frozen evaluation YAML. The YAML changes eight resource/output settings; it keeps
+all navigation parameters. ModelHub forwards the requested sampling fields
+and adds the user-authorized model and thinking configuration. Sampling
+requests match [paper Appendix A, Table 3](https://arxiv.org/html/2511.08935v1);
+Gemini with thinking remains a separate model configuration.
+
+| Aspect | Effective released-code behavior | Pinned source evidence |
+| --- | --- | --- |
+| Sampling and prompt images | Temperature 0.7, `top_p=0.95`, max tokens 4,096, frequency/presence penalties 0; prompt images are 360 × 360. | [API request](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/eval_utils_gpt_goatbench.py#L49-L57), [image settings](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/cfg/eval_goatbench.yaml#L41-L43). |
+| Memory lifetime | Scene memory, TSDF and potential graph persist across subtasks within an episode. A new episode initializes all three again; ten episodes from one scene are separate memory sessions. | [Episode initialization and optional clearing](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L135-L234), [`clear_up_memory_every_subtask=false`](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/cfg/eval_goatbench.yaml#L33-L36). |
+| Potential graph | Runtime grid resolution is 1.0 m, temporal decay 0.95 and influence radius 3.0 m. Potential estimation is enabled by default. The entrypoint overrides the class constructor's grid/radius defaults. | [Runtime defaults](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L164-L170), [estimator switch](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L362-L386). |
+| Navigation and sensing budget | Each subtask permits `max(50, int(2 * sqrt(scene_size)))` macro-steps; `scene_size` is the scene's horizontal bounding-box area. Its first step captures seven views, then three per step. | [Step budget](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L149-L151), [per-subtask loop and views](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L207-L255), [area calculation](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/geom.py#L15-L39). |
+| Goal selection | The original helper retains descriptions with at most 55 space-separated words, includes child categories for category goals, and selects the referenced instance for description/image goals. The frozen request contains 278 split-1 and 2,669 full-set IDs. | [Unmodified goal helper](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/goatbench_utils.py#L6-L62), [frozen selection](assets/scope_20261005/full2669_frozen_manifest.json). |
+| Stop and measurement | Arrival at a selected snapshot ends normal navigation. Distance success independently checks whether the final pose is strictly less than 1 m geodesic distance from an annotated viewpoint. | [Arrival condition](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L534-L553), [distance measurement](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L589-L613). |
+| Seed and repetitions | Python and NumPy use seed 3407; the entrypoint sets no Torch seed. The queued evaluation is one pass. It provides no five-repeat mean/standard-deviation or significance result. | [Seed initialization](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L44-L45), [paper Appendix B](https://arxiv.org/html/2511.08935v1). |
+
+[Paper Equation 9](https://arxiv.org/html/2511.08935v1) describes a weighted
+exploration score with a visitation penalty. The released implementation
+[computes `exploration_value`](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/potential_graph.py#L317-L352),
+but the policy's frontier-score
+[getter returns `node.potential_score`](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/potential_graph.py#L381-L394).
+This behavior is retained. Results reproduce the pinned released implementation;
+they do not establish that every paper equation is executed literally.
+
+Self-refinement applies to snapshot choices for every goal modality, despite
+the YAML comment mentioning descriptions. The upstream code retains three
+semantic fallbacks: unmatched potential fields start at neutral 3.0;
+nonempty confirmation text outside `CONFIRM`/`REJECT` is accepted; and a choice
+rejected three times can be accepted on its next occurrence. See
+[potential parsing](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/potential_graph.py#L199-L209),
+[confirmation parsing](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/eval_utils_gpt_goatbench.py#L445-L474)
+and [refinement/cycle handling](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/eval_utils_gpt_goatbench.py#L653-L698).
+The injected client terminates on infrastructure errors, model mismatch and
+empty completions; it does not rewrite these semantic parsing rules.
+
+After five unsuccessful action-format/refinement attempts, the policy can
+return `None` and end the current subtask's navigation loop. The evaluator
+still records its final-pose distance metrics and later saves the episode.
+Consequently, complete ID coverage can include action-format failures; it
+cannot certify that every decision parsed successfully. An already nearby
+final pose can even pass the distance threshold after such a failure. This
+differs from an infrastructure `SystemExit`, which interrupts the run before
+the current episode is saved. The paths are documented in
+[retry exhaustion](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/eval_utils_gpt_goatbench.py#L514-L567),
+[loop termination](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L449-L454)
+and [unconditional metric recording and episode save](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L589-L628).
+Final run records must report observed parser/fallback events separately from
+coverage and SR/SPL; no partial-log observation is a full-run guarantee.
 
 ## Evidence and evaluation status
 
@@ -122,7 +175,8 @@ coverage; running processes and partial metrics are not a completed result.
 
 ## Current evaluation queue
 
-The full-set queue uses two disjoint 18-scene shards on physical GPUs 0 and 2.
+Each split uses two disjoint 18-scene shards. The first split uses physical
+GPUs 0 and 2.
 Its frozen file order, seed 3407 and exact IDs are in
 [full2669_frozen_manifest.json](assets/scope_20261005/full2669_frozen_manifest.json).
 Split 1 contains 137 and 141 subtasks, respectively. Both workers started on
@@ -134,17 +188,33 @@ The ingestion boundary now accepts the original integer episode IDs and
 normalizes them to strings. It reads primary distance shards ahead of derived
 aggregate files, checks matching success/SPL IDs and rejects conflicting data.
 The original frozen metadata is unchanged. For splits 2–10, only `exp_name`
-changes between the two worker configs so they write to separate directories;
+changes between stage configs so each split/worker writes to its own directory;
 prompts, sensors, scene selection and algorithm parameters are identical.
 Each terminal shard is checked against its exact IDs before being published
 to the central output directory. A resumed controller reuses existing workers
 and validates terminal artifacts rather than starting duplicate work.
+
+After the 278-ID gate passes, the queue launches batches of three splits:
+2–4, 5–7, then 8–10. Each batch has six workers on GPUs 0, 2, 3, 4, 5 and 6,
+which were verified available before queue preparation. GPU 1 is excluded.
+Each process retains the original half-scene selection and independently
+resets its episode memory, as in the released evaluator. The model and
+navigation parameters remain identical to the first-split configuration.
+The successor [parallel storage plan](assets/scope_20261005/storage_plan_parallel_v2.json)
+preserves the immutable original plan and all twenty gates. Its preparation
+passed under the actual Linux `scope-repro` Python 3.9 environment. This is
+queued work; it is not evidence that six navigation workers have started.
+The [parallel revision checks](assets/scope_20261005/parallel_validation_20261005.json)
+include 76 targeted tests and five controller integration cases on Linux with
+real file locking. The dispatch case uses synthetic terminal workers and
+checks six distinct GPU/config/output assignments per batch.
 
 Remote control records:
 
 ```text
 tmux: scope-full-20261005; scope-s1-w0-20261005; scope-s1-w1-20261005
 manifests/storage_plan.json
+manifests/storage_plan_parallel_v2.json
 manifests/full_project_commit.txt
 manifests/full_controller_commit.txt
 logs/full_run.log; logs/full_run.exit

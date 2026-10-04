@@ -1,0 +1,207 @@
+{
+  "schema_version": 2,
+  "experiment": "REPRO_20261005_SCOPE_Gemini38Flash_full2669",
+  "central_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669",
+  "stages": [
+    {
+      "split": 1,
+      "worker": 0,
+      "physical_gpu": 0,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669",
+      "logger_suffix": "0.0_0.5_1",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split1_worker0",
+      "expected_subtasks": 137
+    },
+    {
+      "split": 1,
+      "worker": 1,
+      "physical_gpu": 2,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669",
+      "logger_suffix": "0.5_1.0_1",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split1_worker1",
+      "expected_subtasks": 141
+    },
+    {
+      "split": 2,
+      "worker": 0,
+      "physical_gpu": 0,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split2_worker0.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split2_worker0",
+      "logger_suffix": "0.0_0.5_2",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split2_worker0",
+      "expected_subtasks": 130
+    },
+    {
+      "split": 2,
+      "worker": 1,
+      "physical_gpu": 2,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split2_worker1.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split2_worker1",
+      "logger_suffix": "0.5_1.0_2",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split2_worker1",
+      "expected_subtasks": 125
+    },
+    {
+      "split": 3,
+      "worker": 0,
+      "physical_gpu": 3,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split3_worker0.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split3_worker0",
+      "logger_suffix": "0.0_0.5_3",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split3_worker0",
+      "expected_subtasks": 138
+    },
+    {
+      "split": 3,
+      "worker": 1,
+      "physical_gpu": 4,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split3_worker1.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split3_worker1",
+      "logger_suffix": "0.5_1.0_3",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split3_worker1",
+      "expected_subtasks": 139
+    },
+    {
+      "split": 4,
+      "worker": 0,
+      "physical_gpu": 5,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split4_worker0.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split4_worker0",
+      "logger_suffix": "0.0_0.5_4",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split4_worker0",
+      "expected_subtasks": 135
+    },
+    {
+      "split": 4,
+      "worker": 1,
+      "physical_gpu": 6,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split4_worker1.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split4_worker1",
+      "logger_suffix": "0.5_1.0_4",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split4_worker1",
+      "expected_subtasks": 137
+    },
+    {
+      "split": 5,
+      "worker": 0,
+      "physical_gpu": 0,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split5_worker0.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split5_worker0",
+      "logger_suffix": "0.0_0.5_5",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split5_worker0",
+      "expected_subtasks": 129
+    },
+    {
+      "split": 5,
+      "worker": 1,
+      "physical_gpu": 2,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split5_worker1.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split5_worker1",
+      "logger_suffix": "0.5_1.0_5",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split5_worker1",
+      "expected_subtasks": 128
+    },
+    {
+      "split": 6,
+      "worker": 0,
+      "physical_gpu": 3,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split6_worker0.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split6_worker0",
+      "logger_suffix": "0.0_0.5_6",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split6_worker0",
+      "expected_subtasks": 118
+    },
+    {
+      "split": 6,
+      "worker": 1,
+      "physical_gpu": 4,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split6_worker1.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split6_worker1",
+      "logger_suffix": "0.5_1.0_6",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split6_worker1",
+      "expected_subtasks": 133
+    },
+    {
+      "split": 7,
+      "worker": 0,
+      "physical_gpu": 5,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split7_worker0.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split7_worker0",
+      "logger_suffix": "0.0_0.5_7",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split7_worker0",
+      "expected_subtasks": 134
+    },
+    {
+      "split": 7,
+      "worker": 1,
+      "physical_gpu": 6,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split7_worker1.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split7_worker1",
+      "logger_suffix": "0.5_1.0_7",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split7_worker1",
+      "expected_subtasks": 142
+    },
+    {
+      "split": 8,
+      "worker": 0,
+      "physical_gpu": 0,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split8_worker0.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split8_worker0",
+      "logger_suffix": "0.0_0.5_8",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split8_worker0",
+      "expected_subtasks": 134
+    },
+    {
+      "split": 8,
+      "worker": 1,
+      "physical_gpu": 2,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split8_worker1.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split8_worker1",
+      "logger_suffix": "0.5_1.0_8",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split8_worker1",
+      "expected_subtasks": 145
+    },
+    {
+      "split": 9,
+      "worker": 0,
+      "physical_gpu": 3,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split9_worker0.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split9_worker0",
+      "logger_suffix": "0.0_0.5_9",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split9_worker0",
+      "expected_subtasks": 136
+    },
+    {
+      "split": 9,
+      "worker": 1,
+      "physical_gpu": 4,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split9_worker1.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split9_worker1",
+      "logger_suffix": "0.5_1.0_9",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split9_worker1",
+      "expected_subtasks": 129
+    },
+    {
+      "split": 10,
+      "worker": 0,
+      "physical_gpu": 5,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split10_worker0.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split10_worker0",
+      "logger_suffix": "0.0_0.5_10",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split10_worker0",
+      "expected_subtasks": 129
+    },
+    {
+      "split": 10,
+      "worker": 1,
+      "physical_gpu": 6,
+      "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split10_worker1.yaml",
+      "source_output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split10_worker1",
+      "logger_suffix": "0.5_1.0_10",
+      "gate_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_gates/split10_worker1",
+      "expected_subtasks": 130
+    }
+  ]
+}

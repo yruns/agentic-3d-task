@@ -1,0 +1,37 @@
+{
+  "targeted_tests": "76 passed on Mac, 28.10 seconds",
+  "controller_integration_linux": "5 passed with real flock",
+  "controller_cases": [
+    "completed-stage resume preserves exact canonical278 and full2669 IDs",
+    "missing sample rejected",
+    "nonzero terminal worker rejected",
+    "conflicting immutable source rejected",
+    "future batches dispatch six independent workers before collection"
+  ],
+  "project_gate": {
+    "ruff_src": "passed",
+    "black_check_src": "passed, 211 files",
+    "mypy_src": "passed, 211 files",
+    "keyframe_tests": "53 passed"
+  },
+  "preparation": {
+    "linux_python": "scope-repro Python 3.9",
+    "terminal_exit": 0,
+    "frozen_subtasks": 2669,
+    "stage_count": 20,
+    "stage_batches": [[2, 3, 4], [5, 6, 7], [8, 9, 10]],
+    "gpus_per_batch": [0, 2, 3, 4, 5, 6],
+    "algorithm_configuration_changes": [],
+    "storage_configuration_changes": ["exp_name"],
+    "metadata_and_original_gates": "unchanged",
+    "additional_checks": ["idempotence", "concurrent atomic publication", "conflict rejection", "invalid GPU rejection", "symlink path preservation"]
+  },
+  "quality": {
+    "embedded_preparation_python": "ruff, black and mypy strict passed",
+    "targeted_python": "ruff, black and mypy passed",
+    "bash_syntax": "passed",
+    "mkdocs_build": "passed",
+    "git_diff_check": "passed"
+  },
+  "scope": "Integration tests use synthetic fixtures. Live navigation workers and their recorded distance metrics are evaluated separately."
+}
