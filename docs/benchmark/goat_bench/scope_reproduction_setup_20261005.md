@@ -267,6 +267,34 @@ The [controller launch record](assets/scope_20261005/controller_launch_20261005.
 captures the deployed commit and matching code hashes. Only the controller was
 replaced; both navigation worker PIDs were retained.
 
+### Transport recovery and partial checkpoint
+
+At 05:08:56 on 2026-10-05, first-split worker 1 exited 1 after an actual
+`APITimeoutError`. The bridge ledger recorded one upstream 504 after about
+190 seconds; the SDK's 180-second limit expired before that response arrived.
+The other five workers continued. The failed exit, both logs and the incomplete
+episode's visualizations were archived under `failed_attempts/`.
+
+Bootstrap revision `08fdeba` restores the SDK's two bounded transport retries
+and uses a 240-second client timeout above the bridge's 180-second upstream
+limit. Final API errors still terminate instead of accepting default scores.
+Prompts, model sampling, sensor settings and navigation budgets are unchanged.
+Only the failed worker restarted, at 05:39, with PID 2696054; real image requests
+returned HTTP 200. Its first episode had no saved metric checkpoint and is
+replayed from the original initial state. Earlier log-only successes are not
+merged into new results. The [recovery record](assets/scope_20261005/transport_recovery_20261005.json)
+retains the original failure and exact revision. Older live workers retain their
+original clients; future launches use the new bootstrap.
+
+At 05:40, first-split worker 0 had persisted all seven subtasks of scene
+`00824-Dd4bFSTQ8gi`, episode 0. An immutable observation was ingested separately
+from the eventual canonical result: **7/278 IDs**, five successes, observed SR
+71.4286% and SPL 45.6954%. These are incomplete progress measurements, not a
+new evaluation fold or a paper comparison. The frozen request remains 278 IDs.
+The [checkpoint summary](assets/canonical278_progress_20261005_0540/ingested_summary.json)
+explicitly reports `complete=false` and retains matching primary shards and
+original metadata. It does not overwrite the controller's immutable final gates.
+
 ## Sources
 
 - [Official SCOPE code](https://github.com/mrwangyou/SCOPE).
