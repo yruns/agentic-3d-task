@@ -182,6 +182,23 @@ before execution. Two workers on GPUs 0 and 2 are processing split 1 in
 `tmux`. Completion requires terminal worker status and exact frozen-ID
 coverage; running processes and partial metrics are not a completed result.
 
+The original metadata and frozen IDs independently establish these final
+denominators:
+
+| Requested selection | Scenes | Episodes | Object | Image | Description | Total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| First episode per scene | 36 | 36 | 99 | 88 | 91 | 278 |
+| All original episodes | 36 | 360 | 991 | 822 | 856 | 2,669 |
+
+Final acceptance requires the controller and every relevant worker to exit 0,
+paired primary success/SPL shards with exactly the frozen IDs, and ingestion
+with `complete=true`, `expected_ids_verified=true`, and `modality_complete=true`.
+The SQLite samples must independently reproduce overall and modality SR/SPL
+with the denominators above. Final raw shards, frozen IDs, metadata, config,
+runtime revision and all transport recovery records must be archived before
+publishing a completed local result. Full-run API usage remains aggregate;
+per-subtask token counts are unavailable from these upstream artifacts.
+
 ## Current evaluation queue
 
 Each split uses two disjoint 18-scene shards. The first split uses physical
