@@ -1,0 +1,42 @@
+{
+  "launch_time": "2026-10-05T07:34:34+08:00",
+  "head_commit_at_launch": "19fdb08812f37105ec08972ee2b946450801d60a",
+  "upstream_runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "bootstrap_revision": "08fdeba4c8529e7e01ce1e01f88b6e558e1e652f",
+  "frozen_plan": "/home/ysh/Datasets/SCOPE/manifests/storage_plan_parallel_v2.json",
+  "split": 5,
+  "worker": 0,
+  "physical_gpu": 0,
+  "pid": 2729285,
+  "tmux": "scope-s5-w0-20261005",
+  "expected_subtasks": 129,
+  "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split5_worker0.yaml",
+  "output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split5_worker0",
+  "existing_gpu0_peer": {
+    "split": 1,
+    "worker": 0,
+    "pid": 2706523
+  },
+  "resource_preflight": {
+    "gpu0_total_mib": 24564,
+    "gpu0_used_mib": 9245,
+    "gpu0_free_mib": 14839,
+    "gpu2_previous_sharing_elapsed_minutes": 27,
+    "gpu2_used_mib": 18248,
+    "gpu2_free_mib": 5836
+  },
+  "post_launch_observation": {
+    "observed_at": "2026-10-05T07:35:53+08:00",
+    "worker_elapsed_seconds": 79,
+    "original_workers_and_controller_live": true,
+    "new_worker_live": true,
+    "real_potential_scores_and_navigation_query_logged": true,
+    "gpu0_used_mib": 17906,
+    "gpu0_free_mib": 6178,
+    "gpu2_used_mib": 18248,
+    "gpu2_free_mib": 5836,
+    "new_terminal_status_files": []
+  },
+  "concurrency": 8,
+  "notes": "The complementary independent frozen split5 worker launched after GPU2 sharing remained stable for 27 minutes and fresh GPU0 resource preflight. Split5 now processes both disjoint half-scene shards early, 257 requested IDs total. Models, prompts, selection, memory resets and navigation budgets are unchanged; the controller will reuse both workers. Resource observations do not prove every future scene peak. Ledger remains aggregate full-run usage."
+}

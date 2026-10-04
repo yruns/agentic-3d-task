@@ -290,6 +290,16 @@ split 5 is reached. Concurrency is seven workers; further sharing has not been
 started. The [launch record](assets/scope_20261005/co_gpu_worker_launch_20261005.json)
 preserves the project head, exact PID, requested IDs and resource evidence.
 
+After 27 minutes of GPU-2 sharing with no terminal error or memory growth,
+the complementary split 5 worker 0 started on GPU 0 at 07:34:34. Its frozen
+shard contains 129 IDs, so both split-5 workers process 257 IDs in their separate
+directories. Before launch GPU 0 had 14,839 MiB free. After real potential-score
+requests and the first navigation query, GPU 0 used 17,906 MiB with 6,178 MiB
+free; GPU 2 retained 5,836 MiB free. All existing PIDs remained live. Concurrency
+is now eight workers with the same frozen configuration. The
+[paired launch record](assets/scope_20261005/co_gpu_paired_worker_launch_20261005.json)
+retains the exact preflight and runtime evidence.
+
 ## A-EQA release and asset boundary
 
 The paper also reports A-EQA, but the official repository's A-EQA instructions
@@ -373,6 +383,18 @@ SR 83.3333% and SPL 55.4600%. Its requested set remains the full 2,669 IDs and
 `complete=false`. The metadata symlink reuses the exact immutable original
 metadata already archived for the first checkpoint. This snapshot is a progress
 observation and is not a comparison with the paper's full-set metrics.
+
+At 07:42, split 4 worker 0 had also saved all five subtasks of scene
+`00808-y9hTuugGdiq`, episode 3. The next immutable
+[full-set progress observation](assets/full2669_progress_20261005_0742/ingested_summary.json)
+contains **17/2,669 IDs across three complete episodes**, with 13 successes,
+observed SR 76.4706% and SPL 52.2125%. Its expected set remains the original
+2,669 IDs and `complete=false`; the canonical278 progress remains seven IDs.
+Both remote and local SQLite samples independently reproduce the metrics.
+The [manifest](assets/full2669_progress_20261005_0742/run_manifest.json)
+preserves the five new IDs, raw primary shard hashes, original metadata and
+the distinct launch/recovery revisions. The source workers continue, and final
+controller gates are untouched.
 
 ### SSH tunnel recovery
 

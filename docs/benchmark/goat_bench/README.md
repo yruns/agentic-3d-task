@@ -20,6 +20,14 @@ At 07:06, split 5 worker 1 started early in its isolated directory, sharing
 GPU 2 with the first-split worker. Seven navigation workers are now active;
 the existing controller will reuse the additional worker.
 
+At 07:34, the complementary split 5 worker started on GPU 0 after resource
+verification. Eight workers now process splits 1, 3, 4 and 5; all output
+directories retain the frozen storage plan.
+
+The 07:42 [progress observation](assets/full2669_progress_20261005_0742/ingested_summary.json)
+records 17/2,669 subtasks in three complete episodes, observed SR 76.47% and SPL
+52.21%. It remains an incomplete observation of the full requested set.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
