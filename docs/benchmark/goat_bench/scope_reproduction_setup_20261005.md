@@ -160,6 +160,15 @@ imports passed. A real 1,280-square frame produced 17 YOLO boxes, a SAM mask
 with 37,132 positive pixels, and finite image/text CLIP features. These are
 preflight checks, not navigation success.
 
+The [fourth encoder integrity record](assets/scope_20261005/yolo_clip_integrity.json)
+verifies the separate 353,976,522-byte OpenAI CLIP checkpoint against its public
+registry SHA. The [runtime environment audit](assets/scope_20261005/environment_runtime_audit_20261005.json)
+also verifies package versions and offline cache revision. The recorded
+[Conda explicit export](assets/scope_20261005/env_conda_explicit.txt) must be
+followed by the [pip freeze](assets/scope_20261005/env_pip_freeze.txt): Conda's
+NumPy metadata says 1.26.4, while the actual pip overlay is 1.23.5. Using only
+the Conda record does not restore the observed runtime.
+
 The public episode ran from clean project commit
 `d5c24a5e676d8729fd1f6d0f890d5bf5760b5827`, using the original SCOPE runtime
 commit listed above. The selected five IDs were frozen before launch. Its
@@ -294,6 +303,14 @@ new evaluation fold or a paper comparison. The frozen request remains 278 IDs.
 The [checkpoint summary](assets/canonical278_progress_20261005_0540/ingested_summary.json)
 explicitly reports `complete=false` and retains matching primary shards and
 original metadata. It does not overwrite the controller's immutable final gates.
+
+At 05:50, a second saved episode from split 4 worker 0 supplied five more
+subtasks. The separate [full-set progress snapshot](assets/full2669_progress_20261005_0550/ingested_summary.json)
+contains **12/2,669 IDs** across two original episodes, ten successes, observed
+SR 83.3333% and SPL 55.4600%. Its requested set remains the full 2,669 IDs and
+`complete=false`. The metadata symlink reuses the exact immutable original
+metadata already archived for the first checkpoint. This snapshot is a progress
+observation and is not a comparison with the paper's full-set metrics.
 
 ## Sources
 

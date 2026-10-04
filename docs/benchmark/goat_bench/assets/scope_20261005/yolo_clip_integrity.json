@@ -1,0 +1,8 @@
+{
+  "file": "/home/ysh/Datasets/SCOPE/weights/openai_clip/ViT-B-32.pt",
+  "bytes": 353976522,
+  "sha256": "40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af",
+  "zip_crc": "passed",
+  "use": "Ultralytics YOLOWorld.set_classes loads OpenAI CLIP ViT-B/32, separate from LAION OpenCLIP scene embeddings",
+  "source_url": "https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt"
+}
