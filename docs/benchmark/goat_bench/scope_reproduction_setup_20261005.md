@@ -199,6 +199,36 @@ runtime revision and all transport recovery records must be archived before
 publishing a completed local result. Full-run API usage remains aggregate;
 per-subtask token counts are unavailable from these upstream artifacts.
 
+### Final metric analysis
+
+`scripts/scope/summarize_metrics.py` produces overall, modality and zero-based
+subtask-index SR/SPL, retaining each group's denominator and a one-based
+ordinal. It requires explicit original metadata indices, paired primary shard
+suffixes and exact frozen-ID coverage. It records SHA256 and byte sizes for
+the inputs actually consumed, checks that they did not change during analysis,
+and publishes the JSON atomically. Partial folds, missing indices, conflicting
+metrics and metric-namespace report paths are rejected.
+
+After the corresponding terminal-status gate passes, run on Linux from the
+asset root, using the project analysis environment:
+
+```bash
+cd /home/ysh/Datasets/SCOPE
+/home/ysh/miniconda3/envs/conceptgraph/bin/python -m scripts.scope.summarize_metrics \
+  --output-dir outputs/REPRO_20261005_SCOPE_Gemini38Flash_canonical278 \
+  --expected-subtasks 278 \
+  --report-file outputs/REPRO_20261005_SCOPE_Gemini38Flash_canonical278/fold_report.json
+```
+
+For the full fold, use the `full2669` directory and expected count 2,669.
+Revision `dd33c67` passed 26 regression cases and the project quality gate.
+Its actual Linux Python 3.10.19 CLI reproduced the existing seven-subtask
+complete episode's SR 71.4286% and SPL 45.6954%, with seven index groups and
+four input fingerprints. A real 278-ID partial snapshot was rejected without
+producing a report. This was analysis-tool verification on saved data; it
+started no benchmark run. See the
+[verification record](assets/scope_20261005/summary_validation_20261005.json).
+
 ## Current evaluation queue
 
 Each split uses two disjoint 18-scene shards. The first split uses physical
@@ -358,6 +388,17 @@ archive paths and verification results are in the
 The [checkpoint audit](assets/scope_20261005/network_checkpoint_audit_20261005.json)
 verifies each shard's primary metric ID sets, frozen requested IDs and exact
 archived incomplete episode folders.
+
+A separate [semantic fallback log audit](assets/scope_20261005/semantic_fallback_audit_20261005.json)
+captures the resumed attempt through 06:37:53. It uses only six upstream logs,
+with captured prefix lengths and hashes, excluding duplicated stdout and older
+attempts. It found 12 navigation-output validation warnings, including nine
+parse warnings, and six decisions that recovered through the original retries.
+Two retry sequences remained pending at the snapshot boundary. No marked retry
+exhaustion or forced/default confirmation was observed in that snapshot.
+The same-candidate rejection counter accumulates within one exploration step;
+it does not require consecutive rejections. Overall potential-value fallback
+counts remain unobservable because some default paths have no log marker.
 
 ## Sources
 
