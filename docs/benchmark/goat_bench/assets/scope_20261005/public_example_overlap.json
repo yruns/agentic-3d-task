@@ -1,0 +1,49 @@
+{
+  "note": "Official public example subset only; does not reproduce the 36-scene paper evaluation",
+  "source_repository": "https://github.com/matterport/habitat-matterport-3dresearch/tree/main/example",
+  "overlap_scene_count": 1,
+  "records": [
+    {
+      "scene": "00861-GLAQ4DNUx5U",
+      "task_file": "/home/ysh/Datasets/SCOPE/datasets/goat_bench/public_example/content/GLAQ4DNUx5U.json",
+      "firstsplit_episode_id": 0,
+      "firstsplit_subtasks": 5,
+      "episodes": 10,
+      "subtasks_all_splits": 75,
+      "files": [
+        {
+          "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_public_example/example/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.basis.glb",
+          "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.basis.glb",
+          "bytes": 38530336,
+          "sha256": "d2271f8fbf57aad34a2d1e03565d5bb9e85503e05eb5f8b9fd47fa66d8983577",
+          "destination_sha256": "d2271f8fbf57aad34a2d1e03565d5bb9e85503e05eb5f8b9fd47fa66d8983577",
+          "identical": true
+        },
+        {
+          "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_public_example/example/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.basis.navmesh",
+          "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.basis.navmesh",
+          "bytes": 43496,
+          "sha256": "924b0d1cb33ae5d91b3fab84aa17f43f9293baccd2571b8b840441cd88a4f87f",
+          "destination_sha256": "924b0d1cb33ae5d91b3fab84aa17f43f9293baccd2571b8b840441cd88a4f87f",
+          "identical": true
+        },
+        {
+          "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_public_example/example/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.glb",
+          "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.glb",
+          "bytes": 62925388,
+          "sha256": "9cf5e954d7ecc7b9c41cbb66b7f4200f0965885fe940130bce3c3e1bb221a79f",
+          "destination_sha256": "9cf5e954d7ecc7b9c41cbb66b7f4200f0965885fe940130bce3c3e1bb221a79f",
+          "identical": true
+        },
+        {
+          "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_public_example/example/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.txt",
+          "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.txt",
+          "bytes": 21622,
+          "sha256": "ef072ebe35073f3da4d319837046d76ce7aa7ccedc5aa2de2fd1e4d9c96766d3",
+          "destination_sha256": "ef072ebe35073f3da4d319837046d76ce7aa7ccedc5aa2de2fd1e4d9c96766d3",
+          "identical": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,296 @@
+{
+  "scene_count": 36,
+  "goal_object_count": 1246,
+  "missing_labels": [],
+  "records": [
+    {
+      "scene": "4ok3usBNeis",
+      "semantic_object_count": 513,
+      "goal_object_count": 19,
+      "missing_goal_object_ids": [],
+      "task_sha256": "38e9098ed6b2bcbf37a8236762b1b12d3477d8d434ca9320c7805595098f3331",
+      "semantic_text_sha256": "5930c207b4b019a85e7eafedf632ac07503b496880f071c0b72ccf1cdaa15dc8"
+    },
+    {
+      "scene": "5cdEh9F2hJL",
+      "semantic_object_count": 528,
+      "goal_object_count": 44,
+      "missing_goal_object_ids": [],
+      "task_sha256": "c7cda885eed41b1b7e8cfa7609aad2b190ba90c82d97fcaf943b606cf936c38b",
+      "semantic_text_sha256": "0e2e82f4726dc86df4291ab0911226e01e84bc5d9f511434abfb234f6b9566d8"
+    },
+    {
+      "scene": "6s7QHgap2fW",
+      "semantic_object_count": 654,
+      "goal_object_count": 47,
+      "missing_goal_object_ids": [],
+      "task_sha256": "c5cbb4ec0d85c3da10ea5ac64d34319aa8bab2e984a9beccb1d6662e7c4faed0",
+      "semantic_text_sha256": "f3be09840047f61f704773e046ba414f1b43f47527c71262151dace899feb426"
+    },
+    {
+      "scene": "7MXmsvcQjpJ",
+      "semantic_object_count": 1693,
+      "goal_object_count": 75,
+      "missing_goal_object_ids": [],
+      "task_sha256": "b66c39d2ea5364fff7f2afb24fc9d410789a356f8c1165616762ce910d3cdf57",
+      "semantic_text_sha256": "32d11bf97c79d8db3f643b43bee0932ec6e6c326ca6354d30f97de671195e5c7"
+    },
+    {
+      "scene": "BAbdmeyTvMZ",
+      "semantic_object_count": 393,
+      "goal_object_count": 16,
+      "missing_goal_object_ids": [],
+      "task_sha256": "b5b6d3bae458e46bed5b0eda19e6d2c52bb668d1cce664e10fa5a303e3ff1b77",
+      "semantic_text_sha256": "6c924737aed20cf9e792e6bc9bd884d7038644ae611a592cf855aea4bff3f279"
+    },
+    {
+      "scene": "CrMo8WxCyVb",
+      "semantic_object_count": 548,
+      "goal_object_count": 53,
+      "missing_goal_object_ids": [],
+      "task_sha256": "86ef72c47a9ae908e050549d46dbeeb6d00701b875fde1f14b9138680d181a45",
+      "semantic_text_sha256": "36261dcb2d89712bb161678349b0e9221d6b946f74dfb6268df313c18d85bdba"
+    },
+    {
+      "scene": "DYehNKdT76V",
+      "semantic_object_count": 351,
+      "goal_object_count": 11,
+      "missing_goal_object_ids": [],
+      "task_sha256": "43c10b2d4adb8caacc7c2a4e6ba4c08293da73304bac788d64d03b8360a26c85",
+      "semantic_text_sha256": "d6ef75ae1f63f55358442438ad91d692052ca1ee1434105e6fe288cfb5634e50"
+    },
+    {
+      "scene": "Dd4bFSTQ8gi",
+      "semantic_object_count": 392,
+      "goal_object_count": 33,
+      "missing_goal_object_ids": [],
+      "task_sha256": "2b2ea4cbafad48a54ac7a4661d47ce6ed606bc26b33fb8c81220130d4e4ce013",
+      "semantic_text_sha256": "9cd76faf5d8621967a2eb59a7921e3b5e0f84ef97270ae4ba5910624ca613e3f"
+    },
+    {
+      "scene": "GLAQ4DNUx5U",
+      "semantic_object_count": 907,
+      "goal_object_count": 25,
+      "missing_goal_object_ids": [],
+      "task_sha256": "06461464275db41f74566d6a0bcdd90b35913aea03d678ca18eeb6e52c08eeb2",
+      "semantic_text_sha256": "ef072ebe35073f3da4d319837046d76ce7aa7ccedc5aa2de2fd1e4d9c96766d3"
+    },
+    {
+      "scene": "HY1NcmCgn3n",
+      "semantic_object_count": 442,
+      "goal_object_count": 42,
+      "missing_goal_object_ids": [],
+      "task_sha256": "70516bf984bfea4c550cd3c9ed8005f8f51e00988bdaf414f4db0d231b58ab77",
+      "semantic_text_sha256": "fc1a94d8c6478780db58be0ed71b62379e6b65993276fee0bab441d01a4761f9"
+    },
+    {
+      "scene": "LT9Jq6dN3Ea",
+      "semantic_object_count": 1004,
+      "goal_object_count": 97,
+      "missing_goal_object_ids": [],
+      "task_sha256": "56ca120e33cb0c144ed68725bb4df5d297f1cf83f6ac772ae316133b34ebd18b",
+      "semantic_text_sha256": "45c5643fb1be65fe090d841e20a982806a8bc3133f85e4791b5de4a94119d293"
+    },
+    {
+      "scene": "MHPLjHsuG27",
+      "semantic_object_count": 609,
+      "goal_object_count": 15,
+      "missing_goal_object_ids": [],
+      "task_sha256": "9bc7dcbb4d2303ed5344e2daa41467095bcee71000a5d43f2f4672ea9acc9aa3",
+      "semantic_text_sha256": "bfe241c487c88a677a27951e64a31e8289a1394ac6f0f0bc25e3fc23f81cd3e4"
+    },
+    {
+      "scene": "Nfvxx8J5NCo",
+      "semantic_object_count": 360,
+      "goal_object_count": 15,
+      "missing_goal_object_ids": [],
+      "task_sha256": "d87f7c2f780bbcf478d9d409645b60aaa80b732e144ecd1200df674256da5e7c",
+      "semantic_text_sha256": "a4e189c15a1f3e08121a2a2d7fa3ff7e260cbc03af449824ccff810eba31e6ee"
+    },
+    {
+      "scene": "QaLdnwvtxbs",
+      "semantic_object_count": 251,
+      "goal_object_count": 20,
+      "missing_goal_object_ids": [],
+      "task_sha256": "ff525e2b404f800402952156f82aaa8206da22cf69dd159dba64ad25c1a6b459",
+      "semantic_text_sha256": "dfb30256661106c9632c0adf72869bbdef3877b8c172aeef4970572f37b633e5"
+    },
+    {
+      "scene": "TEEsavR23oF",
+      "semantic_object_count": 660,
+      "goal_object_count": 19,
+      "missing_goal_object_ids": [],
+      "task_sha256": "f01708475d2c650c790b464b991394f8ffb5ca1e919a53e1d4f541c8d86eb2a5",
+      "semantic_text_sha256": "76ae5b1c4f070566199a7ead682f0bb5fd49f196f37aaf8beaf294943595fced"
+    },
+    {
+      "scene": "VBzV5z6i1WS",
+      "semantic_object_count": 849,
+      "goal_object_count": 36,
+      "missing_goal_object_ids": [],
+      "task_sha256": "f8a08650b0a5f6523fa820f1763a982c49f89d554ed81edafc669fc001ac5a96",
+      "semantic_text_sha256": "bc1627eb531ad616711293c7a8d3683ab004490d09ffa661327ab89caa046774"
+    },
+    {
+      "scene": "XB4GS9ShBRE",
+      "semantic_object_count": 427,
+      "goal_object_count": 28,
+      "missing_goal_object_ids": [],
+      "task_sha256": "a377639eb9b3abf20b74451d271c2060326726e68d25dca1ee9e5e65763767da",
+      "semantic_text_sha256": "3ae548fab9fb6913fff7c31a0b5a6dcf77e59707a2e72377560dbaa9ae51dbcf"
+    },
+    {
+      "scene": "a8BtkwhxdRV",
+      "semantic_object_count": 725,
+      "goal_object_count": 19,
+      "missing_goal_object_ids": [],
+      "task_sha256": "9e3e523167654ead16127e07442104b34f1f2bf8db97daa8aa4cb1f5236d10b5",
+      "semantic_text_sha256": "b26094151793d6fd32ec972c30aee2b52f43dcc33cf6d647f3249e04e2b5dccd"
+    },
+    {
+      "scene": "bCPU9suPUw9",
+      "semantic_object_count": 423,
+      "goal_object_count": 21,
+      "missing_goal_object_ids": [],
+      "task_sha256": "ba9d9fcc788ea4d2ca64405e6dc0d5b844221a31b506d9673296b442b38f4949",
+      "semantic_text_sha256": "8d20ef2e46f9e2c57679eb0fc8b066467866bbe39d6644be1273248bc37a6605"
+    },
+    {
+      "scene": "bxsVRursffK",
+      "semantic_object_count": 453,
+      "goal_object_count": 24,
+      "missing_goal_object_ids": [],
+      "task_sha256": "53a33f94f72590a9ee864afeda2ffd15ff6779daa2f048e7464f487386e3edcf",
+      "semantic_text_sha256": "be1dfe5cfadd8bd7e851781262fb29d3148a1d3c204ce065509d7ca4d164b4b4"
+    },
+    {
+      "scene": "cvZr5TUy5C5",
+      "semantic_object_count": 898,
+      "goal_object_count": 50,
+      "missing_goal_object_ids": [],
+      "task_sha256": "e781b826dea2d845b1bdc6a399b115b76cd10ef6a5b1f5e30b73a08165371fab",
+      "semantic_text_sha256": "3810d3e247887bd1d556a45e6ea49925f396d555ef309fe693aa81fffee30acc"
+    },
+    {
+      "scene": "eF36g7L6Z9M",
+      "semantic_object_count": 921,
+      "goal_object_count": 46,
+      "missing_goal_object_ids": [],
+      "task_sha256": "3dc2fb9e7e0802c2cd367bce1fbfc6c1e17156cc88336a09f6272feaced2cb76",
+      "semantic_text_sha256": "e527ae222b5c3b135b6ef4b3691d4ec52cacedf5436bd02319641d9645e11865"
+    },
+    {
+      "scene": "h1zeeAwLh9Z",
+      "semantic_object_count": 667,
+      "goal_object_count": 28,
+      "missing_goal_object_ids": [],
+      "task_sha256": "1ff56cfde4c9fb122377312b4eb3368de706f438f4e1c1d34e43b62f047c2fa6",
+      "semantic_text_sha256": "4f900b68e8006e89dbedcade65ba613b046c4d4d9adb6ecb1dc649cd684b67b7"
+    },
+    {
+      "scene": "k1cupFYWXJ6",
+      "semantic_object_count": 835,
+      "goal_object_count": 43,
+      "missing_goal_object_ids": [],
+      "task_sha256": "76e65e86b1d521b3c487c37b1348283dd5bea36e622f61086c80ea200324adb0",
+      "semantic_text_sha256": "c8abe3e863824acbdb4bd17c107a8b446c222c7cef4be0cba716142771ab7fad"
+    },
+    {
+      "scene": "mL8ThkuaVTM",
+      "semantic_object_count": 401,
+      "goal_object_count": 17,
+      "missing_goal_object_ids": [],
+      "task_sha256": "4cd809673984b0eaa51b309b8832d64db8eabe3389d56228551eb01eada9fe2e",
+      "semantic_text_sha256": "c460cc98fed0c56ef960f90b1e9fd683bfc4ca8316fd870f584efc2fc1012c1d"
+    },
+    {
+      "scene": "mv2HUxq3B53",
+      "semantic_object_count": 680,
+      "goal_object_count": 35,
+      "missing_goal_object_ids": [],
+      "task_sha256": "cf5a828a641ff3245f0e355778c85cfe974ac3838d3d715dfd0053de026582df",
+      "semantic_text_sha256": "d23a2cfe6aaa64abd22d940b69fa736d60fa92646831f842d36ce14fd6869866"
+    },
+    {
+      "scene": "p53SfW6mjZe",
+      "semantic_object_count": 848,
+      "goal_object_count": 45,
+      "missing_goal_object_ids": [],
+      "task_sha256": "c7da856916355435c13840dd77913c59e9142b103b80d3a1a7a7ff8e216b2de2",
+      "semantic_text_sha256": "04d4f2f96bdfd6d5fc07d93c89a23b370da54d8db75519ebeb5b6e287ac6a62f"
+    },
+    {
+      "scene": "q3zU7Yy5E5s",
+      "semantic_object_count": 576,
+      "goal_object_count": 29,
+      "missing_goal_object_ids": [],
+      "task_sha256": "312a8cfb521d075d80599e134359c35446e3e9eceb0f8f33596e0abe576a2fa7",
+      "semantic_text_sha256": "c807fd9ab42ec0e0c0a5d90464aeb8bf045a9d8ff142465f56f1fe12088cc192"
+    },
+    {
+      "scene": "q5QZSEeHe5g",
+      "semantic_object_count": 1480,
+      "goal_object_count": 44,
+      "missing_goal_object_ids": [],
+      "task_sha256": "faad972c0bb5a8f13b3de2b7ec7d6e452508f71474074b56197f45d19a8efdf4",
+      "semantic_text_sha256": "eb85820ebcce78a0c30698c36bd528fa3c315448935cfb8dd71d63d6801fba0b"
+    },
+    {
+      "scene": "qyAac8rV8Zk",
+      "semantic_object_count": 569,
+      "goal_object_count": 40,
+      "missing_goal_object_ids": [],
+      "task_sha256": "5285ebdb0f0f8658a3505ada30422e4ee5aec6747d851041b48b015f1425664d",
+      "semantic_text_sha256": "c31ba4ec50aef327950307707aa9df52e8d6d93e5d70b9db9d083bf790e5369b"
+    },
+    {
+      "scene": "svBbv1Pavdk",
+      "semantic_object_count": 394,
+      "goal_object_count": 21,
+      "missing_goal_object_ids": [],
+      "task_sha256": "63d4f15e2391a01cf391b57a3ca314cb815eadca0cd24899e87730d25670f77d",
+      "semantic_text_sha256": "9ab4dd8fdabc8f92b00f195d2f6ca00a57472d18e7458613e263ba0e212e58f5"
+    },
+    {
+      "scene": "wcojb4TFT35",
+      "semantic_object_count": 1058,
+      "goal_object_count": 46,
+      "missing_goal_object_ids": [],
+      "task_sha256": "c423dd03673676c42380161ef503b155223a842a8d251e8436a60f1de1e2f9da",
+      "semantic_text_sha256": "ab4447ab24af7189ff915bf0022b29e828f55e8d29e6e4fa2359672de7e8dc02"
+    },
+    {
+      "scene": "y9hTuugGdiq",
+      "semantic_object_count": 831,
+      "goal_object_count": 58,
+      "missing_goal_object_ids": [],
+      "task_sha256": "5a802b6ac4a69ec7199946467bc30f22586c278e3fc10679e295d448c06dadfe",
+      "semantic_text_sha256": "42b90fee3b97d2e5f91988d52bf60b9809a72babb04126ef0d3b347dc70d9d52"
+    },
+    {
+      "scene": "yr17PDCnDDW",
+      "semantic_object_count": 670,
+      "goal_object_count": 27,
+      "missing_goal_object_ids": [],
+      "task_sha256": "45222e8e0e6157bc0602d081fa7a62bdc3e180fdb717dc7af4477646edd113f9",
+      "semantic_text_sha256": "0656158266caff5d92ebd5a1fd38f354c64f7b041fdfa8ffb3e6d2e1bf9d8b4b"
+    },
+    {
+      "scene": "ziup5kvtCCR",
+      "semantic_object_count": 347,
+      "goal_object_count": 23,
+      "missing_goal_object_ids": [],
+      "task_sha256": "76d8f6f546a3554654d66914e7fc2390f6b4206ce2c2a490ac87ae9fe5adabb9",
+      "semantic_text_sha256": "da58b1977d920a57bf7ffbb294d36d2a37663db6d913f84a9c82eee6a7d5d795"
+    },
+    {
+      "scene": "zt1RVoi7PcG",
+      "semantic_object_count": 825,
+      "goal_object_count": 35,
+      "missing_goal_object_ids": [],
+      "task_sha256": "752a877c0ed69df1f00ba2cfcaf38a36a490e56d093206898004902ff68d16b2",
+      "semantic_text_sha256": "db662c7fe01bd12d1c06a1ee69e832b34f48c73bda75a038fa8b86657aefeeaa"
+    }
+  ],
+  "status": "passed"
+}

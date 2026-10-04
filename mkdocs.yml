@@ -55,6 +55,10 @@ nav:
       - Skill Loop And Reasoning Dropped: codex_agent/skill_loop_and_reasoning_dropped_20260609.md
   - Benchmarks:
       - Overview: benchmark/index.md
+      - GOAT-Bench:
+          - Timeline: benchmark/goat_bench/README.md
+          - Paper References: benchmark/goat_bench/leaderboard.md
+          - SCOPE Reproduction Setup: benchmark/goat_bench/scope_reproduction_setup_20261005.md
       - NR3D:
           - Timeline: benchmark/nr3d/README.md
           - v1 Keyframe Target ID Coverage: benchmark/nr3d/v1_keyframe_targetid_coverage_strat600_20260608.md

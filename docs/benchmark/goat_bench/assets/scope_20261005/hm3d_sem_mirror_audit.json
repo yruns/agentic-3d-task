@@ -1,0 +1,892 @@
+{
+  "source": "https://huggingface.co/datasets/zhuhu00/hm3d",
+  "revision": "0bf2970b74226e2d84b3137bed68a9805f0cc88a",
+  "asset_version": "HM3D-Sem v0.2 filename; archive hash pinned and official public GLAQ sample matched",
+  "public_and_ungated": true,
+  "required_scene_count": 36,
+  "complete_scene_count": 36,
+  "missing_files": [],
+  "annotated_config_json_equal_to_scope_repository": true,
+  "records": [
+    {
+      "archive": "hm3d-val-semantic-configs-v0.2.tar",
+      "archive_member": "hm3d_annotated_basis.scene_dataset_config.json",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/hm3d_annotated_basis.scene_dataset_config.json",
+      "bytes": 24801,
+      "sha256": "c16fa23b09e36d528c3f12c9799eaa9cf0d733dcd22c9f329c0508d551b640a4"
+    },
+    {
+      "archive": "hm3d-val-semantic-configs-v0.2.tar",
+      "archive_member": "hm3d_annotated_val_basis.scene_dataset_config.json",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/hm3d_annotated_val_basis.scene_dataset_config.json",
+      "bytes": 4213,
+      "sha256": "dac516654419d5292f4777fb976fb12f32b81543c1306909903133fe4dcf9f5f"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00800-TEEsavR23oF/TEEsavR23oF.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00800-TEEsavR23oF/TEEsavR23oF.semantic.txt",
+      "bytes": 15818,
+      "sha256": "76ae5b1c4f070566199a7ead682f0bb5fd49f196f37aaf8beaf294943595fced"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00800-TEEsavR23oF/TEEsavR23oF.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00800-TEEsavR23oF/TEEsavR23oF.semantic.glb",
+      "bytes": 58842796,
+      "sha256": "e5a607b5ba3b8dd8e0a97a73a2fdfe6888e743eb7c196ddbd62ff151a520f09d"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00802-wcojb4TFT35/wcojb4TFT35.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00802-wcojb4TFT35/wcojb4TFT35.semantic.txt",
+      "bytes": 23957,
+      "sha256": "ab4447ab24af7189ff915bf0022b29e828f55e8d29e6e4fa2359672de7e8dc02"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00802-wcojb4TFT35/wcojb4TFT35.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00802-wcojb4TFT35/wcojb4TFT35.semantic.glb",
+      "bytes": 66087588,
+      "sha256": "9034ff792cd2541106e0c9148dafe37f10b04063905866cdf8b16736faa6da65"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00803-k1cupFYWXJ6/k1cupFYWXJ6.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00803-k1cupFYWXJ6/k1cupFYWXJ6.semantic.txt",
+      "bytes": 19663,
+      "sha256": "c8abe3e863824acbdb4bd17c107a8b446c222c7cef4be0cba716142771ab7fad"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00803-k1cupFYWXJ6/k1cupFYWXJ6.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00803-k1cupFYWXJ6/k1cupFYWXJ6.semantic.glb",
+      "bytes": 62442884,
+      "sha256": "415d77e95a8eb970926c90d0e14c1db416a5d157b62ed8605462599f32cdb25a"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00808-y9hTuugGdiq/y9hTuugGdiq.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00808-y9hTuugGdiq/y9hTuugGdiq.semantic.txt",
+      "bytes": 20055,
+      "sha256": "42b90fee3b97d2e5f91988d52bf60b9809a72babb04126ef0d3b347dc70d9d52"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00808-y9hTuugGdiq/y9hTuugGdiq.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00808-y9hTuugGdiq/y9hTuugGdiq.semantic.glb",
+      "bytes": 64820660,
+      "sha256": "cc56e2105391ecf18f12ff52200f45dd92996bf03bbaeb7d074fb9f04ebfc481"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00810-CrMo8WxCyVb/CrMo8WxCyVb.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00810-CrMo8WxCyVb/CrMo8WxCyVb.semantic.txt",
+      "bytes": 12306,
+      "sha256": "36261dcb2d89712bb161678349b0e9221d6b946f74dfb6268df313c18d85bdba"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00810-CrMo8WxCyVb/CrMo8WxCyVb.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00810-CrMo8WxCyVb/CrMo8WxCyVb.semantic.glb",
+      "bytes": 60069144,
+      "sha256": "88dd5b95cf510b3d6dbfeeb959f3b337519e43b7cc045610d8d49c1f6e79aa6b"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00813-svBbv1Pavdk/svBbv1Pavdk.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00813-svBbv1Pavdk/svBbv1Pavdk.semantic.txt",
+      "bytes": 8636,
+      "sha256": "9ab4dd8fdabc8f92b00f195d2f6ca00a57472d18e7458613e263ba0e212e58f5"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00813-svBbv1Pavdk/svBbv1Pavdk.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00813-svBbv1Pavdk/svBbv1Pavdk.semantic.glb",
+      "bytes": 51425400,
+      "sha256": "64cd62e558f9ba5a2d703bcee40fc2dc5e1108c79f9cb393ce26280d68963a01"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00814-p53SfW6mjZe/p53SfW6mjZe.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00814-p53SfW6mjZe/p53SfW6mjZe.semantic.txt",
+      "bytes": 20064,
+      "sha256": "04d4f2f96bdfd6d5fc07d93c89a23b370da54d8db75519ebeb5b6e287ac6a62f"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00814-p53SfW6mjZe/p53SfW6mjZe.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00814-p53SfW6mjZe/p53SfW6mjZe.semantic.glb",
+      "bytes": 68669200,
+      "sha256": "023fca378d9ae3b98f08b5dbde5bfe6b7598f3f0e3946d63caf65d2584f77cd3"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00815-h1zeeAwLh9Z/h1zeeAwLh9Z.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00815-h1zeeAwLh9Z/h1zeeAwLh9Z.semantic.txt",
+      "bytes": 15839,
+      "sha256": "4f900b68e8006e89dbedcade65ba613b046c4d4d9adb6ecb1dc649cd684b67b7"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00815-h1zeeAwLh9Z/h1zeeAwLh9Z.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00815-h1zeeAwLh9Z/h1zeeAwLh9Z.semantic.glb",
+      "bytes": 61957308,
+      "sha256": "6d5474c4c5039826f92b14ebb99def2dad6f93be60468a4467e4a2ee03a52368"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00820-mL8ThkuaVTM/mL8ThkuaVTM.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00820-mL8ThkuaVTM/mL8ThkuaVTM.semantic.txt",
+      "bytes": 9416,
+      "sha256": "c460cc98fed0c56ef960f90b1e9fd683bfc4ca8316fd870f584efc2fc1012c1d"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00820-mL8ThkuaVTM/mL8ThkuaVTM.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00820-mL8ThkuaVTM/mL8ThkuaVTM.semantic.glb",
+      "bytes": 52789600,
+      "sha256": "d19367cfeb6b5b3304dd2a0351294a1071c176e9baf617f3aa5445f38127723c"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00821-eF36g7L6Z9M/eF36g7L6Z9M.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00821-eF36g7L6Z9M/eF36g7L6Z9M.semantic.txt",
+      "bytes": 22112,
+      "sha256": "e527ae222b5c3b135b6ef4b3691d4ec52cacedf5436bd02319641d9645e11865"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00821-eF36g7L6Z9M/eF36g7L6Z9M.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00821-eF36g7L6Z9M/eF36g7L6Z9M.semantic.glb",
+      "bytes": 72267960,
+      "sha256": "fb1514852f842bfcb2e96d30c68c5800d8931058d3695c7768a8e0f09913d561"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00823-7MXmsvcQjpJ/7MXmsvcQjpJ.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00823-7MXmsvcQjpJ/7MXmsvcQjpJ.semantic.txt",
+      "bytes": 39319,
+      "sha256": "32d11bf97c79d8db3f643b43bee0932ec6e6c326ca6354d30f97de671195e5c7"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00823-7MXmsvcQjpJ/7MXmsvcQjpJ.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00823-7MXmsvcQjpJ/7MXmsvcQjpJ.semantic.glb",
+      "bytes": 77925188,
+      "sha256": "7fd703d19f3a1bdba31b80cd240ca7b4dcaaf4b04c812efbaac5dd7c002abfa3"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00824-Dd4bFSTQ8gi/Dd4bFSTQ8gi.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00824-Dd4bFSTQ8gi/Dd4bFSTQ8gi.semantic.txt",
+      "bytes": 9114,
+      "sha256": "9cd76faf5d8621967a2eb59a7921e3b5e0f84ef97270ae4ba5910624ca613e3f"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00824-Dd4bFSTQ8gi/Dd4bFSTQ8gi.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00824-Dd4bFSTQ8gi/Dd4bFSTQ8gi.semantic.glb",
+      "bytes": 53607324,
+      "sha256": "43b3186d97d92601567a50a991986c6589e7e2728c0d0d59c8fe384e45c4b510"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00827-BAbdmeyTvMZ/BAbdmeyTvMZ.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00827-BAbdmeyTvMZ/BAbdmeyTvMZ.semantic.txt",
+      "bytes": 8784,
+      "sha256": "6c924737aed20cf9e792e6bc9bd884d7038644ae611a592cf855aea4bff3f279"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00827-BAbdmeyTvMZ/BAbdmeyTvMZ.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00827-BAbdmeyTvMZ/BAbdmeyTvMZ.semantic.glb",
+      "bytes": 55213792,
+      "sha256": "dc995b4246417cbcc8574fe5b3eaa7877fe23ae17ded9bfe937fba9e66f34a53"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00829-QaLdnwvtxbs/QaLdnwvtxbs.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00829-QaLdnwvtxbs/QaLdnwvtxbs.semantic.txt",
+      "bytes": 5699,
+      "sha256": "dfb30256661106c9632c0adf72869bbdef3877b8c172aeef4970572f37b633e5"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00829-QaLdnwvtxbs/QaLdnwvtxbs.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00829-QaLdnwvtxbs/QaLdnwvtxbs.semantic.glb",
+      "bytes": 48378220,
+      "sha256": "0cdbdb9f2fc49f5450f7dcffdf11051b74ac04b2f5aa1f19e4d4ec6da7a5ce0f"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00831-yr17PDCnDDW/yr17PDCnDDW.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00831-yr17PDCnDDW/yr17PDCnDDW.semantic.txt",
+      "bytes": 15585,
+      "sha256": "0656158266caff5d92ebd5a1fd38f354c64f7b041fdfa8ffb3e6d2e1bf9d8b4b"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00831-yr17PDCnDDW/yr17PDCnDDW.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00831-yr17PDCnDDW/yr17PDCnDDW.semantic.glb",
+      "bytes": 73728596,
+      "sha256": "b5c5175fcb10ebc2a5135f1b71c6b3a49f41c1b97edaf076fb747a441cba01db"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00832-qyAac8rV8Zk/qyAac8rV8Zk.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00832-qyAac8rV8Zk/qyAac8rV8Zk.semantic.txt",
+      "bytes": 13038,
+      "sha256": "c31ba4ec50aef327950307707aa9df52e8d6d93e5d70b9db9d083bf790e5369b"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00832-qyAac8rV8Zk/qyAac8rV8Zk.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00832-qyAac8rV8Zk/qyAac8rV8Zk.semantic.glb",
+      "bytes": 54526824,
+      "sha256": "aa466bf321a44aded026fff5a8890c7a72e6a0d9ae2f762faea9967227d45a86"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00835-q3zU7Yy5E5s/q3zU7Yy5E5s.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00835-q3zU7Yy5E5s/q3zU7Yy5E5s.semantic.txt",
+      "bytes": 13451,
+      "sha256": "c807fd9ab42ec0e0c0a5d90464aeb8bf045a9d8ff142465f56f1fe12088cc192"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00835-q3zU7Yy5E5s/q3zU7Yy5E5s.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00835-q3zU7Yy5E5s/q3zU7Yy5E5s.semantic.glb",
+      "bytes": 51232896,
+      "sha256": "2e2cd601689f3a75f818ade575edb870605283cb7f57afa65d5d5d93a517ac0e"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00839-zt1RVoi7PcG/zt1RVoi7PcG.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00839-zt1RVoi7PcG/zt1RVoi7PcG.semantic.txt",
+      "bytes": 20530,
+      "sha256": "db662c7fe01bd12d1c06a1ee69e832b34f48c73bda75a038fa8b86657aefeeaa"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00839-zt1RVoi7PcG/zt1RVoi7PcG.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00839-zt1RVoi7PcG/zt1RVoi7PcG.semantic.glb",
+      "bytes": 61147424,
+      "sha256": "68c3c6538079c10104c718e02f53ca64e1b00d0bb202dda970a5cc070897b1f2"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00843-DYehNKdT76V/DYehNKdT76V.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00843-DYehNKdT76V/DYehNKdT76V.semantic.txt",
+      "bytes": 8298,
+      "sha256": "d6ef75ae1f63f55358442438ad91d692052ca1ee1434105e6fe288cfb5634e50"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00843-DYehNKdT76V/DYehNKdT76V.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00843-DYehNKdT76V/DYehNKdT76V.semantic.glb",
+      "bytes": 53370928,
+      "sha256": "d97f06caa721df4f7f6684105fe2b5019f6cba5b6ca387f902b6abfb48fb2f98"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00844-q5QZSEeHe5g/q5QZSEeHe5g.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00844-q5QZSEeHe5g/q5QZSEeHe5g.semantic.txt",
+      "bytes": 34139,
+      "sha256": "eb85820ebcce78a0c30698c36bd528fa3c315448935cfb8dd71d63d6801fba0b"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00844-q5QZSEeHe5g/q5QZSEeHe5g.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00844-q5QZSEeHe5g/q5QZSEeHe5g.semantic.glb",
+      "bytes": 72922436,
+      "sha256": "6dc0857cdf89c866e1bdaeaf1945910caa445791b21c6972f5711af66d484722"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00847-bCPU9suPUw9/bCPU9suPUw9.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00847-bCPU9suPUw9/bCPU9suPUw9.semantic.txt",
+      "bytes": 9664,
+      "sha256": "8d20ef2e46f9e2c57679eb0fc8b066467866bbe39d6644be1273248bc37a6605"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00847-bCPU9suPUw9/bCPU9suPUw9.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00847-bCPU9suPUw9/bCPU9suPUw9.semantic.glb",
+      "bytes": 55659352,
+      "sha256": "beb1ce9b800cbb25a0a59ef143ed9166443d0d75d3e59dd56299c8cf1720d60a"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00848-ziup5kvtCCR/ziup5kvtCCR.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00848-ziup5kvtCCR/ziup5kvtCCR.semantic.txt",
+      "bytes": 7966,
+      "sha256": "da58b1977d920a57bf7ffbb294d36d2a37663db6d913f84a9c82eee6a7d5d795"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00848-ziup5kvtCCR/ziup5kvtCCR.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00848-ziup5kvtCCR/ziup5kvtCCR.semantic.glb",
+      "bytes": 53084728,
+      "sha256": "664a1e0ab0570ed6491d513401e590a8ee4164f35c8700f4c2d9a8d1e8ffa4bd"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00849-a8BtkwhxdRV/a8BtkwhxdRV.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00849-a8BtkwhxdRV/a8BtkwhxdRV.semantic.txt",
+      "bytes": 16373,
+      "sha256": "b26094151793d6fd32ec972c30aee2b52f43dcc33cf6d647f3249e04e2b5dccd"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00849-a8BtkwhxdRV/a8BtkwhxdRV.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00849-a8BtkwhxdRV/a8BtkwhxdRV.semantic.glb",
+      "bytes": 64726420,
+      "sha256": "3fcd647a94c52d4e1f746a11ca36cbcccfa58bbd5ef5840fb350cc8feb7f33a9"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00853-5cdEh9F2hJL/5cdEh9F2hJL.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00853-5cdEh9F2hJL/5cdEh9F2hJL.semantic.txt",
+      "bytes": 12806,
+      "sha256": "0e2e82f4726dc86df4291ab0911226e01e84bc5d9f511434abfb234f6b9566d8"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00853-5cdEh9F2hJL/5cdEh9F2hJL.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00853-5cdEh9F2hJL/5cdEh9F2hJL.semantic.glb",
+      "bytes": 56882688,
+      "sha256": "927f36670622cac29d1e1b78d5624ae572a7cf51c8278bef0d266024ab609116"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.txt",
+      "bytes": 21622,
+      "sha256": "ef072ebe35073f3da4d319837046d76ce7aa7ccedc5aa2de2fd1e4d9c96766d3"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.glb",
+      "bytes": 62925388,
+      "sha256": "9cf5e954d7ecc7b9c41cbb66b7f4200f0965885fe940130bce3c3e1bb221a79f"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00862-LT9Jq6dN3Ea/LT9Jq6dN3Ea.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00862-LT9Jq6dN3Ea/LT9Jq6dN3Ea.semantic.txt",
+      "bytes": 23911,
+      "sha256": "45c5643fb1be65fe090d841e20a982806a8bc3133f85e4791b5de4a94119d293"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00862-LT9Jq6dN3Ea/LT9Jq6dN3Ea.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00862-LT9Jq6dN3Ea/LT9Jq6dN3Ea.semantic.glb",
+      "bytes": 67828772,
+      "sha256": "6caf4b39c42fdb2ef00f92383cd8021dcd387cb6ecbdd634c52eb42a5835f430"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00869-MHPLjHsuG27/MHPLjHsuG27.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00869-MHPLjHsuG27/MHPLjHsuG27.semantic.txt",
+      "bytes": 13967,
+      "sha256": "bfe241c487c88a677a27951e64a31e8289a1394ac6f0f0bc25e3fc23f81cd3e4"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00869-MHPLjHsuG27/MHPLjHsuG27.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00869-MHPLjHsuG27/MHPLjHsuG27.semantic.glb",
+      "bytes": 38883948,
+      "sha256": "582bfd6f66b6f07d728403e98e76747389bca030a9ab4765770d10c6569f880a"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00871-VBzV5z6i1WS/VBzV5z6i1WS.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00871-VBzV5z6i1WS/VBzV5z6i1WS.semantic.txt",
+      "bytes": 20227,
+      "sha256": "bc1627eb531ad616711293c7a8d3683ab004490d09ffa661327ab89caa046774"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00871-VBzV5z6i1WS/VBzV5z6i1WS.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00871-VBzV5z6i1WS/VBzV5z6i1WS.semantic.glb",
+      "bytes": 59334648,
+      "sha256": "91a3d86a6917aca7e64603b60f50fdfc4bb7c4f789d8f81cf9f49cf6301b0679"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00873-bxsVRursffK/bxsVRursffK.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00873-bxsVRursffK/bxsVRursffK.semantic.txt",
+      "bytes": 10832,
+      "sha256": "be1dfe5cfadd8bd7e851781262fb29d3148a1d3c204ce065509d7ca4d164b4b4"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00873-bxsVRursffK/bxsVRursffK.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00873-bxsVRursffK/bxsVRursffK.semantic.glb",
+      "bytes": 51136488,
+      "sha256": "a51cc5d566442cd7e6bdf5fddff6373cd7ec48cf5532e6ce917c1889e23458b0"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00876-mv2HUxq3B53/mv2HUxq3B53.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00876-mv2HUxq3B53/mv2HUxq3B53.semantic.txt",
+      "bytes": 15598,
+      "sha256": "d23a2cfe6aaa64abd22d940b69fa736d60fa92646831f842d36ce14fd6869866"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00876-mv2HUxq3B53/mv2HUxq3B53.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00876-mv2HUxq3B53/mv2HUxq3B53.semantic.glb",
+      "bytes": 64590900,
+      "sha256": "3c3909fcf1d65930b26a48a734cbebe7171babb9f63bb0bb1f6aad3721c0ad21"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00877-4ok3usBNeis/4ok3usBNeis.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00877-4ok3usBNeis/4ok3usBNeis.semantic.txt",
+      "bytes": 12808,
+      "sha256": "5930c207b4b019a85e7eafedf632ac07503b496880f071c0b72ccf1cdaa15dc8"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00877-4ok3usBNeis/4ok3usBNeis.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00877-4ok3usBNeis/4ok3usBNeis.semantic.glb",
+      "bytes": 52317044,
+      "sha256": "2f873a24dc97a2ca2e90a210b76951f3eec1282a67d769a27fce8d365fe5d3fa"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00878-XB4GS9ShBRE/XB4GS9ShBRE.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00878-XB4GS9ShBRE/XB4GS9ShBRE.semantic.txt",
+      "bytes": 10132,
+      "sha256": "3ae548fab9fb6913fff7c31a0b5a6dcf77e59707a2e72377560dbaa9ae51dbcf"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00878-XB4GS9ShBRE/XB4GS9ShBRE.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00878-XB4GS9ShBRE/XB4GS9ShBRE.semantic.glb",
+      "bytes": 52754772,
+      "sha256": "bde82469ef774ab5a0bd366a75271757f1020e0f83b5867a1b90a3d62191f936"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00880-Nfvxx8J5NCo/Nfvxx8J5NCo.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00880-Nfvxx8J5NCo/Nfvxx8J5NCo.semantic.txt",
+      "bytes": 7954,
+      "sha256": "a4e189c15a1f3e08121a2a2d7fa3ff7e260cbc03af449824ccff810eba31e6ee"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00880-Nfvxx8J5NCo/Nfvxx8J5NCo.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00880-Nfvxx8J5NCo/Nfvxx8J5NCo.semantic.glb",
+      "bytes": 52141940,
+      "sha256": "7946a8079518b56bad24af81ef2f9dc86c614643fa013095b35e0352a4790758"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00890-6s7QHgap2fW/6s7QHgap2fW.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00890-6s7QHgap2fW/6s7QHgap2fW.semantic.txt",
+      "bytes": 15514,
+      "sha256": "f3be09840047f61f704773e046ba414f1b43f47527c71262151dace899feb426"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00890-6s7QHgap2fW/6s7QHgap2fW.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00890-6s7QHgap2fW/6s7QHgap2fW.semantic.glb",
+      "bytes": 56325208,
+      "sha256": "13e90f4197d439256820ae4e797d086863bfe82e4cf13475b84a5d74236d253b"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00891-cvZr5TUy5C5/cvZr5TUy5C5.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00891-cvZr5TUy5C5/cvZr5TUy5C5.semantic.txt",
+      "bytes": 20491,
+      "sha256": "3810d3e247887bd1d556a45e6ea49925f396d555ef309fe693aa81fffee30acc"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00891-cvZr5TUy5C5/cvZr5TUy5C5.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00891-cvZr5TUy5C5/cvZr5TUy5C5.semantic.glb",
+      "bytes": 68449676,
+      "sha256": "e91b56b6aad71fe0c5ad5959ec979c68747ce910bd5064d2eab96882f104bb53"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00894-HY1NcmCgn3n/HY1NcmCgn3n.semantic.txt",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00894-HY1NcmCgn3n/HY1NcmCgn3n.semantic.txt",
+      "bytes": 9428,
+      "sha256": "fc1a94d8c6478780db58be0ed71b62379e6b65993276fee0bab441d01a4761f9"
+    },
+    {
+      "archive": "hm3d-val-semantic-annots-v0.2.tar",
+      "archive_member": "00894-HY1NcmCgn3n/HY1NcmCgn3n.semantic.glb",
+      "path": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00894-HY1NcmCgn3n/HY1NcmCgn3n.semantic.glb",
+      "bytes": 66823192,
+      "sha256": "e98e377f28e3da316e5aa115114121c1d9dc879e446cb2596fe910ef450639fa"
+    }
+  ],
+  "links": [
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00800-TEEsavR23oF/TEEsavR23oF.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00800-TEEsavR23oF/TEEsavR23oF.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00800-TEEsavR23oF/TEEsavR23oF.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00800-TEEsavR23oF/TEEsavR23oF.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00802-wcojb4TFT35/wcojb4TFT35.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00802-wcojb4TFT35/wcojb4TFT35.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00802-wcojb4TFT35/wcojb4TFT35.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00802-wcojb4TFT35/wcojb4TFT35.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00803-k1cupFYWXJ6/k1cupFYWXJ6.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00803-k1cupFYWXJ6/k1cupFYWXJ6.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00803-k1cupFYWXJ6/k1cupFYWXJ6.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00803-k1cupFYWXJ6/k1cupFYWXJ6.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00808-y9hTuugGdiq/y9hTuugGdiq.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00808-y9hTuugGdiq/y9hTuugGdiq.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00808-y9hTuugGdiq/y9hTuugGdiq.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00808-y9hTuugGdiq/y9hTuugGdiq.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00810-CrMo8WxCyVb/CrMo8WxCyVb.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00810-CrMo8WxCyVb/CrMo8WxCyVb.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00810-CrMo8WxCyVb/CrMo8WxCyVb.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00810-CrMo8WxCyVb/CrMo8WxCyVb.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00813-svBbv1Pavdk/svBbv1Pavdk.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00813-svBbv1Pavdk/svBbv1Pavdk.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00813-svBbv1Pavdk/svBbv1Pavdk.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00813-svBbv1Pavdk/svBbv1Pavdk.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00814-p53SfW6mjZe/p53SfW6mjZe.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00814-p53SfW6mjZe/p53SfW6mjZe.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00814-p53SfW6mjZe/p53SfW6mjZe.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00814-p53SfW6mjZe/p53SfW6mjZe.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00815-h1zeeAwLh9Z/h1zeeAwLh9Z.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00815-h1zeeAwLh9Z/h1zeeAwLh9Z.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00815-h1zeeAwLh9Z/h1zeeAwLh9Z.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00815-h1zeeAwLh9Z/h1zeeAwLh9Z.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00820-mL8ThkuaVTM/mL8ThkuaVTM.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00820-mL8ThkuaVTM/mL8ThkuaVTM.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00820-mL8ThkuaVTM/mL8ThkuaVTM.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00820-mL8ThkuaVTM/mL8ThkuaVTM.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00821-eF36g7L6Z9M/eF36g7L6Z9M.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00821-eF36g7L6Z9M/eF36g7L6Z9M.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00821-eF36g7L6Z9M/eF36g7L6Z9M.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00821-eF36g7L6Z9M/eF36g7L6Z9M.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00823-7MXmsvcQjpJ/7MXmsvcQjpJ.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00823-7MXmsvcQjpJ/7MXmsvcQjpJ.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00823-7MXmsvcQjpJ/7MXmsvcQjpJ.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00823-7MXmsvcQjpJ/7MXmsvcQjpJ.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00824-Dd4bFSTQ8gi/Dd4bFSTQ8gi.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00824-Dd4bFSTQ8gi/Dd4bFSTQ8gi.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00824-Dd4bFSTQ8gi/Dd4bFSTQ8gi.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00824-Dd4bFSTQ8gi/Dd4bFSTQ8gi.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00827-BAbdmeyTvMZ/BAbdmeyTvMZ.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00827-BAbdmeyTvMZ/BAbdmeyTvMZ.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00827-BAbdmeyTvMZ/BAbdmeyTvMZ.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00827-BAbdmeyTvMZ/BAbdmeyTvMZ.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00829-QaLdnwvtxbs/QaLdnwvtxbs.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00829-QaLdnwvtxbs/QaLdnwvtxbs.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00829-QaLdnwvtxbs/QaLdnwvtxbs.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00829-QaLdnwvtxbs/QaLdnwvtxbs.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00831-yr17PDCnDDW/yr17PDCnDDW.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00831-yr17PDCnDDW/yr17PDCnDDW.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00831-yr17PDCnDDW/yr17PDCnDDW.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00831-yr17PDCnDDW/yr17PDCnDDW.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00832-qyAac8rV8Zk/qyAac8rV8Zk.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00832-qyAac8rV8Zk/qyAac8rV8Zk.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00832-qyAac8rV8Zk/qyAac8rV8Zk.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00832-qyAac8rV8Zk/qyAac8rV8Zk.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00835-q3zU7Yy5E5s/q3zU7Yy5E5s.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00835-q3zU7Yy5E5s/q3zU7Yy5E5s.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00835-q3zU7Yy5E5s/q3zU7Yy5E5s.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00835-q3zU7Yy5E5s/q3zU7Yy5E5s.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00839-zt1RVoi7PcG/zt1RVoi7PcG.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00839-zt1RVoi7PcG/zt1RVoi7PcG.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00839-zt1RVoi7PcG/zt1RVoi7PcG.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00839-zt1RVoi7PcG/zt1RVoi7PcG.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00843-DYehNKdT76V/DYehNKdT76V.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00843-DYehNKdT76V/DYehNKdT76V.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00843-DYehNKdT76V/DYehNKdT76V.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00843-DYehNKdT76V/DYehNKdT76V.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00844-q5QZSEeHe5g/q5QZSEeHe5g.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00844-q5QZSEeHe5g/q5QZSEeHe5g.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00844-q5QZSEeHe5g/q5QZSEeHe5g.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00844-q5QZSEeHe5g/q5QZSEeHe5g.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00847-bCPU9suPUw9/bCPU9suPUw9.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00847-bCPU9suPUw9/bCPU9suPUw9.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00847-bCPU9suPUw9/bCPU9suPUw9.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00847-bCPU9suPUw9/bCPU9suPUw9.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00848-ziup5kvtCCR/ziup5kvtCCR.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00848-ziup5kvtCCR/ziup5kvtCCR.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00848-ziup5kvtCCR/ziup5kvtCCR.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00848-ziup5kvtCCR/ziup5kvtCCR.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00849-a8BtkwhxdRV/a8BtkwhxdRV.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00849-a8BtkwhxdRV/a8BtkwhxdRV.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00849-a8BtkwhxdRV/a8BtkwhxdRV.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00849-a8BtkwhxdRV/a8BtkwhxdRV.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00853-5cdEh9F2hJL/5cdEh9F2hJL.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00853-5cdEh9F2hJL/5cdEh9F2hJL.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00853-5cdEh9F2hJL/5cdEh9F2hJL.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00853-5cdEh9F2hJL/5cdEh9F2hJL.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.glb",
+      "preserved_existing": true
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.semantic.txt",
+      "preserved_existing": true
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00862-LT9Jq6dN3Ea/LT9Jq6dN3Ea.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00862-LT9Jq6dN3Ea/LT9Jq6dN3Ea.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00862-LT9Jq6dN3Ea/LT9Jq6dN3Ea.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00862-LT9Jq6dN3Ea/LT9Jq6dN3Ea.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00869-MHPLjHsuG27/MHPLjHsuG27.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00869-MHPLjHsuG27/MHPLjHsuG27.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00869-MHPLjHsuG27/MHPLjHsuG27.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00869-MHPLjHsuG27/MHPLjHsuG27.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00871-VBzV5z6i1WS/VBzV5z6i1WS.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00871-VBzV5z6i1WS/VBzV5z6i1WS.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00871-VBzV5z6i1WS/VBzV5z6i1WS.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00871-VBzV5z6i1WS/VBzV5z6i1WS.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00873-bxsVRursffK/bxsVRursffK.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00873-bxsVRursffK/bxsVRursffK.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00873-bxsVRursffK/bxsVRursffK.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00873-bxsVRursffK/bxsVRursffK.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00876-mv2HUxq3B53/mv2HUxq3B53.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00876-mv2HUxq3B53/mv2HUxq3B53.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00876-mv2HUxq3B53/mv2HUxq3B53.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00876-mv2HUxq3B53/mv2HUxq3B53.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00877-4ok3usBNeis/4ok3usBNeis.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00877-4ok3usBNeis/4ok3usBNeis.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00877-4ok3usBNeis/4ok3usBNeis.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00877-4ok3usBNeis/4ok3usBNeis.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00878-XB4GS9ShBRE/XB4GS9ShBRE.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00878-XB4GS9ShBRE/XB4GS9ShBRE.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00878-XB4GS9ShBRE/XB4GS9ShBRE.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00878-XB4GS9ShBRE/XB4GS9ShBRE.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00880-Nfvxx8J5NCo/Nfvxx8J5NCo.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00880-Nfvxx8J5NCo/Nfvxx8J5NCo.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00880-Nfvxx8J5NCo/Nfvxx8J5NCo.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00880-Nfvxx8J5NCo/Nfvxx8J5NCo.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00890-6s7QHgap2fW/6s7QHgap2fW.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00890-6s7QHgap2fW/6s7QHgap2fW.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00890-6s7QHgap2fW/6s7QHgap2fW.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00890-6s7QHgap2fW/6s7QHgap2fW.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00891-cvZr5TUy5C5/cvZr5TUy5C5.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00891-cvZr5TUy5C5/cvZr5TUy5C5.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00891-cvZr5TUy5C5/cvZr5TUy5C5.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00891-cvZr5TUy5C5/cvZr5TUy5C5.semantic.txt",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00894-HY1NcmCgn3n/HY1NcmCgn3n.semantic.glb",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00894-HY1NcmCgn3n/HY1NcmCgn3n.semantic.glb",
+      "preserved_existing": false
+    },
+    {
+      "source": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d_mirror_zhuhu00_v0.2/val/00894-HY1NcmCgn3n/HY1NcmCgn3n.semantic.txt",
+      "destination": "/home/ysh/Datasets/SCOPE/scene_datasets/hm3d/val/00894-HY1NcmCgn3n/HY1NcmCgn3n.semantic.txt",
+      "preserved_existing": false
+    }
+  ]
+}
