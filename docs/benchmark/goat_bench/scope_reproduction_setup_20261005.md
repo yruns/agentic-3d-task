@@ -312,6 +312,36 @@ SR 83.3333% and SPL 55.4600%. Its requested set remains the full 2,669 IDs and
 metadata already archived for the first checkpoint. This snapshot is a progress
 observation and is not a comparison with the paper's full-set metrics.
 
+### SSH tunnel recovery
+
+At 06:01, the Mac-to-Linux SSH reverse tunnel disconnected after an operation
+timeout. The Mac model bridge remained healthy, but all six workers raised
+`APIConnectionError` and exited 1; the controller also exited 1. Their terminal
+statuses, stdout, upstream logs, checkpoint copies and incomplete episode
+visualizations were preserved under
+`failed_attempts/network_disconnect_20261005_0601/`.
+
+Revision `59bc0d3` adds `scripts/scope/run_tunnel.sh`, which reconnects after
+SSH exits with delays of 2, 4, 8, 16 and at most 30 seconds. It runs in the
+Mac `scope-api-tunnel-20261005` tmux session, uses the private `bupt-scope` SSH
+alias, and stops its own child on TERM/INT. A real owned-SSH termination before
+worker restart recovered automatically in two seconds; Linux bridge health
+returned HTTP 200. Five fake integration tests, 53 keyframe tests, lint,
+formatting, type checking and shell syntax checks passed.
+
+At 06:14, all six workers and the controller restarted from a clean project
+checkout at `59bc0d30e40f326544fb2524956754bd094e08fb`. Each worker now uses the
+two-retry/240-second bootstrap. The original source skips the two completed
+episodes containing **12 saved subtasks**; incomplete episodes replay from
+their original initial poses. Log-only successes from failed attempts are not
+merged. Scene assets, model, prompts, sampling and navigation budgets are
+unchanged. The full evaluation remains incomplete. Exact PIDs, code hashes,
+archive paths and verification results are in the
+[network recovery record](assets/scope_20261005/network_recovery_20261005.json).
+The [checkpoint audit](assets/scope_20261005/network_checkpoint_audit_20261005.json)
+verifies each shard's primary metric ID sets, frozen requested IDs and exact
+archived incomplete episode folders.
+
 ## Sources
 
 - [Official SCOPE code](https://github.com/mrwangyou/SCOPE).

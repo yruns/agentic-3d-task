@@ -10,9 +10,11 @@ Paper numbers and completed local runs are reported separately.
 | 2026-10-05 | [v1 SCOPE public episode](v1_public_episode_20261005.md) | Completed engineering check: 5/5 subtasks recorded, SR 80.00%, SPL 68.84%; Gemini 3.8 Flash |
 
 The first-episode-per-scene run (36 episodes / 278 subtasks) is running in
-Linux `tmux` with two workers on GPUs 0 and 2. The full 360-episode /
-2,669-subtask evaluation remains incomplete. The five-subtask public episode
-is a separate engineering check and is not ranked against either paper fold.
+Linux `tmux` with two workers on GPUs 0 and 2. Four additional workers process
+later episodes on GPUs 3, 4, 5 and 6. All six resumed at 06:14 after SSH tunnel
+recovery, retaining 12 saved subtasks. The full 360-episode / 2,669-subtask
+evaluation remains incomplete. The five-subtask public episode is a separate
+engineering check and is not ranked against either paper fold.
 
 ## Completed local runs
 
