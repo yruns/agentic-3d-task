@@ -1,0 +1,23 @@
+{
+  "head_commit_at_launch": "6625cdf9fd5ac07c594dbd1ec73958d4f688ffb2",
+  "controller_code_commit": "82860f002a4fec57ece1f455c330ae425e7b5650",
+  "bootstrap_code_commit": "d5c24a5e676d8729fd1f6d0f890d5bf5760b5827",
+  "upstream_code_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "branch": "feat/realtime-model",
+  "launch_local_time": "2026-10-05 04:30:56 Asia/Shanghai",
+  "model": "gemini-3.8-flash",
+  "project_and_upstream_tracked_worktrees_clean_at_launch": true,
+  "additional_gpus_verified_idle_before_launch": [3, 4, 5, 6],
+  "retained_firstsplit_pids": [2655312, 2655314],
+  "early_stages": [
+    {"split": 3, "worker": 0, "gpu": 3, "pid": 2679695, "tmux": "scope-s3-w0-20261005"},
+    {"split": 3, "worker": 1, "gpu": 4, "pid": 2679694, "tmux": "scope-s3-w1-20261005"},
+    {"split": 4, "worker": 0, "gpu": 5, "pid": 2679697, "tmux": "scope-s4-w0-20261005"},
+    {"split": 4, "worker": 1, "gpu": 6, "pid": 2679688, "tmux": "scope-s4-w1-20261005"}
+  ],
+  "worker_command_template": "bash /home/ysh/Datasets/SCOPE/scripts/run_worker.sh SPLIT WORKER > /home/ysh/Datasets/SCOPE/logs/full_splitSPLIT_workerWORKER.log 2>&1",
+  "reason": "Advance independent full-set episodes on idle GPUs while retaining the original two first-episode workers.",
+  "collection": "The controller still verifies canonical278 before collecting later stages; it reuses early live or terminal workers without relaunching them.",
+  "token_ledger": "Full-set calls share one run-level ledger from line 164; interleaved phases are not attributed to subtasks or canonical278.",
+  "coverage_complete_at_launch": false
+}

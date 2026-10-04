@@ -194,7 +194,7 @@ Each terminal shard is checked against its exact IDs before being published
 to the central output directory. A resumed controller reuses existing workers
 and validates terminal artifacts rather than starting duplicate work.
 
-After the 278-ID gate passes, the queue launches batches of three splits:
+After the 278-ID gate passes, the controller collects batches of three splits:
 2–4, 5–7, then 8–10. Each batch has six workers on GPUs 0, 2, 3, 4, 5 and 6,
 which were verified available before queue preparation. GPU 1 is excluded.
 Each process retains the original half-scene selection and independently
@@ -202,8 +202,16 @@ resets its episode memory, as in the released evaluator. The model and
 navigation parameters remain identical to the first-split configuration.
 The successor [parallel storage plan](assets/scope_20261005/storage_plan_parallel_v2.json)
 preserves the immutable original plan and all twenty gates. Its preparation
-passed under the actual Linux `scope-repro` Python 3.9 environment. This is
-queued work; it is not evidence that six navigation workers have started.
+passed under the actual Linux `scope-repro` Python 3.9 environment.
+At 04:30 on 2026-10-05, the four idle GPUs started split 3 and split 4 while
+the original two first-split workers continued. These episodes have independent
+memory and output directories. The controller will reuse them and start split 2
+when GPUs 0 and 2 are free. This advances the full set while retaining the
+canonical result gate and avoiding duplicate work. The
+[early worker launch record](assets/scope_20261005/early_parallel_workers_20261005.json)
+captures their exact PIDs and commits. Future phases remain queued.
+The full-set API ledger now contains interleaved phases; it is only a full-run
+usage ledger and cannot provide per-subtask or canonical278 token attribution.
 The [parallel revision checks](assets/scope_20261005/parallel_validation_20261005.json)
 include 76 targeted tests and five controller integration cases on Linux with
 real file locking. The dispatch case uses synthetic terminal workers and
