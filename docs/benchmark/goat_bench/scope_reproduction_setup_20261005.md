@@ -162,6 +162,9 @@ tests. The four controller integration cases also passed on Linux with real
 `flock`; they use isolated fixtures and provide no navigation performance
 evidence. The exact checks are in
 [storage_validation_20261005.json](assets/scope_20261005/storage_validation_20261005.json).
+The [controller launch record](assets/scope_20261005/controller_launch_20261005.json)
+captures the deployed commit and matching code hashes. Only the controller was
+replaced; both navigation worker PIDs were retained.
 
 ## Sources
 
