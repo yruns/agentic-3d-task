@@ -6,6 +6,9 @@ scope_full=$scope_assets/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669
 scope_public=$scope_assets/outputs/REPRO_20261005_SCOPE_Gemini38Flash_public_example_ep0
 scope_gate_python=/home/ysh/miniconda3/envs/conceptgraph/bin/python
 read -r scope_project_commit < "$scope_assets/manifests/full_project_commit.txt"
+read -r scope_controller_commit < "$scope_assets/manifests/full_controller_commit.txt"
+exec 9>"$scope_assets/logs/full_controller.lock"
+flock -n 9 || { printf 'Another SCOPE controller owns the run\n' >&2; exit 2; }
 trap 'scope_exit=$?; printf "%s\n" "$scope_exit" > "$scope_assets/logs/full_run.exit"' EXIT
 
 wait_for_exit() {
@@ -18,6 +21,47 @@ wait_for_exit() {
     sleep 10
   done
   [[ "$(cat "$scope_status")" == 0 ]] || { printf 'Failed session: %s\n' "$scope_session" >&2; return 1; }
+}
+
+# A finished primary shard is immutable. Publish through a temporary file so
+# observers never read a partially copied pickle; refuse conflicting history.
+publish_shard() {
+  local scope_source=$1 scope_target=$2
+  [[ -s "$scope_source" ]] || { printf 'Missing primary shard: %s\n' "$scope_source" >&2; return 2; }
+  if [[ "$scope_source" == "$scope_target" ]]; then
+    return
+  fi
+  if [[ -f "$scope_target" ]]; then
+    cmp -s "$scope_source" "$scope_target" || { printf 'Conflicting primary shard: %s\n' "$scope_target" >&2; return 2; }
+  else
+    cp "$scope_source" "$scope_target.pending.$$"
+    mv "$scope_target.pending.$$" "$scope_target"
+  fi
+}
+
+collect_worker() {
+  local scope_split=$1 scope_worker=$2 scope_commit=$3
+  local scope_source scope_suffix scope_gate scope_expected scope_metric
+  read -r scope_source scope_suffix scope_gate scope_expected < <(
+    "$scope_gate_python" - "$scope_assets/manifests/storage_plan.json" "$scope_split" "$scope_worker" <<'PY'
+from pathlib import Path
+import json
+import sys
+plan = json.loads(Path(sys.argv[1]).read_text())
+stages = [stage for stage in plan['stages'] if stage['split'] == int(sys.argv[2]) and stage['worker'] == int(sys.argv[3])]
+if len(stages) != 1:
+    raise SystemExit('Expected exactly one frozen worker stage')
+stage = stages[0]
+print(stage['source_output_dir'], stage['logger_suffix'], stage['gate_dir'], stage['expected_subtasks'])
+PY
+  )
+  for scope_metric in success_by_distance spl_by_distance; do
+    publish_shard "$scope_source/${scope_metric}_${scope_suffix}.pkl" "$scope_gate/${scope_metric}_${scope_suffix}.pkl"
+  done
+  ingest_and_check "$scope_gate" "REPRO_20261005_SCOPE_Gemini38Flash_split${scope_split}_worker${scope_worker}" "$scope_expected" "$scope_commit"
+  for scope_metric in success_by_distance spl_by_distance; do
+    publish_shard "$scope_gate/${scope_metric}_${scope_suffix}.pkl" "$scope_full/${scope_metric}_${scope_suffix}.pkl"
+  done
 }
 
 ingest_and_check() {
@@ -53,20 +97,32 @@ PY
 ingest_and_check "$scope_public" REPRO_20261005_SCOPE_Gemini38Flash_public_example_ep0 5 "$scope_public_commit"
 
 for scope_split in {1..10}; do
+  scope_stage_commit=$scope_controller_commit
+  [[ "$scope_split" != 1 ]] || scope_stage_commit=$scope_project_commit
   for scope_worker in 0 1; do
     scope_session=scope-s${scope_split}-w${scope_worker}-20261005
     scope_status=$scope_assets/logs/full_split${scope_split}_worker${scope_worker}.exit
-    [[ ! -f "$scope_status" ]] || { printf 'Refusing stale status: %s\n' "$scope_status" >&2; exit 2; }
-    tmux new-session -d -s "$scope_session" \
-      "bash $scope_assets/scripts/run_worker.sh $scope_split $scope_worker > $scope_assets/logs/full_split${scope_split}_worker${scope_worker}.log 2>&1"
+    if [[ -f "$scope_status" ]]; then
+      printf 'Reusing terminal worker: %s\n' "$scope_session"
+    elif tmux has-session -t "$scope_session" 2>/dev/null; then
+      printf 'Waiting for existing worker: %s\n' "$scope_session"
+    else
+      tmux new-session -d -s "$scope_session" \
+        "bash $scope_assets/scripts/run_worker.sh $scope_split $scope_worker > $scope_assets/logs/full_split${scope_split}_worker${scope_worker}.log 2>&1"
+    fi
   done
   for scope_worker in 0 1; do
     wait_for_exit "$scope_assets/logs/full_split${scope_split}_worker${scope_worker}.exit" "scope-s${scope_split}-w${scope_worker}-20261005"
+    collect_worker "$scope_split" "$scope_worker" "$scope_stage_commit"
   done
   if [[ "$scope_split" == 1 ]]; then
     scope_canonical=$scope_assets/outputs/REPRO_20261005_SCOPE_Gemini38Flash_canonical278
     mkdir -p "$scope_canonical"
-    cp "$scope_full"/*distance*.pkl "$scope_canonical/"
+    for scope_suffix in 0.0_0.5_1 0.5_1.0_1; do
+      for scope_metric in success_by_distance spl_by_distance; do
+        publish_shard "$scope_full/${scope_metric}_${scope_suffix}.pkl" "$scope_canonical/${scope_metric}_${scope_suffix}.pkl"
+      done
+    done
     cp "$scope_full/subtask_metadata.json" "$scope_canonical/subtask_metadata.json"
     cp "$scope_assets/manifests/canonical278_ids.json" "$scope_canonical/expected_subtask_ids.json"
     ingest_and_check "$scope_canonical" REPRO_20261005_SCOPE_Gemini38Flash_canonical278 278 "$scope_project_commit"

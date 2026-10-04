@@ -1,0 +1,28 @@
+{
+  "n": 5,
+  "expected_subtasks": 5,
+  "sr": 80.0,
+  "spl": 68.83971360148118,
+  "completion_rate": 1.0,
+  "complete": true,
+  "expected_ids_verified": true,
+  "modality_complete": true,
+  "per_modality": {
+    "description": {
+      "n": 1,
+      "sr": 100.0,
+      "spl": 100.0
+    },
+    "image": {
+      "n": 2,
+      "sr": 100.0,
+      "spl": 72.09928400370295
+    },
+    "object": {
+      "n": 2,
+      "sr": 50.0,
+      "spl": 50.0
+    }
+  },
+  "api_ledger_present": true
+}

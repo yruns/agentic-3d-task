@@ -3,7 +3,8 @@
 
 SR and SPL are reported as percentages over recorded terminal subtasks. Missing
 subtasks affect coverage, never the observed success denominator. JSON metrics
-are preferred; upstream numeric pickle dictionaries are decoded with a narrow
+are preferred; primary shards take precedence over derived aggregate files.
+Upstream numeric pickle dictionaries are decoded with a narrow
 global allowlist that never imports or executes arbitrary pickle globals.
 
 ``subtask_metadata.json`` maps IDs to task_type/answer/scene_id/episode_id
@@ -152,6 +153,20 @@ class MetricMapping(RootModel[dict[NonemptyText, UnitMetric]]):
     """Validated ID-to-scalar metric artifact."""
 
 
+def _normalize_episode_id(value: object) -> str:
+    """Normalize frozen integer IDs while preserving optional empty metadata."""
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return str(value)
+    if isinstance(value, str) and (
+        not value or (value.isascii() and value.isdecimal())
+    ):
+        return value
+    raise ValueError(
+        f"invalid episode_id={value!r}; expected a nonnegative integer, "
+        "decimal string, or an empty string"
+    )
+
+
 class TaskMetadata(BaseModel):
     """Optional per-subtask facts captured from the original episode tasks."""
 
@@ -160,7 +175,7 @@ class TaskMetadata(BaseModel):
     answer: str = ""
     question: str = ""
     scene_id: str = ""
-    episode_id: str = ""
+    episode_id: Annotated[str, BeforeValidator(_normalize_episode_id)] = ""
 
 
 class TaskMetadataMapping(RootModel[dict[NonemptyText, TaskMetadata]]):
@@ -263,8 +278,12 @@ def _load_metrics(output_dir: Path, metric_name: str) -> dict[str, float]:
         raise FileNotFoundError(
             f"no {metric_name} JSON/pickle metrics under {output_dir}"
         )
+    primary_shards = [
+        path for stem, path in paths_by_stem.items() if stem != metric_name
+    ]
+    selected_paths = primary_shards or list(paths_by_stem.values())
     metrics: dict[str, float] = {}
-    for path in paths_by_stem.values():
+    for path in selected_paths:
         artifact = MetricMapping.model_validate(_read_payload(path))
         for subtask_id, value in artifact.root.items():
             if subtask_id in metrics and metrics[subtask_id] != value:

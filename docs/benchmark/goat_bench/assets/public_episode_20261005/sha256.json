@@ -1,0 +1,12 @@
+{
+  "api_ledger.jsonl": "207b1566363711ceed28929874f363630593bb244deabff3157dd84700bab43d",
+  "eval_public_example.yaml": "9f26f245630947139073f01449cea1e82e6dd32de13bd4b13e6a034b01f1af29",
+  "expected_subtask_ids.json": "9b8becf0f6359accde204f6d559ef4ed7dd0d8eee0ee2cc8e53c015df81605ef",
+  "ingested_summary.json": "4f197d728ac9b0c197c8bbc5b85f6dbec9540833c1f7aebd6403ab0ce5c1aec9",
+  "public_episode.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+  "run_manifest.json": "a026f35a7e709e6c83af40aa670b0203e165fa94cd64275ce9e1b53dd6cc3373",
+  "spl_by_distance_0.0_1.0_1.pkl": "2d6b2d19bfbadee78f5d5e7de515be257fea21ff8e56be66e9817b617436f8f0",
+  "subtask_metadata.json": "660006551e6c27d1231f95892a043e1ca84545a33cd9312f21226b159172dab0",
+  "success_by_distance_0.0_1.0_1.pkl": "50ccbddab31f983b623b1df492686516dfccb4172b920f6af3deedeed12e1ddf",
+  "transport_summary.json": "00dbe56c18b7db85bd3cea24c1b070f7980083b1f8314c6b59a2c583cb8e5637"
+}

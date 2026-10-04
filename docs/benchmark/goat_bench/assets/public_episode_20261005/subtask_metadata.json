@@ -1,0 +1,32 @@
+{
+  "00861-GLAQ4DNUx5U_0_0": {
+    "scene_id": "00861-GLAQ4DNUx5U",
+    "episode_id": "0",
+    "task_type": "image",
+    "answer": "dresser"
+  },
+  "00861-GLAQ4DNUx5U_0_1": {
+    "scene_id": "00861-GLAQ4DNUx5U",
+    "episode_id": "0",
+    "task_type": "description",
+    "answer": "mirror"
+  },
+  "00861-GLAQ4DNUx5U_0_2": {
+    "scene_id": "00861-GLAQ4DNUx5U",
+    "episode_id": "0",
+    "task_type": "object",
+    "answer": "mirror"
+  },
+  "00861-GLAQ4DNUx5U_0_3": {
+    "scene_id": "00861-GLAQ4DNUx5U",
+    "episode_id": "0",
+    "task_type": "image",
+    "answer": "picture"
+  },
+  "00861-GLAQ4DNUx5U_0_4": {
+    "scene_id": "00861-GLAQ4DNUx5U",
+    "episode_id": "0",
+    "task_type": "object",
+    "answer": "book"
+  }
+}

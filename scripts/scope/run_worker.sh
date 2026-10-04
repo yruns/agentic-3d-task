@@ -11,6 +11,10 @@ case "$scope_worker" in
   *) exit 2 ;;
 esac
 scope_status=/home/ysh/Datasets/SCOPE/logs/full_split${scope_split}_worker${scope_worker}.exit
+scope_cfg=/home/ysh/Datasets/SCOPE/manifests/eval_full2669.yaml
+if [[ "$scope_split" != 1 ]]; then
+  scope_cfg=/home/ysh/Datasets/SCOPE/manifests/eval_full2669_worker${scope_worker}.yaml
+fi
 trap 'scope_exit=$?; printf "%s\n" "$scope_exit" > "$scope_status"' EXIT
 source /home/ysh/miniconda3/etc/profile.d/conda.sh
 conda activate scope-repro
@@ -24,6 +28,6 @@ cd /home/ysh/codecase/SCOPE-repro/SCOPE
 [[ -z "$(git status --porcelain)" ]] || exit 2
 python /home/ysh/Datasets/SCOPE/scripts/run_scope.py \
   --upstream-root /home/ysh/codecase/SCOPE-repro/SCOPE \
-  --cfg-file /home/ysh/Datasets/SCOPE/manifests/eval_full2669.yaml \
+  --cfg-file "$scope_cfg" \
   --bridge-config /home/ysh/Datasets/SCOPE/private/bridge_connection.json \
   --split "$scope_split" --start-ratio "$scope_start" --end-ratio "$scope_end"

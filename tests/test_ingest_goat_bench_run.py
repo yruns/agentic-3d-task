@@ -10,7 +10,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scripts.ingest_goat_bench_run import RunMetadata, ingest_run, load_samples
+from scripts.ingest_goat_bench_run import (
+    RunMetadata,
+    TaskMetadata,
+    ingest_run,
+    load_samples,
+)
 
 _FIRST_ID = "00861-GLAQ4DNUx5U_0_0"
 _SECOND_ID = "00861-GLAQ4DNUx5U_0_1"
@@ -23,6 +28,7 @@ def _write_run(
     spl: dict[str, float],
     *,
     expected_ids: tuple[str, ...] = (_FIRST_ID, _SECOND_ID, _THIRD_ID),
+    episode_id: str | int = "0",
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "success_by_distance.json").write_text(json.dumps(success))
@@ -35,7 +41,7 @@ def _write_run(
                     "task_type": "object" if index == 0 else "description",
                     "answer": "chair",
                     "scene_id": "00861-GLAQ4DNUx5U",
-                    "episode_id": "0",
+                    "episode_id": episode_id,
                 }
                 for index, subtask_id in enumerate(expected_ids)
             }
@@ -221,8 +227,79 @@ def test_json_metrics_take_precedence_over_same_named_pickle(tmp_path: Path) -> 
 
 def test_rejects_conflicting_shards(tmp_path: Path) -> None:
     _write_run(tmp_path, {_FIRST_ID: 1.0}, {_FIRST_ID: 0.5})
+    (tmp_path / "success_by_distance.json").rename(
+        tmp_path / "success_by_distance_0.0_0.5_1.json"
+    )
     (tmp_path / "success_by_distance_0.0_1.0_1.json").write_text(
         json.dumps({_FIRST_ID: 0.0})
     )
     with pytest.raises(ValueError, match="conflicting"):
         load_samples(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("episode_id", "expected"),
+    [(0, "0"), (27, "27"), ("0", "0"), ("27", "27"), ("", "")],
+)
+def test_normalizes_valid_episode_ids(episode_id: object, expected: str) -> None:
+    metadata = TaskMetadata.model_validate(
+        {"task_type": "object", "episode_id": episode_id}
+    )
+    assert metadata.episode_id == expected
+
+
+def test_absent_episode_id_remains_empty() -> None:
+    assert TaskMetadata.model_validate({"task_type": "object"}).episode_id == ""
+
+
+@pytest.mark.parametrize(
+    "episode_id", [True, False, -1, "-1", None, 1.5, {}, [], "abc", " 0"]
+)
+def test_rejects_invalid_episode_ids(episode_id: object) -> None:
+    with pytest.raises(ValueError, match="episode_id"):
+        TaskMetadata.model_validate({"task_type": "object", "episode_id": episode_id})
+
+
+def test_ingests_integer_episode_metadata_from_frozen_full_run(tmp_path: Path) -> None:
+    _write_run(
+        tmp_path,
+        {_FIRST_ID: 1.0},
+        {_FIRST_ID: 0.5},
+        expected_ids=(_FIRST_ID,),
+        episode_id=0,
+    )
+    db_path = tmp_path / "runs.sqlite"
+    summary = ingest_run(
+        output_dir=tmp_path, db_path=db_path, metadata=_metadata(expected_subtasks=1)
+    )
+    assert (
+        summary.complete and summary.expected_ids_verified and summary.modality_complete
+    )
+    with sqlite3.connect(db_path) as connection:
+        assert connection.execute("SELECT episode_id FROM samples").fetchone() == ("0",)
+
+
+@pytest.mark.parametrize(
+    "aggregate_content",
+    [pickle.dumps({"wrong_0_0": 0.0}), b"\x80\x04}"],
+    ids=("stale", "truncated"),
+)
+def test_primary_shards_ignore_stale_or_truncated_aggregates(
+    tmp_path: Path, aggregate_content: bytes
+) -> None:
+    _write_run(tmp_path, {_FIRST_ID: 1.0}, {_FIRST_ID: 0.5})
+    for name in ("success_by_distance", "spl_by_distance"):
+        (tmp_path / f"{name}.json").rename(tmp_path / f"{name}_0.0_0.5_1.json")
+        (tmp_path / f"{name}.pkl").write_bytes(aggregate_content)
+    samples = load_samples(tmp_path)
+    assert len(samples) == 1
+    assert samples[0].question_id == _FIRST_ID
+    assert samples[0].success == 1.0 and samples[0].spl == 0.5
+
+
+def test_primary_shard_json_precedes_same_named_pickle(tmp_path: Path) -> None:
+    _write_run(tmp_path, {_FIRST_ID: 1.0}, {_FIRST_ID: 0.5})
+    for name in ("success_by_distance", "spl_by_distance"):
+        (tmp_path / f"{name}.json").rename(tmp_path / f"{name}_0.0_0.5_1.json")
+        (tmp_path / f"{name}_0.0_0.5_1.pkl").write_bytes(b"\x80\x04}")
+    assert load_samples(tmp_path)[0].spl == 0.5

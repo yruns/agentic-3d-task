@@ -17,3 +17,18 @@ implement the original GOAT-Bench budget as 500 discrete movement actions.
 The requested Gemini replacement is a separate model configuration. Results
 from that configuration must identify `gemini-3.8-flash` and must not be
 presented as recovery of the paper's GPT-4o numbers.
+
+## Completed local engineering checks
+
+These runs verify the implementation and infrastructure. Their selection is
+listed explicitly; they do not establish a rank on the paper's 278-subtask or
+full validation protocol.
+
+| Record | Episode selection | Model | Recorded / expected | Distance SR | Distance SPL |
+| --- | --- | --- | ---: | ---: | ---: |
+| [v1 public episode](v1_public_episode_20261005.md) | Official public HM3D scene `00861-GLAQ4DNUx5U`, original episode `0` | `gemini-3.8-flash`, thinking budget 2,000 | 5 / 5 | 80.00 | 68.84 |
+
+The v1 launcher exited 0 and all five frozen IDs have matching success/SPL
+records. Four tasks succeeded; the book task failed the distance threshold.
+The 36-scene / 278-subtask run is in progress, and the full 2,669-subtask run
+has no completed result yet.

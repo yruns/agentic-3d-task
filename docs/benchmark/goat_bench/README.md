@@ -6,7 +6,21 @@ Paper numbers and completed local runs are reported separately.
 
 | Date | Record | Status |
 | --- | --- | --- |
-| 2026-10-05 | [SCOPE reproduction setup](scope_reproduction_setup_20261005.md) | Preparation in progress; no benchmark result yet |
+| 2026-10-05 | [SCOPE reproduction setup](scope_reproduction_setup_20261005.md) | All 36 scenes and model assets ready; public mirrors removed the dataset blocker |
+| 2026-10-05 | [v1 SCOPE public episode](v1_public_episode_20261005.md) | Completed engineering check: 5/5 subtasks recorded, SR 80.00%, SPL 68.84%; Gemini 3.8 Flash |
+
+The first-episode-per-scene run (36 episodes / 278 subtasks) is running in
+Linux `tmux` with two workers on GPUs 0 and 2. The full 360-episode /
+2,669-subtask evaluation remains incomplete. The five-subtask public episode
+is a separate engineering check and is not ranked against either paper fold.
+
+## Completed local runs
+
+SR and SPL use SCOPE's distance-based metrics and are percentages.
+
+| Record | Selection | Model | Recorded / expected | SR | SPL |
+| --- | --- | --- | ---: | ---: | ---: |
+| [v1](v1_public_episode_20261005.md) | Official public scene `00861-GLAQ4DNUx5U`, original episode `0` | `gemini-3.8-flash`, thinking budget 2,000 | 5 / 5 | 80.00 | 68.84 |
 
 ## References
 

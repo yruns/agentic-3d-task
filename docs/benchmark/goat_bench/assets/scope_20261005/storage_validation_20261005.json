@@ -1,0 +1,28 @@
+{
+  "project_gate": {
+    "ruff_src": "passed",
+    "black_check_src": "passed, 211 files",
+    "mypy_src": "passed, 211 files",
+    "keyframe_pytest": "53 passed"
+  },
+  "targeted_gate": {
+    "ingester_pytest": "37 passed",
+    "runner_pytest": "4 passed",
+    "bridge_pytest": "30 passed",
+    "controller_pytest_mac": "4 passed, 18.65 seconds",
+    "controller_pytest_linux": "4 passed, 19.52 seconds, real flock",
+    "ruff_black_mypy": "passed",
+    "embedded_preparation_python": "ruff, black, mypy and temporary fixture smoke passed",
+    "bash_syntax": "passed",
+    "git_diff_check": "passed",
+    "mkdocs_build": "passed"
+  },
+  "remote_preparation": {
+    "terminal_exit": 0,
+    "isolated_workers": 2,
+    "exact_stage_gates": 20,
+    "navigation_configuration_changes": [],
+    "storage_configuration_changes": ["exp_name"]
+  },
+  "coverage_boundary": "Controller tests use isolated synthetic fixtures, not navigation success measurements. Live canonical278 and full2669 results remain incomplete."
+}
