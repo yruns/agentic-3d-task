@@ -38,8 +38,15 @@ nav:
   - Latest Handoff: handoff_2026-07-02_1313.md
   - Development Standards:
       - Python Code Agent Quality Guide: python_code_agent_quality_guide.md
+  - Research:
+      - Overview: research/index.md
+      - Research Point 3 Decision: research/research_point3_multitask_cruise_20261005.md
+      - Indoor 3D LLM Capabilities: research/indoor_3d_llm_capability_survey_20261003.md
+      - Frozen-Model Indoor Navigation: research/zero_shot_indoor_llm_navigation_20261003.md
+      - Indoor Long-Horizon Vision-Language Navigation: research/indoor_long_horizon_vln_survey_20261003.md
   - Codex Agent:
       - Overview: codex_agent/index.md
+      - Keyframe Selector Shared Foundation Review: codex_agent/keyframe_shared_foundation_review_20261003.md
       - NR3D Tools Plan: codex_agent/nr3d_tools_plan_20260609.md
       - View Image Adapter Fix: codex_agent/view_image_adapter_fix_20260609.md
       - Prompt Caching: codex_agent/prompt_caching_20260608.md

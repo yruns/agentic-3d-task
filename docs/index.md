@@ -10,6 +10,8 @@ files directly while people browse the rendered MkDocs Material site.
   testing, typing, and review standards for Python changes in this repository.
 - [Codex Agent](codex_agent/index.md): engineering notes, design records, and
   runtime investigations for Codex-based 3D reasoning agents.
+- [Research Reports](research/index.md): literature reviews, benchmark protocol
+  audits, and research planning for indoor 3D embodied tasks.
 - [Benchmarks](benchmark/index.md): durable evaluation records for NR3D and
   OpenEQA, including timelines, version notes, and preserved artifacts.
 - [Latest Handoff](handoff_2026-07-02_1313.md): current SceneFunc3D/Codex
