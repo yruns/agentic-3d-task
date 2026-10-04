@@ -16,6 +16,10 @@ recovery, retaining 12 saved subtasks. The full 360-episode / 2,669-subtask
 evaluation remains incomplete. The five-subtask public episode is a separate
 engineering check and is not ranked against either paper fold.
 
+At 07:06, split 5 worker 1 started early in its isolated directory, sharing
+GPU 2 with the first-split worker. Seven navigation workers are now active;
+the existing controller will reuse the additional worker.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

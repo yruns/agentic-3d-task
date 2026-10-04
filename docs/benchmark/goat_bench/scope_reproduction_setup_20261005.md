@@ -275,6 +275,21 @@ checks six distinct GPU/config/output assignments per batch.
 The [parallel controller launch](assets/scope_20261005/parallel_controller_launch_20261005.json)
 records its deployed SHA, matching script hashes and retained first-split PIDs.
 
+At 07:06:54, one additional frozen future worker, split 5 worker 1, started on
+physical GPU 2 alongside first-split worker 1. It processes 128 requested IDs
+in its existing isolated output directory. The other six workers and controller
+were retained. A 20-second resource observation found 14,951 MiB free before
+launch; after real rendering and model inference, both GPU-2 processes occupied
+9,100 MiB each, with 5,836 MiB remaining. The new worker reached step 3 and all
+original PIDs remained live. This observation supports current capacity and does
+not establish a bound for every future scene's peak memory.
+
+Models, prompts, task selection, memory resets and navigation budgets retain
+the frozen configuration. The existing controller will reuse this worker when
+split 5 is reached. Concurrency is seven workers; further sharing has not been
+started. The [launch record](assets/scope_20261005/co_gpu_worker_launch_20261005.json)
+preserves the project head, exact PID, requested IDs and resource evidence.
+
 ## A-EQA release and asset boundary
 
 The paper also reports A-EQA, but the official repository's A-EQA instructions
