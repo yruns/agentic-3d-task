@@ -714,6 +714,30 @@ and grouped metrics. All earlier database rows are preserved. Canonical
 coverage remains 39/278; both requested selections are incomplete, and
 absent per-qid usage remains `NULL`.
 
+The `1215` [full snapshot](assets/full2669_progress_20261005_1215/ingested_summary.json)
+and [canonical snapshot](assets/canonical278_progress_20261005_1215/ingested_summary.json),
+captured at **12:09:23**, contain **240/2,669 IDs in 37 complete episodes**
+and **48/278 IDs in seven complete episodes**. The full observation has 160
+successes, observed SR 66.6667% and SPL 47.7761%; canonical has 38 successes,
+observed SR 79.1667% and SPL 57.2741%. Both add `00810-CrMo8WxCyVb`
+episode 0 (nine subtasks, eight successes); full also adds `00803-k1cupFYWXJ6`
+episode 4 (five subtasks, two successes). Full description/image/object
+counts are 74/85/81, with observed SR 44.5946/80.0000/72.8395% and SPL
+30.2402/66.4806/44.1684%. Canonical counts are 12/21/15, with observed SR
+75.0000/85.7143/73.3333% and SPL 51.7827/76.6978/34.4740%.
+
+Canonical raw metrics and metadata are copied only from the immutable full
+snapshot's split1 artifacts and retain its capture time. Its
+[manifest](assets/canonical278_progress_20261005_1215/run_manifest.json)
+records only the original split1 launch and recovery provenance; later-stage
+launches belong in the
+[full manifest](assets/full2669_progress_20261005_1215/run_manifest.json).
+Paired raw rows, frozen IDs, original metadata and explicit indices, complete
+episode groups and grouped database metrics were verified. The second,
+uniquely named database backup includes both observations and preserves all
+earlier rows. The original full-only backup is retained. Both requested
+selections remain incomplete, and absent per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
