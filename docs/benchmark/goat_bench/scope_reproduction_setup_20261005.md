@@ -828,6 +828,21 @@ and grouped metrics. All earlier database rows are preserved. Canonical
 coverage remains 48/278; both requested selections are incomplete, and
 absent per-qid usage remains `NULL`.
 
+The [next full observation](assets/full2669_progress_20261005_1300/ingested_summary.json),
+captured at **12:54:34** under archive tag `1300`, contains **307/2,669 IDs
+in 45 complete episodes**, with 210 successes, observed SR 68.4039% and SPL
+48.8702%. It adds all ten original subtasks of `00862-LT9Jq6dN3Ea`
+episode 4, with nine successes. Description/image/object counts are 102/105/100,
+with observed SR 52.9412/79.0476/73.0000% and SPL
+37.6242/64.1471/44.3004%. The
+[manifest](assets/full2669_progress_20261005_1300/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 48/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
