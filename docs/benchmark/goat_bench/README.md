@@ -48,6 +48,11 @@ IDs, launch provenance and verified SQLite records are retained in the
 [setup record](scope_reproduction_setup_20261005.md). Both selections remain
 incomplete and these observed metrics are not completed benchmark results.
 
+The next [09:05 full-set observation](assets/full2669_progress_20261005_0905/ingested_summary.json)
+records **95/2,669** IDs in 15 complete episodes (observed SR 67.37%, SPL
+45.50%). Canonical coverage remains 20/278. All 12 workers had fresh model
+responses and navigation activity at 09:05; no worker had a terminal status.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

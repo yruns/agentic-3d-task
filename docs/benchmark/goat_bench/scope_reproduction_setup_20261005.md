@@ -468,6 +468,26 @@ split 5's workers have their own recorded launch commits. Global API calls
 remain interleaved without per-fold or per-subtask attribution. These partial
 observations are separate from completed benchmark comparisons.
 
+The subsequent [09:05 observation](assets/full2669_progress_20261005_0905/ingested_summary.json)
+records **95/2,669 IDs in 15 complete episodes**, with 64 successes,
+observed SR 67.3684% and SPL 45.5028%. It adds the complete episode 3 of
+`00810-CrMo8WxCyVb` (six subtasks) and episode 2 of `00876-mv2HUxq3B53`
+(ten subtasks). Description/image/object counts are 30/30/35, with observed
+SR 43.3333/83.3333/74.2857% and SPL 23.5491/67.3118/45.6269%. The
+[manifest](assets/full2669_progress_20261005_0905/run_manifest.json) retains
+exact new IDs and hashes. Raw paired artifacts match the consistent remote
+SQLite backup row by row, complete episode sets match the original metadata,
+and all prior rows in all four database tables were preserved. Canonical
+coverage remains 20/278; no duplicate canonical snapshot was created.
+
+At 09:05:41 all 12 worker PIDs were live and upstream logs had changed in the
+previous 0–13 seconds, with real HTTP 200 responses and navigation activity.
+Split 1 worker 1 was on its sixth of nine subtasks in its first episode;
+split 3 worker 0 was on its sixth of six. Split 3 worker 1 had saved all ten
+subtasks of its first episode and entered the next scene. No active worker
+had a terminal exit status or a recorded transport/OOM failure in the current
+attempt. These checks establish ongoing execution, not benchmark completion.
+
 ### SSH tunnel recovery
 
 At 06:01, the Mac-to-Linux SSH reverse tunnel disconnected after an operation
