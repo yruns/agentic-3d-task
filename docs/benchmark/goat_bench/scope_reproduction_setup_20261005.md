@@ -654,6 +654,21 @@ and its FileHandler log had updated within 1–43 seconds. No new terminal
 exit file, OOM, traceback or unrecovered API error was observed. These are
 execution-health observations, not additional saved benchmark results.
 
+The [next full observation](assets/full2669_progress_20261005_1155/ingested_summary.json),
+captured at **11:55:35** under tag `1155`, contains **206/2,669 IDs in 32
+complete episodes**, with 136 successes, observed SR 66.0194% and SPL
+46.4499%. It adds all ten original subtasks of `00829-QaLdnwvtxbs` episode
+2, with eight successes. Description/image/object counts are 68/65/73,
+with observed SR 47.0588/81.5385/69.8630% and SPL
+31.4379/67.0091/42.1276%. The
+[manifest](assets/full2669_progress_20261005_1155/run_manifest.json) retains
+exact new IDs, paired input hashes, original episode groups and all
+contributing launch records. Paired raw rows match SQLite; frozen IDs,
+original metadata and explicit indices, complete episodes and grouped metrics
+were verified. The consistent database backup preserves all earlier rows.
+Canonical coverage remains 39/278; both requested selections remain
+incomplete, and absent per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
