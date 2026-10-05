@@ -1,0 +1,32 @@
+{
+  "tests": {
+    "focused": 56,
+    "keyframe": 53,
+    "total": 109
+  },
+  "checks": {
+    "ruff": 0,
+    "black": 0,
+    "mypy_src": 0,
+    "mypy_touched_strict": 0,
+    "mkdocs": 0
+  },
+  "native_import": {
+    "python": "3.9.21",
+    "default_disabled_no_io": true,
+    "heavy_modules_not_loaded": true,
+    "legacy_lineage_compatible": true,
+    "actual_entrypoint_preflight": true
+  },
+  "sources": {
+    "cpu_pointcloud_capture.py": "170b53348f265db871c0b44fd1e1b0e533138d6f6f2240cdab55772aa56af5f1",
+    "run_scope.py": "3d8e01674a92180382330e4c1d36d190588e0d31b85b203fff70f3263e461ac8",
+    "runtime_lineage.py": "60e61e70e452441979e2b550e60b1cbb00b6da034861faf493f7489a8ba861de"
+  },
+  "scope": {
+    "existing_workers_changed": false,
+    "thread_settings_changed": false,
+    "real_pointcloud_replay_complete": false
+  },
+  "note": "Fixed-array tests validate capture boundaries and comparison logic, not navigation performance. Actual replay requires future real captured input."
+}

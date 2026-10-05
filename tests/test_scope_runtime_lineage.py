@@ -12,6 +12,7 @@ import pytest
 from pydantic import ValidationError
 
 from scripts.scope.runtime_lineage import (
+    ActiveEpoch,
     LineagePlan,
     PreservedEpoch,
     RuntimeSource,
@@ -167,3 +168,63 @@ def test_direct_cli_prints_only_the_observed_runtime_label(tmp_path: Path) -> No
 def test_runtime_source_validates_commit_hash(commit: str) -> None:
     with pytest.raises(ValidationError):
         _source(commit)
+
+
+def test_active_stage_override_preserves_historical_rows(tmp_path: Path) -> None:
+    output, source_map = _write_run(tmp_path)
+    alternate = "4" * 40
+    source = RuntimeSource(
+        runtime_commit_sha=alternate,
+        project_launch_head="5" * 40,
+        evidence_records=("new_stage_launch.json",),
+    )
+    plan = LineagePlan(
+        expected_subtask_ids=_IDS,
+        active_source=_source(_PARALLEL),
+        preserved_epochs=_plan().preserved_epochs,
+        active_epochs=(
+            ActiveEpoch(source=source, requested_subtask_ids=(_IDS[0], _IDS[2])),
+        ),
+    )
+    source_map.write_text(plan.model_dump_json(), encoding="utf-8")
+    report = write_lineage_report(output_dir=output, source_map=source_map)
+    rows = {row.question_id: row for row in report.samples}
+    assert rows[_IDS[0]].source.runtime_commit_sha == _BASE
+    assert rows[_IDS[0]].disposition == "preserved"
+    assert rows[_IDS[1]].source.runtime_commit_sha == _VISUALIZATION
+    assert rows[_IDS[2]].source == source
+    assert report.runtime_commit_sha == f"mixed:{_BASE}+{_VISUALIZATION}+{alternate}"
+
+
+@pytest.mark.parametrize("second_id", [_IDS[2], "unknown_0_0"])
+def test_active_epoch_ids_cannot_overlap_or_escape_frozen_request(
+    second_id: str,
+) -> None:
+    with pytest.raises(ValidationError):
+        LineagePlan(
+            expected_subtask_ids=_IDS,
+            active_source=_source(_PARALLEL),
+            active_epochs=(
+                ActiveEpoch(source=_source(_BASE), requested_subtask_ids=(_IDS[2],)),
+                ActiveEpoch(
+                    source=_source(_VISUALIZATION), requested_subtask_ids=(second_id,)
+                ),
+            ),
+        )
+
+
+def test_untouched_active_stage_keeps_default_source(tmp_path: Path) -> None:
+    output, source_map = _write_run(tmp_path, observed=(_IDS[2],))
+    plan = LineagePlan(
+        expected_subtask_ids=_IDS,
+        active_source=_source(_PARALLEL),
+        active_epochs=(
+            ActiveEpoch(
+                source=_source(_VISUALIZATION), requested_subtask_ids=(_IDS[1],)
+            ),
+        ),
+    )
+    source_map.write_text(plan.model_dump_json(), encoding="utf-8")
+    report = write_lineage_report(output_dir=output, source_map=source_map)
+    assert report.runtime_commit_sha == _PARALLEL
+    assert report.samples[0].source.runtime_commit_sha == _PARALLEL

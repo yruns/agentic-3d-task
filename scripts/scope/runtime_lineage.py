@@ -44,6 +44,14 @@ class PreservedEpoch(BaseModel):
     completed_subtask_ids: tuple[NonemptyText, ...] = Field(min_length=1)
 
 
+class ActiveEpoch(BaseModel):
+    """Override the active source for one disjoint frozen worker selection."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    source: RuntimeSource
+    requested_subtask_ids: tuple[NonemptyText, ...] = Field(min_length=1)
+
+
 class LineagePlan(BaseModel):
     """Frozen requested IDs, historical checkpoints and the current runtime."""
 
@@ -52,6 +60,7 @@ class LineagePlan(BaseModel):
     expected_subtask_ids: tuple[NonemptyText, ...] = Field(min_length=1)
     active_source: RuntimeSource
     preserved_epochs: tuple[PreservedEpoch, ...] = ()
+    active_epochs: tuple[ActiveEpoch, ...] = ()
 
     @model_validator(mode="after")
     def validate_id_ownership(self) -> LineagePlan:
@@ -66,6 +75,14 @@ class LineagePlan(BaseModel):
             if not ids <= expected:
                 raise ValueError("preserved IDs must belong to the frozen request")
             preserved.update(ids)
+        active: set[str] = set()
+        for active_epoch in self.active_epochs:
+            ids = set(active_epoch.requested_subtask_ids)
+            if len(ids) != len(active_epoch.requested_subtask_ids) or active & ids:
+                raise ValueError("active IDs must have exactly one override source")
+            if not ids <= expected:
+                raise ValueError("active IDs must belong to the frozen request")
+            active.update(ids)
         return self
 
 
@@ -109,11 +126,18 @@ def build_lineage_report(
         for epoch in plan.preserved_epochs
         for question_id in epoch.completed_subtask_ids
     }
+    active = {
+        question_id: epoch.source
+        for epoch in plan.active_epochs
+        for question_id in epoch.requested_subtask_ids
+    }
     rows = tuple(
         SampleLineage(
             question_id=question_id,
             disposition="preserved" if question_id in preserved else "active_attempt",
-            source=preserved.get(question_id, plan.active_source),
+            source=preserved.get(
+                question_id, active.get(question_id, plan.active_source)
+            ),
         )
         for question_id in sorted(observed)
     )

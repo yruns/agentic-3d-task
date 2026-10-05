@@ -411,6 +411,9 @@ episodes (observed SR 71.64%, SPL 50.71%). Its 15 new subtasks are the first
 two complete episodes saved by the parallel/cache runtime; all earlier values
 are preserved. Canonical coverage remains 111/278, so no duplicate canonical
 snapshot was created. The requested full evaluation remains incomplete.
+CPU diagnostics now support optional, actor-isolated point-cloud input capture
+and a separate CPU-only thread comparison. The feature remains disabled in
+existing workers; real replay inputs and any speedup still require verification.
 
 ## Completed local runs
 

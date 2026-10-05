@@ -1614,6 +1614,39 @@ object inputs and original parameters first, then compare operation outputs
 and timings. No thread settings, model parameters or running workers were
 changed during this diagnosis.
 
+### Optional real-input CPU calibration tools
+
+`run_scope.py --cpu-capture-dir /absolute/path` enables a one-time, actor-isolated
+capture. Its default is disabled and preserves the existing startup sequence.
+Enabled runs verify the fixed upstream entrypoint hash and its four environment
+assignments before early imports. The wrapper captures the first nontrivial
+`denoise_objects` input, with original integer IDs, XYZ/colors and all explicit
+parameters. Empty and single-point calls do not consume the capture; normals
+and covariances are refused because they would be lost in an XYZ/color replay.
+Original call arguments, returned object identity and exceptions are retained.
+
+The immutable capture directory contains typed JSON and non-pickle NPZ, with
+source/array hashes. Loading checks bounded NPY headers, shapes, dtype, C-order
+and actual payload lengths before allocating arrays. The separate CPU-only
+replay command uses the same source Git HEAD and function-file hash, then
+compares sorted coordinates and their corresponding colors, including skip
+and fallback outcomes, across requested thread counts. Its timings cover the
+point-cloud denoise core; they exclude bbox, merge, perception and model calls.
+
+The source and touched-file Ruff, Black and mypy gates passed, together with
+56 focused tests (15 capture/replay-boundary, 18 runner, 15 lineage and eight
+controller) and 53 keyframe tests. A fresh Linux Python 3.9.21 process imported
+the staged tools, confirmed disabled capture created no files or heavy module
+imports, validated the actual upstream entrypoint, and accepted the old lineage
+plan. No real Open3D replay or thread-speedup claim has been made yet.
+
+Per-stage active lineage overrides allow a future diagnostic launch to retain
+older sample sources and other actors' startup versions. A checkpoint observer
+for split 7 worker 0 (PID 3034461, creation tick 322716795) waits in tmux for
+new complete-episode progress beyond its 65 saved IDs before pausing that
+owned process. The existing evaluation parameters and thread limits remain
+unchanged while this boundary is pending.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
