@@ -948,6 +948,21 @@ was 410.6 GiB. Healthy GPUs 0/2/3/4/5/6 had 5,829–6,845 MiB free, with two
 workers each; no current resource pressure was observed. GPU 1 was not read.
 These execution-health observations add no saved benchmark results.
 
+The [next full observation](assets/full2669_progress_20261005_1350/ingested_summary.json),
+captured at **13:46:19** under archive tag `1350`, contains **385/2,669 IDs
+in 55 complete episodes**, with 272 successes, observed SR 70.6494% and SPL
+50.3048%. It adds all ten original subtasks of `00829-QaLdnwvtxbs`
+episode 6, with eight successes. Description/image/object counts are
+130/124/131, with observed SR 58.4615/79.8387/74.0458% and SPL
+41.7852/64.5582/45.2677%. The
+[manifest](assets/full2669_progress_20261005_1350/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 62/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
