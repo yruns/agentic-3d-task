@@ -1107,6 +1107,25 @@ verified. All earlier database rows are preserved. Canonical coverage
 remains 68/278; both requested selections are incomplete, and absent
 per-qid usage remains `NULL`.
 
+The [next full observation](assets/full2669_progress_20261005_1525/ingested_summary.json)
+and [canonical observation](assets/canonical278_progress_20261005_1525/ingested_summary.json)
+share the immutable capture at **15:22:29**, archive tag `1525`. Full contains
+**475/2,669 IDs in 67 complete episodes**, with 335 successes, observed SR
+70.5263% and SPL 49.9552%. Canonical contains **75/278 IDs in 11 complete
+episodes**, with 58 successes, observed SR 77.3333% and SPL 54.2196%. Full
+adds `00853-5cdEh9F2hJL` episode 4 (five subtasks, three successes); both
+add `00871-VBzV5z6i1WS` episode 0 (seven subtasks, all successful).
+Full description/image/object counts are 153/159/163, with SR
+55.5556/81.1321/74.2331% and SPL 39.9372/63.8354/45.8191%; canonical
+counts are 22/31/22, with SR 68.1818/87.0968/72.7273% and SPL
+42.9621/75.3577/35.6917%. Both manifests retain capture time, new IDs,
+paired hashes, original episode groups and contributing launches. Paired
+raw/SQLite rows, original metadata, frozen IDs and explicit indices, complete
+episodes and grouped metrics were verified. Canonical raw inputs and capture
+time match the same full snapshot, and its rows equal the full/canonical-ID
+intersection. All earlier database rows are preserved. Both selections remain
+incomplete, and absent per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
