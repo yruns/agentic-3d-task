@@ -27,6 +27,8 @@ print(stage['physical_gpu'], stage['cfg_file'])
 PY
 )
 [[ "$scope_gpu" =~ ^[0-6]$ && "$scope_gpu" != 1 && -f "$scope_cfg" ]] || exit 2
+scope_cfg=${scope_cfg%.yaml}_parallel16.yaml
+[[ -f "$scope_cfg" ]] || exit 2
 source /home/ysh/miniconda3/etc/profile.d/conda.sh
 conda activate scope-repro
 export CUDA_VISIBLE_DEVICES=$scope_gpu
@@ -34,11 +36,11 @@ export HF_HUB_CACHE=/home/ysh/Datasets/SCOPE/weights/huggingface/hub
 export HF_HUB_OFFLINE=1
 export NO_PROXY=127.0.0.1,localhost
 export no_proxy=$NO_PROXY
-curl --noproxy '*' --fail --silent http://127.0.0.1:8898/health
+curl --noproxy '*' --fail --silent http://127.0.0.1:8897/health
 cd /home/ysh/codecase/SCOPE-repro/SCOPE
 [[ -z "$(git status --porcelain)" ]] || exit 2
 python /home/ysh/Datasets/SCOPE/scripts/run_scope.py \
   --upstream-root /home/ysh/codecase/SCOPE-repro/SCOPE \
   --cfg-file "$scope_cfg" \
-  --bridge-config /home/ysh/Datasets/SCOPE/private/bridge_connection.json \
+  --bridge-config /home/ysh/Datasets/SCOPE/private/bridge_connection_pool.json \
   --split "$scope_split" --start-ratio "$scope_start" --end-ratio "$scope_end"

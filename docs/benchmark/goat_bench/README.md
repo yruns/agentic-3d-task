@@ -382,6 +382,12 @@ Both resumed at 17:56 with real HTTP 200 calls and preserved checkpoints;
 the other ten workers retain their existing connections. Recovery replays only
 incomplete episodes, and the evaluation remains incomplete.
 
+The user-authorized concurrency upgrade has passed a real three-credential
+transport probe and ordered frontier-scoring equivalence checks. The new bridge
+permits 192 in-flight HTTP requests across three 500-QPM credentials; independent
+frontier scores use up to 16 threads per worker. Worker adoption and actual
+throughput are recorded in the [setup record](scope_reproduction_setup_20261005.md).
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

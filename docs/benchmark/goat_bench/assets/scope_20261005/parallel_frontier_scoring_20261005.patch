@@ -1,0 +1,122 @@
+--- a/run_goatbench_evaluation.py
++++ b/run_goatbench_evaluation.py
+@@ -16,6 +16,7 @@
+ import time
+ import json
+ import logging
++from functools import partial
+ import matplotlib.pyplot as plt
+ import open_clip
+ from ultralytics import SAM, YOLOWorld
+@@ -30,6 +31,7 @@
+ from src.logger_goatbench import Logger
+ from src.potential_graph import PotentialGraph
+ from src.potential_estimation_gpt_goal import get_potential_estimation
++from parallel_candidate_scoring import submit_candidate_scores_in_order
+ 
+ 
+ def main(cfg, start_ratio=0.0, end_ratio=1.0, split=1):
+@@ -364,41 +366,68 @@
+                         if not hasattr(potential_graph, '_analyzed_frontiers'):
+                             potential_graph._analyzed_frontiers = set()
+ 
+-                        for i, frontier in enumerate(tsdf_planner.frontiers):
+-
+-                            frontier_key = (tuple(frontier.position), frontier.image)
+-
+-                            if frontier_key in potential_graph._analyzed_frontiers: 
+-                                continue
+-
+-                            if frontier.feature is not None and getattr(cfg, 'enable_potential_estimation', True):
+-                                try:
+-                                    potential_text = get_potential_estimation(subtask_metadata, frontier.feature)
+-                                    logging.info(f"Frontier {i} potential estimation: {potential_text}")
+-                                    
+-                                    potential_graph.update_from_frontier(
+-                                        frontier=frontier,
+-                                        subtask_metadata=subtask_metadata,
+-                                        occupied_map=None,
+-                                        potential_text=potential_text
+-                                    )
+-
+-                                    potential_graph._analyzed_frontiers.add(frontier_key)
+-
+-                                    # Log the resulting potential score
+-                                    frontier_world_pos = potential_graph._voxel_to_world(frontier.position)
+-                                    final_score = potential_graph.get_potential_at_position(np.array([frontier_world_pos[0], frontier_world_pos[2]]))
+-                                    logging.info(f"Frontier {i} final potential score: {final_score:.2f}")
+-                                    
+-                                except Exception as e:
+-                                    logging.warning(f"Failed to get potential estimation for frontier {i}: {e}")
+-                                    # Update with default scores if estimation fails
+-                                    potential_graph.update_from_frontier(
+-                                        frontier=frontier,
+-                                        subtask_metadata=subtask_metadata,
+-                                        occupied_map=None,
+-                                        potential_text=None
+-                                    )
++                        pending_frontiers = [
++                            frontier
++                            for frontier in tsdf_planner.frontiers
++                            if (tuple(frontier.position), frontier.image)
++                            not in potential_graph._analyzed_frontiers
++                            and frontier.feature is not None
++                            and getattr(cfg, 'enable_potential_estimation', True)
++                        ]
++                        pending_keys = [
++                            (tuple(frontier.position), frontier.image) for frontier in pending_frontiers
++                        ]
++                        has_duplicate_frontier_keys = len(pending_keys) != len(set(pending_keys))
++                        scoring_inputs = (
++                            []
++                            if has_duplicate_frontier_keys
++                            else [frontier.feature for frontier in pending_frontiers]
++                        )
++                        with submit_candidate_scores_in_order(
++                            scoring_inputs,
++                            score_candidate=partial(get_potential_estimation, subtask_metadata),
++                            max_workers=getattr(cfg, 'parallel_frontier_workers', 16),
++                        ) as potential_futures:
++                            potential_results = iter(potential_futures)
++                            for i, frontier in enumerate(tsdf_planner.frontiers):
++
++                                frontier_key = (tuple(frontier.position), frontier.image)
++
++                                if frontier_key in potential_graph._analyzed_frontiers:
++                                    continue
++
++                                if frontier.feature is not None and getattr(cfg, 'enable_potential_estimation', True):
++                                    try:
++                                        potential_text = (
++                                            get_potential_estimation(subtask_metadata, frontier.feature)
++                                            if has_duplicate_frontier_keys
++                                            else next(potential_results).result()
++                                        )
++                                        logging.info(f"Frontier {i} potential estimation: {potential_text}")
++
++                                        potential_graph.update_from_frontier(
++                                            frontier=frontier,
++                                            subtask_metadata=subtask_metadata,
++                                            occupied_map=None,
++                                            potential_text=potential_text
++                                        )
++
++                                        potential_graph._analyzed_frontiers.add(frontier_key)
++
++                                        # Log the resulting potential score
++                                        frontier_world_pos = potential_graph._voxel_to_world(frontier.position)
++                                        final_score = potential_graph.get_potential_at_position(np.array([frontier_world_pos[0], frontier_world_pos[2]]))
++                                        logging.info(f"Frontier {i} final potential score: {final_score:.2f}")
++
++                                    except Exception as e:
++                                        logging.warning(f"Failed to get potential estimation for frontier {i}: {e}")
++                                        # Update with default scores if estimation fails
++                                        potential_graph.update_from_frontier(
++                                            frontier=frontier,
++                                            subtask_metadata=subtask_metadata,
++                                            occupied_map=None,
++                                            potential_text=None
++                                        )
+ 
+                     # (4) Choose the next navigation point by querying the VLM
+                     if cfg.choose_every_step:

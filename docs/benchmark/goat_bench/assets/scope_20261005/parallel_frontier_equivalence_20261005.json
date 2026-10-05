@@ -1,0 +1,19 @@
+{
+  "source_commit": "bfffc2be995a7223c8a0e9c86c18064dbe878838",
+  "validated_cases": [
+    "unique_overlapping_nodes",
+    "already_analyzed",
+    "missing_feature",
+    "disabled",
+    "duplicate_success_skips_second",
+    "duplicate_after_failure_retries",
+    "none_preserves_original_second_call",
+    "exception_preserves_original_fallback",
+    "system_exit_remains_fatal",
+    "empty"
+  ],
+  "numeric_graph_states_and_history_exact": true,
+  "normal_and_fallback_api_input_counts_exact": true,
+  "system_exit_preserved": true,
+  "failure_note": "Already running independent requests may finish after fatal failure; no later score is merged."
+}

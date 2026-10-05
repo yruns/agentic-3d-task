@@ -1403,6 +1403,42 @@ original runtime. The new SQL runtime field lists both revisions with a
 `mixed:` prefix, while every earlier observation remains unchanged.
 Coverage is incomplete, and absent per-qid usage remains `NULL`.
 
+## Independent request concurrency — 2026-10-05
+
+The user authorized three Gemini 3.8 Flash credentials, each with 500 QPM.
+The [transport preflight](assets/scope_20261005/three_key_transport_preflight_20261005.json)
+sent nine varied short text requests concurrently: all returned HTTP 200,
+with three requests on each credential slot, in 16.19 seconds. These are
+transport probes, not a representative benchmark throughput comparison.
+The new Mac bridge and reverse tunnel use loopback port 8897. Its per-key
+rolling limit is 500 dispatches per 60 seconds, with 64 HTTP requests in flight
+per key (192 total), and a cooldown for keys receiving HTTP 429. New ledger
+records include timestamps, credential slot and queue time, without credentials
+or prompt content. Earlier bridges remain available during worker migration.
+
+The [frontier patch](assets/scope_20261005/parallel_frontier_scoring_20261005.patch)
+is committed upstream as `606d29ca19901882015cdd432017b4a867cef978`.
+It scores independent eligible frontiers with up to 16 threads, then resolves
+results and updates the real PotentialGraph in the original frontier order.
+Duplicate eligible keys use the original serial loop. Prefilter, candidate
+selection and self-refinement keep their dependencies. Model, prompts,
+sampling parameters and thinking budget 2,000 are retained.
+The [AST validation](assets/scope_20261005/parallel_frontier_equivalence_20261005.json)
+executes the original and patched loops against the original graph class in
+ten cases, including overlapping nodes, skipped/duplicate candidates, `None`,
+exceptions and `SystemExit`: graph values, history and step counts agree.
+
+The [preparation record](assets/scope_20261005/acceleration_preparation_20261005.json)
+retains worker identities, frozen IDs, existing checkpoints and 19 config
+copies that append only `parallel_frontier_workers: 16`. Typed helper/bridge
+tests (98), original keyframe tests (53), lint, formatting and static checks
+passed. Linux Python 3.9 scorer/config validation and an owned-process
+pause/resume probe also passed. A checkpoint observer verifies process
+creation ticks and complete-episode progress before pausing a worker;
+migration launch records will identify actual contributing code versions.
+Preparation and transport probes alone do not establish that an evaluation
+worker has adopted the new parallel runtime.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
