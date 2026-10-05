@@ -33,6 +33,10 @@ The 08:00 snapshots record **38/2,669** full-set IDs in seven complete episodes
 episodes (observed SR 66.67%, SPL 40.79%). Both remain incomplete; raw artifacts
 and independently verified SQLite records are archived in the setup record.
 
+At 08:21, the two frozen split-6 workers started early on GPUs 3 and 4 after
+exact-ID, configuration and resource checks. Ten workers are now active;
+the same controller will reuse these stages.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

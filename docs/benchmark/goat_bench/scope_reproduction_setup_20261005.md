@@ -300,6 +300,16 @@ is now eight workers with the same frozen configuration. The
 [paired launch record](assets/scope_20261005/co_gpu_paired_worker_launch_20261005.json)
 retains the exact preflight and runtime evidence.
 
+At 08:21:43, split 6 workers 0 and 1 started early on GPUs 3 and 4, alongside
+the existing split-3 workers. Their disjoint 118- and 133-ID sets exactly match
+the frozen selection. Configs differ from the baseline only in `exp_name`, and
+their actual output paths match the isolated storage plan. Both new workers
+completed real rendering and potential-score requests; all eight previous
+workers and the controller remained live. After startup GPUs 3 and 4 retained
+7,769 and 6,860 MiB free, respectively. Ten navigation workers are now active.
+See the [split-6 launch record](assets/scope_20261005/early_split6_workers_20261005.json)
+for exact commits, PIDs and preflight evidence.
+
 ## A-EQA release and asset boundary
 
 The paper also reports A-EQA, but the official repository's A-EQA instructions
