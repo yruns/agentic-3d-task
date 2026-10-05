@@ -353,11 +353,19 @@ subtasks of scene `00861` episode 4, including five successes. Exact
 raw/SQLite and complete-episode checks passed; canonical coverage remains
 85/278 and full coverage is incomplete.
 
+The `1720` observation, captured at 17:19:42 before the compatibility/runtime
+patches, records **605/2,669** full-set IDs in 84 complete episodes (observed
+SR 69.75%, SPL 50.24%). It adds scene `00815` episode 2 (ten subtasks, three
+successes) and `00871` episode 4 (seven subtasks, five successes). Exact
+raw/SQLite and complete-episode checks passed; canonical coverage remains
+85/278 and full coverage is incomplete.
+
 At 17:16 and 17:28, two workers exited with an empty-class prefilter response
 rejection and a stale-ID visualization error. Both fixes and verification
 boundaries are documented in the [setup record](scope_reproduction_setup_20261005.md).
-Recovery preserves complete checkpoints and replays only incomplete episodes;
-the evaluation remains incomplete.
+Both resumed at 17:56 with real HTTP 200 calls and preserved checkpoints;
+the other ten workers retain their existing connections. Recovery replays only
+incomplete episodes, and the evaluation remains incomplete.
 
 ## Completed local runs
 

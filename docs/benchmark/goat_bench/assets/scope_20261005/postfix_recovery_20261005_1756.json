@@ -1,0 +1,59 @@
+{
+  "resume_local_time": "2026-10-05T17:56:29+08:00",
+  "verification_at_utc": "2026-10-05T09:59:22.515822+00:00",
+  "head_commit_at_launch": "6549a28a6dc9b5fd65ee5b9fe5dfc71864331a72",
+  "transport_fix_commit": "cf51ac8960d94533cd099e85d3a0ff6f07248cef",
+  "runtime_commit_at_launch": "bfffc2be995a7223c8a0e9c86c18064dbe878838",
+  "base_runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "runtime_patch_scope": "Two-line guard skips only missing red goal markers; navigation/scoring/target cluster unchanged.",
+  "new_bridge_port": 8898,
+  "legacy_bridge_port": 8899,
+  "new_bridge_ledger": "tmp/scope_repro_20261005/modelhub_calls_empty_prefilter.jsonl",
+  "new_ledger_full_run_start_index": 3,
+  "old_bridge_and_tunnel_retained": true,
+  "other_worker_and_controller_pids_retained": [
+    2706487,
+    2706523,
+    2706525,
+    2706521,
+    2706527,
+    2729285,
+    2722839,
+    2741946,
+    2741948,
+    2746673,
+    2746675
+  ],
+  "workers": [
+    {
+      "split": 1,
+      "worker": 1,
+      "pid": 2972649,
+      "retained_saved_metric_count": 44,
+      "saved_rows_preserved": true,
+      "http_200_count_at_verification": 11,
+      "latest_http_status": "200",
+      "empty_prefilter_marker_observed": false,
+      "replayed_original_episode": "00815-h1zeeAwLh9Z_0"
+    },
+    {
+      "split": 3,
+      "worker": 1,
+      "pid": 2972647,
+      "retained_saved_metric_count": 51,
+      "saved_rows_preserved": true,
+      "http_200_count_at_verification": 14,
+      "latest_http_status": "200",
+      "empty_prefilter_marker_observed": true,
+      "replayed_original_episode": "00803-k1cupFYWXJ6_2"
+    }
+  ],
+  "upstream_files_clean": true,
+  "script_sha256": {
+    "run_scope.py": "88b51b56b49cbac850a9084279a6cd0dab5d3b31bbcaed00e74b320194587d8f",
+    "prefilter_response_contract.py": "9d6596827f954cb469c2ee55055763434a48148cc35418cb0a0d65a5edb1a34f",
+    "run_worker.sh": "a698d0067e4fee263d0a816a4dec8624018e2fd5a2fb6ae281ac18a7d5ca4f76"
+  },
+  "prompt_model_sampling_and_step_budget_changes": [],
+  "all_requested_evaluation_folds_complete": false
+}

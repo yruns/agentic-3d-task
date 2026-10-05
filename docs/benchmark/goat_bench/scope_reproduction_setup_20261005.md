@@ -440,8 +440,20 @@ explicitly while existing workers retain their original imported runtime.
 
 The compatibility change passed 75 transport/contract tests, 53 keyframe
 tests, targeted strict typing, lint and formatting, and the complete `src/`
-quality gate. Recovery is still pending until real requests and navigation
-are verified; these checks alone do not establish a completed evaluation.
+quality gate. At **17:56:29**, only the two failed workers resumed from clean
+project head `6549a28a6dc9b5fd65ee5b9fe5dfc71864331a72`, with patched runtime
+`bfffc2be995a7223c8a0e9c86c18064dbe878838`. The new bridge and reverse tunnel
+use loopback port 8898; the legacy 8899 service and ten active workers retain
+their original connections. Three real Linux prefilter calls succeeded,
+including one original empty-string response with `finish_reason=stop`.
+At 17:59, both workers were alive with new HTTP 200 calls, all previous
+44/51 metric rows unchanged, and the empty-prefilter acceptance marker observed
+in split-3 worker 1. The [recovery record](assets/scope_20261005/postfix_recovery_20261005_1756.json)
+pins new PIDs, script hashes, both runtime commits and the separate ledger;
+[live preflight](assets/scope_20261005/empty_object_prefilter_live_20261005.json)
+retains the bounded response diagnostics without prompt or reasoning content.
+These checks establish a resumed run, not completion of either failed episode
+or either evaluation fold.
 
 At 05:40, first-split worker 0 had persisted all seven subtasks of scene
 `00824-Dd4bFSTQ8gi`, episode 0. An immutable observation was ingested separately
@@ -1334,6 +1346,22 @@ contributing launch records. Paired raw/SQLite rows, original metadata,
 frozen IDs and explicit indices, complete episodes and grouped metrics were
 verified. All earlier database rows are preserved. Canonical coverage
 remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1720/ingested_summary.json),
+captured at **17:19:42** under archive tag `1720`, contains **605/2,669 IDs
+in 84 complete episodes**, with 422 successes, observed SR 69.7521% and SPL
+50.2384%. It adds `00815-h1zeeAwLh9Z` episode 2 (ten subtasks, three
+successes) and `00871-VBzV5z6i1WS` episode 4 (seven subtasks, five successes).
+Description/image/object counts are 195/193/217, with observed SR
+55.8974/81.3472/71.8894% and SPL 40.8374/65.1069/45.4623%. The
+[manifest](assets/full2669_progress_20261005_1720/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. This capture preceded both patches; historical
+runtime/project provenance is retained. Paired raw/SQLite rows, original
+metadata, frozen IDs and explicit indices, complete episodes and grouped
+metrics were verified. All earlier database rows are preserved. Canonical
+coverage remains 85/278; both requested selections are incomplete, and absent
 per-qid usage remains `NULL`.
 
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
