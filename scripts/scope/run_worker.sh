@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 # Execute one disjoint scene shard with the original SCOPE episode selector.
 set -euo pipefail
-[[ $# -eq 2 ]] || { printf 'Usage: run_worker.sh SPLIT WORKER\n' >&2; exit 2; }
+[[ $# -eq 2 || $# -eq 3 ]] || { printf 'Usage: run_worker.sh SPLIT WORKER [CPU_CAPTURE_DIR]\n' >&2; exit 2; }
 scope_split=$1
 scope_worker=$2
+scope_capture_arguments=()
+if [[ $# -eq 3 ]]; then
+  [[ "$3" == /* ]] || { printf 'CPU capture directory must be absolute\n' >&2; exit 2; }
+  scope_capture_arguments=(--cpu-capture-dir "$3")
+fi
 [[ "$scope_split" =~ ^([1-9]|10)$ ]] || exit 2
 case "$scope_worker" in
   0) scope_start=0.0; scope_end=0.5 ;;
@@ -56,4 +61,5 @@ python /home/ysh/Datasets/SCOPE/scripts/run_scope.py \
   --upstream-root /home/ysh/codecase/SCOPE-repro/SCOPE \
   --cfg-file "$scope_cfg" \
   --bridge-config "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu${scope_gpu}.json" \
-  --split "$scope_split" --start-ratio "$scope_start" --end-ratio "$scope_end"
+  --split "$scope_split" --start-ratio "$scope_start" --end-ratio "$scope_end" \
+  "${scope_capture_arguments[@]}"
