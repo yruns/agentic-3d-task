@@ -1566,6 +1566,54 @@ complete episodes and prior sample preservation. The immutable SQLite backup
 SHA256 is `86576133c435ca9798cdf6551633eb0195e83210dbc41dfafca46ad9178162a9`.
 Verification details are retained in both observation manifests.
 
+### First completed parallel-runtime episodes — 21:48:02
+
+The [2145 immutable observation](assets/full2669_progress_20261005_2145/ingested_summary.json)
+contains 691/2,669 subtasks in 95 complete episodes, with 495 successes,
+observed SR 71.635311% and SPL 50.714604%. Compared with `2120`, it adds
+scene `00849` episode 4 (seven subtasks, all successful) and scene `00871`
+episode 6 (eight subtasks, seven successful). Canonical coverage remains
+111/278; no duplicate canonical copy was made.
+
+The [per-ID lineage](assets/full2669_progress_20261005_2145/runtime_lineage.json)
+identifies exactly 670 original, six visualization-fix and 15 parallel-runtime
+rows. This proves that the new runtime completed episodes, rather than only
+returning model responses. All old raw values are retained. Source-map hash,
+complete-episode and frozen-ID checks passed locally, with exact paired SQL
+values and overall/per-modality metrics. This remains a partial observation.
+The public run's notes and ingestion timestamp changed during the documented
+controller replay; other old run fields and all previous metric rows are
+unchanged. Independent remote validation is recorded in its manifest.
+The independent check passed 31 local/remote observation file hashes and
+exact old/new raw and SQL values, including both new episodes and all three
+runtime counts. The tracked and immutable/current remote databases agree
+for this observation. The final manifest is synchronized to Linux.
+
+### Remaining performance evidence
+
+A read-only two-second host sample at 21:41 found 48 physical cores / 96
+logical CPUs, CPU busy 98.68%, iowait 0.02% and one-minute load 336.27.
+Each of the twelve workers had about 165 threads; 536 threads were runnable
+in the sample. Several workers consumed 14–16 logical cores while other
+workers waited for VLM calls. A split-7 worker had adjacent steps without HTTP
+markers taking 52, 32 and 29 seconds; logged denoise and merge intervals were
+8.40 and 6.62 seconds. These observations support CPU oversubscription as an
+additional bottleneck; they do not attribute every step delay to the CPU.
+
+At 21:44 the bridge completed 59 requests over two minutes; queue P95 was
+0.093 ms and bridge elapsed P95 was 37.77 seconds. Bridge elapsed excludes
+Linux upload. Live worker thread-limit variables were unset, and the active
+source did not set Torch intra/inter-op limits. Library pool ownership cannot
+be reconstructed from the total thread count alone.
+
+Existing canonical episode outputs contain RGB visualizations and potential
+state pickles, but no depth arrays or denoise/merge point-cloud inputs. They
+cannot support a faithful offline replay of those operations. A controlled
+thread comparison therefore requires a future attempt to export real CPU
+object inputs and original parameters first, then compare operation outputs
+and timings. No thread settings, model parameters or running workers were
+changed during this diagnosis.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has

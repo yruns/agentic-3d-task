@@ -406,6 +406,12 @@ visualization-fix rows; it contains no completed parallel-runtime episode.
 Both folds remain incomplete. Raw, SQLite and per-ID lineage evidence is in
 the [setup record](scope_reproduction_setup_20261005.md).
 
+The `2145` capture at 21:48:02 records **691/2,669** subtasks in 95 complete
+episodes (observed SR 71.64%, SPL 50.71%). Its 15 new subtasks are the first
+two complete episodes saved by the parallel/cache runtime; all earlier values
+are preserved. Canonical coverage remains 111/278, so no duplicate canonical
+snapshot was created. The requested full evaluation remains incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
