@@ -529,6 +529,19 @@ and `complete=false`; per-qid usage remains `NULL`. Canonical coverage remains
 25/278, so no duplicate canonical observation was created. No worker had
 reached a terminal status at the preceding 09:45 live check.
 
+The [10:11:24 observation](assets/full2669_progress_20261005_1010/ingested_summary.json),
+stored under tag `1010`, contains **132/2,669 IDs in 21 complete episodes**,
+with 83 successes, observed SR 62.8788% and SPL 43.7466%. Its ten new IDs
+are the full original episode 4 of `00890-6s7QHgap2fW`; two are successful.
+Description/image/object counts are 44/39/49, with observed SR
+43.1818/82.0513/65.3061% and SPL 26.5146/66.6594/40.9837%.
+The [manifest](assets/full2669_progress_20261005_1010/run_manifest.json)
+retains exact new IDs, original episode groups, hashes and contributing launch
+provenance. Independent checks reproduced raw/SQLite rows, frozen IDs and
+explicit indices, complete episode sets, and all grouped SQL metrics. The
+consistent SQLite backup preserves every prior row. Canonical coverage remains
+25/278, per-qid usage remains `NULL`, and full coverage remains incomplete.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has

@@ -74,6 +74,12 @@ tag, records **122/2,669** full-set IDs in 20 complete episodes (observed SR
 original episode IDs and indices, and overall/per-modality metrics passed
 independent checks; the requested full set remains incomplete.
 
+The next observation, captured at 10:11:24 under archive tag `1010`, records
+**132/2,669** full-set IDs in 21 complete episodes (observed SR 62.88%, SPL
+43.75%). It adds all ten subtasks of scene `00890` episode 4, including two
+successes. Canonical coverage remains 25/278; this remains an incomplete
+observation of the original requested set.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
