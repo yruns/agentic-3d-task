@@ -94,6 +94,12 @@ Both first-split workers have now saved an episode. The full observation also
 contains the first split-6 and split-7 checkpoints; their launch provenance
 is included. Both requested selections remain incomplete.
 
+The `1120` observation, captured at 11:15:08, records **177/2,669** full-set
+IDs in 28 complete episodes (observed SR 66.10%, SPL 46.17%). It adds 13
+subtasks from scene `00810` episodes 2 and 5, including 11 successes.
+Canonical coverage remains 39/278. Exact raw/SQLite, original ID/index and
+complete-episode checks passed; full coverage remains incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
