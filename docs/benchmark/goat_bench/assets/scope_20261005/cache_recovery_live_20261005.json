@@ -1,0 +1,1077 @@
+{
+  "observed_at_utc": "2026-10-05T12:58:03.440847+00:00",
+  "schema_version": 1,
+  "frozen_subtasks": 2669,
+  "current_saved_subtasks": 676,
+  "preserved_subtasks": 676,
+  "saved_complete_episodes": 93,
+  "coverage_percent": 25.327838141626074,
+  "preserved_primary_values_unchanged": true,
+  "metric_files_byte_identical": 72,
+  "all_preserved_ids_exact_and_disjoint": true,
+  "all_observed_episodes_complete": true,
+  "controller": {
+    "pid": 3034813,
+    "live": true,
+    "state": "S",
+    "stopped": false
+  },
+  "linux_listening_ports": [
+    8870,
+    8871,
+    8872,
+    8873,
+    8874,
+    8875
+  ],
+  "workers": [
+    {
+      "split": 1,
+      "worker": 0,
+      "pid": 3031627,
+      "process_state": "S",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322691675,
+      "gpu": 0,
+      "bridge_port": 8870,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669/log_0.00_0.50_1.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:57.197070+00:00",
+      "latest_navigation_marker": "Scene 00813-svBbv1Pavdk Episode 0 Subtask 3/10",
+      "latest_three_steps": [
+        "== step: 5, global step: 25 ==",
+        "== step: 6, global step: 26 ==",
+        "== step: 7, global step: 27 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split1_worker0.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split1_worker0.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split1_worker0_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split1_worker0_20261005_203956",
+      "prior_failure_exit": "1",
+      "preserved_count": 67,
+      "complete_episode_count": 10,
+      "preserved_ids_sha256": "7fb24c3503caada65d211bc72d382c3ea0300dcafcdc110ecf1fd96add2622ae",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 2227,
+          "sha256": "53d3320464dd674a2da9fa77d789bc715ff162a0591758a0e539bff91c8fa23b",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 2832,
+          "sha256": "10e54bb830a673017caf913e8f90de81dabc237ac7fe8817eb81d4157e130451",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 714,
+          "sha256": "525e75c84fa8fad4f4863ea269d0f2a7ac22d0cd6c1c0beae50967dff9fe373f",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 1319,
+          "sha256": "e1c76237effe66e67f0ad7b5767ed1299196f3d3311d14f75a72dad95756157c",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 2227,
+          "sha256": "71ebac3a76f5e23bdb812f543859b983c464eb83cd4283c312c2bd791344e715",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 2832,
+          "sha256": "b26c20605c9a981c4b6caee87a95f96978a5f493efe78ba75c565bd6479b7655",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3006585,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2706523,
+      "original_record_old_start_ticks": 317496175,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 1,
+      "worker": 1,
+      "pid": 3032758,
+      "process_state": "R",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322714584,
+      "gpu": 2,
+      "bridge_port": 8871,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669/log_0.50_1.00_1.log",
+      "filehandler_mtime_utc": "2026-10-05T12:58:01.584936+00:00",
+      "latest_navigation_marker": "Scene 00815-h1zeeAwLh9Z Episode 0 Subtask 4/5",
+      "latest_three_steps": [
+        "== step: 3, global step: 13 ==",
+        "== step: 4, global step: 14 ==",
+        "== step: 5, global step: 15 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split1_worker1.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split1_worker1.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split1_worker1_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split1_worker1_20261005_204345",
+      "prior_failure_exit": "1",
+      "preserved_count": 44,
+      "complete_episode_count": 5,
+      "preserved_ids_sha256": "534a6962e619dd97ef781f8d2c7bcb41c142e15354ee94b51b7c0fb38fda2dc9",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 1468,
+          "sha256": "1651668787e6a179f39e144ff86a538d31e6b65cfd5705ec203a0a81639ef260",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 1823,
+          "sha256": "e527847d84736a35193a09b8f3bbb62e54856871537b45d0067b90d1f930e549",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 507,
+          "sha256": "9f730d6b2ef889f6a4302d51aa026e97551db55ba2b2bb0b149a009bfabc83f4",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 862,
+          "sha256": "51c7a5061393f5744eff0cf2d1d5e87806f452ea25a1a8cbeb6c88ab9a7e5b76",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 1468,
+          "sha256": "d46b8bbc80d29ef7f5541f5383d0d8e2098cd698055bce559108ac619c93bd0d",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 1823,
+          "sha256": "46c6a1596045977a6cd47e14ef536c75a9089e501a4d3697d17aa80456d731e9",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3012769,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2972649,
+      "original_record_old_start_ticks": 321710968,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 3,
+      "worker": 0,
+      "pid": 3032889,
+      "process_state": "R",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322714849,
+      "gpu": 3,
+      "bridge_port": 8872,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split3_worker0_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split3_worker0/log_0.00_0.50_3.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:57.839051+00:00",
+      "latest_navigation_marker": "Scene 00853-5cdEh9F2hJL Episode 2 Subtask 1/10",
+      "latest_three_steps": [
+        "== step: 14, global step: 14 ==",
+        "== step: 15, global step: 15 ==",
+        "== step: 16, global step: 16 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split3_worker0.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split3_worker0.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split3_worker0_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split3_worker0_20261005_204348",
+      "prior_failure_exit": "1",
+      "preserved_count": 33,
+      "complete_episode_count": 5,
+      "preserved_ids_sha256": "94595a0584375c32c6a215858ac6a62de6623f9853c207e23586f5eda09efbf8",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 1105,
+          "sha256": "96a1152db36c5d72176a1cafb16aa36b0d67bb0c2dced06e3df7a382a3f61ccd",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 1430,
+          "sha256": "9e99ca4d14fc90c7c5acbf860a83504587c4c763ebb00042a270ee8e9e96215d",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 408,
+          "sha256": "538b818c6d196a2a7d1da3e6437cb8357b3a8b3714f311deef1a93ab2b4fb1bb",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 733,
+          "sha256": "cd930234cf3d69402acf32fbe8bda289b4f3c4eca44d3dde905e5bcb6d6b370f",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 1105,
+          "sha256": "cc4b9dc2ce1553e592e20a064571ef77458410e483c28dd8a34032b7917a743d",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 1430,
+          "sha256": "cb762ce735f4bd6793892a3ff437e8190fc4f521b3392b936ad71c78db972197",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3010385,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2706525,
+      "original_record_old_start_ticks": 317496176,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 3,
+      "worker": 1,
+      "pid": 3033078,
+      "process_state": "R",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322715101,
+      "gpu": 4,
+      "bridge_port": 8873,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split3_worker1_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split3_worker1/log_0.50_1.00_3.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:39.862600+00:00",
+      "latest_navigation_marker": "Scene 00827-BAbdmeyTvMZ Episode 2 Subtask 1/7",
+      "latest_three_steps": [
+        "== step: 8, global step: 8 ==",
+        "== step: 9, global step: 9 ==",
+        "== step: 10, global step: 10 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split3_worker1.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split3_worker1.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split3_worker1_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split3_worker1_20261005_204351",
+      "prior_failure_exit": "1",
+      "preserved_count": 57,
+      "complete_episode_count": 7,
+      "preserved_ids_sha256": "90153f55cfb941732122112455fb3fa961a2ea126d7a7e85d9868e2306ed5096",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 1897,
+          "sha256": "576a0877b4a03a5cb38c04df69a06f224e769567e0859e873df226b8ff92b9e0",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 2352,
+          "sha256": "07e3f5e57400bb4103fee75e5b9ae0196b421a41015c86f6460dd5a1022c86a0",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 624,
+          "sha256": "119b8be1cb6c367321bb1c93542afa8cae51ac6df0bcc32cd8be0a6c438e211d",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 1079,
+          "sha256": "da91d1823116ba189fa612b01cbd9a15c707663923c930c1dc60cdd5b4eb5319",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 1897,
+          "sha256": "0e4598ffe6dae066a659c5df6ce48fe02c1199fd013cb634c1ec7cb71e13c957",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 2352,
+          "sha256": "661615b04dbd5099d3133e963deadfab6dd634662b044a3694478a3b144f0016",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3012888,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2972647,
+      "original_record_old_start_ticks": 321710965,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 4,
+      "worker": 0,
+      "pid": 3033269,
+      "process_state": "S",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322715346,
+      "gpu": 5,
+      "bridge_port": 8874,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split4_worker0_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split4_worker0/log_0.00_0.50_4.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:41.999534+00:00",
+      "latest_navigation_marker": "Scene 00813-svBbv1Pavdk Episode 3 Subtask 2/8",
+      "latest_three_steps": [
+        "== step: 9, global step: 13 ==",
+        "== step: 10, global step: 14 ==",
+        "== step: 11, global step: 15 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split4_worker0.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split4_worker0.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split4_worker0_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split4_worker0_20261005_204353",
+      "prior_failure_exit": "1",
+      "preserved_count": 70,
+      "complete_episode_count": 10,
+      "preserved_ids_sha256": "edcd6617d36e9f17506c03347e93a41f2bae98dd6a1d421e40e2257be57441a8",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 2326,
+          "sha256": "2bf785492d897124271e469050ebdc0f215eb664a35882a667e418ab6f6ec742",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 2881,
+          "sha256": "ea5296073954237e8e13757746a6154e5450ee5dc6e24138ad42222c4374a971",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 741,
+          "sha256": "4305321137d0072efcf4c1ddf21b5d2657b4383fb806606796471e9bf8ab7142",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 1296,
+          "sha256": "457590d449646c9ea9f95147815dfceeb2dd0716b527740667416df8dff1e369",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 2326,
+          "sha256": "b3dca54cf78873fad3bb8fac5138de59db345298299b84ff14b9c88b2d02a647",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 2881,
+          "sha256": "5e0d9ae23d3b47e7b59b3cd13e4abdf6827a23472d4260a0e7affd1542ea85f7",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3010955,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2706521,
+      "original_record_old_start_ticks": 317496175,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 4,
+      "worker": 1,
+      "pid": 3033457,
+      "process_state": "S",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322715599,
+      "gpu": 6,
+      "bridge_port": 8875,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split4_worker1_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split4_worker1/log_0.50_1.00_4.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:55.958108+00:00",
+      "latest_navigation_marker": "Scene 00862-LT9Jq6dN3Ea Episode 3 Subtask 2/9",
+      "latest_three_steps": [
+        "== step: 7, global step: 13 ==",
+        "== step: 8, global step: 14 ==",
+        "== step: 9, global step: 15 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split4_worker1.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split4_worker1.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split4_worker1_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split4_worker1_20261005_204355",
+      "prior_failure_exit": "1",
+      "preserved_count": 56,
+      "complete_episode_count": 8,
+      "preserved_ids_sha256": "94c5614047b5ce9cb5a2ea71a80f8ec3965a21916eee68629bb1d84236482572",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 1864,
+          "sha256": "e1a4c0bcd624390c5fdaf8c506221179bf630854924a69c3552cce3f4fc4cd9a",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 2339,
+          "sha256": "5115fc934bafed29195e17c07cb468e0ffa18cbb44a0ae3a63e0a863e63369c4",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 615,
+          "sha256": "9dd473b5d030775f8abe4fc86b43904e91aa9cfa7a92aba3069b45da9463a96f",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 1090,
+          "sha256": "f4bf3617ea1ee33c2db1eb8137d8a7589066388288e35030067f55f02c43e8e0",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 1864,
+          "sha256": "c2a3fa52f78bbcd5821d09587d6cbd21b037a153a5257a245b996475808571e4",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 2339,
+          "sha256": "53cfb424f28f912db10c8aee0078d16ce539e87d52f229d6872a3dab52537cf0",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3013275,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2706527,
+      "original_record_old_start_ticks": 317496177,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 5,
+      "worker": 0,
+      "pid": 3033603,
+      "process_state": "S",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322715806,
+      "gpu": 0,
+      "bridge_port": 8870,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split5_worker0_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split5_worker0/log_0.00_0.50_5.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:59.259007+00:00",
+      "latest_navigation_marker": "Scene 00849-a8BtkwhxdRV Episode 4 Subtask 1/7",
+      "latest_three_steps": [
+        "== step: 15, global step: 15 ==",
+        "== step: 16, global step: 16 ==",
+        "== step: 17, global step: 17 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split5_worker0.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split5_worker0.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split5_worker0_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split5_worker0_20261005_204358",
+      "prior_failure_exit": "1",
+      "preserved_count": 58,
+      "complete_episode_count": 9,
+      "preserved_ids_sha256": "1f1c84c9a5c92cbce4ca8e931daeb6eb2dfafae5a4065592ab08a30967d35ebf",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 1930,
+          "sha256": "969f81940f5f25da082ed0d52c4d158d062631470d88abb640f50863e80527e8",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 2405,
+          "sha256": "c271bbbc7de8a4f98da22a29070f9f12fa4f808f182d79e1f40befaaeef702ff",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 633,
+          "sha256": "6b88eee5bed5e79a9adb0613dac7f0a18b4aef218174f71b14a8595471cf3759",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 1108,
+          "sha256": "cba6b293de05e46e1c1592a9c4f086d28d6d7db93f6ae5d44856cc7dc541ebe9",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 1930,
+          "sha256": "431cf7b7e2c15669d10bc67e8f515c3dd30253f97f043702e2632c249a4a1330",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 2405,
+          "sha256": "18c2356b80930b654d5054355392520e61000802d235e08dedd139986b5b595f",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3013551,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2729285,
+      "original_record_old_start_ticks": 317979407,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 5,
+      "worker": 1,
+      "pid": 3033776,
+      "process_state": "S",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322716026,
+      "gpu": 2,
+      "bridge_port": 8871,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split5_worker1_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split5_worker1/log_0.50_1.00_5.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:53.300189+00:00",
+      "latest_navigation_marker": "Scene 00843-DYehNKdT76V Episode 4 Subtask 3/8",
+      "latest_three_steps": [
+        "== step: 4, global step: 14 ==",
+        "== step: 5, global step: 15 ==",
+        "== step: 6, global step: 16 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split5_worker1.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split5_worker1.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split5_worker1_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split5_worker1_20261005_204400",
+      "prior_failure_exit": "1",
+      "preserved_count": 101,
+      "complete_episode_count": 15,
+      "preserved_ids_sha256": "2e9b089cfca77415464dad89455c03fe65778ce9d69e17323b7b867a89b9d7c9",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 3349,
+          "sha256": "18e6804424a2229fcd57efcac685d09fd7bb5584e6af48f3f0687b3b1fc37866",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 4044,
+          "sha256": "b9344b5bd09eae59bc663d959884065e353c149993b291eb95e7b91423a1d184",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 1020,
+          "sha256": "811a37428468a8a1eaa0ed6608008f60204a10960eb3c6e6b696f577e89b31c5",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 1715,
+          "sha256": "b11df680796bf894a312017983b6c819c52b76e59c168e43048ce275d2992fe4",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 3349,
+          "sha256": "63f7beb73e35f559bb2dd3b79cffc72472655bd6c7172b960296dc5e80645e15",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 4044,
+          "sha256": "e1906f6912308c45f59db676a19b39e698f3e19c8b9b07fa7d5c5143be52f2db",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3013727,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2722839,
+      "original_record_old_start_ticks": 317813422,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 6,
+      "worker": 0,
+      "pid": 3034025,
+      "process_state": "S",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322716263,
+      "gpu": 3,
+      "bridge_port": 8872,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split6_worker0_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split6_worker0/log_0.00_0.50_6.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:40.302586+00:00",
+      "latest_navigation_marker": "Scene 00853-5cdEh9F2hJL Episode 5 Subtask 1/5",
+      "latest_three_steps": [
+        "== step: 12, global step: 12 ==",
+        "== step: 13, global step: 13 ==",
+        "== step: 14, global step: 14 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split6_worker0.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split6_worker0.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split6_worker0_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split6_worker0_20261005_204402",
+      "prior_failure_exit": "1",
+      "preserved_count": 37,
+      "complete_episode_count": 5,
+      "preserved_ids_sha256": "cfebcd07fb32ce6c72413255cbd3220ede92f184edeca5d0e5bc9eaf74f7a1f5",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 1237,
+          "sha256": "17b7e30fff91c46770c9c1c660c0c3e0f8887b9c43273dd80a1ca878a83211e2",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 1532,
+          "sha256": "517ca4307372324987ce919baa5f4723a8638f850ef47e08a28453dc4f775add",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 444,
+          "sha256": "61e862247b87be0f583750343f42bf48eb55883172c2c9ba9882d0d915895fef",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 739,
+          "sha256": "39037450e2b79f1e6b30ec3facd080918955ee98e79414805f0a37ee23c2f476",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 1237,
+          "sha256": "4e40c02389922f359fc199ec39fa13aa6c78f626df0a56c6be9159367a41cfa3",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 1532,
+          "sha256": "c80705635d391d735b85eba4ddecbcb31b6cc1507fa087d46c2c942d9e143da2",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3011025,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2741946,
+      "original_record_old_start_ticks": 318262289,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 6,
+      "worker": 1,
+      "pid": 3034220,
+      "process_state": "R",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322716542,
+      "gpu": 4,
+      "bridge_port": 8873,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split6_worker1_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split6_worker1/log_0.50_1.00_6.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:48.283342+00:00",
+      "latest_navigation_marker": "Scene 00827-BAbdmeyTvMZ Episode 5 Subtask 2/6",
+      "latest_three_steps": [
+        "== step: 9, global step: 16 ==",
+        "== step: 10, global step: 17 ==",
+        "== step: 11, global step: 18 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split6_worker1.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split6_worker1.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split6_worker1_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split6_worker1_20261005_204405",
+      "prior_failure_exit": "1",
+      "preserved_count": 53,
+      "complete_episode_count": 7,
+      "preserved_ids_sha256": "86b37d1763645c870315bd6cb824813da64a95d4f1d920d020a01843d30d827c",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 1765,
+          "sha256": "00d1f426d80d1eb44dce33f152d46fa4273fb7219318b5d2b21e9c4d84adf5f5",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 2190,
+          "sha256": "abffcbecb9f109c87f593aedbef4a684716fd0a3c5c7a9b8fb4880d3b8c5ca6a",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 588,
+          "sha256": "78b27b2f92a81c65e34bc9671baa4da522cfd71a331c89d383e267d3c534fb15",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 1013,
+          "sha256": "575306cc70e074f129d76dbf8d6cf5fe4a34f60f9c65fec70e7324f4054be78f",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 1765,
+          "sha256": "07559aacb7d72157cb2534584fac673b19a76f00c443372f6ca329ff4de9998f",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 2190,
+          "sha256": "4dd8e42c886a0c6bed88cc87b39c24aa1d27d9ac3fb9ea4efb6f656254e4e9db",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3011027,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2741948,
+      "original_record_old_start_ticks": 318262291,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 7,
+      "worker": 0,
+      "pid": 3034461,
+      "process_state": "R",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322716795,
+      "gpu": 5,
+      "bridge_port": 8874,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split7_worker0_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split7_worker0/log_0.00_0.50_7.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:33.006809+00:00",
+      "latest_navigation_marker": "Scene 00871-VBzV5z6i1WS Episode 6 Subtask 2/8",
+      "latest_three_steps": [
+        "== step: 0, global step: 8 ==",
+        "== step: 1, global step: 9 ==",
+        "== step: 2, global step: 10 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split7_worker0.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split7_worker0.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split7_worker0_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split7_worker0_20261005_204408",
+      "prior_failure_exit": "1",
+      "preserved_count": 57,
+      "complete_episode_count": 7,
+      "preserved_ids_sha256": "8c3f7595ce0d044df2e798dba079f19c15aaf890137cbd0a1c02dde3d5c8448f",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 1897,
+          "sha256": "85bb719df638c77b1d4427f2a9842bb2d0fb846b09138242038eb45ac138c26f",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 2342,
+          "sha256": "3c6fa79a8fe6d7aae3dfbea95b82753189d7d3372683849f8755b19011bbcc3c",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 624,
+          "sha256": "fab912dd11fa6b11cb7ec0cf886b6c7969fb069c85e1598908b95cb7d06cf5b5",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 1069,
+          "sha256": "bd3eb901557af35b90f40540dc6a23ce687e327bbbbf243af8a7a04b90d4e8c3",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 1897,
+          "sha256": "6a59c66c959eb96bcb3f03c8aa6e2981a1f33380625033fe5b3dd3367d47caae",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 2342,
+          "sha256": "4343c9b1528d9eec04334a80b8a75e078a1eda8d72f99e7e6880ec266605f19e",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3014239,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2746673,
+      "original_record_old_start_ticks": 318341534,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    },
+    {
+      "split": 7,
+      "worker": 1,
+      "pid": 3034699,
+      "process_state": "S",
+      "process_live": true,
+      "process_stopped": false,
+      "current_process_start_ticks": 322717024,
+      "gpu": 6,
+      "bridge_port": 8875,
+      "current_config_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split7_worker1_parallel16.yaml",
+      "config_parallel_frontier_workers": [
+        "parallel_frontier_workers: 16"
+      ],
+      "upstream_checkout_head_observed": "606d29ca19901882015cdd432017b4a867cef978",
+      "live_loaded_source_bytes_verified": false,
+      "filehandler_path": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split7_worker1/log_0.50_1.00_7.log",
+      "filehandler_mtime_utc": "2026-10-05T12:57:46.587394+00:00",
+      "latest_navigation_marker": "Scene 00815-h1zeeAwLh9Z Episode 6 Subtask 2/10",
+      "latest_three_steps": [
+        "== step: 12, global step: 12 ==",
+        "== step: 0, global step: 13 ==",
+        "== step: 1, global step: 14 =="
+      ],
+      "filehandler_terminal_error_markers": [],
+      "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split7_worker1.log",
+      "stdout_terminal_error_markers": [],
+      "stdout_http_response_count": 0,
+      "last_stdout_http_response": null,
+      "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split7_worker1.exit",
+      "current_exit_exists": false,
+      "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split7_worker1_20261005.json",
+      "archive": "/home/ysh/Datasets/SCOPE/acceleration_attempts/split7_worker1_20261005_204410",
+      "prior_failure_exit": "1",
+      "preserved_count": 43,
+      "complete_episode_count": 5,
+      "preserved_ids_sha256": "1dc22273a1c04b09a04b2d8924a615ff774363c8c724627d832b1258bd3e6941",
+      "archived_primary_ids_equal_preserved_ids": true,
+      "frozen_stage_ids_pass": true,
+      "complete_episode_ids_pass": true,
+      "metadata_byte_identical_to_archive": true,
+      "metric_files": [
+        {
+          "metric": "success_by_distance",
+          "bytes": 1435,
+          "sha256": "aeb55de2830fb859ec399131f2a0052391f82d6c308e11e48563ee8ad25913a0",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_distance",
+          "bytes": 1750,
+          "sha256": "f5582e7a510f6171bee446a0374de65433db486f382fa1312578004b6e2a1423",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_task",
+          "bytes": 498,
+          "sha256": "ed0654f2c9f29a1e0912937c68232c12bf03175098c129cfb624ef6bcda500a7",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_task",
+          "bytes": 813,
+          "sha256": "e9b10b021a9085c9f950035aa695dec347fb504e7733c983c9cb2aa1ea27e389",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "success_by_snapshot",
+          "bytes": 1435,
+          "sha256": "b71d4c0b898e560e3df415e8264c3f063bc6502af02e6fbb8e7c59c513b46418",
+          "byte_identical_to_archive": true
+        },
+        {
+          "metric": "spl_by_snapshot",
+          "bytes": 1750,
+          "sha256": "455e03f25aaac89d5565f05292becfb410ac9b5699d5faf316649289aad5b7f6",
+          "byte_identical_to_archive": true
+        }
+      ],
+      "actual_prior_generation_pid_from_parent_observation": 3011217,
+      "actual_prior_generation_start_ticks": null,
+      "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
+      "original_record_paused_old_pid": 2746675,
+      "original_record_old_start_ticks": 318341535,
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+    }
+  ],
+  "scope": {
+    "remote_writes": 0,
+    "process_mutations": 0,
+    "private_configs_read": 0,
+    "model_requests_sent": 0,
+    "load_probes_sent": 0,
+    "http200_does_not_establish_evaluation_completion": true,
+    "evaluation_complete": false
+  },
+  "mac_cache_listener": {
+    "port": 8889,
+    "listening": true,
+    "pid": 40009,
+    "evidence": "lsof -nP -iTCP:8889 -sTCP:LISTEN",
+    "socket_observed": "127.0.0.1:8889 (LISTEN)"
+  }
+}

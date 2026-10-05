@@ -1463,8 +1463,35 @@ invoking a model. The integration and regression gate passed 138 tests; typed,
 lint and formatting checks passed. Linux Python 3.9 required the lightweight
 `eval-type-backport==0.2.2` package for shared Pydantic request annotations;
 the runtime union alias uses `typing.Union` for Python 3.9 compatibility.
-Cache-capable worker adoption and sustained benchmark throughput still need
-live verification before claiming recovery or speedup.
+All twelve workers resumed between 20:39:56 and 20:44:10 at project launch
+commit `ba1a24c732cd826ede0b618e23aee724204c9fc4`, with upstream runtime
+`606d29ca19901882015cdd432017b4a867cef978`. GPU 0, 2, 3, 4, 5 and 6 use Linux
+loopback ports 8870 through 8875 respectively; all connect to the one Mac
+service on port 8889. The controller resumed at 20:44:12. A 20:50 live check
+confirmed all twelve worker processes, the controller and advancing evaluation
+logs. Saved coverage at 20:49:25 was 676/2,669, including 111/278 canonical
+subtasks. These remain partial results. Completed episodes and sustained
+throughput need further observation before claiming a benchmark speedup.
+
+The per-worker `cache_recovery_split*_worker*_20261005.json` records preserve
+saved IDs and archived failed attempts. Their `paused_old_pid` and
+`old_start_ticks` fields were inherited from the original acceleration
+preparation; they do not identify the immediately preceding failed parallel
+attempt. They must not be used as authoritative process identities for this
+cache recovery.
+The [20:58 live recovery audit](assets/scope_20261005/cache_recovery_live_20261005.json)
+confirms all twelve active workers and unchanged saved values: 676 subtasks
+from 93 complete episodes, with 72 primary metric files byte-identical to the
+recovery archives. It also corrects the inherited process-identity fields.
+
+The [20:53:43 cache bridge audit](assets/scope_20261005/cache_bridge_live_20261005.json)
+validates a fixed 202,871-byte ledger prefix containing 499 completed model
+responses, all HTTP 200, across all three credential slots. The last 120
+seconds contain 91 completed responses (45.5 QPM), with queue-time P95 below
+0.1 ms. Bridge elapsed time excludes Linux uploads; cache misses and corrupt
+cache returns are not recorded by that ledger. These counts therefore do not
+establish absence of every transport failure or completion of any episode.
+The metadata-only cache scan found 912 image files totaling 178,541,676 bytes.
 
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.

@@ -388,8 +388,11 @@ permits 192 in-flight HTTP requests across three 500-QPM credentials; independen
 frontier scores use up to 16 threads per worker. Worker adoption and actual
 throughput are recorded in the [setup record](scope_reproduction_setup_20261005.md).
 The first full rollout hit Linux-to-Mac upload timeouts. A lossless image cache
-and six independent compressed SSH links passed transport tests; benchmark
-recovery and sustained throughput require live verification.
+and six independent compressed SSH links passed transport tests. All twelve
+workers resumed between 20:39:56 and 20:44:10; a live check at 20:50 confirmed
+their processes and advancing evaluation logs. The 676 saved subtasks remain
+the checkpoint baseline. Sustained throughput and completed episodes still
+require observation; bridge success alone is not benchmark completion.
 
 ## Completed local runs
 
