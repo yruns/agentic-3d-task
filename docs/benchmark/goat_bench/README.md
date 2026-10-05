@@ -153,6 +153,12 @@ subtasks of scene `00827` episode 4, including four successes. Exact raw/SQLite
 and complete-episode checks passed; canonical coverage remains 48/278 and
 full coverage is incomplete.
 
+The `1240` observation, captured at 12:33:39, records **266/2,669** full-set
+IDs in 40 complete episodes (observed SR 66.54%, SPL 46.34%). It adds all ten
+subtasks of scene `00853` episode 3, including four successes. Exact raw/SQLite
+and complete-episode checks passed; canonical coverage remains 48/278 and
+full coverage is incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
