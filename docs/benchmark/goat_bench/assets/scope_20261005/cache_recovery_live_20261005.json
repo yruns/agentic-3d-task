@@ -52,8 +52,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split1_worker0.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split1_worker0.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split1_worker0_20261005.json",
@@ -109,7 +107,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2706523,
       "original_record_old_start_ticks": 317496175,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 1,
@@ -138,8 +137,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split1_worker1.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split1_worker1.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split1_worker1_20261005.json",
@@ -195,7 +192,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2972649,
       "original_record_old_start_ticks": 321710968,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 3,
@@ -224,8 +222,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split3_worker0.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split3_worker0.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split3_worker0_20261005.json",
@@ -281,7 +277,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2706525,
       "original_record_old_start_ticks": 317496176,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 3,
@@ -310,8 +307,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split3_worker1.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split3_worker1.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split3_worker1_20261005.json",
@@ -367,7 +362,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2972647,
       "original_record_old_start_ticks": 321710965,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 4,
@@ -396,8 +392,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split4_worker0.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split4_worker0.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split4_worker0_20261005.json",
@@ -453,7 +447,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2706521,
       "original_record_old_start_ticks": 317496175,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 4,
@@ -482,8 +477,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split4_worker1.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split4_worker1.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split4_worker1_20261005.json",
@@ -539,7 +532,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2706527,
       "original_record_old_start_ticks": 317496177,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 5,
@@ -568,8 +562,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split5_worker0.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split5_worker0.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split5_worker0_20261005.json",
@@ -625,7 +617,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2729285,
       "original_record_old_start_ticks": 317979407,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 5,
@@ -654,8 +647,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split5_worker1.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split5_worker1.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split5_worker1_20261005.json",
@@ -711,7 +702,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2722839,
       "original_record_old_start_ticks": 317813422,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 6,
@@ -740,8 +732,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split6_worker0.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split6_worker0.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split6_worker0_20261005.json",
@@ -797,7 +787,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2741946,
       "original_record_old_start_ticks": 318262289,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 6,
@@ -826,8 +817,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split6_worker1.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split6_worker1.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split6_worker1_20261005.json",
@@ -883,7 +872,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2741948,
       "original_record_old_start_ticks": 318262291,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 7,
@@ -912,8 +902,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split7_worker0.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split7_worker0.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split7_worker0_20261005.json",
@@ -969,7 +957,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2746673,
       "original_record_old_start_ticks": 318341534,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     },
     {
       "split": 7,
@@ -998,8 +987,6 @@
       "filehandler_terminal_error_markers": [],
       "stdout_path": "/data1/ysh/Datasets/SCOPE/logs/full_split7_worker1.log",
       "stdout_terminal_error_markers": [],
-      "stdout_http_response_count": 0,
-      "last_stdout_http_response": null,
       "current_exit_path": "/data1/ysh/Datasets/SCOPE/logs/full_split7_worker1.exit",
       "current_exit_exists": false,
       "recovery_record_path": "/home/ysh/Datasets/SCOPE/manifests/cache_recovery_split7_worker1_20261005.json",
@@ -1055,7 +1042,8 @@
       "actual_prior_generation_pid_evidence": "Root agent historical process observation supplied in task message; not re-established from immutable archive.",
       "original_record_paused_old_pid": 2746675,
       "original_record_old_start_ticks": 318341535,
-      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process."
+      "original_identity_field_semantics": "paused_old_pid and old_start_ticks were inherited from acceleration preparation and do not identify the immediately preceding failed gen3 process.",
+      "stdout_http_marker_observability": "No HTTP marker matched this audit parser; this is not evidence of zero requests. Aggregate HTTP evidence is recorded separately in cache_bridge_live_20261005.json."
     }
   ],
   "scope": {

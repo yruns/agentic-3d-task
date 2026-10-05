@@ -393,6 +393,10 @@ workers resumed between 20:39:56 and 20:44:10; a live check at 20:50 confirmed
 their processes and advancing evaluation logs. The 676 saved subtasks remain
 the checkpoint baseline. Sustained throughput and completed episodes still
 require observation; bridge success alone is not benchmark completion.
+The frozen [per-ID runtime source map](assets/scope_20261005/frozen_result_lineage.json)
+retains 670 original-runtime and six visualization-fix results. The lineage
+helper and controller regression tests pass, including mixed runtime labels
+and failure handling; controller adoption is recorded in the setup document.
 
 ## Completed local runs
 

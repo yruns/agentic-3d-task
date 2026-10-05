@@ -1493,6 +1493,33 @@ cache returns are not recorded by that ledger. These counts therefore do not
 establish absence of every transport failure or completion of any episode.
 The metadata-only cache scan found 912 image files totaling 178,541,676 bytes.
 
+### Runtime attribution after recovery
+
+The old controller hardcoded the original runtime for every final fold. The
+[frozen per-ID source map](assets/scope_20261005/frozen_result_lineage.json)
+instead identifies 670 preserved IDs from `46f1e1f`, six preserved IDs from
+`bfffc2be`, and the active source `606d29ca` for later saved IDs. The active
+source is valid only while that runtime remains frozen. Older project launch
+heads that are not reconstructed per ID stay null; supporting launch and
+recovery records are retained. New workers check their actual upstream HEAD
+against `manifests/active_scope_runtime_commit.txt` before starting evaluation.
+
+`runtime_lineage.py` reads the actual primary samples and selected fold IDs,
+rejects unknown or conflicting IDs, and atomically writes `runtime_lineage.json`.
+Its runtime label includes only versions that contributed observed samples.
+The controller refuses ingestion when attribution fails and retains its exact
+coverage and modality checks. Public-episode metadata retains its original
+launch head and runtime. For other final folds, `commit_sha` identifies the
+archival controller launch; per-ID runtime and known worker launch provenance
+are in the lineage report, rather than being inferred from a split number.
+
+Validation passed 11 lineage tests, seven controller integration tests,
+37 existing metric-ingester tests and 53 keyframe tests. Source and touched-file
+Ruff, Black and mypy gates passed. Linux's actual `conceptgraph` Python also
+attributed a copied 676-row primary snapshot as exactly 670 original plus six
+visualization-fix rows. This smoke test did not rewrite running primary files.
+Controller deployment and its retained-worker verification are recorded next.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has

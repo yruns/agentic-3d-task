@@ -6,8 +6,9 @@ scope_full=$scope_assets/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669
 scope_public=$scope_assets/outputs/REPRO_20261005_SCOPE_Gemini38Flash_public_example_ep0
 scope_gate_python=/home/ysh/miniconda3/envs/conceptgraph/bin/python
 scope_plan=$scope_assets/manifests/storage_plan_parallel_v2.json
-read -r scope_project_commit < "$scope_assets/manifests/full_project_commit.txt"
-read -r scope_controller_commit < "$scope_assets/manifests/full_controller_commit.txt"
+scope_lineage_source_map=$scope_assets/manifests/frozen_result_lineage.json
+scope_original_runtime=46f1e1f78077219c30e35440540e4ef22995194c
+read -r scope_controller_launch_commit < "$scope_assets/manifests/lineage_controller_commit.txt"
 exec 9>"$scope_assets/logs/full_controller.lock"
 flock -n 9 || { printf 'Another SCOPE controller owns the run\n' >&2; exit 2; }
 trap 'scope_exit=$?; printf "%s\n" "$scope_exit" > "$scope_assets/logs/full_run.exit"' EXIT
@@ -41,7 +42,7 @@ publish_shard() {
 }
 
 collect_worker() {
-  local scope_split=$1 scope_worker=$2 scope_commit=$3
+  local scope_split=$1 scope_worker=$2
   local scope_source scope_suffix scope_gate scope_expected scope_metric
   read -r scope_source scope_suffix scope_gate scope_expected < <(
     "$scope_gate_python" - "$scope_plan" "$scope_split" "$scope_worker" <<'PY'
@@ -59,7 +60,7 @@ PY
   for scope_metric in success_by_distance spl_by_distance; do
     publish_shard "$scope_source/${scope_metric}_${scope_suffix}.pkl" "$scope_gate/${scope_metric}_${scope_suffix}.pkl"
   done
-  ingest_and_check "$scope_gate" "REPRO_20261005_SCOPE_Gemini38Flash_split${scope_split}_worker${scope_worker}" "$scope_expected" "$scope_commit"
+  ingest_and_check "$scope_gate" "REPRO_20261005_SCOPE_Gemini38Flash_split${scope_split}_worker${scope_worker}" "$scope_expected" "$scope_controller_launch_commit"
   for scope_metric in success_by_distance spl_by_distance; do
     publish_shard "$scope_gate/${scope_metric}_${scope_suffix}.pkl" "$scope_full/${scope_metric}_${scope_suffix}.pkl"
   done
@@ -67,13 +68,27 @@ PY
 
 ingest_and_check() {
   local scope_dir=$1 scope_run_id=$2 scope_expected=$3 scope_commit=$4
+  local scope_runtime=${5:-} scope_notes
+  if [[ -z "$scope_runtime" ]]; then
+    if ! scope_runtime=$(
+      "$scope_gate_python" "$scope_assets/scripts/runtime_lineage.py" \
+        --output-dir "$scope_dir" --source-map "$scope_lineage_source_map"
+    ); then
+      printf 'Runtime lineage validation failed: %s\n' "$scope_run_id" >&2
+      return 1
+    fi
+    [[ -n "$scope_runtime" ]] || { printf 'Empty runtime lineage label: %s\n' "$scope_run_id" >&2; return 2; }
+    scope_notes='Verified distance metrics; model replacement; runtime_lineage.json records per-ID sources; commit archives controller source'
+  else
+    scope_notes='Verified public episode; model replacement; original public launch head and runtime retained'
+  fi
   "$scope_gate_python" "$scope_assets/scripts/ingest_goat_bench_run.py" \
     --output-dir "$scope_dir" --run-id "$scope_run_id" \
     --branch feat/realtime-model --commit "$scope_commit" \
-    --runtime-commit 46f1e1f78077219c30e35440540e4ef22995194c \
+    --runtime-commit "$scope_runtime" \
     --model gemini-3.8-flash --expected-subtasks "$scope_expected" \
     --db "$scope_assets/outputs/runs.sqlite" \
-    --notes 'Verified distance metrics; model replacement; two disjoint scene shards' \
+    --notes "$scope_notes" \
     > "$scope_dir/ingested_summary.json"
   PYTHONPATH="$scope_assets/scripts" "$scope_gate_python" - "$scope_dir/ingested_summary.json" <<'PY'
 from pathlib import Path
@@ -105,11 +120,9 @@ launch_split() {
 
 complete_split() {
   local scope_split=$1 scope_worker scope_canonical scope_suffix scope_metric
-  local scope_stage_commit=$scope_controller_commit
-  [[ "$scope_split" != 1 ]] || scope_stage_commit=$scope_project_commit
   for scope_worker in 0 1; do
     wait_for_exit "$scope_assets/logs/full_split${scope_split}_worker${scope_worker}.exit" "scope-s${scope_split}-w${scope_worker}-20261005"
-    collect_worker "$scope_split" "$scope_worker" "$scope_stage_commit"
+    collect_worker "$scope_split" "$scope_worker"
   done
   if [[ "$scope_split" == 1 ]]; then
     scope_canonical=$scope_assets/outputs/REPRO_20261005_SCOPE_Gemini38Flash_canonical278
@@ -121,7 +134,7 @@ complete_split() {
     done
     cp "$scope_full/subtask_metadata.json" "$scope_canonical/subtask_metadata.json"
     cp "$scope_assets/manifests/canonical278_ids.json" "$scope_canonical/expected_subtask_ids.json"
-    ingest_and_check "$scope_canonical" REPRO_20261005_SCOPE_Gemini38Flash_canonical278 278 "$scope_project_commit"
+    ingest_and_check "$scope_canonical" REPRO_20261005_SCOPE_Gemini38Flash_canonical278 278 "$scope_controller_launch_commit"
   fi
   printf 'Finished split %s\n' "$scope_split"
 }
@@ -135,7 +148,7 @@ import sys
 print(json.loads(Path(sys.argv[1]).read_text())['head_commit_at_launch'])
 PY
 )
-ingest_and_check "$scope_public" REPRO_20261005_SCOPE_Gemini38Flash_public_example_ep0 5 "$scope_public_commit"
+ingest_and_check "$scope_public" REPRO_20261005_SCOPE_Gemini38Flash_public_example_ep0 5 "$scope_public_commit" "$scope_original_runtime"
 
 # Retain the two active first-episode workers. Subsequent batches run three
 # independent episodes per scene, with one process per physical GPU and output.
@@ -149,4 +162,4 @@ for scope_batch_start in 2 5 8; do
     complete_split "$scope_split"
   done
 done
-ingest_and_check "$scope_full" REPRO_20261005_SCOPE_Gemini38Flash_full2669 2669 "$scope_project_commit"
+ingest_and_check "$scope_full" REPRO_20261005_SCOPE_Gemini38Flash_full2669 2669 "$scope_controller_launch_commit"

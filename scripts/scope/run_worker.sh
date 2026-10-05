@@ -47,6 +47,11 @@ esac
 curl --noproxy '*' --fail --silent "http://127.0.0.1:${scope_bridge_port}/health"
 cd /home/ysh/codecase/SCOPE-repro/SCOPE
 [[ -z "$(git status --porcelain)" ]] || exit 2
+read -r scope_runtime_commit < /home/ysh/Datasets/SCOPE/manifests/active_scope_runtime_commit.txt
+[[ "$(git rev-parse HEAD)" == "$scope_runtime_commit" ]] || {
+  printf 'SCOPE runtime does not match the frozen lineage source\n' >&2
+  exit 2
+}
 python /home/ysh/Datasets/SCOPE/scripts/run_scope.py \
   --upstream-root /home/ysh/codecase/SCOPE-repro/SCOPE \
   --cfg-file "$scope_cfg" \
