@@ -753,6 +753,21 @@ and grouped metrics. All earlier database rows are preserved. Canonical
 coverage remains 48/278; both requested selections are incomplete, and
 absent per-qid usage remains `NULL`.
 
+The [next full observation](assets/full2669_progress_20261005_1235/ingested_summary.json),
+captured at **12:31:22** under archive tag `1235`, contains **256/2,669 IDs
+in 39 complete episodes**, with 173 successes, observed SR 67.5781% and SPL
+47.2156%. It adds all seven original subtasks of `00827-BAbdmeyTvMZ`
+episode 4, with four successes. Description/image/object counts are 80/90/86,
+with observed SR 46.2500/80.0000/74.4186% and SPL
+30.3602/65.1196/44.1584%. The
+[manifest](assets/full2669_progress_20261005_1235/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 48/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
