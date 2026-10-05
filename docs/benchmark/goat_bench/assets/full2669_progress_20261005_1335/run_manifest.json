@@ -1,0 +1,360 @@
+{
+  "observed_at": "2026-10-05T13:30:39+08:00",
+  "run_id": "REPRO_20261005_SCOPE_Gemini38Flash_full2669_progress_1335",
+  "requested_subtasks": 2669,
+  "observed_subtasks": 375,
+  "complete_episodes": 54,
+  "complete": false,
+  "successes": 264,
+  "sr": 70.4,
+  "spl": 49.82650706305256,
+  "saved_episodes": [
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "4",
+      "n": 7
+    },
+    {
+      "scene_id": "00803-k1cupFYWXJ6",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "2",
+      "n": 8
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "5",
+      "n": 10
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "6",
+      "n": 10
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "0",
+      "n": 9
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "2",
+      "n": 6
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "3",
+      "n": 6
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "4",
+      "n": 8
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "5",
+      "n": 7
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "6",
+      "n": 9
+    },
+    {
+      "scene_id": "00815-h1zeeAwLh9Z",
+      "episode_id": "3",
+      "n": 9
+    },
+    {
+      "scene_id": "00815-h1zeeAwLh9Z",
+      "episode_id": "4",
+      "n": 7
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "0",
+      "n": 8
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "2",
+      "n": 5
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "2",
+      "n": 6
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "5",
+      "n": 6
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "6",
+      "n": 5
+    },
+    {
+      "scene_id": "00827-BAbdmeyTvMZ",
+      "episode_id": "4",
+      "n": 7
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "2",
+      "n": 10
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "4",
+      "n": 6
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "5",
+      "n": 7
+    },
+    {
+      "scene_id": "00832-qyAac8rV8Zk",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "3",
+      "n": 9
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "4",
+      "n": 10
+    },
+    {
+      "scene_id": "00853-5cdEh9F2hJL",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00853-5cdEh9F2hJL",
+      "episode_id": "3",
+      "n": 10
+    },
+    {
+      "scene_id": "00862-LT9Jq6dN3Ea",
+      "episode_id": "4",
+      "n": 10
+    },
+    {
+      "scene_id": "00869-MHPLjHsuG27",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "0",
+      "n": 9
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "2",
+      "n": 10
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "3",
+      "n": 6
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "5",
+      "n": 5
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "6",
+      "n": 9
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "2",
+      "n": 9
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "3",
+      "n": 8
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "4",
+      "n": 6
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "2",
+      "n": 6
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "3",
+      "n": 6
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "4",
+      "n": 10
+    }
+  ],
+  "upstream_runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "initial_launch_heads": [
+    "89dd5337df953374c26b0ebcb67b3bb8663b9ad8",
+    "6625cdf9fd5ac07c594dbd1ec73958d4f688ffb2"
+  ],
+  "recovery_head": "59bc0d30e40f326544fb2524956754bd094e08fb",
+  "initial_bootstrap_revision": "d5c24a5e676d8729fd1f6d0f890d5bf5760b5827",
+  "recovery_bootstrap_revision": "08fdeba4c8529e7e01ce1e01f88b6e558e1e652f",
+  "launch_record_paths": [
+    "../scope_20261005/controller_launch_20261005.json",
+    "../scope_20261005/early_parallel_workers_20261005.json",
+    "../scope_20261005/network_recovery_20261005.json",
+    "../scope_20261005/co_gpu_worker_launch_20261005.json",
+    "../scope_20261005/co_gpu_paired_worker_launch_20261005.json",
+    "../scope_20261005/early_split6_workers_20261005.json",
+    "../scope_20261005/early_split7_workers_20261005.json"
+  ],
+  "early_split5_worker0_launch_head": "19fdb08812f37105ec08972ee2b946450801d60a",
+  "early_split5_worker1_launch_head": "15726c1d3311f6976415db94f3954efe103df927",
+  "input_sha256": {
+    "expected_subtask_ids.json": "ebe0a923affe64ad0a10bbe96ab36d8faa4b1fe0431e58906185d7a0de4b0b24",
+    "spl_by_distance_0.0_0.5_1.pkl": "e21490eb6f6548c972c3f25be3575e031a7d6a1ae23347918bde3a8d503a4691",
+    "spl_by_distance_0.0_0.5_3.pkl": "04e8672f90e9d3b9e22a16d1222736ad6948b9c49f2fabd71270f063bc16efec",
+    "spl_by_distance_0.0_0.5_4.pkl": "0920cf8ebc201e990d61c317048dfef8a6ba7951a79d867ba651fc9e51ec1361",
+    "spl_by_distance_0.0_0.5_5.pkl": "52bee45959a4b49a9376f796d9d2d8393986949fce35025944120ee6cd2e164c",
+    "spl_by_distance_0.0_0.5_6.pkl": "f37becc503133d04f161612f61ae1f2fb8a457367a6040431dc07815ce2dd3ff",
+    "spl_by_distance_0.0_0.5_7.pkl": "c8c13ed23a003e920c8f1cfe3a32e24b7017ff1de83d696bb8af67bafa6e1f47",
+    "spl_by_distance_0.5_1.0_1.pkl": "05ab177a320a947c0ebe79b7ab8191a24e250e7e6bf478e26bfc6a40f3824f4e",
+    "spl_by_distance_0.5_1.0_3.pkl": "f1391df60d9581d7b81fdda30ac485a8c0a5d5de464d6730d269c844906cf4c4",
+    "spl_by_distance_0.5_1.0_4.pkl": "13f499eb0e6ac1aa6f2d6f502cd07ec4ec74a7e906592d795eec0946f6a4618f",
+    "spl_by_distance_0.5_1.0_5.pkl": "7d7e487c2021874d8d292e4a84e323284ceadf2a8826cd76f8002206e15032fa",
+    "spl_by_distance_0.5_1.0_6.pkl": "bd15aa767afe3e993e9262cc0421d1e7e5304655340997c1c309b3dc283ed89c",
+    "spl_by_distance_0.5_1.0_7.pkl": "0c0fcbdbdccc01e72dd37caf8809854a92e4500fda7384c033a406ed799ccc56",
+    "subtask_metadata.json": "885491e6f8d205ef2cb7c80deccf8ca66c95dbd19cbe223bfd932d8e35c303de",
+    "success_by_distance_0.0_0.5_1.pkl": "4280b66a92b89d07fa25a33222da83c8a334a5d5f5325504ecb3b1edfaf7a950",
+    "success_by_distance_0.0_0.5_3.pkl": "6125e651def3e6995abfa5efc59e1d58e98fcd3f3fce661ad6f1b71d5c23310a",
+    "success_by_distance_0.0_0.5_4.pkl": "2244708f46dab24e285a3b736c0d5fd8bc80dd12f4329b3dc5d748e6eea5d32b",
+    "success_by_distance_0.0_0.5_5.pkl": "974bd4bef2d2ec96e489464baa8660b514a877c7be646a9e0f6375a1227b039c",
+    "success_by_distance_0.0_0.5_6.pkl": "00bb365af05885c56f88a0b3e50d39eb8cb2d3d6fb12d840e0b106844a17e558",
+    "success_by_distance_0.0_0.5_7.pkl": "eac0f601ac5f869a28538320b09c348167df85ef76fdc90743ee5c36d1ef851f",
+    "success_by_distance_0.5_1.0_1.pkl": "f5cc0194eab6ceb862adfda7f0d15890399224f39d2ccbdaaaeb10580794b9a7",
+    "success_by_distance_0.5_1.0_3.pkl": "d943d7a3c26f7c2ebb9b469f43204a1c9cd6b51d8f552e18fcc9c4c7da293eee",
+    "success_by_distance_0.5_1.0_4.pkl": "2786adf522672d64ab0ce87e3db57278c16bd55b4685d6816697e42511c7777d",
+    "success_by_distance_0.5_1.0_5.pkl": "da5a227057b01457fc9633dd342c7cabf472f5112cb8c4b589298e3b846fce56",
+    "success_by_distance_0.5_1.0_6.pkl": "9d340747a27dc6f627340440810cf44911ffb38313fe67a79eb11f68c31402dc",
+    "success_by_distance_0.5_1.0_7.pkl": "c8bf73d0c805f66bb6bdf26633dbfce9c805e22b9ca6af302ee0e455ff6f17e2"
+  },
+  "local_sqlite_verified": true,
+  "notes": "Incomplete immutable progress observation of the original frozen requested fold. Paired primary metrics and exact IDs match SQLite; all observed episodes contain their original full subtask set. Initial and recovery transport clients contributed. SCOPE source, model, prompts, selection and navigation budget are unchanged. Global interleaved API usage has no per-fold or per-qid attribution; absent traces are not zero calls.",
+  "remote_sqlite_verified": true,
+  "sql_aggregate_tolerance": 1e-10,
+  "missing_per_qid_usage_remains_null": true,
+  "all_previous_sqlite_rows_preserved": true,
+  "verification_method": "Consistent remote SQLite backup, independently compared with paired raw artifacts and original frozen IDs; all prior rows preserved.",
+  "progress_baseline_run_id": "REPRO_20261005_SCOPE_Gemini38Flash_full2669_progress_1320",
+  "new_ids_since_baseline": [
+    "00808-y9hTuugGdiq_6_0",
+    "00808-y9hTuugGdiq_6_1",
+    "00808-y9hTuugGdiq_6_2",
+    "00808-y9hTuugGdiq_6_3",
+    "00808-y9hTuugGdiq_6_4",
+    "00808-y9hTuugGdiq_6_5",
+    "00808-y9hTuugGdiq_6_6",
+    "00808-y9hTuugGdiq_6_7",
+    "00808-y9hTuugGdiq_6_8",
+    "00808-y9hTuugGdiq_6_9",
+    "00890-6s7QHgap2fW_2_0",
+    "00890-6s7QHgap2fW_2_1",
+    "00890-6s7QHgap2fW_2_2",
+    "00890-6s7QHgap2fW_2_3",
+    "00890-6s7QHgap2fW_2_4",
+    "00890-6s7QHgap2fW_2_5"
+  ],
+  "early_split6_workers_launch_head": "22927e8d75edf9794a66b5699a7a14bbc2e1b09f",
+  "early_split7_workers_launch_head": "154d11e55a47ca6d67dad8fe0e214847477bd2bb",
+  "independent_remote_verification_recorded_at_utc": "2026-10-05T05:33:31.826206+00:00",
+  "independent_remote_verification_scope": "Paired raw rows, original metadata bytes, frozen-ID subset and explicit indices, complete observed episodes, overall/per-modality SQL metrics, exact new episodes versus 1320; per-qid usage remains null."
+}

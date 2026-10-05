@@ -923,6 +923,31 @@ verified. All earlier database rows are preserved. Canonical coverage
 remains 62/278; both requested selections are incomplete, and absent
 per-qid usage remains `NULL`.
 
+The [next full observation](assets/full2669_progress_20261005_1335/ingested_summary.json),
+captured at **13:30:39** under archive tag `1335`, contains **375/2,669 IDs
+in 54 complete episodes**, with 264 successes, observed SR 70.4000% and SPL
+49.8265%. It adds `00808-y9hTuugGdiq` episode 6 (ten subtasks, eight
+successes) and `00890-6s7QHgap2fW` episode 2 (six subtasks, six successes).
+Description/image/object counts are 124/123/128, with observed SR
+58.0645/79.6748/73.4375% and SPL 41.0806/64.2700/44.4197%. The
+[manifest](assets/full2669_progress_20261005_1335/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, frozen IDs, original metadata and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 62/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+At 13:31:25, a separate read-only process/log check found all 12 navigation
+workers alive and advancing relative to 12:49. Each had 80–141 additional
+model responses, its latest response was HTTP 200, and its log had updated
+within 1–23 seconds. Worker 1w0 had an intervening HTTP 504 and subsequently
+resumed; no terminal exit file, OOM, traceback or unrecovered API error was
+observed. `/data1` had 1,839,815,962,624 bytes available and host MemAvailable
+was 410.6 GiB. Healthy GPUs 0/2/3/4/5/6 had 5,829–6,845 MiB free, with two
+workers each; no current resource pressure was observed. GPU 1 was not read.
+These execution-health observations add no saved benchmark results.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
