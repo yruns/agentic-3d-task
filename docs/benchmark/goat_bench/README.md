@@ -285,6 +285,13 @@ adds scene `00853` episode 4 (five subtasks, three successes); both add scene
 complete-episode checks passed; canonical is derived from the same immutable
 full capture, and both selections remain incomplete.
 
+The `1530` observation, captured at 15:27:56, records **485/2,669** full-set
+IDs in 68 complete episodes (observed SR 70.72%, SPL 49.73%) and **85/278**
+canonical IDs in 12 complete episodes (observed SR 77.65%, SPL 52.41%). Both
+add scene `00877` episode 0 (ten subtasks, eight successes). Exact raw/SQLite
+and complete-episode checks passed; canonical is derived from the same
+immutable full capture, and both selections remain incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
