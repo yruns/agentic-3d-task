@@ -1,0 +1,274 @@
+{
+  "observed_at_utc": "2026-10-05T13:33:11.522312Z",
+  "launch_head": "babd602cf7a9f8053eee6eb956af49fa28c9efa0",
+  "upstream_runtime_commit": "606d29ca19901882015cdd432017b4a867cef978",
+  "old_controller": {
+    "pid": 3034813,
+    "start_ticks": 322717163,
+    "command": [
+      "bash",
+      "/home/ysh/Datasets/SCOPE/scripts/run_full.sh"
+    ]
+  },
+  "new_controller": {
+    "pid": 3052890,
+    "start_ticks": 322993816,
+    "command": [
+      "bash",
+      "/home/ysh/Datasets/SCOPE/scripts/run_full.sh"
+    ]
+  },
+  "retained_workers": [
+    {
+      "pid": 3031627,
+      "start_ticks": 322691675,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu0.json",
+        "--split",
+        "1",
+        "--start-ratio",
+        "0.0",
+        "--end-ratio",
+        "0.5"
+      ]
+    },
+    {
+      "pid": 3032758,
+      "start_ticks": 322714584,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu2.json",
+        "--split",
+        "1",
+        "--start-ratio",
+        "0.5",
+        "--end-ratio",
+        "1.0"
+      ]
+    },
+    {
+      "pid": 3032889,
+      "start_ticks": 322714849,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split3_worker0_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu3.json",
+        "--split",
+        "3",
+        "--start-ratio",
+        "0.0",
+        "--end-ratio",
+        "0.5"
+      ]
+    },
+    {
+      "pid": 3033078,
+      "start_ticks": 322715101,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split3_worker1_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu4.json",
+        "--split",
+        "3",
+        "--start-ratio",
+        "0.5",
+        "--end-ratio",
+        "1.0"
+      ]
+    },
+    {
+      "pid": 3033269,
+      "start_ticks": 322715346,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split4_worker0_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu5.json",
+        "--split",
+        "4",
+        "--start-ratio",
+        "0.0",
+        "--end-ratio",
+        "0.5"
+      ]
+    },
+    {
+      "pid": 3033457,
+      "start_ticks": 322715599,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split4_worker1_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu6.json",
+        "--split",
+        "4",
+        "--start-ratio",
+        "0.5",
+        "--end-ratio",
+        "1.0"
+      ]
+    },
+    {
+      "pid": 3033603,
+      "start_ticks": 322715806,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split5_worker0_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu0.json",
+        "--split",
+        "5",
+        "--start-ratio",
+        "0.0",
+        "--end-ratio",
+        "0.5"
+      ]
+    },
+    {
+      "pid": 3033776,
+      "start_ticks": 322716026,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split5_worker1_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu2.json",
+        "--split",
+        "5",
+        "--start-ratio",
+        "0.5",
+        "--end-ratio",
+        "1.0"
+      ]
+    },
+    {
+      "pid": 3034025,
+      "start_ticks": 322716263,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split6_worker0_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu3.json",
+        "--split",
+        "6",
+        "--start-ratio",
+        "0.0",
+        "--end-ratio",
+        "0.5"
+      ]
+    },
+    {
+      "pid": 3034220,
+      "start_ticks": 322716542,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split6_worker1_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu4.json",
+        "--split",
+        "6",
+        "--start-ratio",
+        "0.5",
+        "--end-ratio",
+        "1.0"
+      ]
+    },
+    {
+      "pid": 3034461,
+      "start_ticks": 322716795,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split7_worker0_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu5.json",
+        "--split",
+        "7",
+        "--start-ratio",
+        "0.0",
+        "--end-ratio",
+        "0.5"
+      ]
+    },
+    {
+      "pid": 3034699,
+      "start_ticks": 322717024,
+      "command": [
+        "python",
+        "/home/ysh/Datasets/SCOPE/scripts/run_scope.py",
+        "--upstream-root",
+        "/home/ysh/codecase/SCOPE-repro/SCOPE",
+        "--cfg-file",
+        "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split7_worker1_parallel16.yaml",
+        "--bridge-config",
+        "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu6.json",
+        "--split",
+        "7",
+        "--start-ratio",
+        "0.5",
+        "--end-ratio",
+        "1.0"
+      ]
+    }
+  ],
+  "source_sha256": {
+    "run_full.sh": "76b72dfa653f9866ba04dd9216ffda3638540bbd4b45f9e9f0607f74c62ad2a0",
+    "run_worker.sh": "61fdbf6ee6a8a17a68c3d6b556b8b3acd07621f2d06e1034dc63eefbe8ffc981",
+    "runtime_lineage.py": "4cae0ccb2f8310d4951c17b65210bd53b262dc57da3dcea043e6a39f11dcce03"
+  },
+  "old_status_file_value": "0",
+  "old_stop_scope": "Explicit planned TERM of the archival controller; its legacy zero marker is not successful evaluation. No navigation workers were signaled.",
+  "current_status_file_absent": true,
+  "tmux_session": "scope-full-20261005",
+  "worker_restarts": 0,
+  "full_evaluation_complete": false
+}

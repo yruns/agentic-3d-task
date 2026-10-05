@@ -1518,7 +1518,14 @@ Validation passed 11 lineage tests, seven controller integration tests,
 Ruff, Black and mypy gates passed. Linux's actual `conceptgraph` Python also
 attributed a copied 676-row primary snapshot as exactly 670 original plus six
 visualization-fix rows. This smoke test did not rewrite running primary files.
-Controller deployment and its retained-worker verification are recorded next.
+The [controller recovery record](assets/scope_20261005/lineage_controller_recovery_20261005.json)
+confirms deployment at launch head `babd602cf7a9f8053eee6eb956af49fa28c9efa0`.
+At 21:33:11, controller PID 3052890 was active in `scope-full-20261005`, waiting
+for both existing first-split workers. All twelve navigation worker PIDs,
+creation ticks and commands matched the pre-replacement identities; none was
+restarted or signaled. The actual upstream HEAD remained `606d29ca`, and the
+deployed controller, worker and attribution-helper hashes matched the project
+sources. No current controller exit marker was present.
 
 The old controller was stopped deliberately to deploy attribution. Its TERM
 handler produced a zero status file despite the signal; this was a planned
@@ -1553,8 +1560,11 @@ source-map hash. Previous metric rows and prior run fields are preserved;
 the public episode's ingestion timestamp was refreshed during controller
 replay. Per-subtask usage remains unknown. Global API ledgers are separate
 from these primary-only copies, so their `api_ledger_present=false` does not
-mean no model requests occurred. Independent remote verification is recorded
-in the observation manifests when completed.
+mean no model requests occurred. Independent verification passed 43
+local/remote artifact hashes, exact raw/SQL values, both folds' lineage counts,
+complete episodes and prior sample preservation. The immutable SQLite backup
+SHA256 is `86576133c435ca9798cdf6551633eb0195e83210dbc41dfafca46ad9178162a9`.
+Verification details are retained in both observation manifests.
 
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.

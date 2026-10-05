@@ -525,7 +525,7 @@
   },
   "local_sqlite_verified": true,
   "notes": "Incomplete immutable progress observation of the original frozen requested fold. Paired primary metrics and exact IDs match SQLite; all observed episodes contain their original full subtask set. Initial and recovery transport clients contributed. SCOPE source, model, prompts, selection and navigation budget are unchanged. Global interleaved API usage has no per-fold or per-qid attribution; absent traces are not zero calls.",
-  "remote_sqlite_verified": false,
+  "remote_sqlite_verified": true,
   "sql_aggregate_tolerance": 1e-10,
   "missing_per_qid_usage_remains_null": true,
   "all_previous_sqlite_rows_preserved": false,
@@ -610,5 +610,8 @@
   },
   "runtime_commit_sha": "mixed:46f1e1f78077219c30e35440540e4ef22995194c+bfffc2be995a7223c8a0e9c86c18064dbe878838",
   "archive_code_commit_sha": "550a725199506b390b4fc56d9b61f2348df98b14",
-  "archive_commit_scope": "Source of the attribution/ingestion helper, not an inferred common worker bootstrap head."
+  "archive_commit_scope": "Source of the attribution/ingestion helper, not an inferred common worker bootstrap head.",
+  "independent_remote_verification_recorded_at_utc": "2026-10-05T13:35:53.280984+00:00",
+  "independent_remote_verification_scope": "43 local/remote artifact SHA values; paired raw/SQL values, frozen IDs, explicit indices, complete observed episodes, exact prior sample values, per-modality metrics and per-ID lineage. Prior public ingestion timestamp refresh is documented; unknown per-qid usage remains null.",
+  "independent_immutable_sqlite_sha256": "86576133c435ca9798cdf6551633eb0195e83210dbc41dfafca46ad9178162a9"
 }
