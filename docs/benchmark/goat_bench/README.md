@@ -58,6 +58,16 @@ The 09:15 snapshots record **106/2,669** full-set IDs in 17 complete episodes
 episodes (observed SR 76.00%, SPL 50.20%). Raw metrics, exact IDs and SQLite
 were independently checked; both requested selections remain incomplete.
 
+The [global API audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
+retains transport and usage evidence for the ongoing run. Its interleaved
+calls include unfinished episodes and earlier attempts, so usage cannot be
+attributed to the saved subtasks or canonical fold.
+
+The [12-worker semantic log audit](assets/scope_20261005/semantic_fallback_audit_20261005_0930.json)
+records original-policy retries and candidate acceptance, with independently
+verified log-prefix hashes. Silent neutral-score defaults remain unobservable;
+HTTP success and syntactic recovery do not establish navigation success.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

@@ -1,0 +1,101 @@
+{
+  "captured_at_utc": "2026-10-05T01:28:13.880485+00:00",
+  "sanitized_ledger_path": "tmp/scope_repro_20261005/modelhub_calls.jsonl",
+  "complete_prefix_bytes": 2186908,
+  "complete_prefix_sha256": "5645935533b973e32c42a72d231cba1c846834708d103b03a07bdf7663a579a6",
+  "complete_prefix_records": 7784,
+  "excluded_trailing_bytes": 0,
+  "bridge_source_sha256": "1761fd1055a6490f792ee1ada2ed8e6b53431c36ab47c249fa27640f0e00cb57",
+  "full_run_first_line_zero_based": 164,
+  "recovery_first_line_zero_based": 2388,
+  "full_run": {
+    "calls": 7620,
+    "status_counts": {
+      "200": 7619,
+      "504": 1
+    },
+    "models": [
+      "gemini-3.8-flash"
+    ],
+    "known_thinking_budgets": [
+      2000
+    ],
+    "thinking_budget_missing_records": 0,
+    "latency_mean_ms": 11905.605905997509,
+    "latency_median_ms": 7318.770395999309,
+    "latency_p95_ms": 31973.63283392042,
+    "latency_max_ms": 190064.9346660357,
+    "tokens": {
+      "prompt_tokens": {
+        "known_records": 7619,
+        "missing_records": 1,
+        "known_total": 130596004
+      },
+      "completion_tokens": {
+        "known_records": 7619,
+        "missing_records": 1,
+        "known_total": 399546
+      },
+      "total_tokens": {
+        "known_records": 7619,
+        "missing_records": 1,
+        "known_total": 133536530
+      },
+      "reasoning_tokens": {
+        "known_records": 6092,
+        "missing_records": 1528,
+        "known_total": 2540980
+      },
+      "cached_prompt_tokens": {
+        "known_records": 7619,
+        "missing_records": 1,
+        "known_total": 290045
+      }
+    }
+  },
+  "recovery": {
+    "calls": 5396,
+    "status_counts": {
+      "200": 5396
+    },
+    "models": [
+      "gemini-3.8-flash"
+    ],
+    "known_thinking_budgets": [
+      2000
+    ],
+    "thinking_budget_missing_records": 0,
+    "latency_mean_ms": 11724.494511322639,
+    "latency_median_ms": 7149.4013125193305,
+    "latency_p95_ms": 32095.437707961537,
+    "latency_max_ms": 136737.70883399993,
+    "tokens": {
+      "prompt_tokens": {
+        "known_records": 5396,
+        "missing_records": 0,
+        "known_total": 91162144
+      },
+      "completion_tokens": {
+        "known_records": 5396,
+        "missing_records": 0,
+        "known_total": 288522
+      },
+      "total_tokens": {
+        "known_records": 5396,
+        "missing_records": 0,
+        "known_total": 93259562
+      },
+      "reasoning_tokens": {
+        "known_records": 4330,
+        "missing_records": 1066,
+        "known_total": 1808896
+      },
+      "cached_prompt_tokens": {
+        "known_records": 5396,
+        "missing_records": 0,
+        "known_total": 232874
+      }
+    }
+  },
+  "attribution_note": "Global interleaved calls include ongoing/incomplete episodes and earlier attempts. They cannot be assigned to canonical278, completed subtasks or per-qid traces. Historical missing thinking budgets and missing token fields stay unknown. Latency is per bridge request, not navigation or run wall time. No prompts, images, credentials or thought text are included."
+}

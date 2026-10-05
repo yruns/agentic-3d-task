@@ -511,6 +511,25 @@ and recovery `59bc0d3`. The correction pins the historical manifest hashes;
 those original artifacts and their numerical results are retained. The 09:15
 canonical manifest lists the contributing split-1 launch explicitly.
 
+The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
+pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
+After excluding the earlier preflight/public-episode rows, the full run has
+7,620 recorded bridge requests: 7,619 HTTP 200 and one earlier HTTP 504.
+The recovery interval beginning at ledger row 2,388 contains 5,396 requests,
+all HTTP 200. Every recorded full-run request names `gemini-3.8-flash` and
+thinking budget 2,000. Recovery request latency has median 7.149 seconds and
+95th percentile 32.095 seconds; these are bridge-request timings.
+
+The full-run known token totals are 130,596,004 prompt tokens, 399,546
+completion tokens, and 133,536,530 provider total tokens. One request has
+missing usage; reasoning-token usage is absent from 1,528 records. Each
+field retains its own known/missing denominator in the audit. These totals
+include ongoing episodes and earlier attempts, and cannot be assigned to
+the completed subtasks or either requested fold. Missing values remain
+unknown; no per-subtask usage was inserted into SQLite. The archived prefix
+hash was independently rechecked against the append-only ledger. The audit
+contains only model, transport and numeric usage metadata.
+
 ### SSH tunnel recovery
 
 At 06:01, the Mac-to-Linux SSH reverse tunnel disconnected after an operation
@@ -551,6 +570,37 @@ exhaustion or forced/default confirmation was observed in that snapshot.
 The same-candidate rejection counter accumulates within one exploration step;
 it does not require consecutive rejections. Overall potential-value fallback
 counts remain unobservable because some default paths have no log marker.
+
+The updated [09:30:54 audit](assets/scope_20261005/semantic_fallback_audit_20261005_0930.json)
+captures fixed prefixes from all 12 current-attempt FileHandler logs. Every
+prefix has one run header, and an independent reread of the live files matched
+all twelve captured SHA256 values. It excludes duplicated stdout and old
+failed attempts. Counts below are observed markers or decisions in these
+prefixes, not failed task or episode counts.
+
+| Observed marker/decision | Count |
+| --- | ---: |
+| Navigation response validation warnings | 101 |
+| Format warnings, included in validation warnings | 80 |
+| Valid-selection markers after validation retry | 53 |
+| Valid-selection markers after format retry | 41 |
+| Format retry exhaustion returning `None` | 3 |
+| Generic retry exhaustion returning `None` | 13 |
+| Validation warnings reporting zero remaining retries | 4 |
+| Default `CONFIRM` from unclear/API-none self-refinement | 0 |
+| Same-candidate acceptance after three rejections | 6 |
+
+Exhaustion markers and zero-remaining warnings can overlap, so they must not
+be added as distinct failed tasks. The same-candidate counter accumulates
+within an exploration step. A valid-selection marker establishes syntactic
+recovery, not correct grounding; the six acceptance events belong to the
+unchanged released policy. The fixed prefixes contain no pending or unclosed
+validation-warning query, which does not imply that navigation has finished.
+Silent potential-score defaults remain `null`/unobservable. The 1,241 logged
+potential bodies all contain the numeric pattern checked by this audit, but
+this observable subset does not measure every neutral-score path. The report
+retains sanitized line, elapsed-time, task and step locations, and does not
+change the running algorithm.
 
 ## Sources
 
