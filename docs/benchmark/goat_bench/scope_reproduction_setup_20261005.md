@@ -64,6 +64,13 @@ An unauthenticated Matterport download returned login HTML, which was not
 treated as a downloaded dataset. Existing geometry and verified mirror assets
 removed that runtime blocker.
 
+A fresh Linux read on 2026-10-05 at 11:43:35 verified 144 nonempty scene
+files (36 each of geometry, navmesh, semantic mesh and semantic text), plus
+two annotation configs. All 1,246 scene/goal-object pairs still resolve.
+Both mirror archives and all 74 extracted files match their recorded SHA256.
+The old `hm3d_required_scene_audit.json` describes the state before the public
+mirror filled the missing semantic files; it is retained as historical evidence.
+
 ## Model and protocol
 
 - Paper model: `gpt-4o-2024-11-20`.
@@ -611,6 +618,20 @@ rows, original metadata bytes, frozen IDs and explicit indices, complete
 observed episodes, and all grouped SQL metrics. The consistent backup retains
 all earlier table rows. Canonical coverage remains 39/278, full coverage is
 incomplete, and per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1145/ingested_summary.json),
+captured at **11:43:13** under tag `1145`, contains **185/2,669 IDs in 29
+complete episodes**, with 124 successes, observed SR 67.0270% and SPL
+46.5721%. It adds all eight original subtasks of `00877-4ok3usBNeis` episode
+3, with seven successes. Description/image/object counts are 59/56/70,
+with observed SR 47.4576/83.9286/70.0000% and SPL
+30.8395/68.2509/42.4893%. The
+[manifest](assets/full2669_progress_20261005_1145/run_manifest.json) retains
+paired input hashes, exact new IDs, complete episode groups and contributing
+launch records. Raw metrics, frozen IDs, explicit indices and grouped SQL
+metrics passed independent checks; the consistent database backup preserves
+all earlier table rows. Canonical coverage remains 39/278. Both requested
+selections remain incomplete, and absent per-qid usage remains `NULL`.
 
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
