@@ -1364,6 +1364,30 @@ metrics were verified. All earlier database rows are preserved. Canonical
 coverage remains 85/278; both requested selections are incomplete, and absent
 per-qid usage remains `NULL`.
 
+The [next full observation](assets/full2669_progress_20261005_1805/ingested_summary.json)
+and [canonical observation](assets/canonical278_progress_20261005_1805/ingested_summary.json)
+share the immutable capture at **18:06:24**, archive tag `1805`. Full contains
+**637/2,669 IDs in 88 complete episodes**, with 446 successes, observed SR
+70.0157% and SPL 49.9642%. Canonical contains **102/278 IDs in 14 complete
+episodes**, with 80 successes, observed SR 78.4314% and SPL 51.3184%. Full
+adds `00847-bCPU9suPUw9` episode 4 (nine subtasks, six successes) and
+`00848-ziup5kvtCCR` episode 4 (six subtasks, four successes); both add
+`00847-bCPU9suPUw9` episode 0 (eight subtasks, six successes) and
+`00890-6s7QHgap2fW` episode 0 (nine subtasks, eight successes).
+Full description/image/object counts are 205/205/227, with SR
+56.0976/81.4634/72.2467% and SPL 39.9841/65.3850/45.0509%; canonical
+counts are 30/38/34, with SR 66.6667/84.2105/82.3529% and SPL
+32.3033/73.5709/43.2262%. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. Canonical inputs and capture time match the same full snapshot,
+and its rows equal the full/canonical-ID intersection. Earlier database rows
+are preserved. The manifests link the
+[frozen restart-stage ID mapping](assets/scope_20261005/postfix_stage_id_provenance_20261005.json)
+and record zero newly saved IDs from the two patched worker attempts. Their
+44/51 pre-patch rows retain original provenance; active patched processes
+alone do not establish a contribution to this snapshot. Both selections remain
+incomplete, and absent per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has

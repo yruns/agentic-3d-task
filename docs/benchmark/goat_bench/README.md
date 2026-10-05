@@ -360,6 +360,14 @@ successes) and `00871` episode 4 (seven subtasks, five successes). Exact
 raw/SQLite and complete-episode checks passed; canonical coverage remains
 85/278 and full coverage is incomplete.
 
+The `1805` observation, captured at 18:06:24, records **637/2,669** full-set
+IDs in 88 complete episodes (observed SR 70.02%, SPL 49.96%) and **102/278**
+canonical IDs in 14 complete episodes (observed SR 78.43%, SPL 51.32%). Exact
+raw/SQLite and complete-episode checks passed; canonical is derived from the
+same immutable full capture. Both restarted workers still retain only their
+pre-patch completed rows, so this observation adds no patched-runtime metrics.
+Both selections remain incomplete.
+
 At 17:16 and 17:28, two workers exited with an empty-class prefilter response
 rejection and a stale-ID visualization error. Both fixes and verification
 boundaries are documented in the [setup record](scope_reproduction_setup_20261005.md).
