@@ -1,0 +1,62 @@
+{
+  "observed_at": "2026-10-05T08:56:51+08:00",
+  "run_id": "REPRO_20261005_SCOPE_Gemini38Flash_canonical278_progress_0855",
+  "requested_subtasks": 278,
+  "observed_subtasks": 20,
+  "complete_episodes": 3,
+  "complete": false,
+  "successes": 15,
+  "sr": 75.0,
+  "spl": 45.545514917816156,
+  "new_ids_since_0800": [
+    "00823-7MXmsvcQjpJ_0_0",
+    "00823-7MXmsvcQjpJ_0_1",
+    "00823-7MXmsvcQjpJ_0_2",
+    "00823-7MXmsvcQjpJ_0_3",
+    "00823-7MXmsvcQjpJ_0_4",
+    "00823-7MXmsvcQjpJ_0_5",
+    "00823-7MXmsvcQjpJ_0_6",
+    "00823-7MXmsvcQjpJ_0_7"
+  ],
+  "saved_episodes": [
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "0",
+      "n": 8
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "0",
+      "n": 7
+    }
+  ],
+  "upstream_runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "initial_launch_heads": [
+    "89dd5337df953374c26b0ebcb67b3bb8663b9ad8",
+    "6625cdf9fd5ac07c594dbd1ec73958d4f688ffb2"
+  ],
+  "recovery_head": "59bc0d30e40f326544fb2524956754bd094e08fb",
+  "initial_bootstrap_revision": "d5c24a5e676d8729fd1f6d0f890d5bf5760b5827",
+  "recovery_bootstrap_revision": "08fdeba4c8529e7e01ce1e01f88b6e558e1e652f",
+  "launch_record_paths": [
+    "../scope_20261005/controller_launch_20261005.json",
+    "../scope_20261005/network_recovery_20261005.json"
+  ],
+  "input_sha256": {
+    "expected_subtask_ids.json": "ae9ff04339d209b43881cb7a7948418912e81e53986e49bad6b9e9a735e6be24",
+    "spl_by_distance_0.0_0.5_1.pkl": "8799572b11eb2f08f57cb6094e6aa4c334eeee621c826f7df4758a5806acb42b",
+    "subtask_metadata.json": "885491e6f8d205ef2cb7c80deccf8ca66c95dbd19cbe223bfd932d8e35c303de",
+    "success_by_distance_0.0_0.5_1.pkl": "4cb62163d9f793b3d2bb37fe9bbac1a6107b43247842272ad3465c4e198b254a"
+  },
+  "local_sqlite_verified": true,
+  "notes": "Incomplete immutable progress observation of the original frozen requested fold. Paired primary metrics and exact IDs match SQLite; all observed episodes contain their original full subtask set. Initial and recovery transport clients contributed. SCOPE source, model, prompts, selection and navigation budget are unchanged. Global interleaved API usage has no per-fold or per-qid attribution; absent traces are not zero calls.",
+  "remote_sqlite_verified": true,
+  "independent_remote_verification_at": "2026-10-05T09:01:59+08:00",
+  "sql_aggregate_tolerance": 1e-10,
+  "missing_per_qid_usage_remains_null": true
+}

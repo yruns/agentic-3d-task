@@ -41,6 +41,13 @@ At 08:34, split 7 also started early after the same checks. Twelve workers now
 process frozen splits 1, 3, 4, 5, 6 and 7, with two processes per healthy GPU;
 future dispatch must wait for a validated slot to be released.
 
+The 08:55 immutable snapshots record **79/2,669** full-set IDs in 13 complete
+episodes (observed SR 72.15%, SPL 47.57%) and **20/278** canonical IDs in three
+complete episodes (observed SR 75.00%, SPL 45.55%). Raw paired shards, frozen
+IDs, launch provenance and verified SQLite records are retained in the
+[setup record](scope_reproduction_setup_20261005.md). Both selections remain
+incomplete and these observed metrics are not completed benchmark results.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

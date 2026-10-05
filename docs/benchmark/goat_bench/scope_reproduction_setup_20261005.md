@@ -438,6 +438,36 @@ reconstruct both metrics independently; raw primary shards, exact IDs and
 hashes are archived. These are incomplete observations and remain separate
 from completed benchmark comparisons.
 
+The 08:55 immutable
+[full progress snapshot](assets/full2669_progress_20261005_0855/ingested_summary.json)
+contains **79/2,669 IDs in 13 complete episodes**, with 57 successes,
+observed SR 72.1519% and SPL 47.5695%. Compared with 08:00, 41 further IDs
+were saved in six complete episodes. The accompanying
+[canonical progress snapshot](assets/canonical278_progress_20261005_0855/ingested_summary.json)
+contains **20/278 IDs in three complete episodes**, with 15 successes,
+observed SR 75.0000% and SPL 45.5455%; it adds eight IDs from the next scene's
+original first episode. Both preserve their original requested ID sets and
+`complete=false`. Every observed episode contains all its original subtasks;
+raw paired shards match the SQLite rows exactly. The database was transferred
+using SQLite backup, passed integrity checks, and retains all earlier runs.
+
+| 08:55 observation | Modality | Recorded | Observed SR (%) | Observed SPL (%) |
+| --- | --- | ---: | ---: | ---: |
+| Full requested set | Description | 24 | 54.1667 | 29.4364 |
+| Full requested set | Image | 24 | 79.1667 | 62.9485 |
+| Full requested set | Object | 31 | 80.6452 | 49.7017 |
+| Canonical requested set | Description | 5 | 80.0000 | 35.4597 |
+| Canonical requested set | Image | 8 | 87.5000 | 73.8630 |
+| Canonical requested set | Object | 7 | 57.1429 | 20.3868 |
+
+The [full manifest](assets/full2669_progress_20261005_0855/run_manifest.json)
+and [canonical manifest](assets/canonical278_progress_20261005_0855/run_manifest.json)
+retain the exact new IDs, complete episode groups, input hashes and contributing
+launch records. Initial and resumed attempts contributed to the checkpoints;
+split 5's workers have their own recorded launch commits. Global API calls
+remain interleaved without per-fold or per-subtask attribution. These partial
+observations are separate from completed benchmark comparisons.
+
 ### SSH tunnel recovery
 
 At 06:01, the Mac-to-Linux SSH reverse tunnel disconnected after an operation
