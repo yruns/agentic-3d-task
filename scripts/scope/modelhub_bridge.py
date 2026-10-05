@@ -13,11 +13,11 @@ import logging
 import os
 import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from threading import Lock
+from threading import Condition, Lock
 from typing import TYPE_CHECKING, Annotated, Literal, Protocol
 from uuid import uuid4
 
@@ -37,16 +37,19 @@ from pydantic import (
 )
 
 if TYPE_CHECKING:
+    from scripts.scope.modelhub_key_pool import CredentialLimits, CredentialPool
     from scripts.scope.prefilter_response_contract import (
         EMPTY_PREFILTER_HEADER,
         allows_empty_object_prefilter_response,
     )
 elif __package__:
+    from .modelhub_key_pool import CredentialLimits, CredentialPool
     from .prefilter_response_contract import (
         EMPTY_PREFILTER_HEADER,
         allows_empty_object_prefilter_response,
     )
 else:
+    from modelhub_key_pool import CredentialLimits, CredentialPool
     from prefilter_response_contract import (
         EMPTY_PREFILTER_HEADER,
         allows_empty_object_prefilter_response,
@@ -75,6 +78,8 @@ class BridgeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     endpoint: str
     api_key: SecretStr = Field(min_length=1)
+    additional_api_keys: tuple[Annotated[SecretStr, Field(min_length=1)], ...] = ()
+    credential_limits: CredentialLimits = Field(default_factory=CredentialLimits)
     model: Literal["gemini-3.8-flash"] = TARGET_MODEL
     bridge_token: SecretStr = Field(min_length=1)
     thinking: ThinkingConfig = Field(default_factory=ThinkingConfig)
@@ -98,6 +103,15 @@ class BridgeConfig(BaseModel):
         ):
             raise ValueError("endpoint_invalid")
         return endpoint
+
+    @model_validator(mode="after")
+    def validate_distinct_credentials(self) -> BridgeConfig:
+        values = tuple(
+            key.get_secret_value() for key in (self.api_key, *self.additional_api_keys)
+        )
+        if len(set(values)) != len(values):
+            raise ValueError("duplicate_upstream_credentials")
+        return self
 
 
 class TextContent(BaseModel):
@@ -256,6 +270,10 @@ class LedgerRecord(BaseModel):
     thinking_budget_tokens: int = Field(ge=0)
     response_id_synthesized: bool = False
     metadata_synthesized: bool = False
+    credential_slot: int | None = Field(default=None, ge=0)
+    queued_ms: float | None = Field(default=None, ge=0)
+    started_at_unix: float | None = Field(default=None, ge=0)
+    recorded_at_unix: float | None = Field(default=None, ge=0)
 
 
 class RecordSink(Protocol):
@@ -310,6 +328,19 @@ class BridgeResponse:
     body: bytes
 
 
+@dataclass(frozen=True)
+class DispatchMetadata:
+    credential_slot: int
+    queued_ms: float
+    started_at_unix: float
+
+
+@dataclass(frozen=True)
+class UpstreamDispatch:
+    response: httpx.Response | BridgeResponse
+    metadata: DispatchMetadata
+
+
 def error_response(status: int, code: str, error_type: ErrorType) -> BridgeResponse:
     """Use fixed error codes, never exception text or upstream response bodies."""
     return BridgeResponse(
@@ -337,6 +368,12 @@ class BridgeService:
         self.config = config
         self._client = client
         self._ledger = ledger
+        self._credentials = CredentialPool(
+            (config.api_key, *config.additional_api_keys),
+            config.credential_limits,
+            clock=time.monotonic,
+            condition=Condition(),
+        )
 
     def close(self) -> None:
         self._client.close()
@@ -358,6 +395,7 @@ class BridgeService:
         *,
         response_id_synthesized: bool = False,
         metadata_synthesized: bool = False,
+        dispatch: DispatchMetadata | None = None,
     ) -> BridgeResponse:
         record = LedgerRecord(
             model=model,
@@ -367,12 +405,64 @@ class BridgeService:
             thinking_budget_tokens=self.config.thinking.budget_tokens,
             response_id_synthesized=response_id_synthesized,
             metadata_synthesized=metadata_synthesized,
+            credential_slot=dispatch.credential_slot if dispatch else None,
+            queued_ms=dispatch.queued_ms if dispatch else None,
+            started_at_unix=dispatch.started_at_unix if dispatch else None,
+            recorded_at_unix=time.time(),
         )
         try:
             self._ledger.record(record)
         except OSError:
             return error_response(500, "ledger_write_failed", "bridge_error")
         return response
+
+    def _dispatch(
+        self, payload: Mapping[str, JsonValue], request_id: str
+    ) -> UpstreamDispatch:
+        queued_at = time.perf_counter()
+        started_at_unix = time.time()
+        lease = self._credentials.acquire()
+        metadata = DispatchMetadata(
+            lease.slot,
+            max(0.0, (time.perf_counter() - queued_at) * 1000),
+            started_at_unix,
+        )
+        endpoint = httpx.URL(self.config.endpoint).copy_set_param(
+            "ak", lease.api_key.get_secret_value()
+        )
+        status = 502
+        retry_after = 0.0
+        try:
+            try:
+                network_response = self._client.post(
+                    endpoint,
+                    json=payload,
+                    headers={"X-TT-LOGID": request_id},
+                    timeout=self.config.timeout_seconds,
+                )
+                response: httpx.Response | BridgeResponse = network_response
+                status = network_response.status_code
+                if status == 429:
+                    try:
+                        parsed_delay = float(
+                            network_response.headers.get("Retry-After", "0")
+                        )
+                    except ValueError:
+                        parsed_delay = 0.0
+                    if 0 <= parsed_delay <= 600:
+                        retry_after = parsed_delay
+            except httpx.TimeoutException:
+                status = 504
+                response = error_response(status, "upstream_timeout", "upstream_error")
+            except httpx.RequestError:
+                response = error_response(
+                    status, "upstream_connection_failed", "upstream_error"
+                )
+            return UpstreamDispatch(response, metadata)
+        finally:
+            self._credentials.release(
+                lease, status=status, retry_after_seconds=retry_after
+            )
 
     def forward(
         self,
@@ -386,29 +476,20 @@ class BridgeService:
         payload["model"] = self.config.model
         payload["stream"] = False
         payload["thinking"] = self.config.thinking.model_dump()
-        endpoint = httpx.URL(self.config.endpoint).copy_set_param(
-            "ak", self.config.api_key.get_secret_value()
-        )
-        try:
-            upstream = self._client.post(
-                endpoint,
-                json=payload,
-                headers={"X-TT-LOGID": request_id},
-                timeout=self.config.timeout_seconds,
+        dispatched = self._dispatch(payload, request_id)
+        dispatch = dispatched.metadata
+        upstream = dispatched.response
+        if isinstance(upstream, BridgeResponse):
+            return self._record(
+                upstream, self.config.model, started, TokenCounts(), dispatch=dispatch
             )
-        except httpx.TimeoutException:
-            response = error_response(504, "upstream_timeout", "upstream_error")
-            return self._record(response, self.config.model, started, TokenCounts())
-        except httpx.RequestError:
-            response = error_response(
-                502, "upstream_connection_failed", "upstream_error"
-            )
-            return self._record(response, self.config.model, started, TokenCounts())
 
         if upstream.status_code != 200:
             status = 429 if upstream.status_code == 429 else 502
             response = error_response(status, "upstream_http_error", "upstream_error")
-            return self._record(response, self.config.model, started, TokenCounts())
+            return self._record(
+                response, self.config.model, started, TokenCounts(), dispatch=dispatch
+            )
         try:
             completion = CompletionEnvelope.model_validate_json(
                 upstream.content,
@@ -426,12 +507,15 @@ class BridgeService:
                     self.config.model,
                     started,
                     TokenCounts(),
+                    dispatch=dispatch,
                 )
         except ValidationError:
             response = error_response(
                 502, "upstream_invalid_response", "upstream_error"
             )
-            return self._record(response, self.config.model, started, TokenCounts())
+            return self._record(
+                response, self.config.model, started, TokenCounts(), dispatch=dispatch
+            )
 
         synthesized = "id" not in provider_payload
         metadata_missing = synthesized or "created" not in provider_payload
@@ -461,11 +545,14 @@ class BridgeService:
             ),
             response_id_synthesized=synthesized,
             metadata_synthesized=metadata_missing,
+            dispatch=dispatch,
         )
 
 
 class BridgeServer(ThreadingHTTPServer):
     """Wait for active request threads before closing the injected HTTP client."""
+
+    request_queue_size = 256
 
     def __init__(self, address: tuple[str, int], service: BridgeService) -> None:
         self.service = service
@@ -590,7 +677,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         or arguments.config.with_suffix(".requests.jsonl")
     )
     service = BridgeService(
-        config, client=httpx.Client(), ledger=JsonlLedger(ledger_path)
+        config,
+        client=httpx.Client(
+            limits=httpx.Limits(
+                max_connections=(
+                    (1 + len(config.additional_api_keys))
+                    * config.credential_limits.max_inflight_per_key
+                ),
+                max_keepalive_connections=(
+                    (1 + len(config.additional_api_keys))
+                    * config.credential_limits.max_inflight_per_key
+                ),
+            )
+        ),
+        ledger=JsonlLedger(ledger_path),
     )
     try:
         with BridgeServer((arguments.host, arguments.port), service) as server:
