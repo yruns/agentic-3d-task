@@ -271,6 +271,12 @@ subtasks of scene `00823` episode 6, including seven successes. Exact
 raw/SQLite and complete-episode checks passed; canonical coverage remains
 68/278 and full coverage is incomplete.
 
+The `1520` observation, captured at 15:16:04, records **463/2,669** full-set
+IDs in 65 complete episodes (observed SR 70.19%, SPL 49.72%). It adds all ten
+subtasks of scene `00877` episode 6, including seven successes. Exact
+raw/SQLite and complete-episode checks passed; canonical coverage remains
+68/278 and full coverage is incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
