@@ -396,6 +396,20 @@ preserves the five new IDs, raw primary shard hashes, original metadata and
 the distinct launch/recovery revisions. The source workers continue, and final
 controller gates are untouched.
 
+At 08:00, the next immutable
+[full progress snapshot](assets/full2669_progress_20261005_0800/ingested_summary.json)
+contains **38/2,669 IDs in seven complete episodes**, with 24 successes,
+observed SR 63.1579% and SPL 42.0837%. Its new 21 IDs come from the next
+first-episode scene, two further split-4 episodes and the first saved split-5
+episode. A separate
+[canonical progress snapshot](assets/canonical278_progress_20261005_0800/ingested_summary.json)
+contains **12/278 IDs in two complete episodes**, with eight successes,
+observed SR 66.6667% and SPL 40.7949%. Both requested sets are unchanged and
+both summaries explicitly retain `complete=false`. Remote and local SQLite
+reconstruct both metrics independently; raw primary shards, exact IDs and
+hashes are archived. These are incomplete observations and remain separate
+from completed benchmark comparisons.
+
 ### SSH tunnel recovery
 
 At 06:01, the Mac-to-Linux SSH reverse tunnel disconnected after an operation

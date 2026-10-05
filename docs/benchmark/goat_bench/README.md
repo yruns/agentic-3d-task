@@ -28,6 +28,11 @@ The 07:42 [progress observation](assets/full2669_progress_20261005_0742/ingested
 records 17/2,669 subtasks in three complete episodes, observed SR 76.47% and SPL
 52.21%. It remains an incomplete observation of the full requested set.
 
+The 08:00 snapshots record **38/2,669** full-set IDs in seven complete episodes
+(observed SR 63.16%, SPL 42.08%) and **12/278** canonical IDs in two complete
+episodes (observed SR 66.67%, SPL 40.79%). Both remain incomplete; raw artifacts
+and independently verified SQLite records are archived in the setup record.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
