@@ -12,6 +12,8 @@ read -r scope_controller_launch_commit < "$scope_assets/manifests/lineage_contro
 exec 9>"$scope_assets/logs/full_controller.lock"
 flock -n 9 || { printf 'Another SCOPE controller owns the run\n' >&2; exit 2; }
 trap 'scope_exit=$?; printf "%s\n" "$scope_exit" > "$scope_assets/logs/full_run.exit"' EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 
 wait_for_exit() {
   local scope_status=$1 scope_session=$2

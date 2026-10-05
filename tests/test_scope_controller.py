@@ -8,9 +8,11 @@ import os
 import pickle
 import shlex
 import shutil
+import signal
 import sqlite3
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TypedDict
@@ -433,6 +435,59 @@ def test_lineage_helper_failure_is_not_swallowed(
     assert "Runtime lineage validation failed" in result.stderr
     assert (fixture.assets_root / "logs/full_run.exit").read_text().strip() != "0"
     _assert_no_worker_started(fixture)
+
+
+def test_sigterm_records_signal_exit_without_starting_workers(
+    controller_fixture: ControllerFixture,
+) -> None:
+    """Terminate only an owned controller while it waits for the public run."""
+    fixture = controller_fixture
+    (fixture.assets_root / "logs/public_episode.exit").unlink()
+    waiting = fixture.assets_root / "logs/controller_waiting"
+    fakebin = Path(fixture.environment["PATH"].split(os.pathsep)[0])
+    (fakebin / "tmux").write_text(
+        "#!/usr/bin/env bash\n"
+        f"printf '%s\\n' \"$*\" >> {shlex.quote(str(fixture.tmux_calls))}\n"
+        'if [[ "$1" == has-session ]]; then\n'
+        f"  printf 'waiting\\n' > {shlex.quote(str(waiting))}\n"
+        "  exit 0\n"
+        "fi\n"
+        "exit 91\n",
+        encoding="utf-8",
+    )
+    sleep = fakebin / "sleep"
+    sleep.write_text("#!/usr/bin/env bash\n/bin/sleep 0.05\n", encoding="utf-8")
+    sleep.chmod(0o755)
+    process = subprocess.Popen(
+        ["bash", str(fixture.controller)],
+        env=fixture.environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    try:
+        deadline = time.monotonic() + 5
+        while not waiting.is_file():
+            assert process.poll() is None, "Controller exited before reaching wait"
+            assert time.monotonic() < deadline, "Controller did not reach wait"
+            time.sleep(0.01)
+        process.send_signal(signal.SIGTERM)
+        _, stderr = process.communicate(timeout=5)
+        recorded_status = (
+            (fixture.assets_root / "logs/full_run.exit").read_text().strip()
+        )
+        assert process.returncode == 143, (
+            process.returncode,
+            recorded_status,
+            stderr[-2000:],
+        )
+        assert recorded_status == "143"
+        _assert_no_worker_started(fixture)
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.communicate(timeout=5)
 
 
 def test_observed_id_absent_from_frozen_lineage_fails_before_stage_ingest(

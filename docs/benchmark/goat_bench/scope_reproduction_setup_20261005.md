@@ -1520,6 +1520,15 @@ attributed a copied 676-row primary snapshot as exactly 670 original plus six
 visualization-fix rows. This smoke test did not rewrite running primary files.
 Controller deployment and its retained-worker verification are recorded next.
 
+The old controller was stopped deliberately to deploy attribution. Its TERM
+handler produced a zero status file despite the signal; this was a planned
+controller stop with incomplete coverage, not a successful evaluation.
+The corrected controller explicitly exits 143 on TERM and 130 on INT. An
+owned-process regression reproduced the old zero marker and verified the
+new process return code and status file were both 143, without starting a
+navigation worker. Target lint, formatting, strict typing and shell checks
+passed after this two-line signal-handler change.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
