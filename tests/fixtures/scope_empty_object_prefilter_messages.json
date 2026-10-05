@@ -1,0 +1,27 @@
+[
+  {
+    "role": "system",
+    "content": "You are an AI agent in a 3D indoor scene.\n"
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "Your goal is to answer questions about the scene through exploration.\nTo efficiently solve the problem, you should first rank objects in the scene based on their importance.\nThese are the rules for the task.\n1. Read through the whole object list.\n2. Rank objects in the list based on how well they can help your exploration given the question.\n3. Reprint the name of all objects that may help your exploration given the question. 4. Do not print any object not included in the list or include any additional information in your response.\n"
+      },
+      {
+        "type": "text",
+        "text": "Here is an example of selecting helpful objects:\nQuestion: What can I use to watch my favorite shows and movies?\nFollowing is a list of objects that you can choose, each object one line\npainting\nspeaker\nbox\ncabinet\nlamp\ntv\nbook rack\nsofa\noven\nbed\ncurtain\nAnswer: tv\nspeaker\nsofa\nbed\n"
+      },
+      {
+        "type": "text",
+        "text": "Following is the concrete content of the task and you should retrieve helpful objects in order:\nQuestion: Can you find the decorative plant?\n"
+      },
+      {
+        "type": "text",
+        "text": "Following is a list of objects that you can choose, each object one line\nAnswer: "
+      }
+    ]
+  }
+]

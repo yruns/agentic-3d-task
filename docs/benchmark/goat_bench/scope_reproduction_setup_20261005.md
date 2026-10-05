@@ -402,6 +402,47 @@ merged into new results. The [recovery record](assets/scope_20261005/transport_r
 retains the original failure and exact revision. Older live workers retain their
 original clients; future launches use the new bootstrap.
 
+At 17:16:43, split-3 worker 1 exited after three HTTP 502 responses; a recovery
+at 17:20:59 also exited at 17:22:47. Both attempts retained the same 51 saved
+subtasks in six complete episodes. Their stdout, upstream logs, checkpoint
+copies and incomplete `00803-k1cupFYWXJ6` episode 2 directories are preserved
+under `failed_attempts/split3_worker1_20261005_171643/` and
+`failed_attempts/split3_worker1_20261005_172247/` on Linux. The second attempt
+reached navigation step 2 before terminating; neither saved that incomplete
+episode or merged log-only outcomes.
+
+The [bounded diagnostic](assets/scope_20261005/empty_class_prefilter_diagnostic_20261005.json)
+replays the original pure-text prefilter with an empty object list and all
+released sampling parameters. All four provider requests returned HTTP 200;
+two contained an empty assistant string, which the original bridge rejected
+as an invalid response. The compatibility fix recognizes only the exact
+released empty-list prompt and accepts an empty string or whitespace only
+when `finish_reason=stop`. It preserves the provider response and still calls
+the model; the released parser returns the same empty class selection.
+Missing content, incomplete replies and empty answers for other prompts remain
+fatal. New clients opt in with `X-SCOPE-Empty-Prefilter: 1`; legacy clients
+retain the earlier boundary. Deployment uses a separate bridge and tunnel,
+so active workers' existing connections are retained.
+
+At 17:28:45, split-1 worker 1 exited with `KeyError: 111` in the red goal-marker
+drawing loop of `tsdf_planner.py`. Its 44 saved subtasks in five complete
+episodes remain intact; `00815-h1zeeAwLh9Z` episode 0 was incomplete and must
+replay all five original subtasks. The
+[two-line runtime patch](assets/scope_20261005/stale_goal_visualization_20261005.patch)
+skips only plotting removed object IDs. The target cluster, cached target
+point, navigation and scoring code are retained. Original failure and three
+patched drawing cases were executed successfully, including an unchanged
+all-live case and preserved target cluster. The
+[verification record](assets/scope_20261005/stale_goal_visualization_patch_20261005.json)
+pins base runtime `46f1e1f78077219c30e35440540e4ef22995194c` and patched runtime
+`bfffc2be995a7223c8a0e9c86c18064dbe878838`; future launches record this patch
+explicitly while existing workers retain their original imported runtime.
+
+The compatibility change passed 75 transport/contract tests, 53 keyframe
+tests, targeted strict typing, lint and formatting, and the complete `src/`
+quality gate. Recovery is still pending until real requests and navigation
+are verified; these checks alone do not establish a completed evaluation.
+
 At 05:40, first-split worker 0 had persisted all seven subtasks of scene
 `00824-Dd4bFSTQ8gi`, episode 0. An immutable observation was ingested separately
 from the eventual canonical result: **7/278 IDs**, five successes, observed SR

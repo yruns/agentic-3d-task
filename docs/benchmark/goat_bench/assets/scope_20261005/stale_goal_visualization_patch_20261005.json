@@ -1,0 +1,17 @@
+{
+  "base_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "patched_runtime_commit": "bfffc2be995a7223c8a0e9c86c18064dbe878838",
+  "recorded_at_utc": "2026-10-05T09:46:36.124956+00:00",
+  "file": "src/tsdf_planner.py",
+  "original_sha256": "e30ded871525cbfdf6a3bb6f9311fbb307535b3a587acb60b91d0dead5cf2f96",
+  "patched_sha256": "e4b5588df56ee1dfc6bb3818d61008f1876770877c514a9c77aad46880520eb1",
+  "scope": "Skip only missing red goal markers inside save_visualization; retain target cluster, cached target point and all navigation/scoring code.",
+  "verification": {
+    "original_keyerror_111_reproduced": true,
+    "stale_and_live_cluster_plots_only_live_marker": true,
+    "all_stale_cluster_plots_no_markers": true,
+    "all_live_cluster_matches_original": true,
+    "target_cluster_preserved": true,
+    "upstream_worktree_clean": true
+  }
+}

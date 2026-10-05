@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+import runpy
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -44,7 +45,13 @@ def _execute_runner_with_mock_transport(
 
     class MockTransportClient(OpenAI):
         def __init__(
-            self, *, base_url: str, api_key: str, max_retries: int, timeout: float
+            self,
+            *,
+            base_url: str,
+            api_key: str,
+            max_retries: int,
+            timeout: float,
+            default_headers: Mapping[str, str],
         ) -> None:
             configured.append((max_retries, timeout))
             super().__init__(
@@ -53,6 +60,7 @@ def _execute_runner_with_mock_transport(
                 max_retries=max_retries,
                 timeout=timeout,
                 http_client=httpx.Client(transport=httpx.MockTransport(respond)),
+                default_headers=default_headers,
             )
 
     modules = {
@@ -62,6 +70,7 @@ def _execute_runner_with_mock_transport(
                 api_key="test-token",
                 max_retries=0,
                 timeout=1.0,
+                default_headers={},
             )
         )
         for name in (
@@ -103,7 +112,7 @@ def _execute_runner_with_mock_transport(
     monkeypatch.setattr(sys, "argv", list(sys.argv))
     monkeypatch.setattr(runner, "OpenAI", MockTransportClient)
     monkeypatch.setattr(runner, "importlib", _ApiImports(modules))
-    monkeypatch.setattr(runner.runpy, "run_path", execute)
+    monkeypatch.setattr(runpy, "run_path", execute)
     settings = RunSettings(upstream_root, cfg_file, bridge_config, 1, 0.0, 1.0)
     runner.run_upstream(settings)
     assert configured[-1] == (2, 240.0)

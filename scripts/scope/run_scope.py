@@ -10,12 +10,13 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import logging
 import os
 import runpy
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final, Protocol, cast
+from typing import TYPE_CHECKING, Final, Protocol, cast
 
 import openai
 from openai import OpenAI
@@ -25,6 +26,24 @@ from openai.types.chat.completion_create_params import (
 )
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, SecretStr
 from typing_extensions import Unpack
+
+if TYPE_CHECKING:
+    from scripts.scope.prefilter_response_contract import (
+        EMPTY_PREFILTER_HEADER,
+        allows_empty_object_prefilter_response,
+    )
+elif __package__:
+    from .prefilter_response_contract import (
+        EMPTY_PREFILTER_HEADER,
+        allows_empty_object_prefilter_response,
+    )
+else:
+    from prefilter_response_contract import (
+        EMPTY_PREFILTER_HEADER,
+        allows_empty_object_prefilter_response,
+    )
+
+logger = logging.getLogger(__name__)
 
 _UPSTREAM_API_MODULES = (
     "src.eval_utils_gpt_goatbench",
@@ -73,12 +92,21 @@ class FailClosedCompletions:
             raise SystemExit(f"SCOPE model transport failed: {description}") from None
         if completion.model != self.expected_model:
             raise SystemExit("SCOPE model transport returned an unexpected model")
-        if (
-            not completion.choices
-            or not completion.choices[0].message.content
-            or not completion.choices[0].message.content.strip()
-        ):
+        if not completion.choices:
             raise SystemExit("SCOPE model transport returned empty assistant content")
+        choice = completion.choices[0]
+        content = choice.message.content
+        if content is None:
+            raise SystemExit("SCOPE model transport returned empty assistant content")
+        if not content.strip():
+            if not (
+                choice.finish_reason == "stop"
+                and allows_empty_object_prefilter_response(parameters.get("messages"))
+            ):
+                raise SystemExit(
+                    "SCOPE model transport returned empty assistant content"
+                )
+            logger.info("Accepted empty answer for the original empty object prefilter")
         return completion
 
 
@@ -151,6 +179,7 @@ def run_upstream(settings: RunSettings) -> None:
         api_key=connection.bridge_token.get_secret_value(),
         max_retries=_MODEL_TRANSPORT_MAX_RETRIES,
         timeout=_MODEL_TRANSPORT_TIMEOUT_SECONDS,
+        default_headers={EMPTY_PREFILTER_HEADER: "1"},
     ) as client:
         injected = ScopeClient(
             ChatEndpoint(

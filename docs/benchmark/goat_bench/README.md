@@ -353,6 +353,12 @@ subtasks of scene `00861` episode 4, including five successes. Exact
 raw/SQLite and complete-episode checks passed; canonical coverage remains
 85/278 and full coverage is incomplete.
 
+At 17:16 and 17:28, two workers exited with an empty-class prefilter response
+rejection and a stale-ID visualization error. Both fixes and verification
+boundaries are documented in the [setup record](scope_reproduction_setup_20261005.md).
+Recovery preserves complete checkpoints and replays only incomplete episodes;
+the evaluation remains incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

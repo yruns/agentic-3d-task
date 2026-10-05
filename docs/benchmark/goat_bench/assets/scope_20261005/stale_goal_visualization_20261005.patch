@@ -1,0 +1,13 @@
+diff --git a/src/tsdf_planner.py b/src/tsdf_planner.py
+index f8af393..b198f0a 100644
+--- a/src/tsdf_planner.py
++++ b/src/tsdf_planner.py
+@@ -811,6 +811,8 @@ class TSDFPlanner(TSDFPlannerBase):
+ 
+             if type(self.max_point) == SnapShot:
+                 for obj_id in self.max_point.cluster:
++                    if obj_id not in objects:
++                        continue
+                     obj_vox = self.habitat2voxel(objects[obj_id]["bbox"].center)
+                     ax1.scatter(obj_vox[1], obj_vox[0], color="r", s=30)
+ 

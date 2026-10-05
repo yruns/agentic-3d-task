@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
-from typing import Annotated, Literal, Protocol
+from typing import TYPE_CHECKING, Annotated, Literal, Protocol
 from uuid import uuid4
 
 import httpx
@@ -31,8 +31,26 @@ from pydantic import (
     SecretStr,
     TypeAdapter,
     ValidationError,
+    ValidationInfo,
     field_validator,
+    model_validator,
 )
+
+if TYPE_CHECKING:
+    from scripts.scope.prefilter_response_contract import (
+        EMPTY_PREFILTER_HEADER,
+        allows_empty_object_prefilter_response,
+    )
+elif __package__:
+    from .prefilter_response_contract import (
+        EMPTY_PREFILTER_HEADER,
+        allows_empty_object_prefilter_response,
+    )
+else:
+    from prefilter_response_contract import (
+        EMPTY_PREFILTER_HEADER,
+        allows_empty_object_prefilter_response,
+    )
 
 MAX_REQUEST_BYTES = 16 * 1024 * 1024
 SOURCE_MODEL = "gpt-4o-2024-11-20"
@@ -180,16 +198,28 @@ class ProviderUsage(TokenCounts):
         )
 
 
+@dataclass(frozen=True)
+class CompletionValidationContext:
+    """Permit an empty set only when the original candidate list is empty."""
+
+    allows_empty_object_prefilter: bool
+
+
 class CompletionMessage(BaseModel):
     model_config = ConfigDict(extra="allow", strict=True)
     role: Literal["assistant"]
-    content: str = Field(min_length=1)
+    content: str
 
     @field_validator("content")
     @classmethod
-    def validate_content(cls, content: str) -> str:
+    def validate_content(cls, content: str, info: ValidationInfo) -> str:
         if not content.strip():
-            raise ValueError("completion_content_empty")
+            context = info.context
+            if not (
+                isinstance(context, CompletionValidationContext)
+                and context.allows_empty_object_prefilter
+            ):
+                raise ValueError("completion_content_empty")
         return content
 
 
@@ -198,6 +228,12 @@ class CompletionChoice(BaseModel):
     index: int | None = Field(default=None, ge=0)
     message: CompletionMessage
     finish_reason: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_empty_answer_finished(self) -> CompletionChoice:
+        if not self.message.content.strip() and self.finish_reason != "stop":
+            raise ValueError("empty_prefilter_response_not_finished")
+        return self
 
 
 class CompletionEnvelope(BaseModel):
@@ -338,7 +374,12 @@ class BridgeService:
             return error_response(500, "ledger_write_failed", "bridge_error")
         return response
 
-    def forward(self, request: ChatCompletionRequest) -> BridgeResponse:
+    def forward(
+        self,
+        request: ChatCompletionRequest,
+        *,
+        supports_empty_object_prefilter: bool = False,
+    ) -> BridgeResponse:
         started = time.perf_counter()
         request_id = uuid4().hex
         payload = request.model_dump(mode="json", exclude_unset=True, exclude_none=True)
@@ -369,7 +410,13 @@ class BridgeService:
             response = error_response(status, "upstream_http_error", "upstream_error")
             return self._record(response, self.config.model, started, TokenCounts())
         try:
-            completion = CompletionEnvelope.model_validate_json(upstream.content)
+            completion = CompletionEnvelope.model_validate_json(
+                upstream.content,
+                context=CompletionValidationContext(
+                    supports_empty_object_prefilter
+                    and allows_empty_object_prefilter_response(payload["messages"])
+                ),
+            )
             provider_payload = TypeAdapter(dict[str, JsonValue]).validate_json(
                 upstream.content
             )
@@ -500,7 +547,14 @@ class BridgeRequestHandler(BaseHTTPRequestHandler):
         except ValidationError:
             self._fail(400, "request_invalid")
             return
-        self._send(self._service().forward(request))
+        self._send(
+            self._service().forward(
+                request,
+                supports_empty_object_prefilter=(
+                    self.headers.get(EMPTY_PREFILTER_HEADER) == "1"
+                ),
+            )
+        )
 
 
 def load_config(path: Path) -> BridgeConfig:
