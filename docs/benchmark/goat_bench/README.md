@@ -165,6 +165,12 @@ IDs in 42 complete episodes (observed SR 66.67%, SPL 46.35%). It adds scene
 (nine subtasks, six successes). Exact raw/SQLite and complete-episode checks
 passed; canonical coverage remains 48/278 and full coverage is incomplete.
 
+The `1250` observation, captured at 12:38:33, records **292/2,669** full-set
+IDs in 43 complete episodes (observed SR 67.12%, SPL 47.20%). It adds all ten
+subtasks of scene `00808` episode 5, including eight successes. Exact raw/SQLite
+and complete-episode checks passed; canonical coverage remains 48/278 and
+full coverage is incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
