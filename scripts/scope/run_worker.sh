@@ -34,7 +34,7 @@ export HF_HUB_CACHE=/home/ysh/Datasets/SCOPE/weights/huggingface/hub
 export HF_HUB_OFFLINE=1
 export NO_PROXY=127.0.0.1,localhost
 export no_proxy=$NO_PROXY
-curl --noproxy '*' --fail --silent http://127.0.0.1:8899/health
+curl --noproxy '*' --fail --silent http://127.0.0.1:8898/health
 cd /home/ysh/codecase/SCOPE-repro/SCOPE
 [[ -z "$(git status --porcelain)" ]] || exit 2
 python /home/ysh/Datasets/SCOPE/scripts/run_scope.py \
