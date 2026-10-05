@@ -37,6 +37,10 @@ At 08:21, the two frozen split-6 workers started early on GPUs 3 and 4 after
 exact-ID, configuration and resource checks. Ten workers are now active;
 the same controller will reuse these stages.
 
+At 08:34, split 7 also started early after the same checks. Twelve workers now
+process frozen splits 1, 3, 4, 5, 6 and 7, with two processes per healthy GPU;
+future dispatch must wait for a validated slot to be released.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

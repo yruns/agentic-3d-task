@@ -310,6 +310,24 @@ workers and the controller remained live. After startup GPUs 3 and 4 retained
 See the [split-6 launch record](assets/scope_20261005/early_split6_workers_20261005.json)
 for exact commits, PIDs and preflight evidence.
 
+At 08:34:55, split 7 workers started early on GPUs 5 and 6 alongside split 4.
+Their disjoint 134- and 142-ID sets match the frozen data, and their configs
+retain all baseline settings except the isolated output name. Both workers
+rendered real observations and received potential-score responses. At 08:38,
+all twelve navigation workers and the controller remained live; GPUs 5 and 6
+retained 6,674 and 6,061 MiB free. All 3,539 completed API calls since recovery
+had HTTP 200 status. The [split-7 launch record](assets/scope_20261005/early_split7_workers_20261005.json)
+captures source, exact PIDs and resource evidence. This starts the remaining
+independent middle episodes early without changing the canonical gate.
+
+Further dispatch must retain at most two active workers per healthy GPU. For
+GPUs 0 and 2, reserve one slot for the controller's split-1-to-split-2 sequence:
+an early split-8 worker may use the other slot only after the corresponding
+split-5 worker has completed and passed its exact-ID check. On GPUs 3/4 and
+5/6, split 9/10 can use a released slot from split 3/6 or 4/7; the controller
+reuses those recorded stages. GPU 1 remains excluded. Check live processes,
+terminal status and current free VRAM before each dispatch.
+
 ## A-EQA release and asset boundary
 
 The paper also reports A-EQA, but the official repository's A-EQA instructions

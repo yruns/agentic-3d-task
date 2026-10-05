@@ -1,0 +1,58 @@
+{
+  "launch_time": "2026-10-05T08:34:55+08:00",
+  "head_commit_at_launch": "154d11e55a47ca6d67dad8fe0e214847477bd2bb",
+  "upstream_runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "bootstrap_revision": "08fdeba4c8529e7e01ce1e01f88b6e558e1e652f",
+  "frozen_plan": "/home/ysh/Datasets/SCOPE/manifests/storage_plan_parallel_v2.json",
+  "workers": [
+    {
+      "split": 7,
+      "worker": 0,
+      "physical_gpu": 5,
+      "pid": 2746673,
+      "expected_subtasks": 134,
+      "tmux": "scope-s7-w0-20261005",
+      "peer_pid": 2706521
+    },
+    {
+      "split": 7,
+      "worker": 1,
+      "physical_gpu": 6,
+      "pid": 2746675,
+      "expected_subtasks": 142,
+      "tmux": "scope-s7-w1-20261005",
+      "peer_pid": 2706527
+    }
+  ],
+  "preflight": {
+    "exact_frozen_ids_verified": true,
+    "worker_ids_disjoint": true,
+    "total_expected_subtasks": 276,
+    "configs_byte_identical_to_baseline_except_exp_name": true,
+    "actual_output_paths_match_isolated_plan_dirs": true,
+    "project_and_upstream_clean": true,
+    "bridge_health_ok": true,
+    "gpu5_used_mib": 8750,
+    "gpu5_free_mib": 15334,
+    "gpu6_used_mib": 8908,
+    "gpu6_free_mib": 15176
+  },
+  "post_launch": {
+    "observed_at": "2026-10-05T08:38:09+08:00",
+    "all_ten_previous_workers_and_controller_live": true,
+    "both_new_workers_live": true,
+    "real_rendering_and_potential_requests_logged": true,
+    "gpu5_used_mib": 17410,
+    "gpu5_free_mib": 6674,
+    "gpu6_used_mib": 18023,
+    "gpu6_free_mib": 6061,
+    "live_navigation_workers": 12,
+    "new_terminal_status_files": [],
+    "completed_api_calls_since_recovery": 3539,
+    "api_status_counts": {
+      "200": 3539
+    }
+  },
+  "concurrency": 12,
+  "notes": "Two isolated frozen split7 stages were started early alongside split4; source, model, prompts, task IDs, sensors, memory resets, seed and navigation budgets remain fixed. Existing controller reuses these workers. Keep at most two active workers per healthy GPU; future split8 on GPU0/2 needs the corresponding split5 worker complete so the controller can retain its reserved split1-to-split2 slot. Current VRAM observations do not bound every future scene peak. Model usage remains interleaved full-run only."
+}
