@@ -87,6 +87,13 @@ Both add the same complete first episode of scene `00839`, with five successes.
 All raw/SQLite and frozen-ID checks passed; both requested selections remain
 incomplete.
 
+The `1100` snapshots, captured at 11:01:20, record **164/2,669** full-set IDs
+in 26 complete episodes (observed SR 64.63%, SPL 45.10%) and **39/278**
+canonical IDs in six complete episodes (observed SR 76.92%, SPL 52.81%).
+Both first-split workers have now saved an episode. The full observation also
+contains the first split-6 and split-7 checkpoints; their launch provenance
+is included. Both requested selections remain incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

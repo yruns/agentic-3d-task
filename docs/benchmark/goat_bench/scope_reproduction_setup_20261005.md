@@ -564,6 +564,39 @@ The consistent database backup preserves all earlier table rows. Both keep
 their original expected sets and `complete=false`; per-qid usage remains
 `NULL`. These observed metrics do not represent completed fold results.
 
+The `1100` observations were captured at **11:01:20**. The
+[full snapshot](assets/full2669_progress_20261005_1100/ingested_summary.json)
+contains **164/2,669 IDs in 26 complete episodes**, with 106 successes,
+observed SR 64.6341% and SPL 45.0962%. Compared with `1020`, it adds:
+
+| Scene | Original episode | Subtasks | Successes | Worker |
+| --- | ---: | ---: | ---: | --- |
+| `00808-y9hTuugGdiq` | 2 | 8 | 4 | split 3 / worker 0 |
+| `00824-Dd4bFSTQ8gi` | 6 | 5 | 4 | split 7 / worker 0 |
+| `00876-mv2HUxq3B53` | 0 | 9 | 6 | split 1 / worker 1 |
+| `00876-mv2HUxq3B53` | 5 | 5 | 4 | split 6 / worker 1 |
+
+The [canonical snapshot](assets/canonical278_progress_20261005_1100/ingested_summary.json)
+was derived solely from the split-1 pairs in that immutable full snapshot.
+It contains **39/278 IDs in six complete episodes**, with 30 successes,
+observed SR 76.9231% and SPL 52.8084%. Its nine new IDs are the complete
+original first episode saved by worker 1. The canonical values exactly match
+the corresponding frozen subset of the full observation.
+
+Full description/image/object counts are 55/53/56, with observed SR
+45.4545/83.0189/66.0714% and SPL 29.1220/67.3947/39.6812%.
+Canonical counts are 11/15/13, with observed SR 72.7273/86.6667/69.2308%
+and SPL 47.3993/75.3330/31.3952%. The
+[full manifest](assets/full2669_progress_20261005_1100/run_manifest.json)
+also adds the split-6 and split-7 launch records and their actual head commits,
+`22927e8` and `154d11e`; both retain the same upstream runtime and recovery
+bootstrap. The [canonical manifest](assets/canonical278_progress_20261005_1100/run_manifest.json)
+retains only its contributing split-1 provenance. Independent checks verified
+raw/SQLite rows, metadata bytes, frozen IDs and explicit indices, complete
+observed episodes, and all grouped SQL metrics. The consistent database backup
+preserves all prior rows; neither requested set is complete and per-qid usage
+remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
