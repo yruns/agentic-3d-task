@@ -387,6 +387,9 @@ transport probe and ordered frontier-scoring equivalence checks. The new bridge
 permits 192 in-flight HTTP requests across three 500-QPM credentials; independent
 frontier scores use up to 16 threads per worker. Worker adoption and actual
 throughput are recorded in the [setup record](scope_reproduction_setup_20261005.md).
+The first full rollout hit Linux-to-Mac upload timeouts. A lossless image cache
+and six independent compressed SSH links passed transport tests; benchmark
+recovery and sustained throughput require live verification.
 
 ## Completed local runs
 

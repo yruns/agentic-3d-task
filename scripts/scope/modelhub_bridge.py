@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Condition, Lock
-from typing import TYPE_CHECKING, Annotated, Literal, Protocol
+from typing import TYPE_CHECKING, Annotated, Literal, Protocol, Union
 from uuid import uuid4
 
 import httpx
@@ -37,18 +37,25 @@ from pydantic import (
 )
 
 if TYPE_CHECKING:
+    from scripts.scope.modelhub_image_cache import (
+        ImageCacheMissError,
+        ImageCacheStore,
+        is_cache_uri,
+    )
     from scripts.scope.modelhub_key_pool import CredentialLimits, CredentialPool
     from scripts.scope.prefilter_response_contract import (
         EMPTY_PREFILTER_HEADER,
         allows_empty_object_prefilter_response,
     )
 elif __package__:
+    from .modelhub_image_cache import ImageCacheMissError, ImageCacheStore, is_cache_uri
     from .modelhub_key_pool import CredentialLimits, CredentialPool
     from .prefilter_response_contract import (
         EMPTY_PREFILTER_HEADER,
         allows_empty_object_prefilter_response,
     )
 else:
+    from modelhub_image_cache import ImageCacheMissError, ImageCacheStore, is_cache_uri
     from modelhub_key_pool import CredentialLimits, CredentialPool
     from prefilter_response_contract import (
         EMPTY_PREFILTER_HEADER,
@@ -85,6 +92,7 @@ class BridgeConfig(BaseModel):
     thinking: ThinkingConfig = Field(default_factory=ThinkingConfig)
     ledger_path: Path | None = None
     timeout_seconds: float = Field(default=180.0, gt=0, le=600)
+    image_cache_dir: Path | None = None
 
     @field_validator("endpoint")
     @classmethod
@@ -128,6 +136,8 @@ class ImageReference(BaseModel):
     @field_validator("url")
     @classmethod
     def validate_url(cls, url: str) -> str:
+        if is_cache_uri(url):
+            return url
         if url.startswith("data:image/") and ";base64," in url:
             return url
         TypeAdapter(AnyHttpUrl).validate_python(url)
@@ -146,7 +156,9 @@ class ImageContent(BaseModel):
     image_url: ImageReference
 
 
-ContentPart = Annotated[TextContent | ImageContent, Field(discriminator="type")]
+ContentPart = Annotated[
+    Union[TextContent, ImageContent], Field(discriminator="type")
+]  # noqa: UP007 -- shared with Linux Python 3.9
 
 
 class ChatMessage(BaseModel):
@@ -362,12 +374,18 @@ class BridgeService:
     """Translate and forward one request; credentials remain inside this boundary."""
 
     def __init__(
-        self, config: BridgeConfig, *, client: httpx.Client, ledger: RecordSink
+        self,
+        config: BridgeConfig,
+        *,
+        client: httpx.Client,
+        ledger: RecordSink,
+        image_cache: ImageCacheStore | None = None,
     ) -> None:
         suppress_network_logs()
         self.config = config
         self._client = client
         self._ledger = ledger
+        self.image_cache = image_cache
         self._credentials = CredentialPool(
             (config.api_key, *config.additional_api_keys),
             config.credential_limits,
@@ -472,6 +490,23 @@ class BridgeService:
     ) -> BridgeResponse:
         started = time.perf_counter()
         request_id = uuid4().hex
+        try:
+            for message in request.messages:
+                if isinstance(message.content, str):
+                    continue
+                for part in message.content:
+                    if isinstance(part, ImageContent) and is_cache_uri(
+                        part.image_url.url
+                    ):
+                        if self.image_cache is None:
+                            return error_response(
+                                409, "image_cache_miss", "bridge_error"
+                            )
+                        part.image_url.url = self.image_cache.get(part.image_url.url)
+        except ImageCacheMissError:
+            return error_response(409, "image_cache_miss", "bridge_error")
+        except (OSError, ValueError):
+            return error_response(502, "image_cache_read_failed", "bridge_error")
         payload = request.model_dump(mode="json", exclude_unset=True, exclude_none=True)
         payload["model"] = self.config.model
         payload["stream"] = False
@@ -643,6 +678,57 @@ class BridgeRequestHandler(BaseHTTPRequestHandler):
             )
         )
 
+    def do_PUT(self) -> None:
+        prefix = "/v1/images/"
+        if not self.path.startswith(prefix) or not is_cache_uri(
+            "scope-cache://" + self.path.removeprefix(prefix)
+        ):
+            self._fail(404, "route_not_found")
+            return
+        authorization = self.headers.get("Authorization", "")
+        expected = "Bearer " + self._service().config.bridge_token.get_secret_value()
+        if not hmac.compare_digest(authorization.encode(), expected.encode()):
+            self._fail(401, "bridge_authentication_failed", "authentication_error")
+            return
+        cache = self._service().image_cache
+        if cache is None:
+            self._fail(503, "image_cache_disabled", "bridge_error")
+            return
+        lengths = self.headers.get_all("Content-Length", [])
+        if len(lengths) != 1 or self.headers.get("Transfer-Encoding") is not None:
+            self._fail(400, "image_upload_length_invalid")
+            return
+        try:
+            length = int(lengths[0])
+        except ValueError:
+            self._fail(400, "image_upload_length_invalid")
+            return
+        if not 0 < length <= MAX_REQUEST_BYTES:
+            self._fail(413, "image_upload_too_large")
+            return
+        self.connection.settimeout(60.0)
+        try:
+            body = self.rfile.read(length)
+            if len(body) != length:
+                self._fail(400, "image_upload_incomplete")
+                return
+            uri = "scope-cache://" + self.path.removeprefix(prefix)
+            cache.put(uri, body.decode("utf-8"))
+        except TimeoutError:
+            self._fail(408, "image_upload_timeout")
+            return
+        except (UnicodeDecodeError, ValueError):
+            self._fail(400, "image_upload_invalid")
+            return
+        except OSError:
+            self._fail(500, "image_cache_write_failed", "bridge_error")
+            return
+        self._send(
+            BridgeResponse(
+                200, json.dumps({"uri": uri, "stored_bytes": len(body)}).encode()
+            )
+        )
+
 
 def load_config(path: Path) -> BridgeConfig:
     """Read a private configuration; callers sanitize validation diagnostics."""
@@ -691,6 +777,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         ),
         ledger=JsonlLedger(ledger_path),
+        image_cache=(
+            ImageCacheStore(config.image_cache_dir) if config.image_cache_dir else None
+        ),
     )
     try:
         with BridgeServer((arguments.host, arguments.port), service) as server:

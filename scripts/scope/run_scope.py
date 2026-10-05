@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, Protocol, cast
 
+import httpx
 import openai
 from openai import OpenAI
 from openai.types.chat import ChatCompletion
@@ -28,16 +29,19 @@ from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, SecretStr
 from typing_extensions import Unpack
 
 if TYPE_CHECKING:
+    from scripts.scope.image_cache_transport import ImageCachingTransport
     from scripts.scope.prefilter_response_contract import (
         EMPTY_PREFILTER_HEADER,
         allows_empty_object_prefilter_response,
     )
 elif __package__:
+    from .image_cache_transport import ImageCachingTransport
     from .prefilter_response_contract import (
         EMPTY_PREFILTER_HEADER,
         allows_empty_object_prefilter_response,
     )
 else:
+    from image_cache_transport import ImageCachingTransport
     from prefilter_response_contract import (
         EMPTY_PREFILTER_HEADER,
         allows_empty_object_prefilter_response,
@@ -180,6 +184,11 @@ def run_upstream(settings: RunSettings) -> None:
         max_retries=_MODEL_TRANSPORT_MAX_RETRIES,
         timeout=_MODEL_TRANSPORT_TIMEOUT_SECONDS,
         default_headers={EMPTY_PREFILTER_HEADER: "1"},
+        http_client=httpx.Client(
+            transport=ImageCachingTransport(httpx.HTTPTransport()),
+            timeout=_MODEL_TRANSPORT_TIMEOUT_SECONDS,
+            trust_env=False,
+        ),
     ) as client:
         injected = ScopeClient(
             ChatEndpoint(

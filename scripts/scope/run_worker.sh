@@ -36,11 +36,19 @@ export HF_HUB_CACHE=/home/ysh/Datasets/SCOPE/weights/huggingface/hub
 export HF_HUB_OFFLINE=1
 export NO_PROXY=127.0.0.1,localhost
 export no_proxy=$NO_PROXY
-curl --noproxy '*' --fail --silent http://127.0.0.1:8897/health
+case "$scope_gpu" in
+  0) scope_bridge_port=8870 ;;
+  2) scope_bridge_port=8871 ;;
+  3) scope_bridge_port=8872 ;;
+  4) scope_bridge_port=8873 ;;
+  5) scope_bridge_port=8874 ;;
+  6) scope_bridge_port=8875 ;;
+esac
+curl --noproxy '*' --fail --silent "http://127.0.0.1:${scope_bridge_port}/health"
 cd /home/ysh/codecase/SCOPE-repro/SCOPE
 [[ -z "$(git status --porcelain)" ]] || exit 2
 python /home/ysh/Datasets/SCOPE/scripts/run_scope.py \
   --upstream-root /home/ysh/codecase/SCOPE-repro/SCOPE \
   --cfg-file "$scope_cfg" \
-  --bridge-config /home/ysh/Datasets/SCOPE/private/bridge_connection_pool.json \
+  --bridge-config "/home/ysh/Datasets/SCOPE/private/bridge_connection_cache_gpu${scope_gpu}.json" \
   --split "$scope_split" --start-ratio "$scope_start" --end-ratio "$scope_end"

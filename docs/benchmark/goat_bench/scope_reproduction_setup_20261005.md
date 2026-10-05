@@ -1439,6 +1439,33 @@ migration launch records will identify actual contributing code versions.
 Preparation and transport probes alone do not establish that an evaluation
 worker has adopted the new parallel runtime.
 
+The parallel pilot resumed at 19:10:56 with 67 saved IDs unchanged and actual
+overlapping scoring calls on all three credential slots. All twelve workers
+then adopted the new runtime. That rollout exposed a transport bottleneck:
+all twelve ultimately exited with `APITimeoutError`; the Mac bridge's completed
+168 model calls were HTTP 200, while its elapsed time excluded Linux uploads.
+No unfinished-episode log entries were merged into primary metrics.
+
+An authenticated transport-only test sent 3 MiB invalid JSON, which the bridge
+rejects before a model call: one upload took 31.81 seconds, and all twelve
+simultaneous uploads hit a 60-second timeout. Two independent compressed SSH
+links reduced a single transfer to 14.37 seconds but did not pass the twelve-way
+burst. The new transport caches each complete image data URI by SHA256 and
+uploads it once, then sends compact references for concurrent completions.
+The Mac bridge resolves those references to exactly the original data URI
+before calling ModelHub. It changes neither pixels nor prompts. Upload
+concurrency is bounded separately from model inference.
+
+Six independent compressed SSH links, one per healthy GPU, now share one
+Mac image-cache/credential service on port 8889. Six concurrent 3 MiB cache
+uploads all returned verified acknowledgements in 0.51–6.27 seconds, without
+invoking a model. The integration and regression gate passed 138 tests; typed,
+lint and formatting checks passed. Linux Python 3.9 required the lightweight
+`eval-type-backport==0.2.2` package for shared Pydantic request annotations;
+the runtime union alias uses `typing.Union` for Python 3.9 compatibility.
+Cache-capable worker adoption and sustained benchmark throughput still need
+live verification before claiming recovery or speedup.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has

@@ -52,6 +52,7 @@ def _execute_runner_with_mock_transport(
             max_retries: int,
             timeout: float,
             default_headers: Mapping[str, str],
+            http_client: httpx.Client,
         ) -> None:
             configured.append((max_retries, timeout))
             super().__init__(
@@ -59,7 +60,7 @@ def _execute_runner_with_mock_transport(
                 api_key=api_key,
                 max_retries=max_retries,
                 timeout=timeout,
-                http_client=httpx.Client(transport=httpx.MockTransport(respond)),
+                http_client=http_client,
                 default_headers=default_headers,
             )
 
@@ -71,6 +72,7 @@ def _execute_runner_with_mock_transport(
                 max_retries=0,
                 timeout=1.0,
                 default_headers={},
+                http_client=httpx.Client(transport=httpx.MockTransport(respond)),
             )
         )
         for name in (
@@ -111,6 +113,11 @@ def _execute_runner_with_mock_transport(
     monkeypatch.setattr(sys, "path", list(sys.path))
     monkeypatch.setattr(sys, "argv", list(sys.argv))
     monkeypatch.setattr(runner, "OpenAI", MockTransportClient)
+
+    def mock_http_transport() -> httpx.MockTransport:
+        return httpx.MockTransport(respond)
+
+    monkeypatch.setattr(httpx, "HTTPTransport", mock_http_transport)
     monkeypatch.setattr(runner, "importlib", _ApiImports(modules))
     monkeypatch.setattr(runpy, "run_path", execute)
     settings = RunSettings(upstream_root, cfg_file, bridge_config, 1, 0.0, 1.0)
