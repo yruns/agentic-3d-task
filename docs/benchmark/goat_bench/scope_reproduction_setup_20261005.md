@@ -1144,6 +1144,21 @@ time match the same full snapshot, and its rows equal the full/canonical-ID
 intersection. All earlier database rows are preserved. Both selections remain
 incomplete, and absent per-qid usage remains `NULL`.
 
+The [next full observation](assets/full2669_progress_20261005_1540/ingested_summary.json),
+captured at **15:39:26** under archive tag `1540`, contains **495/2,669 IDs
+in 69 complete episodes**, with 345 successes, observed SR 69.6970% and SPL
+49.0431%. It adds all ten original subtasks of `00800-TEEsavR23oF`
+episode 6, including two successes. Description/image/object counts are
+160/161/174, with observed SR 54.3750/80.7453/73.5632% and SPL
+38.2987/63.6635/45.3949%. The
+[manifest](assets/full2669_progress_20261005_1540/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
