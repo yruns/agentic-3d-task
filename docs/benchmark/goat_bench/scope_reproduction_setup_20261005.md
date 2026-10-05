@@ -858,6 +858,30 @@ and grouped metrics. All earlier database rows are preserved. Canonical
 coverage remains 48/278; both requested selections are incomplete, and
 absent per-qid usage remains `NULL`.
 
+The `1310` [full snapshot](assets/full2669_progress_20261005_1310/ingested_summary.json)
+and [canonical snapshot](assets/canonical278_progress_20261005_1310/ingested_summary.json),
+captured at **13:00:22**, contain **324/2,669 IDs in 47 complete episodes**
+and **55/278 IDs in eight complete episodes**. Full has 222 successes,
+observed SR 68.5185% and SPL 49.2147%; canonical has 41 successes,
+observed SR 74.5455% and SPL 53.5509%. Both add all seven original subtasks
+of `00853-5cdEh9F2hJL` episode 0, with three successes. Full
+description/image/object counts are 107/109/108, with observed SR
+54.2056/78.8991/72.2222% and SPL 38.5031/64.3485/44.5531%. Canonical
+counts are 15/23/17, with observed SR 73.3333/82.6087/64.7059% and SPL
+48.3846/74.0182/30.4182%.
+
+Canonical primary files and metadata are copied only from the immutable full
+snapshot's split1 artifacts and share its capture time. The
+[canonical manifest](assets/canonical278_progress_20261005_1310/run_manifest.json)
+retains only split1's original launch and recovery provenance; the
+[full manifest](assets/full2669_progress_20261005_1310/run_manifest.json)
+retains all contributing stages. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. The second, uniquely named database backup includes both
+observations and preserves all earlier rows; the original full-only backup
+is retained. Both requested selections remain incomplete, and absent
+per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has

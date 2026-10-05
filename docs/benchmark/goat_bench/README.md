@@ -189,6 +189,13 @@ subtasks of scene `00839` episode 4, including nine successes. Exact raw/SQLite
 and complete-episode checks passed; canonical coverage remains 48/278 and
 full coverage is incomplete.
 
+The `1310` observations, captured at 13:00:22, record **324/2,669** full-set
+IDs in 47 complete episodes (observed SR 68.52%, SPL 49.21%) and **55/278**
+canonical IDs in eight complete episodes (observed SR 74.55%, SPL 53.55%).
+Both add scene `00853` episode 0, with seven subtasks and three successes.
+Canonical artifacts are copied from the same immutable full snapshot;
+both requested selections remain incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
