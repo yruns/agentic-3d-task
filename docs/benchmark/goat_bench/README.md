@@ -203,6 +203,13 @@ Both add scene `00829` episode 0 (seven subtasks, five successes); full also
 adds scene `00823` episode 2 (five subtasks, three successes). Both requested
 selections remain incomplete.
 
+The `1320` observation, captured at 13:17:55, records **359/2,669** full-set
+IDs in 52 complete episodes (observed SR 69.64%, SPL 49.50%). It adds scene
+`00810` episode 6 (nine subtasks, nine successes), scene `00815` episode 3
+(nine subtasks, six successes) and scene `00832` episode 4 (five subtasks,
+five successes). Canonical coverage remains 62/278; both requested
+selections remain incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
