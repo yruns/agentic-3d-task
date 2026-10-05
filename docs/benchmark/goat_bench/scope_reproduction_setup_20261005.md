@@ -1250,6 +1250,21 @@ verified. All earlier database rows are preserved. Canonical coverage
 remains 85/278; both requested selections are incomplete, and absent
 per-qid usage remains `NULL`.
 
+The [next full observation](assets/full2669_progress_20261005_1645/ingested_summary.json),
+captured at **16:40:58** under archive tag `1645`, contains **562/2,669 IDs
+in 79 complete episodes**, with 394 successes, observed SR 70.1068% and SPL
+50.0987%. It adds all eight original subtasks of `00839-zt1RVoi7PcG`
+episode 6, all successful. Description/image/object counts are 179/183/200,
+with observed SR 56.4246/81.4208/72.0000% and SPL
+40.9965/64.6727/44.9099%. The
+[manifest](assets/full2669_progress_20261005_1645/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
