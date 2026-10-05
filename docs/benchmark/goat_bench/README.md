@@ -196,6 +196,13 @@ Both add scene `00853` episode 0, with seven subtasks and three successes.
 Canonical artifacts are copied from the same immutable full snapshot;
 both requested selections remain incomplete.
 
+The `1315` observations, captured at 13:07:10, record **336/2,669** full-set
+IDs in 49 complete episodes (observed SR 68.45%, SPL 48.73%) and **62/278**
+canonical IDs in nine complete episodes (observed SR 74.19%, SPL 51.57%).
+Both add scene `00829` episode 0 (seven subtasks, five successes); full also
+adds scene `00823` episode 2 (five subtasks, three successes). Both requested
+selections remain incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

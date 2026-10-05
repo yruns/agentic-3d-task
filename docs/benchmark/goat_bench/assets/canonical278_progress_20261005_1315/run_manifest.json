@@ -1,0 +1,99 @@
+{
+  "observed_at": "2026-10-05T13:07:10+08:00",
+  "run_id": "REPRO_20261005_SCOPE_Gemini38Flash_canonical278_progress_1315",
+  "requested_subtasks": 278,
+  "observed_subtasks": 62,
+  "complete_episodes": 9,
+  "complete": false,
+  "successes": 46,
+  "sr": 74.19354838709677,
+  "spl": 51.57047188537254,
+  "saved_episodes": [
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "0",
+      "n": 9
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "0",
+      "n": 8
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00853-5cdEh9F2hJL",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "0",
+      "n": 9
+    }
+  ],
+  "upstream_runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "initial_launch_heads": [
+    "89dd5337df953374c26b0ebcb67b3bb8663b9ad8"
+  ],
+  "recovery_head": "59bc0d30e40f326544fb2524956754bd094e08fb",
+  "initial_bootstrap_revision": "d5c24a5e676d8729fd1f6d0f890d5bf5760b5827",
+  "recovery_bootstrap_revision": "08fdeba4c8529e7e01ce1e01f88b6e558e1e652f",
+  "launch_record_paths": [
+    "../scope_20261005/controller_launch_20261005.json",
+    "../scope_20261005/network_recovery_20261005.json"
+  ],
+  "input_sha256": {
+    "expected_subtask_ids.json": "ae9ff04339d209b43881cb7a7948418912e81e53986e49bad6b9e9a735e6be24",
+    "spl_by_distance_0.0_0.5_1.pkl": "e21490eb6f6548c972c3f25be3575e031a7d6a1ae23347918bde3a8d503a4691",
+    "spl_by_distance_0.5_1.0_1.pkl": "05ab177a320a947c0ebe79b7ab8191a24e250e7e6bf478e26bfc6a40f3824f4e",
+    "subtask_metadata.json": "885491e6f8d205ef2cb7c80deccf8ca66c95dbd19cbe223bfd932d8e35c303de",
+    "success_by_distance_0.0_0.5_1.pkl": "4280b66a92b89d07fa25a33222da83c8a334a5d5f5325504ecb3b1edfaf7a950",
+    "success_by_distance_0.5_1.0_1.pkl": "f5cc0194eab6ceb862adfda7f0d15890399224f39d2ccbdaaaeb10580794b9a7"
+  },
+  "local_sqlite_verified": true,
+  "notes": "Incomplete immutable progress observation of the original frozen requested fold. Paired primary metrics and exact IDs match SQLite; all observed episodes contain their original full subtask set. Initial and recovery transport clients contributed. SCOPE source, model, prompts, selection and navigation budget are unchanged. Global interleaved API usage has no per-fold or per-qid attribution; absent traces are not zero calls.",
+  "remote_sqlite_verified": true,
+  "sql_aggregate_tolerance": 1e-10,
+  "missing_per_qid_usage_remains_null": true,
+  "progress_baseline_run_id": "REPRO_20261005_SCOPE_Gemini38Flash_canonical278_progress_1310",
+  "new_ids_since_baseline": [
+    "00829-QaLdnwvtxbs_0_0",
+    "00829-QaLdnwvtxbs_0_1",
+    "00829-QaLdnwvtxbs_0_2",
+    "00829-QaLdnwvtxbs_0_3",
+    "00829-QaLdnwvtxbs_0_4",
+    "00829-QaLdnwvtxbs_0_5",
+    "00829-QaLdnwvtxbs_0_6"
+  ],
+  "all_previous_sqlite_rows_preserved": true,
+  "verification_method": "Consistent remote SQLite backup, independently compared with paired raw artifacts and original frozen IDs; all prior rows preserved.",
+  "provenance_note": "Only the original split1 launch and its recovery contributed to this canonical snapshot. The 6625cdf early split3/4 launch belongs to later episodes, not canonical278.",
+  "provenance_correction_record": "../scope_20261005/provenance_corrections_20261005.json",
+  "source_immutable_full_observation": "../full2669_progress_20261005_1315",
+  "independent_remote_verification_recorded_at_utc": "2026-10-05T05:16:54.722636+00:00",
+  "independent_remote_verification_scope": "Paired raw rows, original metadata bytes, frozen-ID subset and explicit indices, complete observed episodes, overall/per-modality SQL metrics, exact new episode versus 1310; canonical split1 bytes and values match immutable full1315; per-qid usage remains null."
+}
