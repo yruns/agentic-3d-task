@@ -141,6 +141,12 @@ Both add the same nine-subtask first episode of scene `00810`, with eight
 successes. The full observation also adds scene `00803` episode 4, with five
 subtasks and two successes. Both requested selections remain incomplete.
 
+The `1220` observation, captured at 12:19:17, records **249/2,669** full-set
+IDs in 38 complete episodes (observed SR 67.87%, SPL 47.55%). It adds all nine
+subtasks of scene `00877` episode 2, all successful. Exact raw/SQLite and
+complete-episode checks passed; canonical coverage remains 48/278 and full
+coverage is incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
