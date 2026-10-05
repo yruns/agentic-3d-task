@@ -511,6 +511,24 @@ and recovery `59bc0d3`. The correction pins the historical manifest hashes;
 those original artifacts and their numerical results are retained. The 09:15
 canonical manifest lists the contributing split-1 launch explicitly.
 
+The [next immutable observation](assets/full2669_progress_20261005_0950/ingested_summary.json),
+captured at **09:47:10** with archive tag `0950`, contains **122/2,669 IDs in
+20 complete episodes**, with 81 successes, observed SR 66.3934% and SPL
+46.0037%. It adds `00808-y9hTuugGdiq` episode 4 (five subtasks),
+`00824-Dd4bFSTQ8gi` episode 2 (six), and `00829-QaLdnwvtxbs` episode 3
+(five). Description/image/object counts are 42/37/43, with observed SR
+45.2381/83.7838/72.0930% and SPL 27.7772/67.8790/44.9834%.
+
+The [manifest](assets/full2669_progress_20261005_0950/run_manifest.json)
+retains exact new IDs, complete episode groups, input hashes and contributing
+launch provenance. Independent remote and local checks reproduced raw/SQLite
+rows, the original frozen-ID subset, explicit subtask indices, complete
+observed episodes, and overall/per-modality SQL metrics. SQLite backup retains
+all previous rows in all four tables. The original 2,669-ID request is unchanged
+and `complete=false`; per-qid usage remains `NULL`. Canonical coverage remains
+25/278, so no duplicate canonical observation was created. No worker had
+reached a terminal status at the preceding 09:45 live check.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has

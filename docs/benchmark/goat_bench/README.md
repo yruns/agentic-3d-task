@@ -68,6 +68,12 @@ records original-policy retries and candidate acceptance, with independently
 verified log-prefix hashes. Silent neutral-score defaults remain unobservable;
 HTTP success and syntactic recovery do not establish navigation success.
 
+The next immutable observation, captured at 09:47:10 under the `0950` archive
+tag, records **122/2,669** full-set IDs in 20 complete episodes (observed SR
+66.39%, SPL 46.00%). Canonical coverage remains 25/278. Exact raw/SQLite rows,
+original episode IDs and indices, and overall/per-modality metrics passed
+independent checks; the requested full set remains incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
