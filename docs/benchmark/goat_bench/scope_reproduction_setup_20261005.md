@@ -488,6 +488,29 @@ subtasks of its first episode and entered the next scene. No active worker
 had a terminal exit status or a recorded transport/OOM failure in the current
 attempt. These checks establish ongoing execution, not benchmark completion.
 
+The 09:15 [full snapshot](assets/full2669_progress_20261005_0915/ingested_summary.json)
+contains **106/2,669 IDs in 17 complete episodes**, with 72 successes,
+observed SR 67.9245% and SPL 46.4292%. Since 09:05 it adds
+`00800-TEEsavR23oF` episode 0 (five subtasks) and `00877-4ok3usBNeis`
+episode 4 (six subtasks). The corresponding
+[canonical snapshot](assets/canonical278_progress_20261005_0915/ingested_summary.json)
+contains **25/278 IDs in four complete episodes**, with 19 successes,
+observed SR 76.0000% and SPL 50.2028%. Both remain `complete=false`.
+Independent remote and local checks reproduced overall and per-modality
+metrics, exact paired raw/SQLite rows and full original subtask coverage
+within every saved episode. SQLite backup preserves all earlier table rows.
+The [full manifest](assets/full2669_progress_20261005_0915/run_manifest.json)
+and [canonical manifest](assets/canonical278_progress_20261005_0915/run_manifest.json)
+retain the new IDs, launch provenance and input hashes.
+
+A [provenance correction](assets/scope_20261005/provenance_corrections_20261005.json)
+clarifies two historical canonical manifests: their `initial_launch_heads`
+also included the early split-3/4 launch `6625cdf`, which contributed later
+episodes. Canonical metrics came from the original split-1 launch `89dd533`
+and recovery `59bc0d3`. The correction pins the historical manifest hashes;
+those original artifacts and their numerical results are retained. The 09:15
+canonical manifest lists the contributing split-1 launch explicitly.
+
 ### SSH tunnel recovery
 
 At 06:01, the Mac-to-Linux SSH reverse tunnel disconnected after an operation

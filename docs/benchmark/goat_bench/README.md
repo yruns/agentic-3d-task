@@ -53,6 +53,11 @@ records **95/2,669** IDs in 15 complete episodes (observed SR 67.37%, SPL
 45.50%). Canonical coverage remains 20/278. All 12 workers had fresh model
 responses and navigation activity at 09:05; no worker had a terminal status.
 
+The 09:15 snapshots record **106/2,669** full-set IDs in 17 complete episodes
+(observed SR 67.92%, SPL 46.43%) and **25/278** canonical IDs in four complete
+episodes (observed SR 76.00%, SPL 50.20%). Raw metrics, exact IDs and SQLite
+were independently checked; both requested selections remain incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

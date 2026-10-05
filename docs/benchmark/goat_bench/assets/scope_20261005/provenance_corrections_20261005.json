@@ -1,0 +1,36 @@
+{
+  "reason": "The early split3/4 launch did not contribute canonical first-episode IDs. The canonical snapshots include original split1 and its recovery; their original metrics, expected IDs, hashes and runtime code remain valid.",
+  "corrections": [
+    {
+      "path": "../canonical278_progress_20261005_0800/run_manifest.json",
+      "original_sha256": "4e1debb39dbcee272241c230b5c2fbb2bc920bbf525dbb11b948fcbc16cf0d01",
+      "field": "initial_launch_heads",
+      "recorded_value": [
+        "89dd5337df953374c26b0ebcb67b3bb8663b9ad8",
+        "6625cdf9fd5ac07c594dbd1ec73958d4f688ffb2"
+      ],
+      "correct_value": [
+        "89dd5337df953374c26b0ebcb67b3bb8663b9ad8"
+      ]
+    },
+    {
+      "path": "../canonical278_progress_20261005_0855/run_manifest.json",
+      "original_sha256": "1ffcf7d189ff474b1076dfb4961032398ce1db7df7c92254e8bb20595010121a",
+      "field": "initial_launch_heads",
+      "recorded_value": [
+        "89dd5337df953374c26b0ebcb67b3bb8663b9ad8",
+        "6625cdf9fd5ac07c594dbd1ec73958d4f688ffb2"
+      ],
+      "correct_value": [
+        "89dd5337df953374c26b0ebcb67b3bb8663b9ad8"
+      ]
+    }
+  ],
+  "evidence": [
+    "controller_launch_20261005.json",
+    "early_parallel_workers_20261005.json",
+    "network_recovery_20261005.json"
+  ],
+  "recovery_head": "59bc0d30e40f326544fb2524956754bd094e08fb",
+  "historical_artifacts_preserved": true
+}
