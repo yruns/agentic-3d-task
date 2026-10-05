@@ -542,6 +542,28 @@ explicit indices, complete episode sets, and all grouped SQL metrics. The
 consistent SQLite backup preserves every prior row. Canonical coverage remains
 25/278, per-qid usage remains `NULL`, and full coverage remains incomplete.
 
+The `1020` observations were captured at **10:21:42–43**. The
+[full snapshot](assets/full2669_progress_20261005_1020/ingested_summary.json)
+contains **137/2,669 IDs in 22 complete episodes**, with 88 successes,
+observed SR 64.2336% and SPL 44.5790%. The
+[canonical snapshot](assets/canonical278_progress_20261005_1020/ingested_summary.json)
+contains **30/278 IDs in five complete episodes**, with 24 successes,
+observed SR 80.0000% and SPL 52.9278%. Both add all five original subtasks
+of `00839-zt1RVoi7PcG` episode 0, which are all successful.
+
+Description/image/object counts for the full snapshot are 45/42/50, with
+observed SR 44.4444/83.3333/66.0000% and SPL 27.8056/67.5907/40.3452%.
+For canonical they are 9/11/10, with observed SR 88.8889/90.9091/60.0000%
+and SPL 57.9325/75.4541/23.6446%. The
+[full manifest](assets/full2669_progress_20261005_1020/run_manifest.json)
+and [canonical manifest](assets/canonical278_progress_20261005_1020/run_manifest.json)
+retain exact new IDs, input hashes, complete episode groups and contributing
+launch records. Independent checks reproduced raw/SQLite rows, original IDs
+and explicit indices, complete saved episodes, and grouped SQL metrics.
+The consistent database backup preserves all earlier table rows. Both keep
+their original expected sets and `complete=false`; per-qid usage remains
+`NULL`. These observed metrics do not represent completed fold results.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has

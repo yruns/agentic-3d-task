@@ -80,6 +80,13 @@ The next observation, captured at 10:11:24 under archive tag `1010`, records
 successes. Canonical coverage remains 25/278; this remains an incomplete
 observation of the original requested set.
 
+The `1020` observations, captured at 10:21:42–43, record **137/2,669** full-set
+IDs in 22 complete episodes (observed SR 64.23%, SPL 44.58%) and **30/278**
+canonical IDs in five complete episodes (observed SR 80.00%, SPL 52.93%).
+Both add the same complete first episode of scene `00839`, with five successes.
+All raw/SQLite and frozen-ID checks passed; both requested selections remain
+incomplete.
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.
