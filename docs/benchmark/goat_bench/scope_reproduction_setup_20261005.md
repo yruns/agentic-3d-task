@@ -1388,6 +1388,21 @@ and record zero newly saved IDs from the two patched worker attempts. Their
 alone do not establish a contribution to this snapshot. Both selections remain
 incomplete, and absent per-qid usage remains `NULL`.
 
+The [18:20:32 full observation](assets/full2669_progress_20261005_1820/ingested_summary.json)
+contains **651/2,669 IDs in 90 complete episodes**, with 459 successes,
+observed SR 70.5069% and SPL 50.0097%. Relative to `1805`, it adds
+`00803-k1cupFYWXJ6` episode 2 (six subtasks, five successes) and
+`00820-mL8ThkuaVTM` episode 4 (eight subtasks, all successful). Canonical
+remains 102/278, so no duplicate canonical observation was created.
+Description/image/object counts are 209/209/233, with SR
+56.9378/81.3397/72.9614% and SPL 39.7621/65.3155/45.4724%.
+The [manifest](assets/full2669_progress_20261005_1820/run_manifest.json)
+maps all six new split-3 worker-1 IDs to the recovered runtime
+`bfffc2be995a7223c8a0e9c86c18064dbe878838`; the other rows retain their
+original runtime. The new SQL runtime field lists both revisions with a
+`mixed:` prefix, while every earlier observation remains unchanged.
+Coverage is incomplete, and absent per-qid usage remains `NULL`.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has

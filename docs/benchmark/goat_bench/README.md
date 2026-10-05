@@ -368,6 +368,13 @@ same immutable full capture. Both restarted workers still retain only their
 pre-patch completed rows, so this observation adds no patched-runtime metrics.
 Both selections remain incomplete.
 
+The `1820` observation, captured at 18:20:32, records **651/2,669** full-set
+IDs in 90 complete episodes (observed SR 70.51%, SPL 50.01%). Canonical remains
+102/278. This capture adds six rows from the recovered split-3 worker-1 episode
+and eight rows from an unchanged worker. Mixed runtime revisions and exact
+restart-stage IDs are recorded explicitly; historical observations remain
+unchanged. Both selections remain incomplete.
+
 At 17:16 and 17:28, two workers exited with an empty-class prefilter response
 rejection and a stale-ID visualization error. Both fixes and verification
 boundaries are documented in the [setup record](scope_reproduction_setup_20261005.md).
