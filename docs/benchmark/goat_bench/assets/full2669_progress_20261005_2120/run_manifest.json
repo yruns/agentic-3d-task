@@ -1,0 +1,614 @@
+{
+  "observed_at": "2026-10-05T21:20:46+08:00",
+  "run_id": "REPRO_20261005_SCOPE_Gemini38Flash_full2669_progress_2120",
+  "requested_subtasks": 2669,
+  "observed_subtasks": 676,
+  "complete_episodes": 93,
+  "complete": false,
+  "successes": 481,
+  "sr": 71.15384615384616,
+  "spl": 50.09361050781929,
+  "saved_episodes": [
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "2",
+      "n": 9
+    },
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "4",
+      "n": 7
+    },
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "5",
+      "n": 8
+    },
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "6",
+      "n": 10
+    },
+    {
+      "scene_id": "00803-k1cupFYWXJ6",
+      "episode_id": "2",
+      "n": 6
+    },
+    {
+      "scene_id": "00803-k1cupFYWXJ6",
+      "episode_id": "3",
+      "n": 7
+    },
+    {
+      "scene_id": "00803-k1cupFYWXJ6",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00803-k1cupFYWXJ6",
+      "episode_id": "5",
+      "n": 10
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "2",
+      "n": 8
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "5",
+      "n": 10
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "6",
+      "n": 10
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "0",
+      "n": 9
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "2",
+      "n": 6
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "3",
+      "n": 6
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "4",
+      "n": 8
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "5",
+      "n": 7
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "6",
+      "n": 9
+    },
+    {
+      "scene_id": "00815-h1zeeAwLh9Z",
+      "episode_id": "2",
+      "n": 10
+    },
+    {
+      "scene_id": "00815-h1zeeAwLh9Z",
+      "episode_id": "3",
+      "n": 9
+    },
+    {
+      "scene_id": "00815-h1zeeAwLh9Z",
+      "episode_id": "4",
+      "n": 7
+    },
+    {
+      "scene_id": "00815-h1zeeAwLh9Z",
+      "episode_id": "5",
+      "n": 7
+    },
+    {
+      "scene_id": "00820-mL8ThkuaVTM",
+      "episode_id": "4",
+      "n": 8
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "0",
+      "n": 8
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "2",
+      "n": 5
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "5",
+      "n": 5
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "6",
+      "n": 8
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "2",
+      "n": 6
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "5",
+      "n": 6
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "6",
+      "n": 5
+    },
+    {
+      "scene_id": "00827-BAbdmeyTvMZ",
+      "episode_id": "3",
+      "n": 9
+    },
+    {
+      "scene_id": "00827-BAbdmeyTvMZ",
+      "episode_id": "4",
+      "n": 7
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "2",
+      "n": 10
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "4",
+      "n": 6
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "5",
+      "n": 7
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "6",
+      "n": 10
+    },
+    {
+      "scene_id": "00832-qyAac8rV8Zk",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "2",
+      "n": 5
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "3",
+      "n": 9
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "4",
+      "n": 10
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "5",
+      "n": 8
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "6",
+      "n": 8
+    },
+    {
+      "scene_id": "00847-bCPU9suPUw9",
+      "episode_id": "0",
+      "n": 8
+    },
+    {
+      "scene_id": "00847-bCPU9suPUw9",
+      "episode_id": "3",
+      "n": 9
+    },
+    {
+      "scene_id": "00847-bCPU9suPUw9",
+      "episode_id": "4",
+      "n": 9
+    },
+    {
+      "scene_id": "00848-ziup5kvtCCR",
+      "episode_id": "4",
+      "n": 6
+    },
+    {
+      "scene_id": "00849-a8BtkwhxdRV",
+      "episode_id": "0",
+      "n": 9
+    },
+    {
+      "scene_id": "00849-a8BtkwhxdRV",
+      "episode_id": "3",
+      "n": 10
+    },
+    {
+      "scene_id": "00853-5cdEh9F2hJL",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00853-5cdEh9F2hJL",
+      "episode_id": "3",
+      "n": 10
+    },
+    {
+      "scene_id": "00853-5cdEh9F2hJL",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00853-5cdEh9F2hJL",
+      "episode_id": "6",
+      "n": 7
+    },
+    {
+      "scene_id": "00861-GLAQ4DNUx5U",
+      "episode_id": "4",
+      "n": 8
+    },
+    {
+      "scene_id": "00862-LT9Jq6dN3Ea",
+      "episode_id": "4",
+      "n": 10
+    },
+    {
+      "scene_id": "00869-MHPLjHsuG27",
+      "episode_id": "0",
+      "n": 6
+    },
+    {
+      "scene_id": "00869-MHPLjHsuG27",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00869-MHPLjHsuG27",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00869-MHPLjHsuG27",
+      "episode_id": "6",
+      "n": 9
+    },
+    {
+      "scene_id": "00871-VBzV5z6i1WS",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00871-VBzV5z6i1WS",
+      "episode_id": "3",
+      "n": 7
+    },
+    {
+      "scene_id": "00871-VBzV5z6i1WS",
+      "episode_id": "4",
+      "n": 7
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "0",
+      "n": 9
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "2",
+      "n": 10
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "3",
+      "n": 6
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "5",
+      "n": 5
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "6",
+      "n": 9
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "0",
+      "n": 10
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "2",
+      "n": 9
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "3",
+      "n": 8
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "4",
+      "n": 6
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "5",
+      "n": 10
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "6",
+      "n": 10
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "0",
+      "n": 9
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "2",
+      "n": 6
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "3",
+      "n": 6
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "4",
+      "n": 10
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "5",
+      "n": 7
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "6",
+      "n": 5
+    },
+    {
+      "scene_id": "00891-cvZr5TUy5C5",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00894-HY1NcmCgn3n",
+      "episode_id": "4",
+      "n": 5
+    }
+  ],
+  "upstream_runtime_commit": "mixed:46f1e1f78077219c30e35440540e4ef22995194c+bfffc2be995a7223c8a0e9c86c18064dbe878838",
+  "initial_launch_heads": [
+    "89dd5337df953374c26b0ebcb67b3bb8663b9ad8",
+    "6625cdf9fd5ac07c594dbd1ec73958d4f688ffb2"
+  ],
+  "recovery_head": "59bc0d30e40f326544fb2524956754bd094e08fb",
+  "initial_bootstrap_revision": "d5c24a5e676d8729fd1f6d0f890d5bf5760b5827",
+  "recovery_bootstrap_revision": "08fdeba4c8529e7e01ce1e01f88b6e558e1e652f",
+  "launch_record_paths": [
+    "../scope_20261005/controller_launch_20261005.json",
+    "../scope_20261005/early_parallel_workers_20261005.json",
+    "../scope_20261005/network_recovery_20261005.json",
+    "../scope_20261005/co_gpu_worker_launch_20261005.json",
+    "../scope_20261005/co_gpu_paired_worker_launch_20261005.json",
+    "../scope_20261005/early_split6_workers_20261005.json",
+    "../scope_20261005/early_split7_workers_20261005.json"
+  ],
+  "early_split5_worker0_launch_head": "19fdb08812f37105ec08972ee2b946450801d60a",
+  "early_split5_worker1_launch_head": "15726c1d3311f6976415db94f3954efe103df927",
+  "input_sha256": {
+    "expected_subtask_ids.json": "ebe0a923affe64ad0a10bbe96ab36d8faa4b1fe0431e58906185d7a0de4b0b24",
+    "runtime_lineage.json": "03dd3a47412c4b5fea85d5543c5bbb8e2107e4c4991c3e46255de04fe8ef92c2",
+    "spl_by_distance_0.0_0.5_1.pkl": "10e54bb830a673017caf913e8f90de81dabc237ac7fe8817eb81d4157e130451",
+    "spl_by_distance_0.0_0.5_3.pkl": "9e99ca4d14fc90c7c5acbf860a83504587c4c763ebb00042a270ee8e9e96215d",
+    "spl_by_distance_0.0_0.5_4.pkl": "ea5296073954237e8e13757746a6154e5450ee5dc6e24138ad42222c4374a971",
+    "spl_by_distance_0.0_0.5_5.pkl": "c271bbbc7de8a4f98da22a29070f9f12fa4f808f182d79e1f40befaaeef702ff",
+    "spl_by_distance_0.0_0.5_6.pkl": "517ca4307372324987ce919baa5f4723a8638f850ef47e08a28453dc4f775add",
+    "spl_by_distance_0.0_0.5_7.pkl": "3c6fa79a8fe6d7aae3dfbea95b82753189d7d3372683849f8755b19011bbcc3c",
+    "spl_by_distance_0.5_1.0_1.pkl": "e527847d84736a35193a09b8f3bbb62e54856871537b45d0067b90d1f930e549",
+    "spl_by_distance_0.5_1.0_3.pkl": "07e3f5e57400bb4103fee75e5b9ae0196b421a41015c86f6460dd5a1022c86a0",
+    "spl_by_distance_0.5_1.0_4.pkl": "5115fc934bafed29195e17c07cb468e0ffa18cbb44a0ae3a63e0a863e63369c4",
+    "spl_by_distance_0.5_1.0_5.pkl": "b9344b5bd09eae59bc663d959884065e353c149993b291eb95e7b91423a1d184",
+    "spl_by_distance_0.5_1.0_6.pkl": "abffcbecb9f109c87f593aedbef4a684716fd0a3c5c7a9b8fb4880d3b8c5ca6a",
+    "spl_by_distance_0.5_1.0_7.pkl": "f5582e7a510f6171bee446a0374de65433db486f382fa1312578004b6e2a1423",
+    "subtask_metadata.json": "885491e6f8d205ef2cb7c80deccf8ca66c95dbd19cbe223bfd932d8e35c303de",
+    "success_by_distance_0.0_0.5_1.pkl": "53d3320464dd674a2da9fa77d789bc715ff162a0591758a0e539bff91c8fa23b",
+    "success_by_distance_0.0_0.5_3.pkl": "96a1152db36c5d72176a1cafb16aa36b0d67bb0c2dced06e3df7a382a3f61ccd",
+    "success_by_distance_0.0_0.5_4.pkl": "2bf785492d897124271e469050ebdc0f215eb664a35882a667e418ab6f6ec742",
+    "success_by_distance_0.0_0.5_5.pkl": "969f81940f5f25da082ed0d52c4d158d062631470d88abb640f50863e80527e8",
+    "success_by_distance_0.0_0.5_6.pkl": "17b7e30fff91c46770c9c1c660c0c3e0f8887b9c43273dd80a1ca878a83211e2",
+    "success_by_distance_0.0_0.5_7.pkl": "85bb719df638c77b1d4427f2a9842bb2d0fb846b09138242038eb45ac138c26f",
+    "success_by_distance_0.5_1.0_1.pkl": "1651668787e6a179f39e144ff86a538d31e6b65cfd5705ec203a0a81639ef260",
+    "success_by_distance_0.5_1.0_3.pkl": "576a0877b4a03a5cb38c04df69a06f224e769567e0859e873df226b8ff92b9e0",
+    "success_by_distance_0.5_1.0_4.pkl": "e1a4c0bcd624390c5fdaf8c506221179bf630854924a69c3552cce3f4fc4cd9a",
+    "success_by_distance_0.5_1.0_5.pkl": "18e6804424a2229fcd57efcac685d09fd7bb5584e6af48f3f0687b3b1fc37866",
+    "success_by_distance_0.5_1.0_6.pkl": "00d1f426d80d1eb44dce33f152d46fa4273fb7219318b5d2b21e9c4d84adf5f5",
+    "success_by_distance_0.5_1.0_7.pkl": "aeb55de2830fb859ec399131f2a0052391f82d6c308e11e48563ee8ad25913a0"
+  },
+  "local_sqlite_verified": true,
+  "notes": "Incomplete immutable progress observation of the original frozen requested fold. Paired primary metrics and exact IDs match SQLite; all observed episodes contain their original full subtask set. Initial and recovery transport clients contributed. SCOPE source, model, prompts, selection and navigation budget are unchanged. Global interleaved API usage has no per-fold or per-qid attribution; absent traces are not zero calls.",
+  "remote_sqlite_verified": false,
+  "sql_aggregate_tolerance": 1e-10,
+  "missing_per_qid_usage_remains_null": true,
+  "all_previous_sqlite_rows_preserved": false,
+  "verification_method": "Consistent remote SQLite backup, independently compared with paired raw artifacts and original frozen IDs; all prior rows preserved.",
+  "progress_baseline_run_id": "REPRO_20261005_SCOPE_Gemini38Flash_full2669_progress_1820",
+  "new_ids_since_baseline": [
+    "00849-a8BtkwhxdRV_0_0",
+    "00849-a8BtkwhxdRV_0_1",
+    "00849-a8BtkwhxdRV_0_2",
+    "00849-a8BtkwhxdRV_0_3",
+    "00849-a8BtkwhxdRV_0_4",
+    "00849-a8BtkwhxdRV_0_5",
+    "00849-a8BtkwhxdRV_0_6",
+    "00849-a8BtkwhxdRV_0_7",
+    "00849-a8BtkwhxdRV_0_8",
+    "00853-5cdEh9F2hJL_6_0",
+    "00853-5cdEh9F2hJL_6_1",
+    "00853-5cdEh9F2hJL_6_2",
+    "00853-5cdEh9F2hJL_6_3",
+    "00853-5cdEh9F2hJL_6_4",
+    "00853-5cdEh9F2hJL_6_5",
+    "00853-5cdEh9F2hJL_6_6",
+    "00869-MHPLjHsuG27_6_0",
+    "00869-MHPLjHsuG27_6_1",
+    "00869-MHPLjHsuG27_6_2",
+    "00869-MHPLjHsuG27_6_3",
+    "00869-MHPLjHsuG27_6_4",
+    "00869-MHPLjHsuG27_6_5",
+    "00869-MHPLjHsuG27_6_6",
+    "00869-MHPLjHsuG27_6_7",
+    "00869-MHPLjHsuG27_6_8"
+  ],
+  "early_split6_workers_launch_head": "22927e8d75edf9794a66b5699a7a14bbc2e1b09f",
+  "early_split7_workers_launch_head": "154d11e55a47ca6d67dad8fe0e214847477bd2bb",
+  "postfix_recovery_record": "../scope_20261005/postfix_recovery_20261005_1756.json",
+  "postfix_stage_id_provenance": "../scope_20261005/postfix_stage_id_provenance_20261005.json",
+  "postfix_observed_rows_by_stage": [
+    {
+      "split": 1,
+      "worker": 1,
+      "pre_patch_observed_count": 44,
+      "postfix_observed_count": 0,
+      "postfix_question_ids": [],
+      "postfix_launch_head": "6549a28a6dc9b5fd65ee5b9fe5dfc71864331a72",
+      "postfix_runtime_commit": "bfffc2be995a7223c8a0e9c86c18064dbe878838"
+    },
+    {
+      "split": 3,
+      "worker": 1,
+      "pre_patch_observed_count": 51,
+      "postfix_observed_count": 6,
+      "postfix_question_ids": [
+        "00803-k1cupFYWXJ6_2_0",
+        "00803-k1cupFYWXJ6_2_1",
+        "00803-k1cupFYWXJ6_2_2",
+        "00803-k1cupFYWXJ6_2_3",
+        "00803-k1cupFYWXJ6_2_4",
+        "00803-k1cupFYWXJ6_2_5"
+      ],
+      "postfix_launch_head": "6549a28a6dc9b5fd65ee5b9fe5dfc71864331a72",
+      "postfix_runtime_commit": "bfffc2be995a7223c8a0e9c86c18064dbe878838"
+    }
+  ],
+  "observed_postfix_runtime_commits": [
+    "bfffc2be995a7223c8a0e9c86c18064dbe878838"
+  ],
+  "postfix_provenance_scope": "Maps actual newly saved IDs for the two restarted worker stages; earlier rows retain their original runtime. Other worker launches retain their separate launch records.",
+  "base_upstream_runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "observed_upstream_runtime_commits": [
+    "46f1e1f78077219c30e35440540e4ef22995194c",
+    "bfffc2be995a7223c8a0e9c86c18064dbe878838"
+  ],
+  "runtime_metadata_encoding": "Mixed runtime revisions are listed explicitly; per-ID restart mappings identify six patched rows and preserve the original runtime for earlier rows.",
+  "all_previous_metric_rows_preserved": true,
+  "prior_run_metadata_difference": "Only the public-episode ingested_at timestamp was refreshed by controller replay; all metric rows and other prior run fields are unchanged",
+  "runtime_lineage_report": "runtime_lineage.json",
+  "runtime_lineage_source_map": "../scope_20261005/frozen_result_lineage.json",
+  "runtime_lineage_source_map_sha256": "3872925d569960324e30af1c5febc0184429ca32f710c1dc1d231837a5466de8",
+  "observed_runtime_counts": {
+    "46f1e1f78077219c30e35440540e4ef22995194c": 670,
+    "bfffc2be995a7223c8a0e9c86c18064dbe878838": 6
+  },
+  "runtime_commit_sha": "mixed:46f1e1f78077219c30e35440540e4ef22995194c+bfffc2be995a7223c8a0e9c86c18064dbe878838",
+  "archive_code_commit_sha": "550a725199506b390b4fc56d9b61f2348df98b14",
+  "archive_commit_scope": "Source of the attribution/ingestion helper, not an inferred common worker bootstrap head."
+}

@@ -398,6 +398,14 @@ retains 670 original-runtime and six visualization-fix results. The lineage
 helper and controller regression tests pass, including mixed runtime labels
 and failure handling; controller adoption is recorded in the setup document.
 
+The `2120` immutable observations, captured at 21:20:46, retain **676/2,669**
+full-set subtasks in 93 complete episodes (observed SR 71.15%, SPL 50.09%) and
+**111/278** canonical subtasks in 15 complete episodes (observed SR 80.18%,
+SPL 51.74%). The full snapshot contains 670 original-runtime and six
+visualization-fix rows; it contains no completed parallel-runtime episode.
+Both folds remain incomplete. Raw, SQLite and per-ID lineage evidence is in
+the [setup record](scope_reproduction_setup_20261005.md).
+
 ## Completed local runs
 
 SR and SPL use SCOPE's distance-based metrics and are percentages.

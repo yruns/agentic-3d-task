@@ -1529,6 +1529,33 @@ new process return code and status file were both 143, without starting a
 navigation worker. Target lint, formatting, strict typing and shell checks
 passed after this two-line signal-handler change.
 
+### Immutable checkpoint captured at 21:20:46
+
+The full and canonical copies use the same frozen full snapshot, rather than
+independent live rereads. They preserve all older primary sample values.
+
+| Selection | Saved / requested subtasks | Complete episodes | Successes | Observed SR | Observed SPL |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| [Full observation](assets/full2669_progress_20261005_2120/ingested_summary.json) | 676 / 2,669 | 93 | 481 | 71.153846% | 50.093611% |
+| [Canonical observation](assets/canonical278_progress_20261005_2120/ingested_summary.json) | 111 / 278 | 15 | 89 | 80.180180% | 51.742571% |
+
+These are partial observations, not completed benchmark scores. Compared with
+`1820`, the full copy adds complete episodes `00849`/0, `00853`/6 and
+`00869`/6 (25 subtasks); canonical adds the same nine-subtask first episode of
+`00849`. Full observed modality counts are 218 description, 217 image and 241
+object subtasks. The attribution reports identify exactly 670 original plus
+six visualization-fix rows in full, and 111 original rows in canonical; no
+parallel-runtime episode is yet saved in this snapshot.
+
+Local checks validate paired raw/SQLite values, original frozen IDs and
+explicit indices, complete episodes, overall/per-modality metrics, and the
+source-map hash. Previous metric rows and prior run fields are preserved;
+the public episode's ingestion timestamp was refreshed during controller
+replay. Per-subtask usage remains unknown. Global API ledgers are separate
+from these primary-only copies, so their `api_ledger_present=false` does not
+mean no model requests occurred. Independent remote verification is recorded
+in the observation manifests when completed.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
