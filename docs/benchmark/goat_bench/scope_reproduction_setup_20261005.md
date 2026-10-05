@@ -633,6 +633,27 @@ metrics passed independent checks; the consistent database backup preserves
 all earlier table rows. Canonical coverage remains 39/278. Both requested
 selections remain incomplete, and absent per-qid usage remains `NULL`.
 
+The [next full observation](assets/full2669_progress_20261005_1150/ingested_summary.json),
+captured at **11:48:28** under tag `1150`, contains **196/2,669 IDs in 31
+complete episodes**, with 128 successes, observed SR 65.3061% and SPL
+45.3675%. It adds `00823-7MXmsvcQjpJ` episode 4 (five subtasks, zero
+successes) and `00824-Dd4bFSTQ8gi` episode 5 (six subtasks, four successes).
+Description/image/object counts are 62/62/72, with observed SR
+45.1613/80.6452/69.4444% and SPL 29.3472/66.0836/41.3238%. The
+[manifest](assets/full2669_progress_20261005_1150/run_manifest.json) retains
+the exact added IDs, paired input hashes, original episode groups and launch
+provenance. Independent checks matched all paired rows to SQLite and verified
+original metadata, frozen IDs, explicit indices, complete episodes and grouped
+metrics. All earlier database rows are preserved. Canonical coverage remains
+39/278; both requested selections are incomplete and per-qid usage is `NULL`.
+
+At 11:49:40, a separate read-only process/log check found all 12 navigation
+workers alive and advancing relative to the 10:52 observation. Each worker
+had 78–196 additional model responses, its latest response was HTTP 200,
+and its FileHandler log had updated within 1–43 seconds. No new terminal
+exit file, OOM, traceback or unrecovered API error was observed. These are
+execution-health observations, not additional saved benchmark results.
+
 The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
 pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
 After excluding the earlier preflight/public-episode rows, the full run has
