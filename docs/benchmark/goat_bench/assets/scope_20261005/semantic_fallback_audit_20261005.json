@@ -1,0 +1,570 @@
+{
+  "audit_time_utc": "2026-10-04T22:37:53.114764+00:00",
+  "source_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "attempt": "resumed 2026-10-05 06:14 Asia/Shanghai; current upstream-only logs, exactly one Running header each",
+  "counting_scope": "Six official FileHandler logs only; no stdout log or previous failed attempt is counted.",
+  "source_evidence": {
+    "format_retry_bound_and_cycle_limit": "src/eval_utils_gpt_goatbench.py:514-516",
+    "format_exhaustion_none": "src/eval_utils_gpt_goatbench.py:558-567, 594-597",
+    "all_retry_exhaustion_none": "src/eval_utils_gpt_goatbench.py:721-723",
+    "unclear_self_refine_default_confirm": "src/eval_utils_gpt_goatbench.py:471-474",
+    "api_none_self_refine_default_confirm": "src/eval_utils_gpt_goatbench.py:456-459",
+    "cycle_acceptance_after_three_rejections": "src/eval_utils_gpt_goatbench.py:651-661",
+    "verbose_logging_enabled": "run_goatbench_evaluation.py:436-443",
+    "potential_score_parser_default_and_regex": "src/potential_graph.py:199-209, 260-285",
+    "potential_unmapped_grid_silent_default3": "src/potential_graph.py:381-394",
+    "potential_lookup_exception_default3": "src/query_vlm_goatbench.py:98-102"
+  },
+  "overall_counts": {
+    "format_warning": 9,
+    "format_exhausted_to_none": 0,
+    "all_retries_exhausted_to_none": 0,
+    "unclear_self_refine_default_confirm": 0,
+    "api_none_self_refine_default_confirm": 0,
+    "same_candidate_three_rejections_force_accept": 0,
+    "format_retry_recovered_to_valid_selection": 5,
+    "potential_text_blocks": 220,
+    "potential_numeric_score_missing_in_logged_text": 0,
+    "potential_graph_lookup_exception_default3": 0,
+    "navigation_response_validation_warning": 12,
+    "valid_decisions_after_navigation_response_validation_warning": 6
+  },
+  "potential_default3_overall": {
+    "status": "unobservable",
+    "count": null,
+    "reason": "Potential graph unmapped-grid defaults and no-analysis defaults have no definite upstream log marker; Parsed scores uses print to stdout, which this audit intentionally excludes. Numeric 3.0 alone is also a valid score and cannot prove fallback.",
+    "observable_text_parser_subset": "Potential bodies are fully logged; this report separately counts missing exact numeric patterns. All mapped scores or neutral components must not be relabeled as fallback."
+  },
+  "workers": [
+    {
+      "split": 1,
+      "worker": 0,
+      "upstream_log": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669/log_0.00_0.50_1.log",
+      "snapshot_bytes": 78808,
+      "snapshot_sha256": "e7f64d9154a34f3b04592b87583eca58daba88d0468e220ad87d65787b37b106",
+      "running_header_count": 1,
+      "counts": {
+        "format_warning": 2,
+        "format_exhausted_to_none": 0,
+        "all_retries_exhausted_to_none": 0,
+        "unclear_self_refine_default_confirm": 0,
+        "api_none_self_refine_default_confirm": 0,
+        "same_candidate_three_rejections_force_accept": 0,
+        "format_retry_recovered_to_valid_selection": 1,
+        "potential_text_blocks": 29,
+        "potential_numeric_score_missing_in_logged_text": 0,
+        "potential_graph_lookup_exception_default3": 0
+      },
+      "events": [
+        {
+          "kind": "format_retry_recovered_to_valid_selection",
+          "line": 916,
+          "elapsed": "00:21:20",
+          "subtask_id": "00808-y9hTuugGdiq_0_1",
+          "step": 8,
+          "detail": "frontier 4"
+        }
+      ],
+      "current_subtask_id": "00808-y9hTuugGdiq_0_1",
+      "task_states": {
+        "00808-y9hTuugGdiq_0_0": "finished",
+        "00808-y9hTuugGdiq_0_1": "in_progress"
+      },
+      "final_decisions_with_semantic_fallback": [],
+      "final_decisions_after_format_retry": [
+        {
+          "line": 916,
+          "elapsed": "00:21:20",
+          "subtask_id": "00808-y9hTuugGdiq_0_1",
+          "step": 8,
+          "selection": "frontier 4",
+          "confirmed_semantic_fallback_causes": [],
+          "preceding_format_warning_lines": [
+            900
+          ]
+        }
+      ],
+      "final_decision_count": 20,
+      "last_final_decision": {
+        "line": 979,
+        "elapsed": "00:22:32",
+        "subtask_id": "00808-y9hTuugGdiq_0_1",
+        "step": 10,
+        "selection": "frontier 2",
+        "confirmed_semantic_fallback_causes": [],
+        "preceding_format_warning_lines": []
+      },
+      "validation_warnings": [
+        {
+          "line": 798,
+          "subtask_id": "00808-y9hTuugGdiq_0_1",
+          "step": 6,
+          "marker": "Invalid choice type:",
+          "retries_remaining": 3,
+          "elapsed": "00:16:13"
+        },
+        {
+          "line": 890,
+          "subtask_id": "00808-y9hTuugGdiq_0_1",
+          "step": 8,
+          "marker": "Invalid choice type:",
+          "retries_remaining": 4,
+          "elapsed": "00:19:21"
+        },
+        {
+          "line": 896,
+          "subtask_id": "00808-y9hTuugGdiq_0_1",
+          "step": 8,
+          "marker": "Invalid choice type:",
+          "retries_remaining": 3,
+          "elapsed": "00:19:47"
+        },
+        {
+          "line": 900,
+          "subtask_id": "00808-y9hTuugGdiq_0_1",
+          "step": 8,
+          "marker": "Error parsing response format",
+          "retries_remaining": 2,
+          "elapsed": "00:20:20"
+        },
+        {
+          "line": 1008,
+          "subtask_id": "00808-y9hTuugGdiq_0_1",
+          "step": 11,
+          "marker": "Error parsing response format",
+          "retries_remaining": 4,
+          "elapsed": "00:23:32"
+        }
+      ],
+      "validation_exhausted_remaining_zero": 0,
+      "final_decisions_after_validation_retry": [
+        {
+          "line": 815,
+          "elapsed": "00:16:55",
+          "subtask_id": "00808-y9hTuugGdiq_0_1",
+          "step": 6,
+          "selection": "frontier 3",
+          "preceding_validation_warning_lines": [
+            798
+          ]
+        },
+        {
+          "line": 916,
+          "elapsed": "00:21:20",
+          "subtask_id": "00808-y9hTuugGdiq_0_1",
+          "step": 8,
+          "selection": "frontier 4",
+          "preceding_validation_warning_lines": [
+            890,
+            896,
+            900
+          ]
+        }
+      ],
+      "pending_warning_lines_at_snapshot_end": [
+        1008
+      ]
+    },
+    {
+      "split": 1,
+      "worker": 1,
+      "upstream_log": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669/log_0.50_1.00_1.log",
+      "snapshot_bytes": 116148,
+      "snapshot_sha256": "118e6fb08f7496deb7a1cbf31e56e70e46ef4b9068692502c0127de99349c180",
+      "running_header_count": 1,
+      "counts": {
+        "format_warning": 0,
+        "format_exhausted_to_none": 0,
+        "all_retries_exhausted_to_none": 0,
+        "unclear_self_refine_default_confirm": 0,
+        "api_none_self_refine_default_confirm": 0,
+        "same_candidate_three_rejections_force_accept": 0,
+        "format_retry_recovered_to_valid_selection": 0,
+        "potential_text_blocks": 48,
+        "potential_numeric_score_missing_in_logged_text": 0,
+        "potential_graph_lookup_exception_default3": 0
+      },
+      "events": [],
+      "current_subtask_id": "00876-mv2HUxq3B53_0_2",
+      "task_states": {
+        "00876-mv2HUxq3B53_0_0": "finished",
+        "00876-mv2HUxq3B53_0_1": "finished",
+        "00876-mv2HUxq3B53_0_2": "in_progress"
+      },
+      "final_decisions_with_semantic_fallback": [],
+      "final_decisions_after_format_retry": [],
+      "final_decision_count": 36,
+      "last_final_decision": {
+        "line": 1567,
+        "elapsed": "00:23:23",
+        "subtask_id": "00876-mv2HUxq3B53_0_2",
+        "step": 5,
+        "selection": "frontier 8",
+        "confirmed_semantic_fallback_causes": [],
+        "preceding_format_warning_lines": []
+      },
+      "validation_warnings": [],
+      "validation_exhausted_remaining_zero": 0,
+      "final_decisions_after_validation_retry": [],
+      "pending_warning_lines_at_snapshot_end": []
+    },
+    {
+      "split": 3,
+      "worker": 0,
+      "upstream_log": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split3_worker0/log_0.00_0.50_3.log",
+      "snapshot_bytes": 87194,
+      "snapshot_sha256": "aa53a857896466516fe9a77afc88d525602574bcc422f436628832b204124fde",
+      "running_header_count": 1,
+      "counts": {
+        "format_warning": 2,
+        "format_exhausted_to_none": 0,
+        "all_retries_exhausted_to_none": 0,
+        "unclear_self_refine_default_confirm": 0,
+        "api_none_self_refine_default_confirm": 0,
+        "same_candidate_three_rejections_force_accept": 0,
+        "format_retry_recovered_to_valid_selection": 2,
+        "potential_text_blocks": 34,
+        "potential_numeric_score_missing_in_logged_text": 0,
+        "potential_graph_lookup_exception_default3": 0
+      },
+      "events": [
+        {
+          "kind": "format_retry_recovered_to_valid_selection",
+          "line": 536,
+          "elapsed": "00:10:19",
+          "subtask_id": "00824-Dd4bFSTQ8gi_2_0",
+          "step": 11,
+          "detail": "frontier 5"
+        },
+        {
+          "kind": "format_retry_recovered_to_valid_selection",
+          "line": 606,
+          "elapsed": "00:12:42",
+          "subtask_id": "00824-Dd4bFSTQ8gi_2_0",
+          "step": 13,
+          "detail": "frontier 6"
+        }
+      ],
+      "current_subtask_id": "00824-Dd4bFSTQ8gi_2_0",
+      "task_states": {
+        "00824-Dd4bFSTQ8gi_2_0": "in_progress"
+      },
+      "final_decisions_with_semantic_fallback": [],
+      "final_decisions_after_format_retry": [
+        {
+          "line": 536,
+          "elapsed": "00:10:19",
+          "subtask_id": "00824-Dd4bFSTQ8gi_2_0",
+          "step": 11,
+          "selection": "frontier 5",
+          "confirmed_semantic_fallback_causes": [],
+          "preceding_format_warning_lines": [
+            511
+          ]
+        },
+        {
+          "line": 606,
+          "elapsed": "00:12:42",
+          "subtask_id": "00824-Dd4bFSTQ8gi_2_0",
+          "step": 13,
+          "selection": "frontier 6",
+          "confirmed_semantic_fallback_causes": [],
+          "preceding_format_warning_lines": [
+            599
+          ]
+        }
+      ],
+      "final_decision_count": 29,
+      "last_final_decision": {
+        "line": 1068,
+        "elapsed": "00:23:22",
+        "subtask_id": "00824-Dd4bFSTQ8gi_2_0",
+        "step": 28,
+        "selection": "frontier 6",
+        "confirmed_semantic_fallback_causes": [],
+        "preceding_format_warning_lines": []
+      },
+      "validation_warnings": [
+        {
+          "line": 511,
+          "subtask_id": "00824-Dd4bFSTQ8gi_2_0",
+          "step": 11,
+          "marker": "Error parsing response format",
+          "retries_remaining": 4,
+          "elapsed": "00:09:11"
+        },
+        {
+          "line": 599,
+          "subtask_id": "00824-Dd4bFSTQ8gi_2_0",
+          "step": 13,
+          "marker": "Error parsing response format",
+          "retries_remaining": 4,
+          "elapsed": "00:12:17"
+        }
+      ],
+      "validation_exhausted_remaining_zero": 0,
+      "final_decisions_after_validation_retry": [
+        {
+          "line": 536,
+          "elapsed": "00:10:19",
+          "subtask_id": "00824-Dd4bFSTQ8gi_2_0",
+          "step": 11,
+          "selection": "frontier 5",
+          "preceding_validation_warning_lines": [
+            511
+          ]
+        },
+        {
+          "line": 606,
+          "elapsed": "00:12:42",
+          "subtask_id": "00824-Dd4bFSTQ8gi_2_0",
+          "step": 13,
+          "selection": "frontier 6",
+          "preceding_validation_warning_lines": [
+            599
+          ]
+        }
+      ],
+      "pending_warning_lines_at_snapshot_end": []
+    },
+    {
+      "split": 3,
+      "worker": 1,
+      "upstream_log": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split3_worker1/log_0.50_1.00_3.log",
+      "snapshot_bytes": 96349,
+      "snapshot_sha256": "b00f44ad99c1d3c6b474d404b1c19233be511843e798e3f17f2a7d8fdbd1a4a3",
+      "running_header_count": 1,
+      "counts": {
+        "format_warning": 0,
+        "format_exhausted_to_none": 0,
+        "all_retries_exhausted_to_none": 0,
+        "unclear_self_refine_default_confirm": 0,
+        "api_none_self_refine_default_confirm": 0,
+        "same_candidate_three_rejections_force_accept": 0,
+        "format_retry_recovered_to_valid_selection": 0,
+        "potential_text_blocks": 40,
+        "potential_numeric_score_missing_in_logged_text": 0,
+        "potential_graph_lookup_exception_default3": 0
+      },
+      "events": [],
+      "current_subtask_id": "00876-mv2HUxq3B53_2_2",
+      "task_states": {
+        "00876-mv2HUxq3B53_2_0": "finished",
+        "00876-mv2HUxq3B53_2_1": "finished",
+        "00876-mv2HUxq3B53_2_2": "in_progress"
+      },
+      "final_decisions_with_semantic_fallback": [],
+      "final_decisions_after_format_retry": [],
+      "final_decision_count": 29,
+      "last_final_decision": {
+        "line": 1309,
+        "elapsed": "00:23:10",
+        "subtask_id": "00876-mv2HUxq3B53_2_2",
+        "step": 3,
+        "selection": "frontier 4",
+        "confirmed_semantic_fallback_causes": [],
+        "preceding_format_warning_lines": []
+      },
+      "validation_warnings": [],
+      "validation_exhausted_remaining_zero": 0,
+      "final_decisions_after_validation_retry": [],
+      "pending_warning_lines_at_snapshot_end": []
+    },
+    {
+      "split": 4,
+      "worker": 0,
+      "upstream_log": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split4_worker0/log_0.00_0.50_4.log",
+      "snapshot_bytes": 86402,
+      "snapshot_sha256": "e728e3cdee618eacdf2adc6348911d74e00216cb80b0db94af2d21db71664f57",
+      "running_header_count": 1,
+      "counts": {
+        "format_warning": 5,
+        "format_exhausted_to_none": 0,
+        "all_retries_exhausted_to_none": 0,
+        "unclear_self_refine_default_confirm": 0,
+        "api_none_self_refine_default_confirm": 0,
+        "same_candidate_three_rejections_force_accept": 0,
+        "format_retry_recovered_to_valid_selection": 2,
+        "potential_text_blocks": 32,
+        "potential_numeric_score_missing_in_logged_text": 0,
+        "potential_graph_lookup_exception_default3": 0
+      },
+      "events": [
+        {
+          "kind": "format_retry_recovered_to_valid_selection",
+          "line": 809,
+          "elapsed": "00:14:35",
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 9,
+          "detail": "frontier 3"
+        },
+        {
+          "kind": "format_retry_recovered_to_valid_selection",
+          "line": 898,
+          "elapsed": "00:17:50",
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 11,
+          "detail": "frontier 3"
+        }
+      ],
+      "current_subtask_id": "00808-y9hTuugGdiq_3_1",
+      "task_states": {
+        "00808-y9hTuugGdiq_3_0": "finished",
+        "00808-y9hTuugGdiq_3_1": "in_progress"
+      },
+      "final_decisions_with_semantic_fallback": [],
+      "final_decisions_after_format_retry": [
+        {
+          "line": 809,
+          "elapsed": "00:14:35",
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 9,
+          "selection": "frontier 3",
+          "confirmed_semantic_fallback_causes": [],
+          "preceding_format_warning_lines": [
+            793
+          ]
+        },
+        {
+          "line": 898,
+          "elapsed": "00:17:50",
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 11,
+          "selection": "frontier 3",
+          "confirmed_semantic_fallback_causes": [],
+          "preceding_format_warning_lines": [
+            883
+          ]
+        }
+      ],
+      "final_decision_count": 22,
+      "last_final_decision": {
+        "line": 1035,
+        "elapsed": "00:21:19",
+        "subtask_id": "00808-y9hTuugGdiq_3_1",
+        "step": 14,
+        "selection": "frontier 3",
+        "confirmed_semantic_fallback_causes": [],
+        "preceding_format_warning_lines": []
+      },
+      "validation_warnings": [
+        {
+          "line": 793,
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 9,
+          "marker": "Error parsing response format",
+          "retries_remaining": 3,
+          "elapsed": "00:13:57"
+        },
+        {
+          "line": 883,
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 11,
+          "marker": "Error parsing response format",
+          "retries_remaining": 4,
+          "elapsed": "00:16:50"
+        },
+        {
+          "line": 1062,
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 15,
+          "marker": "Error parsing response format",
+          "retries_remaining": 4,
+          "elapsed": "00:22:17"
+        },
+        {
+          "line": 1066,
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 15,
+          "marker": "Error parsing response format",
+          "retries_remaining": 3,
+          "elapsed": "00:22:54"
+        },
+        {
+          "line": 1070,
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 15,
+          "marker": "Error parsing response format",
+          "retries_remaining": 2,
+          "elapsed": "00:23:34"
+        }
+      ],
+      "validation_exhausted_remaining_zero": 0,
+      "final_decisions_after_validation_retry": [
+        {
+          "line": 809,
+          "elapsed": "00:14:35",
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 9,
+          "selection": "frontier 3",
+          "preceding_validation_warning_lines": [
+            793
+          ]
+        },
+        {
+          "line": 898,
+          "elapsed": "00:17:50",
+          "subtask_id": "00808-y9hTuugGdiq_3_1",
+          "step": 11,
+          "selection": "frontier 3",
+          "preceding_validation_warning_lines": [
+            883
+          ]
+        }
+      ],
+      "pending_warning_lines_at_snapshot_end": [
+        1062,
+        1066,
+        1070
+      ]
+    },
+    {
+      "split": 4,
+      "worker": 1,
+      "upstream_log": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split4_worker1/log_0.50_1.00_4.log",
+      "snapshot_bytes": 87319,
+      "snapshot_sha256": "224c7f4ecf104debfe92a619fea4a6fd6cf582c3eb8e399e607990a619c0a7ce",
+      "running_header_count": 1,
+      "counts": {
+        "format_warning": 0,
+        "format_exhausted_to_none": 0,
+        "all_retries_exhausted_to_none": 0,
+        "unclear_self_refine_default_confirm": 0,
+        "api_none_self_refine_default_confirm": 0,
+        "same_candidate_three_rejections_force_accept": 0,
+        "format_retry_recovered_to_valid_selection": 0,
+        "potential_text_blocks": 37,
+        "potential_numeric_score_missing_in_logged_text": 0,
+        "potential_graph_lookup_exception_default3": 0
+      },
+      "events": [],
+      "current_subtask_id": "00876-mv2HUxq3B53_3_1",
+      "task_states": {
+        "00876-mv2HUxq3B53_3_0": "finished",
+        "00876-mv2HUxq3B53_3_1": "in_progress"
+      },
+      "final_decisions_with_semantic_fallback": [],
+      "final_decisions_after_format_retry": [],
+      "final_decision_count": 28,
+      "last_final_decision": {
+        "line": 1084,
+        "elapsed": "00:23:14",
+        "subtask_id": "00876-mv2HUxq3B53_3_1",
+        "step": 22,
+        "selection": "frontier 5",
+        "confirmed_semantic_fallback_causes": [],
+        "preceding_format_warning_lines": []
+      },
+      "validation_warnings": [],
+      "validation_exhausted_remaining_zero": 0,
+      "final_decisions_after_validation_retry": [],
+      "pending_warning_lines_at_snapshot_end": []
+    }
+  ],
+  "interpretation": [
+    "An error followed by a valid frontier response is recovery under the unchanged original retry loop, not a default semantic acceptance.",
+    "Choice history counts repeated rejections of the same tuple cumulatively within one explore_step; the source does not require the rejections to be consecutive.",
+    "Zero observable markers are bounded to the frozen upstream snapshot bytes and do not establish that future tasks are free of fallback.",
+    "Potential graph global default3 remains unobservable; no zero total is inferred from valid numeric score text."
+  ]
+}

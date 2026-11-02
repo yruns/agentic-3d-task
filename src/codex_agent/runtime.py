@@ -81,6 +81,12 @@ _RUN_HOME_SEED_FILES: tuple[str, ...] = (
     "installation_id",
     ".personality_migration",
 )
+_PRESERVED_RUN_HOME_PRUNE_DIRS: tuple[str, ...] = (".tmp", "tmp")
+_PRESERVED_RUN_HOME_PRUNE_FILE_PATTERNS: tuple[str, ...] = (
+    "*.sqlite",
+    "*.sqlite-wal",
+    "*.sqlite-shm",
+)
 
 #: Sub-directory of each run home used as an isolated ``HOME`` so the Codex
 #: app-server does not discover user/global skills under the real home.
@@ -494,6 +500,7 @@ class CodexAgentRuntime:
 
     def _cleanup_run_home(self, run_home: Path) -> None:
         if self.config.keep_run_home:
+            _prune_preserved_run_home(run_home)
             return
         runs_root = self.config.codex_home / "runs"
         try:
@@ -671,6 +678,24 @@ def _remove_tree_best_effort(path: Path, *, attempts: int = 4) -> None:
                 )
                 return
             time.sleep(0.25 * (attempt + 1))
+
+
+def _prune_preserved_run_home(run_home: Path) -> None:
+    """Keep trace files while dropping bulky app-server scratch and state."""
+    for dirname in _PRESERVED_RUN_HOME_PRUNE_DIRS:
+        _remove_tree_best_effort(run_home / dirname)
+    for pattern in _PRESERVED_RUN_HOME_PRUNE_FILE_PATTERNS:
+        for path in run_home.glob(pattern):
+            _remove_file_best_effort(path)
+
+
+def _remove_file_best_effort(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        logger.warning("could not remove codex run-home file {}: {}", path, exc)
 
 
 def _tool_action_signature(item: ThreadItem) -> str | None:

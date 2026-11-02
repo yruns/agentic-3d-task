@@ -1,11 +1,14 @@
 # Codex Agent
 
 This chapter collects engineering notes for the Codex Agent runtime and its
-tool-using NR3D/OpenEQA workflows. These are design and investigation records,
+tool-using NR3D/OpenEQA/SceneFunc3D workflows. These are design and investigation records,
 not generated API documentation.
 
 ## Core Notes
 
+- [Keyframe Selector Shared Foundation Review](keyframe_shared_foundation_review_20261003.md):
+  deferred architecture gap between the thesis's shared evidence foundation and
+  the three tasks' current retrieval paths, with code evidence and follow-up criteria.
 - [NR3D Tools Plan](nr3d_tools_plan_20260609.md): design plan for agent-driven
   CLI tools, image viewing, and the phased NR3D evidence loop.
 - [View Image Adapter Fix](view_image_adapter_fix_20260609.md): notes on making

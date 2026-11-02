@@ -412,7 +412,7 @@ def test_suggest_additional_views_prioritizes_query_visible_object_frames(
     ]
 
 
-def test_suggest_additional_views_recommends_crops_from_matched_object_bboxes(
+def test_suggest_additional_views_does_not_return_recommended_crops(
     tmp_path: Path,
 ) -> None:
     scene_dir = tmp_path / "421393"
@@ -469,22 +469,17 @@ def test_suggest_additional_views_recommends_crops_from_matched_object_bboxes(
     result = suggest_additional_views(tool_scene, args)
     payload = cast(SuggestedViewsPayload, result.to_payload())
 
-    assert payload["views"][0]["recommended_crops"] == [
+    assert payload["views"][0]["matched_objects"] == [
         {
+            "object_id": "8",
+            "label": "heater",
+            "score": 0.86,
             "bbox_xyxy": [100.0, 200.0, 500.0, 1000.0],
             "bbox_format": "pixel_xyxy",
-            "reason": "matched_object_full_bbox",
-            "source_object_id": "8",
-            "source_object_label": "heater",
-        },
-        {
-            "bbox_xyxy": [360.0, 760.0, 540.0, 1040.0],
-            "bbox_format": "pixel_xyxy",
-            "reason": "right_lower_affordance_crop_from_matched_object_bbox",
-            "source_object_id": "8",
-            "source_object_label": "heater",
-        },
+            "source": "object_frame_map",
+        }
     ]
+    assert "recommended_crops" not in payload["views"][0]
 
 
 def test_suggest_additional_views_stops_when_only_accepted_frame_exists(

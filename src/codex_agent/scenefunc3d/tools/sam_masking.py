@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
 import math
 import re
 from collections.abc import Mapping, Sequence
@@ -21,6 +24,7 @@ from pydantic import (
 )
 
 from ...errors import SceneFunc3dDataError
+from ..servers.schemas import SamMaskCandidateResponse, SamMaskRle
 from .crop_metadata import (
     expand_crop_mask_to_source_frame,
     load_crop_metadata_for_image,
@@ -326,10 +330,12 @@ def sam_mask(
     contact_sheet_entries: list[_ContactSheetEntry] = []
     for candidate_response in response.candidates:
         safe_candidate_id = _safe_path_component(candidate_response.candidate_id)
-        mask_npz_path = ensure_path_under_roots(
-            candidate_response.mask_npz_path,
-            roots=settings.allowed_output_roots,
-            field_name="mask_npz_path",
+        mask_npz_path = _resolve_candidate_mask_npz_path(
+            candidate_response=candidate_response,
+            safe_candidate_id=safe_candidate_id,
+            staging_dir=staging_dir,
+            allowed_output_roots=settings.allowed_output_roots,
+            allow_path_payload=not response.is_remote_backend_response,
         )
         boolean_mask = _load_boolean_mask(mask_npz_path)
         candidate_mask_npz_path = mask_npz_path
@@ -376,6 +382,165 @@ def sam_mask(
         candidates=tuple(candidates),
         contact_sheet_path=contact_sheet_path,
     )
+
+
+def _resolve_candidate_mask_npz_path(
+    *,
+    candidate_response: SamMaskCandidateResponse,
+    safe_candidate_id: str,
+    staging_dir: Path,
+    allowed_output_roots: tuple[Path, ...],
+    allow_path_payload: bool,
+) -> Path:
+    from codex_agent.scenefunc3d.backends.config import ensure_path_under_roots
+
+    if candidate_response.mask_rle is not None:
+        return _materialize_rle_mask_npz(
+            mask_rle=candidate_response.mask_rle,
+            candidate_id=candidate_response.candidate_id,
+            target_path=staging_dir / f"{safe_candidate_id}.npz",
+            allowed_output_roots=allowed_output_roots,
+        )
+    if candidate_response.mask_npz_base64:
+        return _materialize_inline_mask_npz(
+            mask_npz_base64=candidate_response.mask_npz_base64,
+            mask_npz_sha256=candidate_response.mask_npz_sha256,
+            target_path=staging_dir / f"{safe_candidate_id}.npz",
+            allowed_output_roots=allowed_output_roots,
+        )
+    candidate_mask_path = candidate_response.mask_npz_path
+    if candidate_mask_path is not None and not allow_path_payload:
+        raise _candidate_mask_materialization_error(
+            candidate_response,
+            mask_npz_path=candidate_mask_path,
+            remote_backend_response=True,
+        )
+    if candidate_mask_path is not None and candidate_mask_path.is_file():
+        try:
+            return ensure_path_under_roots(
+                candidate_mask_path,
+                roots=allowed_output_roots,
+                field_name="mask_npz_path",
+            )
+        except ToolInputError as exc:
+            raise _candidate_mask_materialization_error(
+                candidate_response,
+                mask_npz_path=candidate_mask_path,
+                remote_backend_response=False,
+            ) from exc
+    raise _candidate_mask_materialization_error(
+        candidate_response,
+        mask_npz_path=candidate_mask_path,
+        remote_backend_response=False,
+    )
+
+
+def _materialize_rle_mask_npz(
+    *,
+    mask_rle: SamMaskRle,
+    candidate_id: str,
+    target_path: Path,
+    allowed_output_roots: tuple[Path, ...],
+) -> Path:
+    from codex_agent.scenefunc3d.backends.config import ensure_path_under_roots
+    from codex_agent.scenefunc3d.backends.mask_codec import (
+        MaskRlePayload,
+        decode_bool_mask_rle,
+    )
+
+    mask_npz_path = ensure_path_under_roots(
+        target_path,
+        roots=allowed_output_roots,
+        field_name="mask_npz_path",
+    )
+    try:
+        mask = decode_bool_mask_rle(
+            MaskRlePayload(
+                height=mask_rle.height,
+                width=mask_rle.width,
+                counts=mask_rle.counts,
+            )
+        )
+    except ValueError as exc:
+        raise ToolInputError(
+            "SAM RLE mask payload is invalid: "
+            f"candidate_id={candidate_id!r}; path={mask_npz_path}"
+        ) from exc
+    return _write_boolean_mask_npz(mask_npz_path, mask)
+
+
+def _candidate_mask_materialization_error(
+    candidate_response: SamMaskCandidateResponse,
+    *,
+    mask_npz_path: Path | None,
+    remote_backend_response: bool,
+) -> ToolInputError:
+    source_summary = " from remote HTTPS backend" if remote_backend_response else ""
+    path_summary = (
+        "; mask_npz_path=<redacted_remote_path>"
+        if remote_backend_response and mask_npz_path is not None
+        else f"; mask_npz_path={mask_npz_path}"
+    )
+    return ToolInputError(
+        f"SAM mask candidate payload{source_summary} could not be materialized "
+        "on this host: "
+        f"candidate_id={candidate_response.candidate_id!r}; "
+        f"payloads={_candidate_mask_payload_summary(candidate_response)}"
+        f"{path_summary}"
+    )
+
+
+def _candidate_mask_payload_summary(
+    candidate_response: SamMaskCandidateResponse,
+) -> str:
+    payload_types: list[str] = []
+    if candidate_response.mask_rle is not None:
+        payload_types.append("mask_rle")
+    if candidate_response.mask_npz_base64:
+        payload_types.append("mask_npz_base64")
+    if candidate_response.mask_npz_path is not None:
+        payload_types.append("mask_npz_path")
+    if not payload_types:
+        return "none"
+    return ",".join(payload_types)
+
+
+def _materialize_inline_mask_npz(
+    *,
+    mask_npz_base64: str,
+    mask_npz_sha256: str,
+    target_path: Path,
+    allowed_output_roots: tuple[Path, ...],
+) -> Path:
+    from codex_agent.scenefunc3d.backends.config import ensure_path_under_roots
+
+    mask_npz_path = ensure_path_under_roots(
+        target_path,
+        roots=allowed_output_roots,
+        field_name="mask_npz_path",
+    )
+    try:
+        mask_npz_bytes = base64.b64decode(mask_npz_base64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ToolInputError(
+            "SAM inline mask npz payload is not valid base64: " f"path={mask_npz_path}"
+        ) from exc
+    if mask_npz_sha256:
+        actual_sha256 = hashlib.sha256(mask_npz_bytes).hexdigest()
+        if actual_sha256 != mask_npz_sha256:
+            raise ToolInputError(
+                "SAM inline mask npz payload failed sha256 verification: "
+                f"path={mask_npz_path}"
+            )
+    try:
+        mask_npz_path.parent.mkdir(parents=True, exist_ok=True)
+        mask_npz_path.write_bytes(mask_npz_bytes)
+    except OSError as exc:
+        raise ToolInputError(
+            "could not write SAM inline mask npz artifact: "
+            f"path={mask_npz_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    return mask_npz_path
 
 
 def _load_boolean_mask(mask_npz_path: Path) -> npt.NDArray[np.bool_]:
@@ -432,7 +597,7 @@ def _write_boolean_mask_npz(mask_npz_path: Path, mask: npt.NDArray[np.bool_]) ->
         np.savez_compressed(mask_npz_path, mask=mask.astype(np.bool_, copy=False))
     except OSError as exc:
         raise ToolInputError(
-            "could not write SAM full-frame mask npz artifact: "
+            "could not write SAM mask npz artifact: "
             f"path={mask_npz_path}; error_type={exc.__class__.__name__}"
         ) from exc
     return mask_npz_path
@@ -526,9 +691,9 @@ def _write_contact_sheet(
                 color=(255, 255, 255),
             )
             draw = ImageDraw.Draw(sheet)
-            for index, image in enumerate(images):
+            for index, sheet_image in enumerate(images):
                 left = index * width
-                sheet.paste(image, (left, 0))
+                sheet.paste(sheet_image, (left, 0))
                 label_top = overlay_height
                 draw.rectangle(
                     (
@@ -550,8 +715,8 @@ def _write_contact_sheet(
                 )
             sheet.save(contact_sheet_path, format="JPEG", quality=_JPEG_QUALITY)
         finally:
-            for image in images:
-                image.close()
+            for loaded_image in images:
+                loaded_image.close()
     except OSError as exc:
         raise ToolInputError(
             "could not render SAM contact sheet: "

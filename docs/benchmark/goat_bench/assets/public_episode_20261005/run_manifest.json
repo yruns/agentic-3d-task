@@ -1,0 +1,23 @@
+{
+  "run_id": "REPRO_20261005_SCOPE_Gemini38Flash_public_example_ep0",
+  "project_branch": "feat/realtime-model",
+  "head_commit_at_launch": "d5c24a5e676d8729fd1f6d0f890d5bf5760b5827",
+  "adapter_code_commit": "d5c24a5e676d8729fd1f6d0f890d5bf5760b5827",
+  "runtime_code_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "runtime_root": "/home/ysh/codecase/SCOPE-repro/SCOPE",
+  "model": "gemini-3.8-flash",
+  "source_model": "gpt-4o-2024-11-20",
+  "thinking_budget_tokens": 2000,
+  "scene_ids": [
+    "00861-GLAQ4DNUx5U"
+  ],
+  "episode_ids": [
+    "0"
+  ],
+  "expected_subtasks": 5,
+  "split": 1,
+  "ledger_start_line": 2,
+  "start_utc": "2026-10-04T18:49:32.721419+00:00",
+  "runner_sha256": "9835f44293ba42df41cc0493b854be01ad8074aacda5962d7aff065ef60bd1c4",
+  "bridge_sha256": "1761fd1055a6490f792ee1ada2ed8e6b53431c36ab47c249fa27640f0e00cb57"
+}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -11,8 +12,10 @@ import pytest
 from codex_agent.cli import run_openeqa
 from codex_agent.config import CodexAgentConfig
 from codex_agent.evaluation.openeqa_runner import OpenEqaRunSummary
-from codex_agent.openeqa.question import load_questions
+from codex_agent.openeqa.judge import JudgeScorer
+from codex_agent.openeqa.question import OpenEqaQuestion, load_questions
 from codex_agent.openeqa.scene import filter_questions_with_local_scenes
+from codex_agent.tasks.base import CodexExecutor
 from codex_agent.tests.conftest import OpenEqaFixture
 
 
@@ -130,6 +133,10 @@ def test_main_runs_selected_questions(
         captured.update(kwargs)
         return OpenEqaRunSummary(n=1, n_judged=0, mnas=0.0)
 
+    def _fake_preflight(config: CodexAgentConfig) -> None:
+        assert isinstance(config, CodexAgentConfig)
+
+    monkeypatch.setattr(run_openeqa, "preflight_codex_runtime", _fake_preflight)
     monkeypatch.setattr(run_openeqa, "run_questions", _fake_run_questions)
 
     exit_code = run_openeqa.main(
@@ -185,3 +192,64 @@ def test_main_errors_when_no_local_scenes(
                 "--no-judge",
             ]
         )
+
+
+def test_main_preflights_runtime_config_before_constructing_runtime(
+    openeqa_fixture: OpenEqaFixture,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    call_order: list[str] = []
+
+    def fake_preflight(config: CodexAgentConfig) -> None:
+        assert isinstance(config, CodexAgentConfig)
+        call_order.append("preflight")
+
+    class FakeRuntime:
+        def __init__(self, config: CodexAgentConfig) -> None:
+            assert isinstance(config, CodexAgentConfig)
+            call_order.append("runtime")
+
+    def fake_run_questions(
+        *,
+        questions: Sequence[OpenEqaQuestion],
+        data_root: Path,
+        output_dir: Path,
+        runtime: CodexExecutor,
+        judge: JudgeScorer | None = None,
+        workers: int = 1,
+        sample_retries: int = 2,
+    ) -> OpenEqaRunSummary:
+        _ = (
+            questions,
+            data_root,
+            output_dir,
+            runtime,
+            judge,
+            workers,
+            sample_retries,
+        )
+        return OpenEqaRunSummary(n=1, n_judged=0, mnas=0.0)
+
+    monkeypatch.setattr(
+        run_openeqa, "preflight_codex_runtime", fake_preflight, raising=False
+    )
+    monkeypatch.setattr(run_openeqa, "CodexAgentRuntime", FakeRuntime)
+    monkeypatch.setattr(run_openeqa, "run_questions", fake_run_questions)
+
+    exit_code = run_openeqa.main(
+        [
+            "--questions",
+            str(openeqa_fixture.questions_path),
+            "--data-root",
+            str(openeqa_fixture.data_root),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--limit",
+            "1",
+            "--no-judge",
+        ]
+    )
+
+    assert exit_code == 0
+    assert call_order == ["preflight", "runtime"]

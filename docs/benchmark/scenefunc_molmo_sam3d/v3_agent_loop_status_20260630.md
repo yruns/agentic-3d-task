@@ -172,6 +172,268 @@ fuse_accepted_masks
 MolmoPoint-8B + SAM2.1-Hiera-L
 ```
 
+### Native single-port sidecar server
+
+新的正式服务入口是 repo 内的单进程 server：
+
+```text
+src/codex_agent/scenefunc3d/servers/scenefunc_sidecar_server.py
+```
+
+它在一个 Python 进程中同时加载 MolmoPoint 和 SAM2.1，并只监听一个对外端口。对 `mlx export --port=9001` 场景，推荐直接让该 server 监听 IPv6 `::` 的 `9001`：
+
+```bash
+PYTHONPATH=src scripts/scenefunc3d/serve_native_sidecar.sh \
+  --host :: \
+  --port 9001 \
+  --device cuda:0 \
+  --molmo-model-path /mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/sidecar_services_20260630/molmopoint_merged_model \
+  --sam-backend transformers \
+  --sam-model-path /mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/molmopoint_sam21_20260628/hf_home/transformers/models--facebook--sam2.1-hiera-large/snapshots/665f8e2ad61cf5f53d65644ff27c8ee525124610 \
+  --staging-root /mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/sidecar_services_20260630 \
+  --base-path /s/qnpoSRas
+```
+
+### Native server API contract
+
+所有 `POST` 请求都使用 JSON body，并设置：
+
+```text
+Content-Type: application/json
+```
+
+如果部署在会保留 URL prefix 的 reverse proxy 后面，用 `--base-path` 增加挂载前缀。例如 `--base-path /s/<export-id>` 会同时支持 `/health` 和 `/s/<export-id>/health`。下面只写 server 看到的 path；挂载前缀只是在这些 path 前面加一段，不改变 method 和 body。
+
+#### Aggregate health
+
+```text
+Method: GET
+Path: /health
+Body: none
+```
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "molmo": {
+    "status": "ok",
+    "model_name": "MolmoPoint-8B",
+    "model_loaded": true
+  },
+  "sam": {
+    "status": "ok",
+    "model_name": "SAM2.1-Hiera-L",
+    "model_loaded": true
+  }
+}
+```
+
+#### Molmo health
+
+```text
+Method: GET
+Path: /molmo/health
+Body: none
+```
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "model_name": "MolmoPoint-8B",
+  "model_loaded": true
+}
+```
+
+#### SAM health
+
+```text
+Method: GET
+Path: /sam/health
+Body: none
+```
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "model_name": "SAM2.1-Hiera-L",
+  "model_loaded": true
+}
+```
+
+#### Molmo point
+
+```text
+Method: POST
+Path: /molmo/v1/point
+```
+
+Body:
+
+```json
+{
+  "request_id": "case-000073-molmo-01",
+  "image_path": "/absolute/path/to/frame_or_crop.jpg",
+  "prompt": "Point to the center of the green circular radiator temperature dial face.",
+  "image_width": 252,
+  "image_height": 403
+}
+```
+
+Field requirements:
+
+| Field | Type | Required | Meaning |
+|---|---:|---:|---|
+| `request_id` | string | yes | Caller-provided id echoed in the response. |
+| `image_path` | string path | yes | Existing image file path visible to the server process. |
+| `prompt` | string | yes | Pointing prompt sent to MolmoPoint. |
+| `image_width` | integer | yes | Image width in pixels. Must be positive. |
+| `image_height` | integer | yes | Image height in pixels. Must be positive. |
+
+Response:
+
+```json
+{
+  "request_id": "case-000073-molmo-01",
+  "model_name": "MolmoPoint-8B",
+  "raw_text": "<points ...>...</point>",
+  "image_points": [
+    {
+      "x_px": 107.28666666666666,
+      "y_px": 153.27141304347828,
+      "source": "<points ...>...</point>",
+      "label": "green circular radiator temperature dial face"
+    }
+  ],
+  "latency_ms": 918.1
+}
+```
+
+Notes:
+
+- `image_points` can contain zero, one, or multiple points. The caller must review the point overlay or raw output before using it as a SAM prompt.
+- Coordinates are absolute pixel coordinates in the input image coordinate system.
+
+#### SAM masks
+
+```text
+Method: POST
+Path: /sam/v1/masks
+```
+
+Body:
+
+```json
+{
+  "request_id": "case-000073-sam-01",
+  "image_path": "/absolute/path/to/frame_or_crop.jpg",
+  "points": [
+    {
+      "x_px": 107.28666666666666,
+      "y_px": 153.27141304347828,
+      "label": "green circular radiator temperature dial face",
+      "source": "molmo_point"
+    }
+  ],
+  "staging_dir": "/absolute/path/to/output/sam/000073/candidates"
+}
+```
+
+Field requirements:
+
+| Field | Type | Required | Meaning |
+|---|---:|---:|---|
+| `request_id` | string | yes | Caller-provided id echoed in the response. |
+| `image_path` | string path | yes | Existing image file path visible to the server process. |
+| `points` | array | yes | One or more approved point prompts. |
+| `points[].x_px` | float | yes | Point x coordinate in image pixels. |
+| `points[].y_px` | float | yes | Point y coordinate in image pixels. |
+| `points[].label` | string | no | Human-readable point label. |
+| `points[].source` | string | no | Point provenance, usually Molmo raw output or `molmo_point`. |
+| `staging_dir` | string path | yes | Directory where mask `.npz` artifacts are written. Must be under the server staging root. |
+
+Response:
+
+```json
+{
+  "request_id": "case-000073-sam-01",
+  "model_name": "SAM2.1-Hiera-L",
+  "candidates": [
+    {
+      "candidate_id": "mask_00",
+      "score": 0.890625,
+      "mask_npz_path": "/absolute/path/to/output/sam/000073/candidates/mask_00.npz",
+      "pixel_count": 1579,
+      "coverage_percent": 0.05711082175925926
+    }
+  ],
+  "latency_ms": 69.7
+}
+```
+
+Notes:
+
+- SAM may return multiple candidates for one point prompt. The caller must choose a candidate after visual review; do not select by score alone.
+- `mask_npz_path` is a server-written artifact path. Downstream `lift_mask_to_3d` should consume the selected candidate's path.
+
+#### Common errors
+
+Request validation failures return:
+
+```text
+Status: 400
+Body:
+```
+
+```json
+{
+  "error": "invalid_request",
+  "details": [
+    {
+      "field": "image_path",
+      "message": "Path does not point to a file"
+    }
+  ]
+}
+```
+
+GPU resource failures return:
+
+```text
+Status: 503
+Body:
+```
+
+```json
+{
+  "error": "molmo_resource_unavailable"
+}
+```
+
+or:
+
+```json
+{
+  "error": "sam_resource_unavailable"
+}
+```
+
+SAM-specific artifact or image failures use stable error names:
+
+```text
+invalid_staging_dir
+sam_image_load_failed
+sam_invalid_output
+sam_artifact_write_failed
+```
+
+旧的 `molmo_point_server.py` 和 `sam2_mask_server.py` 仍保留为单模型调试入口，但外部服务不再需要额外的 NAS wrapper 或 `8711/8712` 双端口暴露。
+
 E2E launcher 现在在 Linux 上默认启动项目内 ModelHub adapter：
 
 ```text

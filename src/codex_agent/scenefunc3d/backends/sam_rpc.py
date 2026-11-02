@@ -9,6 +9,7 @@ from codex_agent.scenefunc3d.tools.models import ToolInputError
 
 from .config import SceneFunc3dBackendSettings, ensure_path_under_roots
 from .http_client import post_json
+from .image_payload import build_inline_image_payload, is_remote_backend_url
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -24,26 +25,39 @@ def request_sam_masks(
     staging_dir: Path,
 ) -> SamMaskResponse:
     """Call the configured local SAM sidecar and validate its response."""
-    image_path = ensure_path_under_roots(
-        args.image_path,
-        roots=settings.allowed_image_roots,
-        field_name="image_path",
-    )
     artifact_staging_dir = ensure_path_under_roots(
         staging_dir,
         roots=settings.allowed_output_roots,
         field_name="staging_dir",
     )
+    is_remote_backend = is_remote_backend_url(settings.sam_url)
+    payload: dict[str, object] = {
+        "request_id": request_id,
+        "points": [point.to_payload() for point in args.points],
+    }
+    if is_remote_backend:
+        payload["image"] = build_inline_image_payload(
+            args.image_path,
+            allowed_roots=settings.allowed_image_roots,
+        ).model_dump(mode="json")
+    else:
+        image_path = ensure_path_under_roots(
+            args.image_path,
+            roots=settings.allowed_image_roots,
+            field_name="image_path",
+        )
+        payload["image_path"] = str(image_path)
+        payload["staging_dir"] = str(artifact_staging_dir)
+
     response = post_json(
         f"{settings.sam_url.rstrip('/')}/v1/masks",
-        payload={
-            "request_id": request_id,
-            "image_path": str(image_path),
-            "points": [point.to_payload() for point in args.points],
-            "staging_dir": str(artifact_staging_dir),
-        },
+        payload=payload,
         response_model=SamMaskResponse,
         timeout_seconds=settings.request_timeout_seconds,
+        request_headers=settings.request_headers,
+    )
+    response = response.with_backend_source(
+        "remote_https" if is_remote_backend else "local_http"
     )
     if response.request_id != request_id:
         raise ToolInputError(

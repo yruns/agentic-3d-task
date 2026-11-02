@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import cast
 
 from ...errors import CodexAgentError
+from ..backends.config import (
+    ensure_path_under_roots,
+    load_backend_settings,
+)
+from ..tool_context import load_tool_context
 from .dispatch import TOOL_NAMES, run_tool
 from .mask_artifacts import (
     SceneFunc3dToolInvocationEvent,
@@ -19,19 +24,21 @@ from .mask_artifacts import (
 from .models import ToolInputError
 from .scene_context import SceneFunc3dToolScene
 
-_DEFAULT_OUT_DIR = Path("tmp") / "scenefunc3d_tool_scratch"
 _CHECKPOINT_ALLOWED_NEXT_TOOLS: Mapping[str, frozenset[str]] = {
     "molmo_point": frozenset(("sam_mask", "molmo_point")),
     "sam_mask": frozenset(("lift_mask_to_3d", "sam_mask")),
     "lift_mask_to_3d": frozenset(("inspect_mask_artifact",)),
+    "inspect_mask_artifact": frozenset(
+        ("inspect_mask_artifact", "suggest_additional_views", "fuse_accepted_masks")
+    ),
     "suggest_additional_views": frozenset(
-        ("view_crop", "view_frame", "molmo_point", "fuse_accepted_masks")
+        ("view_frame", "molmo_point", "fuse_accepted_masks")
     ),
 }
 _CHECKPOINT_TOOL_NAMES = frozenset(
     (*_CHECKPOINT_ALLOWED_NEXT_TOOLS.keys(), "inspect_mask_artifact")
 )
-_MULTIVIEW_FOLLOWUP_EVIDENCE_TOOL_NAMES = frozenset(("view_crop", "view_frame"))
+_MULTIVIEW_FOLLOWUP_EVIDENCE_TOOL_NAMES = frozenset(("view_frame",))
 _MULTIVIEW_PROGRESS_TOOL_NAMES = frozenset(("molmo_point", "fuse_accepted_masks"))
 _MAX_MULTIVIEW_EVIDENCE_EVENTS_BEFORE_POINT = 4
 _IDENTICAL_RETRY_GUARDED_TOOL_NAMES = frozenset(
@@ -53,13 +60,26 @@ class _FollowupEvidenceSignature:
     args_json: str
 
 
+@dataclass(frozen=True)
+class _ToolCliContext:
+    tool_scene: SceneFunc3dToolScene
+    out_dir: Path
+    backend_config_path: Path | None
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     """Build the SceneFunc3D tools CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="codex_agent.scenefunc3d.tools", description=__doc__
     )
     parser.add_argument("tool", choices=list(TOOL_NAMES), help="Tool to run.")
-    parser.add_argument("--scene-root", required=True, type=Path, help="Scene root.")
+    parser.add_argument(
+        "--context",
+        type=Path,
+        default=None,
+        help="SceneFunc3D tool context JSON written by the runner.",
+    )
+    parser.add_argument("--scene-root", type=Path, default=None, help="Scene root.")
     parser.add_argument(
         "--args",
         default="{}",
@@ -84,25 +104,26 @@ def main(argv: list[str] | None = None) -> int:
     """Run one SceneFunc3D CLI tool and print a compact JSON result."""
     parser = build_arg_parser()
     args = parser.parse_args(argv)
-    out_dir = args.out_dir if args.out_dir is not None else _DEFAULT_OUT_DIR
-    backend_config_path = cast(Path | None, args.backend_config)
+    try:
+        invocation_context = _resolve_tool_cli_context(parser, args)
+    except CodexAgentError as exc:
+        parser.exit(status=1, message=f"ERROR: {exc}\n")
+
     raw_args: dict[str, object] = {}
     try:
         raw_args = _parse_args_json(args.args)
-        tool_scene = SceneFunc3dToolScene.load(args.scene_root)
-        if args.out_dir is not None:
-            _validate_tool_sequence(args.tool, raw_args, out_dir)
+        _validate_tool_sequence(args.tool, raw_args, invocation_context.out_dir)
         payload = run_tool(
-            tool_scene,
+            invocation_context.tool_scene,
             args.tool,
             raw_args,
-            out_dir=out_dir,
-            backend_config_path=backend_config_path,
+            out_dir=invocation_context.out_dir,
+            backend_config_path=invocation_context.backend_config_path,
         )
         payload_data = payload.to_payload()
         _append_tool_event_or_exit(
             parser,
-            out_dir=out_dir,
+            out_dir=invocation_context.out_dir,
             event=SceneFunc3dToolInvocationEvent(
                 tool_name=args.tool,
                 status=ToolEventStatus.SUCCESS,
@@ -114,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     except ToolInputError as exc:
         _append_tool_event_or_exit(
             parser,
-            out_dir=out_dir,
+            out_dir=invocation_context.out_dir,
             event=SceneFunc3dToolInvocationEvent(
                 tool_name=args.tool,
                 status=ToolEventStatus.FAILED,
@@ -129,6 +150,58 @@ def main(argv: list[str] | None = None) -> int:
         parser.exit(status=1, message=f"ERROR: {exc}\n")
     print(json.dumps(payload_data, ensure_ascii=False))
     return 0
+
+
+def _resolve_tool_cli_context(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> _ToolCliContext:
+    context_path = cast(Path | None, args.context)
+    scene_root = cast(Path | None, args.scene_root)
+    backend_config_path = cast(Path | None, args.backend_config)
+    out_dir = cast(Path | None, args.out_dir)
+    if context_path is not None:
+        _reject_context_with_explicit_paths(
+            parser,
+            scene_root=scene_root,
+            backend_config_path=backend_config_path,
+            out_dir=out_dir,
+        )
+        tool_context = load_tool_context(context_path)
+        settings = load_backend_settings(tool_context.backend_config_path)
+        validated_out_dir = ensure_path_under_roots(
+            tool_context.out_dir,
+            roots=settings.allowed_output_roots,
+            field_name="context.out_dir",
+        )
+        return _ToolCliContext(
+            tool_scene=SceneFunc3dToolScene.load(tool_context.scene_root),
+            out_dir=validated_out_dir,
+            backend_config_path=tool_context.backend_config_path,
+        )
+
+    if scene_root is None:
+        parser.error("--scene-root is required when --context is absent")
+    if out_dir is None:
+        parser.error("--out-dir is required when --context is absent")
+    return _ToolCliContext(
+        tool_scene=SceneFunc3dToolScene.load(scene_root),
+        out_dir=out_dir,
+        backend_config_path=backend_config_path,
+    )
+
+
+def _reject_context_with_explicit_paths(
+    parser: argparse.ArgumentParser,
+    *,
+    scene_root: Path | None,
+    backend_config_path: Path | None,
+    out_dir: Path | None,
+) -> None:
+    if scene_root is None and backend_config_path is None and out_dir is None:
+        return
+    parser.error(
+        "--context cannot be combined with --scene-root, --backend-config, or --out-dir"
+    )
 
 
 def _append_tool_event_or_exit(
@@ -218,7 +291,7 @@ def _validate_multiview_followup_sequence(tool_name: str, events_path: Path) -> 
         return
     raise ToolInputError(
         "after successful suggest_additional_views follow-up evidence, call "
-        "molmo_point on a selected follow-up crop or frame, or call "
+        "molmo_point on a selected follow-up frame, or call "
         "fuse_accepted_masks with rejected_suggested_frame_ids; do not keep "
         "opening more follow-up views before Molmo or fusion"
     )
@@ -245,7 +318,7 @@ def _validate_repeated_multiview_followup_evidence(
         if prior_signature == current_signature:
             raise ToolInputError(
                 f"do not repeat follow-up {tool_name} with identical arguments "
-                "after successful suggest_additional_views; change frame or crop, "
+                "after successful suggest_additional_views; change frame, "
                 "or call molmo_point on the selected evidence, or call "
                 "fuse_accepted_masks with rejected_suggested_frame_ids"
             )

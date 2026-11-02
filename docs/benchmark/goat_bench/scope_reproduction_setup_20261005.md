@@ -1,0 +1,1745 @@
+# SCOPE reproduction setup — 2026-10-05
+
+Status: **all required assets ready; first public episode completed**.
+
+The [v1 public episode](v1_public_episode_20261005.md) exited 0 with all five
+original subtasks recorded: distance SR 80.00% and SPL 68.84%. The 36-scene /
+278-subtask evaluation is running in Linux `tmux`; the full 2,669-subtask
+evaluation is incomplete.
+
+The user selected SCOPE for research point 3 and subsequently authorized
+`gemini-3.8-flash` as a replacement for the original GPT model. Compute and data
+preparation run on `ssh bupt`; the model API must be reached from the Mac and
+bridged to Linux through an SSH reverse tunnel.
+
+## Source and storage
+
+- Project branch: `feat/realtime-model`.
+- Project commit at start: `1332f039e412590d3ac22bfb8a476b5ef8fe5365`.
+- Official SCOPE commit: `46f1e1f78077219c30e35440540e4ef22995194c`.
+- Source: `/home/ysh/codecase/SCOPE-repro/SCOPE`.
+- Assets, logs, scripts, manifests and outputs:
+  `/home/ysh/Datasets/SCOPE` (resolves under `/data1/ysh/Datasets`).
+- External reproduction environment: Conda `scope-repro`, pinned to the
+  upstream README's Python 3.9 / Torch 2.4.1 / PyTorch3D 0.7.8 combination.
+  The project's existing `conceptgraph` environment is unchanged.
+- GPU 0 is used for verification; GPU 1 is excluded by `CLAUDE.md`.
+- Secret configuration lives outside tracked files; this record contains no
+  API keys, access tokens, or credential-bearing URLs.
+
+## Episode and data scope
+
+The original task JSON files contain 36 scenes, 360 episodes and 2,669
+subtasks. `--split 1` selects the first episode of each scene: 36 episodes and
+278 subtasks. `--split 1` through `--split 10` are needed for the full set.
+
+Existing geometry and navmeshes for all 36 scenes were found in
+`/home/ysh/Datasets/open-eqa/data/scene_datasets/hm3d/val`. Their semantic mesh
+and annotation text files were initially absent. The geometry is linked into
+the task asset directory; the missing semantic files were subsequently filled
+from the verified public mirror described below.
+
+The official public HM3D example overlaps one required scene,
+`00861-GLAQ4DNUx5U`, and supplies all four required files. The original task
+JSON is copied unchanged to:
+
+```text
+/home/ysh/Datasets/SCOPE/datasets/goat_bench/public_example/content/GLAQ4DNUx5U.json
+```
+
+Its first episode is episode ID `0`, with five subtasks. This is an engineering
+end-to-end check on an available official scene, not the 36-scene paper subset
+or a decision-grade pilot. No synthetic substitute tasks or semantic labels
+are created. The user authorized public dataset mirrors. The remaining
+semantic assets were obtained from the public
+[zhuhu00/hm3d mirror](https://huggingface.co/datasets/zhuhu00/hm3d), pinned to
+revision `0bf2970b74226e2d84b3137bed68a9805f0cc88a`. The 2,145,935,360-byte
+`hm3d-val-semantic-annots-v0.2.tar` matches its published LFS SHA256. All 36
+required scenes now have their four files. The example scene's mirror semantic
+files match the official example hashes; the annotation config matches the
+original SCOPE config byte for byte. All 1,246 distinct scene/goal-object pairs
+resolve to semantic labels, with no missing IDs.
+
+An unauthenticated Matterport download returned login HTML, which was not
+treated as a downloaded dataset. Existing geometry and verified mirror assets
+removed that runtime blocker.
+
+A fresh Linux read on 2026-10-05 at 11:43:35 verified 144 nonempty scene
+files (36 each of geometry, navmesh, semantic mesh and semantic text), plus
+two annotation configs. All 1,246 scene/goal-object pairs still resolve.
+Both mirror archives and all 74 extracted files match their recorded SHA256.
+The old `hm3d_required_scene_audit.json` describes the state before the public
+mirror filled the missing semantic files; it is retained as historical evidence.
+
+## Model and protocol
+
+- Paper model: `gpt-4o-2024-11-20`.
+- User-authorized replacement: `gemini-3.8-flash`, with thinking requested as
+  `include_thoughts=true`, `budget_tokens=2000`.
+- The Mac-local ModelHub bridge listens on `127.0.0.1:8899`, forwarded to the
+  same Linux loopback port. Linux SDK image requests returned actual
+  `gemini-3.8-flash` completions and usage. The bridge records reasoning and
+  cached prompt tokens without private prompts or credentials. Missing response
+  ID, creation time and choice index are filled as transport metadata only.
+- The existing local GPT-4o credential returned HTTP 401 in a preflight;
+  it is not used as evidence that the paper model is available.
+- Algorithm settings retain upstream prompts, temperature 0.7, `top_p=0.95`,
+  max tokens 4,096, frequency/presence penalties 0, persistent memory,
+  potential estimation and self-refinement.
+- Original observations: 1,280 × 1,280 RGB-D, HFOV 120 degrees; seven views at
+  the first step of each subtask and three at its subsequent steps.
+- Primary metrics: `success_by_distance` and `spl_by_distance`, using
+  geodesic distance to annotated goal viewpoints and a 1 m threshold.
+- Infrastructure API failure terminates the bootstrap before upstream
+  API-failure defaults can be accepted. Nonempty semantic-format fallbacks
+  remain part of the pinned upstream implementation, as detailed below.
+
+### Effective protocol and fidelity boundaries
+
+The settings below were checked against the pinned official source and the
+frozen evaluation YAML. The YAML changes eight resource/output settings; it keeps
+all navigation parameters. ModelHub forwards the requested sampling fields
+and adds the user-authorized model and thinking configuration. Sampling
+requests match [paper Appendix A, Table 3](https://arxiv.org/html/2511.08935v1);
+Gemini with thinking remains a separate model configuration.
+
+| Aspect | Effective released-code behavior | Pinned source evidence |
+| --- | --- | --- |
+| Sampling and prompt images | Temperature 0.7, `top_p=0.95`, max tokens 4,096, frequency/presence penalties 0; prompt images are 360 × 360. | [API request](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/eval_utils_gpt_goatbench.py#L49-L57), [image settings](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/cfg/eval_goatbench.yaml#L41-L43). |
+| Memory lifetime | Scene memory, TSDF and potential graph persist across subtasks within an episode. A new episode initializes all three again; ten episodes from one scene are separate memory sessions. | [Episode initialization and optional clearing](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L135-L234), [`clear_up_memory_every_subtask=false`](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/cfg/eval_goatbench.yaml#L33-L36). |
+| Potential graph | Runtime grid resolution is 1.0 m, temporal decay 0.95 and influence radius 3.0 m. Potential estimation is enabled by default. The entrypoint overrides the class constructor's grid/radius defaults. | [Runtime defaults](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L164-L170), [estimator switch](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L362-L386). |
+| Navigation and sensing budget | Each subtask permits `max(50, int(2 * sqrt(scene_size)))` macro-steps; `scene_size` is the scene's horizontal bounding-box area. Its first step captures seven views, then three per step. | [Step budget](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L149-L151), [per-subtask loop and views](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L207-L255), [area calculation](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/geom.py#L15-L39). |
+| Goal selection | The original helper retains descriptions with at most 55 space-separated words, includes child categories for category goals, and selects the referenced instance for description/image goals. The frozen request contains 278 split-1 and 2,669 full-set IDs. | [Unmodified goal helper](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/goatbench_utils.py#L6-L62), [frozen selection](assets/scope_20261005/full2669_frozen_manifest.json). |
+| Stop and measurement | Arrival at a selected snapshot ends normal navigation. Distance success independently checks whether the final pose is strictly less than 1 m geodesic distance from an annotated viewpoint. | [Arrival condition](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L534-L553), [distance measurement](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L589-L613). |
+| Seed and repetitions | Python and NumPy use seed 3407; the entrypoint sets no Torch seed. The queued evaluation is one pass. It provides no five-repeat mean/standard-deviation or significance result. | [Seed initialization](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L44-L45), [paper Appendix B](https://arxiv.org/html/2511.08935v1). |
+
+[Paper Equation 9](https://arxiv.org/html/2511.08935v1) describes a weighted
+exploration score with a visitation penalty. The released implementation
+[computes `exploration_value`](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/potential_graph.py#L317-L352),
+but the policy's frontier-score
+[getter returns `node.potential_score`](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/potential_graph.py#L381-L394).
+This behavior is retained. Results reproduce the pinned released implementation;
+they do not establish that every paper equation is executed literally.
+
+Self-refinement applies to snapshot choices for every goal modality, despite
+the YAML comment mentioning descriptions. The upstream code retains three
+semantic fallbacks: unmatched potential fields start at neutral 3.0;
+nonempty confirmation text outside `CONFIRM`/`REJECT` is accepted; and a choice
+rejected three times can be accepted on its next occurrence. See
+[potential parsing](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/potential_graph.py#L199-L209),
+[confirmation parsing](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/eval_utils_gpt_goatbench.py#L445-L474)
+and [refinement/cycle handling](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/eval_utils_gpt_goatbench.py#L653-L698).
+The injected client terminates on infrastructure errors, model mismatch and
+empty completions; it does not rewrite these semantic parsing rules.
+
+After five unsuccessful action-format/refinement attempts, the policy can
+return `None` and end the current subtask's navigation loop. The evaluator
+still records its final-pose distance metrics and later saves the episode.
+Consequently, complete ID coverage can include action-format failures; it
+cannot certify that every decision parsed successfully. An already nearby
+final pose can even pass the distance threshold after such a failure. This
+differs from an infrastructure `SystemExit`, which interrupts the run before
+the current episode is saved. The paths are documented in
+[retry exhaustion](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/src/eval_utils_gpt_goatbench.py#L514-L567),
+[loop termination](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L449-L454)
+and [unconditional metric recording and episode save](https://github.com/mrwangyou/SCOPE/blob/46f1e1f78077219c30e35440540e4ef22995194c/run_goatbench_evaluation.py#L589-L628).
+Final run records must report observed parser/fallback events separately from
+coverage and SR/SPL; no partial-log observation is a full-run guarantee.
+
+## Evidence and evaluation status
+
+Remote durable manifests include:
+
+```text
+manifests/goat_tasks.json
+manifests/hm3d_required_scene_audit.json
+manifests/reused_scene_geometry.json
+manifests/public_example_overlap.json
+manifests/hm3d_sem_mirror_audit.json
+manifests/task_semantic_compatibility.json
+```
+
+Public model downloads are `yolov8x-world.pt`, `sam_l.pt`, OpenCLIP
+`ViT-B-32 / laion2b_s34b_b79k`, and the independent OpenAI CLIP encoder used by
+YOLOWorld. Model hashes and archive integrity checks passed. GPU 0 CUDA,
+PyTorch3D KNN, Habitat EGL, real annotated-scene RGB-D rendering, and SCOPE
+imports passed. A real 1,280-square frame produced 17 YOLO boxes, a SAM mask
+with 37,132 positive pixels, and finite image/text CLIP features. These are
+preflight checks, not navigation success.
+
+The [fourth encoder integrity record](assets/scope_20261005/yolo_clip_integrity.json)
+verifies the separate 353,976,522-byte OpenAI CLIP checkpoint against its public
+registry SHA. The [runtime environment audit](assets/scope_20261005/environment_runtime_audit_20261005.json)
+also verifies package versions and offline cache revision. The recorded
+[Conda explicit export](assets/scope_20261005/env_conda_explicit.txt) must be
+followed by the [pip freeze](assets/scope_20261005/env_pip_freeze.txt): Conda's
+NumPy metadata says 1.26.4, while the actual pip overlay is 1.23.5. Using only
+the Conda record does not restore the observed runtime.
+
+The public episode ran from clean project commit
+`d5c24a5e676d8729fd1f6d0f890d5bf5760b5827`, using the original SCOPE runtime
+commit listed above. The selected five IDs were frozen before launch. Its
+terminal status, raw distance-metric shards, task metadata, config, run
+manifest, summary and SQL reproduction commands are retained in the
+[v1 process record](v1_public_episode_20261005.md). The record reports the
+Gemini replacement as its own configuration.
+
+The broader run freezes all 2,669 IDs and the first-episode 278-ID selection
+before execution. Two workers on GPUs 0 and 2 are processing split 1 in
+`tmux`. Completion requires terminal worker status and exact frozen-ID
+coverage; running processes and partial metrics are not a completed result.
+
+The original metadata and frozen IDs independently establish these final
+denominators:
+
+| Requested selection | Scenes | Episodes | Object | Image | Description | Total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| First episode per scene | 36 | 36 | 99 | 88 | 91 | 278 |
+| All original episodes | 36 | 360 | 991 | 822 | 856 | 2,669 |
+
+Final acceptance requires the controller and every relevant worker to exit 0,
+paired primary success/SPL shards with exactly the frozen IDs, and ingestion
+with `complete=true`, `expected_ids_verified=true`, and `modality_complete=true`.
+The SQLite samples must independently reproduce overall and modality SR/SPL
+with the denominators above. Final raw shards, frozen IDs, metadata, config,
+runtime revision and all transport recovery records must be archived before
+publishing a completed local result. Full-run API usage remains aggregate;
+per-subtask token counts are unavailable from these upstream artifacts.
+
+### Final metric analysis
+
+`scripts/scope/summarize_metrics.py` produces overall, modality and zero-based
+subtask-index SR/SPL, retaining each group's denominator and a one-based
+ordinal. It requires explicit original metadata indices, paired primary shard
+suffixes and exact frozen-ID coverage. It records SHA256 and byte sizes for
+the inputs actually consumed, checks that they did not change during analysis,
+and publishes the JSON atomically. Partial folds, missing indices, conflicting
+metrics and metric-namespace report paths are rejected.
+
+After the corresponding terminal-status gate passes, run on Linux from the
+asset root, using the project analysis environment:
+
+```bash
+cd /home/ysh/Datasets/SCOPE
+/home/ysh/miniconda3/envs/conceptgraph/bin/python -m scripts.scope.summarize_metrics \
+  --output-dir outputs/REPRO_20261005_SCOPE_Gemini38Flash_canonical278 \
+  --expected-subtasks 278 \
+  --report-file outputs/REPRO_20261005_SCOPE_Gemini38Flash_canonical278/fold_report.json
+```
+
+For the full fold, use the `full2669` directory and expected count 2,669.
+Revision `dd33c67` passed 26 regression cases and the project quality gate.
+Its actual Linux Python 3.10.19 CLI reproduced the existing seven-subtask
+complete episode's SR 71.4286% and SPL 45.6954%, with seven index groups and
+four input fingerprints. A real 278-ID partial snapshot was rejected without
+producing a report. This was analysis-tool verification on saved data; it
+started no benchmark run. See the
+[verification record](assets/scope_20261005/summary_validation_20261005.json).
+
+## Current evaluation queue
+
+Each split uses two disjoint 18-scene shards. The first split uses physical
+GPUs 0 and 2.
+Its frozen file order, seed 3407 and exact IDs are in
+[full2669_frozen_manifest.json](assets/scope_20261005/full2669_frozen_manifest.json).
+Split 1 contains 137 and 141 subtasks, respectively. Both workers started on
+2026-10-05 at 03:28 Asia/Shanghai and continue with the original navigation
+budget. The controller must verify all 278 IDs before advancing to splits 2–10.
+An active process is not a completed result.
+
+The ingestion boundary now accepts the original integer episode IDs and
+normalizes them to strings. It reads primary distance shards ahead of derived
+aggregate files, checks matching success/SPL IDs and rejects conflicting data.
+The original frozen metadata is unchanged. For splits 2–10, only `exp_name`
+changes between stage configs so each split/worker writes to its own directory;
+prompts, sensors, scene selection and algorithm parameters are identical.
+Each terminal shard is checked against its exact IDs before being published
+to the central output directory. A resumed controller reuses existing workers
+and validates terminal artifacts rather than starting duplicate work.
+
+After the 278-ID gate passes, the controller collects batches of three splits:
+2–4, 5–7, then 8–10. Each batch has six workers on GPUs 0, 2, 3, 4, 5 and 6,
+which were verified available before queue preparation. GPU 1 is excluded.
+Each process retains the original half-scene selection and independently
+resets its episode memory, as in the released evaluator. The model and
+navigation parameters remain identical to the first-split configuration.
+The successor [parallel storage plan](assets/scope_20261005/storage_plan_parallel_v2.json)
+preserves the immutable original plan and all twenty gates. Its preparation
+passed under the actual Linux `scope-repro` Python 3.9 environment.
+At 04:30 on 2026-10-05, the four idle GPUs started split 3 and split 4 while
+the original two first-split workers continued. These episodes have independent
+memory and output directories. The controller will reuse them and start split 2
+when GPUs 0 and 2 are free. This advances the full set while retaining the
+canonical result gate and avoiding duplicate work. The
+[early worker launch record](assets/scope_20261005/early_parallel_workers_20261005.json)
+captures their exact PIDs and commits. Future phases remain queued.
+The full-set API ledger now contains interleaved phases; it is only a full-run
+usage ledger and cannot provide per-subtask or canonical278 token attribution.
+The [parallel revision checks](assets/scope_20261005/parallel_validation_20261005.json)
+include 76 targeted tests and five controller integration cases on Linux with
+real file locking. The dispatch case uses synthetic terminal workers and
+checks six distinct GPU/config/output assignments per batch.
+The [parallel controller launch](assets/scope_20261005/parallel_controller_launch_20261005.json)
+records its deployed SHA, matching script hashes and retained first-split PIDs.
+
+At 07:06:54, one additional frozen future worker, split 5 worker 1, started on
+physical GPU 2 alongside first-split worker 1. It processes 128 requested IDs
+in its existing isolated output directory. The other six workers and controller
+were retained. A 20-second resource observation found 14,951 MiB free before
+launch; after real rendering and model inference, both GPU-2 processes occupied
+9,100 MiB each, with 5,836 MiB remaining. The new worker reached step 3 and all
+original PIDs remained live. This observation supports current capacity and does
+not establish a bound for every future scene's peak memory.
+
+Models, prompts, task selection, memory resets and navigation budgets retain
+the frozen configuration. The existing controller will reuse this worker when
+split 5 is reached. Concurrency is seven workers; further sharing has not been
+started. The [launch record](assets/scope_20261005/co_gpu_worker_launch_20261005.json)
+preserves the project head, exact PID, requested IDs and resource evidence.
+
+After 27 minutes of GPU-2 sharing with no terminal error or memory growth,
+the complementary split 5 worker 0 started on GPU 0 at 07:34:34. Its frozen
+shard contains 129 IDs, so both split-5 workers process 257 IDs in their separate
+directories. Before launch GPU 0 had 14,839 MiB free. After real potential-score
+requests and the first navigation query, GPU 0 used 17,906 MiB with 6,178 MiB
+free; GPU 2 retained 5,836 MiB free. All existing PIDs remained live. Concurrency
+is now eight workers with the same frozen configuration. The
+[paired launch record](assets/scope_20261005/co_gpu_paired_worker_launch_20261005.json)
+retains the exact preflight and runtime evidence.
+
+At 08:21:43, split 6 workers 0 and 1 started early on GPUs 3 and 4, alongside
+the existing split-3 workers. Their disjoint 118- and 133-ID sets exactly match
+the frozen selection. Configs differ from the baseline only in `exp_name`, and
+their actual output paths match the isolated storage plan. Both new workers
+completed real rendering and potential-score requests; all eight previous
+workers and the controller remained live. After startup GPUs 3 and 4 retained
+7,769 and 6,860 MiB free, respectively. Ten navigation workers are now active.
+See the [split-6 launch record](assets/scope_20261005/early_split6_workers_20261005.json)
+for exact commits, PIDs and preflight evidence.
+
+At 08:34:55, split 7 workers started early on GPUs 5 and 6 alongside split 4.
+Their disjoint 134- and 142-ID sets match the frozen data, and their configs
+retain all baseline settings except the isolated output name. Both workers
+rendered real observations and received potential-score responses. At 08:38,
+all twelve navigation workers and the controller remained live; GPUs 5 and 6
+retained 6,674 and 6,061 MiB free. All 3,539 completed API calls since recovery
+had HTTP 200 status. The [split-7 launch record](assets/scope_20261005/early_split7_workers_20261005.json)
+captures source, exact PIDs and resource evidence. This starts the remaining
+independent middle episodes early without changing the canonical gate.
+
+Further dispatch must retain at most two active workers per healthy GPU. For
+GPUs 0 and 2, reserve one slot for the controller's split-1-to-split-2 sequence:
+an early split-8 worker may use the other slot only after the corresponding
+split-5 worker has completed and passed its exact-ID check. On GPUs 3/4 and
+5/6, split 9/10 can use a released slot from split 3/6 or 4/7; the controller
+reuses those recorded stages. GPU 1 remains excluded. Check live processes,
+terminal status and current free VRAM before each dispatch.
+
+## A-EQA release and asset boundary
+
+The paper also reports A-EQA, but the official repository's A-EQA instructions
+are commented out and neither the evaluator nor config exists in its eight
+public commits. The author's [open issue response](https://github.com/mrwangyou/SCOPE/issues/2#issuecomment-3688968547)
+says that evaluation code was being prepared. This check found no official
+public A-EQA release or predictions.
+
+A [third-party fork](https://github.com/NohJanghan/SCOPE/tree/60cc58cd0af615ee0755eca5639ba61c8b70c5e3)
+added A-EQA code in September 2026 and uses SCOPE's potential graph and
+refinement. Its model defaults, API-failure handling and blind-LLM answer
+replacement during judging differ materially from the current transport and
+coverage requirements. It has not been executed here and cannot establish
+reproduction of the paper's A-EQA results.
+
+The existing OpenEQA subset matches all 184 question IDs and their metadata;
+its 57 distinct HM3D scenes have valid GLB headers/file lengths and navmeshes
+that load in Habitat with finite positive navigable area. This verifies assets,
+not complete rendering or navigation. Detailed sources and bounds are in the
+[A-EQA audit](assets/scope_20261005/aeqa_release_audit_20261005.json).
+
+Remote control records:
+
+```text
+tmux: scope-full-20261005; scope-s1-w0-20261005; scope-s1-w1-20261005
+manifests/storage_plan.json
+manifests/storage_plan_parallel_v2.json
+manifests/full_project_commit.txt
+manifests/full_controller_commit.txt
+logs/full_run.log; logs/full_run.exit
+logs/full_split{split}_worker{worker}.log / .exit
+outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669
+```
+
+The first workers were launched from project commit
+`89dd5337df953374c26b0ebcb67b3bb8663b9ad8`. The controller revision is recorded
+separately in `full_controller_commit.txt`; it changes storage and validation,
+while the pinned upstream runtime and injected model transport stay the same.
+
+The storage revision passed the project quality gate and 75 targeted regression
+tests. The four controller integration cases also passed on Linux with real
+`flock`; they use isolated fixtures and provide no navigation performance
+evidence. The exact checks are in
+[storage_validation_20261005.json](assets/scope_20261005/storage_validation_20261005.json).
+The [controller launch record](assets/scope_20261005/controller_launch_20261005.json)
+captures the deployed commit and matching code hashes. Only the controller was
+replaced; both navigation worker PIDs were retained.
+
+### Transport recovery and partial checkpoint
+
+At 05:08:56 on 2026-10-05, first-split worker 1 exited 1 after an actual
+`APITimeoutError`. The bridge ledger recorded one upstream 504 after about
+190 seconds; the SDK's 180-second limit expired before that response arrived.
+The other five workers continued. The failed exit, both logs and the incomplete
+episode's visualizations were archived under `failed_attempts/`.
+
+Bootstrap revision `08fdeba` restores the SDK's two bounded transport retries
+and uses a 240-second client timeout above the bridge's 180-second upstream
+limit. Final API errors still terminate instead of accepting default scores.
+Prompts, model sampling, sensor settings and navigation budgets are unchanged.
+Only the failed worker restarted, at 05:39, with PID 2696054; real image requests
+returned HTTP 200. Its first episode had no saved metric checkpoint and is
+replayed from the original initial state. Earlier log-only successes are not
+merged into new results. The [recovery record](assets/scope_20261005/transport_recovery_20261005.json)
+retains the original failure and exact revision. Older live workers retain their
+original clients; future launches use the new bootstrap.
+
+At 17:16:43, split-3 worker 1 exited after three HTTP 502 responses; a recovery
+at 17:20:59 also exited at 17:22:47. Both attempts retained the same 51 saved
+subtasks in six complete episodes. Their stdout, upstream logs, checkpoint
+copies and incomplete `00803-k1cupFYWXJ6` episode 2 directories are preserved
+under `failed_attempts/split3_worker1_20261005_171643/` and
+`failed_attempts/split3_worker1_20261005_172247/` on Linux. The second attempt
+reached navigation step 2 before terminating; neither saved that incomplete
+episode or merged log-only outcomes.
+
+The [bounded diagnostic](assets/scope_20261005/empty_class_prefilter_diagnostic_20261005.json)
+replays the original pure-text prefilter with an empty object list and all
+released sampling parameters. All four provider requests returned HTTP 200;
+two contained an empty assistant string, which the original bridge rejected
+as an invalid response. The compatibility fix recognizes only the exact
+released empty-list prompt and accepts an empty string or whitespace only
+when `finish_reason=stop`. It preserves the provider response and still calls
+the model; the released parser returns the same empty class selection.
+Missing content, incomplete replies and empty answers for other prompts remain
+fatal. New clients opt in with `X-SCOPE-Empty-Prefilter: 1`; legacy clients
+retain the earlier boundary. Deployment uses a separate bridge and tunnel,
+so active workers' existing connections are retained.
+
+At 17:28:45, split-1 worker 1 exited with `KeyError: 111` in the red goal-marker
+drawing loop of `tsdf_planner.py`. Its 44 saved subtasks in five complete
+episodes remain intact; `00815-h1zeeAwLh9Z` episode 0 was incomplete and must
+replay all five original subtasks. The
+[two-line runtime patch](assets/scope_20261005/stale_goal_visualization_20261005.patch)
+skips only plotting removed object IDs. The target cluster, cached target
+point, navigation and scoring code are retained. Original failure and three
+patched drawing cases were executed successfully, including an unchanged
+all-live case and preserved target cluster. The
+[verification record](assets/scope_20261005/stale_goal_visualization_patch_20261005.json)
+pins base runtime `46f1e1f78077219c30e35440540e4ef22995194c` and patched runtime
+`bfffc2be995a7223c8a0e9c86c18064dbe878838`; future launches record this patch
+explicitly while existing workers retain their original imported runtime.
+
+The compatibility change passed 75 transport/contract tests, 53 keyframe
+tests, targeted strict typing, lint and formatting, and the complete `src/`
+quality gate. At **17:56:29**, only the two failed workers resumed from clean
+project head `6549a28a6dc9b5fd65ee5b9fe5dfc71864331a72`, with patched runtime
+`bfffc2be995a7223c8a0e9c86c18064dbe878838`. The new bridge and reverse tunnel
+use loopback port 8898; the legacy 8899 service and ten active workers retain
+their original connections. Three real Linux prefilter calls succeeded,
+including one original empty-string response with `finish_reason=stop`.
+At 17:59, both workers were alive with new HTTP 200 calls, all previous
+44/51 metric rows unchanged, and the empty-prefilter acceptance marker observed
+in split-3 worker 1. The [recovery record](assets/scope_20261005/postfix_recovery_20261005_1756.json)
+pins new PIDs, script hashes, both runtime commits and the separate ledger;
+[live preflight](assets/scope_20261005/empty_object_prefilter_live_20261005.json)
+retains the bounded response diagnostics without prompt or reasoning content.
+These checks establish a resumed run, not completion of either failed episode
+or either evaluation fold.
+
+At 05:40, first-split worker 0 had persisted all seven subtasks of scene
+`00824-Dd4bFSTQ8gi`, episode 0. An immutable observation was ingested separately
+from the eventual canonical result: **7/278 IDs**, five successes, observed SR
+71.4286% and SPL 45.6954%. These are incomplete progress measurements, not a
+new evaluation fold or a paper comparison. The frozen request remains 278 IDs.
+The [checkpoint summary](assets/canonical278_progress_20261005_0540/ingested_summary.json)
+explicitly reports `complete=false` and retains matching primary shards and
+original metadata. It does not overwrite the controller's immutable final gates.
+
+At 05:50, a second saved episode from split 4 worker 0 supplied five more
+subtasks. The separate [full-set progress snapshot](assets/full2669_progress_20261005_0550/ingested_summary.json)
+contains **12/2,669 IDs** across two original episodes, ten successes, observed
+SR 83.3333% and SPL 55.4600%. Its requested set remains the full 2,669 IDs and
+`complete=false`. The metadata symlink reuses the exact immutable original
+metadata already archived for the first checkpoint. This snapshot is a progress
+observation and is not a comparison with the paper's full-set metrics.
+
+At 07:42, split 4 worker 0 had also saved all five subtasks of scene
+`00808-y9hTuugGdiq`, episode 3. The next immutable
+[full-set progress observation](assets/full2669_progress_20261005_0742/ingested_summary.json)
+contains **17/2,669 IDs across three complete episodes**, with 13 successes,
+observed SR 76.4706% and SPL 52.2125%. Its expected set remains the original
+2,669 IDs and `complete=false`; the canonical278 progress remains seven IDs.
+Both remote and local SQLite samples independently reproduce the metrics.
+The [manifest](assets/full2669_progress_20261005_0742/run_manifest.json)
+preserves the five new IDs, raw primary shard hashes, original metadata and
+the distinct launch/recovery revisions. The source workers continue, and final
+controller gates are untouched.
+
+At 08:00, the next immutable
+[full progress snapshot](assets/full2669_progress_20261005_0800/ingested_summary.json)
+contains **38/2,669 IDs in seven complete episodes**, with 24 successes,
+observed SR 63.1579% and SPL 42.0837%. Its new 21 IDs come from the next
+first-episode scene, two further split-4 episodes and the first saved split-5
+episode. A separate
+[canonical progress snapshot](assets/canonical278_progress_20261005_0800/ingested_summary.json)
+contains **12/278 IDs in two complete episodes**, with eight successes,
+observed SR 66.6667% and SPL 40.7949%. Both requested sets are unchanged and
+both summaries explicitly retain `complete=false`. Remote and local SQLite
+reconstruct both metrics independently; raw primary shards, exact IDs and
+hashes are archived. These are incomplete observations and remain separate
+from completed benchmark comparisons.
+
+The 08:55 immutable
+[full progress snapshot](assets/full2669_progress_20261005_0855/ingested_summary.json)
+contains **79/2,669 IDs in 13 complete episodes**, with 57 successes,
+observed SR 72.1519% and SPL 47.5695%. Compared with 08:00, 41 further IDs
+were saved in six complete episodes. The accompanying
+[canonical progress snapshot](assets/canonical278_progress_20261005_0855/ingested_summary.json)
+contains **20/278 IDs in three complete episodes**, with 15 successes,
+observed SR 75.0000% and SPL 45.5455%; it adds eight IDs from the next scene's
+original first episode. Both preserve their original requested ID sets and
+`complete=false`. Every observed episode contains all its original subtasks;
+raw paired shards match the SQLite rows exactly. The database was transferred
+using SQLite backup, passed integrity checks, and retains all earlier runs.
+
+| 08:55 observation | Modality | Recorded | Observed SR (%) | Observed SPL (%) |
+| --- | --- | ---: | ---: | ---: |
+| Full requested set | Description | 24 | 54.1667 | 29.4364 |
+| Full requested set | Image | 24 | 79.1667 | 62.9485 |
+| Full requested set | Object | 31 | 80.6452 | 49.7017 |
+| Canonical requested set | Description | 5 | 80.0000 | 35.4597 |
+| Canonical requested set | Image | 8 | 87.5000 | 73.8630 |
+| Canonical requested set | Object | 7 | 57.1429 | 20.3868 |
+
+The [full manifest](assets/full2669_progress_20261005_0855/run_manifest.json)
+and [canonical manifest](assets/canonical278_progress_20261005_0855/run_manifest.json)
+retain the exact new IDs, complete episode groups, input hashes and contributing
+launch records. Initial and resumed attempts contributed to the checkpoints;
+split 5's workers have their own recorded launch commits. Global API calls
+remain interleaved without per-fold or per-subtask attribution. These partial
+observations are separate from completed benchmark comparisons.
+
+The subsequent [09:05 observation](assets/full2669_progress_20261005_0905/ingested_summary.json)
+records **95/2,669 IDs in 15 complete episodes**, with 64 successes,
+observed SR 67.3684% and SPL 45.5028%. It adds the complete episode 3 of
+`00810-CrMo8WxCyVb` (six subtasks) and episode 2 of `00876-mv2HUxq3B53`
+(ten subtasks). Description/image/object counts are 30/30/35, with observed
+SR 43.3333/83.3333/74.2857% and SPL 23.5491/67.3118/45.6269%. The
+[manifest](assets/full2669_progress_20261005_0905/run_manifest.json) retains
+exact new IDs and hashes. Raw paired artifacts match the consistent remote
+SQLite backup row by row, complete episode sets match the original metadata,
+and all prior rows in all four database tables were preserved. Canonical
+coverage remains 20/278; no duplicate canonical snapshot was created.
+
+At 09:05:41 all 12 worker PIDs were live and upstream logs had changed in the
+previous 0–13 seconds, with real HTTP 200 responses and navigation activity.
+Split 1 worker 1 was on its sixth of nine subtasks in its first episode;
+split 3 worker 0 was on its sixth of six. Split 3 worker 1 had saved all ten
+subtasks of its first episode and entered the next scene. No active worker
+had a terminal exit status or a recorded transport/OOM failure in the current
+attempt. These checks establish ongoing execution, not benchmark completion.
+
+The 09:15 [full snapshot](assets/full2669_progress_20261005_0915/ingested_summary.json)
+contains **106/2,669 IDs in 17 complete episodes**, with 72 successes,
+observed SR 67.9245% and SPL 46.4292%. Since 09:05 it adds
+`00800-TEEsavR23oF` episode 0 (five subtasks) and `00877-4ok3usBNeis`
+episode 4 (six subtasks). The corresponding
+[canonical snapshot](assets/canonical278_progress_20261005_0915/ingested_summary.json)
+contains **25/278 IDs in four complete episodes**, with 19 successes,
+observed SR 76.0000% and SPL 50.2028%. Both remain `complete=false`.
+Independent remote and local checks reproduced overall and per-modality
+metrics, exact paired raw/SQLite rows and full original subtask coverage
+within every saved episode. SQLite backup preserves all earlier table rows.
+The [full manifest](assets/full2669_progress_20261005_0915/run_manifest.json)
+and [canonical manifest](assets/canonical278_progress_20261005_0915/run_manifest.json)
+retain the new IDs, launch provenance and input hashes.
+
+A [provenance correction](assets/scope_20261005/provenance_corrections_20261005.json)
+clarifies two historical canonical manifests: their `initial_launch_heads`
+also included the early split-3/4 launch `6625cdf`, which contributed later
+episodes. Canonical metrics came from the original split-1 launch `89dd533`
+and recovery `59bc0d3`. The correction pins the historical manifest hashes;
+those original artifacts and their numerical results are retained. The 09:15
+canonical manifest lists the contributing split-1 launch explicitly.
+
+The [next immutable observation](assets/full2669_progress_20261005_0950/ingested_summary.json),
+captured at **09:47:10** with archive tag `0950`, contains **122/2,669 IDs in
+20 complete episodes**, with 81 successes, observed SR 66.3934% and SPL
+46.0037%. It adds `00808-y9hTuugGdiq` episode 4 (five subtasks),
+`00824-Dd4bFSTQ8gi` episode 2 (six), and `00829-QaLdnwvtxbs` episode 3
+(five). Description/image/object counts are 42/37/43, with observed SR
+45.2381/83.7838/72.0930% and SPL 27.7772/67.8790/44.9834%.
+
+The [manifest](assets/full2669_progress_20261005_0950/run_manifest.json)
+retains exact new IDs, complete episode groups, input hashes and contributing
+launch provenance. Independent remote and local checks reproduced raw/SQLite
+rows, the original frozen-ID subset, explicit subtask indices, complete
+observed episodes, and overall/per-modality SQL metrics. SQLite backup retains
+all previous rows in all four tables. The original 2,669-ID request is unchanged
+and `complete=false`; per-qid usage remains `NULL`. Canonical coverage remains
+25/278, so no duplicate canonical observation was created. No worker had
+reached a terminal status at the preceding 09:45 live check.
+
+The [10:11:24 observation](assets/full2669_progress_20261005_1010/ingested_summary.json),
+stored under tag `1010`, contains **132/2,669 IDs in 21 complete episodes**,
+with 83 successes, observed SR 62.8788% and SPL 43.7466%. Its ten new IDs
+are the full original episode 4 of `00890-6s7QHgap2fW`; two are successful.
+Description/image/object counts are 44/39/49, with observed SR
+43.1818/82.0513/65.3061% and SPL 26.5146/66.6594/40.9837%.
+The [manifest](assets/full2669_progress_20261005_1010/run_manifest.json)
+retains exact new IDs, original episode groups, hashes and contributing launch
+provenance. Independent checks reproduced raw/SQLite rows, frozen IDs and
+explicit indices, complete episode sets, and all grouped SQL metrics. The
+consistent SQLite backup preserves every prior row. Canonical coverage remains
+25/278, per-qid usage remains `NULL`, and full coverage remains incomplete.
+
+The `1020` observations were captured at **10:21:42–43**. The
+[full snapshot](assets/full2669_progress_20261005_1020/ingested_summary.json)
+contains **137/2,669 IDs in 22 complete episodes**, with 88 successes,
+observed SR 64.2336% and SPL 44.5790%. The
+[canonical snapshot](assets/canonical278_progress_20261005_1020/ingested_summary.json)
+contains **30/278 IDs in five complete episodes**, with 24 successes,
+observed SR 80.0000% and SPL 52.9278%. Both add all five original subtasks
+of `00839-zt1RVoi7PcG` episode 0, which are all successful.
+
+Description/image/object counts for the full snapshot are 45/42/50, with
+observed SR 44.4444/83.3333/66.0000% and SPL 27.8056/67.5907/40.3452%.
+For canonical they are 9/11/10, with observed SR 88.8889/90.9091/60.0000%
+and SPL 57.9325/75.4541/23.6446%. The
+[full manifest](assets/full2669_progress_20261005_1020/run_manifest.json)
+and [canonical manifest](assets/canonical278_progress_20261005_1020/run_manifest.json)
+retain exact new IDs, input hashes, complete episode groups and contributing
+launch records. Independent checks reproduced raw/SQLite rows, original IDs
+and explicit indices, complete saved episodes, and grouped SQL metrics.
+The consistent database backup preserves all earlier table rows. Both keep
+their original expected sets and `complete=false`; per-qid usage remains
+`NULL`. These observed metrics do not represent completed fold results.
+
+The `1100` observations were captured at **11:01:20**. The
+[full snapshot](assets/full2669_progress_20261005_1100/ingested_summary.json)
+contains **164/2,669 IDs in 26 complete episodes**, with 106 successes,
+observed SR 64.6341% and SPL 45.0962%. Compared with `1020`, it adds:
+
+| Scene | Original episode | Subtasks | Successes | Worker |
+| --- | ---: | ---: | ---: | --- |
+| `00808-y9hTuugGdiq` | 2 | 8 | 4 | split 3 / worker 0 |
+| `00824-Dd4bFSTQ8gi` | 6 | 5 | 4 | split 7 / worker 0 |
+| `00876-mv2HUxq3B53` | 0 | 9 | 6 | split 1 / worker 1 |
+| `00876-mv2HUxq3B53` | 5 | 5 | 4 | split 6 / worker 1 |
+
+The [canonical snapshot](assets/canonical278_progress_20261005_1100/ingested_summary.json)
+was derived solely from the split-1 pairs in that immutable full snapshot.
+It contains **39/278 IDs in six complete episodes**, with 30 successes,
+observed SR 76.9231% and SPL 52.8084%. Its nine new IDs are the complete
+original first episode saved by worker 1. The canonical values exactly match
+the corresponding frozen subset of the full observation.
+
+Full description/image/object counts are 55/53/56, with observed SR
+45.4545/83.0189/66.0714% and SPL 29.1220/67.3947/39.6812%.
+Canonical counts are 11/15/13, with observed SR 72.7273/86.6667/69.2308%
+and SPL 47.3993/75.3330/31.3952%. The
+[full manifest](assets/full2669_progress_20261005_1100/run_manifest.json)
+also adds the split-6 and split-7 launch records and their actual head commits,
+`22927e8` and `154d11e`; both retain the same upstream runtime and recovery
+bootstrap. The [canonical manifest](assets/canonical278_progress_20261005_1100/run_manifest.json)
+retains only its contributing split-1 provenance. Independent checks verified
+raw/SQLite rows, metadata bytes, frozen IDs and explicit indices, complete
+observed episodes, and all grouped SQL metrics. The consistent database backup
+preserves all prior rows; neither requested set is complete and per-qid usage
+remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1120/ingested_summary.json),
+captured at **11:15:08** under tag `1120`, contains **177/2,669 IDs in 28
+complete episodes**, with 117 successes, observed SR 66.1017% and SPL
+46.1734%. It adds two complete original episodes of `00810-CrMo8WxCyVb`:
+episode 2 has six subtasks and four successes; episode 5 has seven subtasks
+and seven successes. Description/image/object counts are 58/55/64, with
+observed SR 48.2759/83.6364/67.1875% and SPL 31.3712/68.4838/40.4148%.
+The [manifest](assets/full2669_progress_20261005_1120/run_manifest.json)
+retains exact new IDs, input hashes, complete episode groups and all
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata bytes, frozen IDs and explicit indices, complete
+observed episodes, and all grouped SQL metrics. The consistent backup retains
+all earlier table rows. Canonical coverage remains 39/278, full coverage is
+incomplete, and per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1145/ingested_summary.json),
+captured at **11:43:13** under tag `1145`, contains **185/2,669 IDs in 29
+complete episodes**, with 124 successes, observed SR 67.0270% and SPL
+46.5721%. It adds all eight original subtasks of `00877-4ok3usBNeis` episode
+3, with seven successes. Description/image/object counts are 59/56/70,
+with observed SR 47.4576/83.9286/70.0000% and SPL
+30.8395/68.2509/42.4893%. The
+[manifest](assets/full2669_progress_20261005_1145/run_manifest.json) retains
+paired input hashes, exact new IDs, complete episode groups and contributing
+launch records. Raw metrics, frozen IDs, explicit indices and grouped SQL
+metrics passed independent checks; the consistent database backup preserves
+all earlier table rows. Canonical coverage remains 39/278. Both requested
+selections remain incomplete, and absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1150/ingested_summary.json),
+captured at **11:48:28** under tag `1150`, contains **196/2,669 IDs in 31
+complete episodes**, with 128 successes, observed SR 65.3061% and SPL
+45.3675%. It adds `00823-7MXmsvcQjpJ` episode 4 (five subtasks, zero
+successes) and `00824-Dd4bFSTQ8gi` episode 5 (six subtasks, four successes).
+Description/image/object counts are 62/62/72, with observed SR
+45.1613/80.6452/69.4444% and SPL 29.3472/66.0836/41.3238%. The
+[manifest](assets/full2669_progress_20261005_1150/run_manifest.json) retains
+the exact added IDs, paired input hashes, original episode groups and launch
+provenance. Independent checks matched all paired rows to SQLite and verified
+original metadata, frozen IDs, explicit indices, complete episodes and grouped
+metrics. All earlier database rows are preserved. Canonical coverage remains
+39/278; both requested selections are incomplete and per-qid usage is `NULL`.
+
+At 11:49:40, a separate read-only process/log check found all 12 navigation
+workers alive and advancing relative to the 10:52 observation. Each worker
+had 78–196 additional model responses, its latest response was HTTP 200,
+and its FileHandler log had updated within 1–43 seconds. No new terminal
+exit file, OOM, traceback or unrecovered API error was observed. These are
+execution-health observations, not additional saved benchmark results.
+
+The [next full observation](assets/full2669_progress_20261005_1155/ingested_summary.json),
+captured at **11:55:35** under tag `1155`, contains **206/2,669 IDs in 32
+complete episodes**, with 136 successes, observed SR 66.0194% and SPL
+46.4499%. It adds all ten original subtasks of `00829-QaLdnwvtxbs` episode
+2, with eight successes. Description/image/object counts are 68/65/73,
+with observed SR 47.0588/81.5385/69.8630% and SPL
+31.4379/67.0091/42.1276%. The
+[manifest](assets/full2669_progress_20261005_1155/run_manifest.json) retains
+exact new IDs, paired input hashes, original episode groups and all
+contributing launch records. Paired raw rows match SQLite; frozen IDs,
+original metadata and explicit indices, complete episodes and grouped metrics
+were verified. The consistent database backup preserves all earlier rows.
+Canonical coverage remains 39/278; both requested selections remain
+incomplete, and absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1200/ingested_summary.json),
+captured at **11:58:22** under archive tag `1200`, contains **213/2,669 IDs
+in 33 complete episodes**, with 142 successes, observed SR 66.6667% and SPL
+47.4006%. It adds all seven original subtasks of `00829-QaLdnwvtxbs`
+episode 5, with six successes. Description/image/object counts are 69/71/73,
+with observed SR 46.3768/83.0986/69.8630% and SPL
+30.9822/68.7780/42.1276%. The
+[manifest](assets/full2669_progress_20261005_1200/run_manifest.json) retains
+the precise capture time, exact new IDs, paired input hashes, original episode
+groups and contributing launch records. Independent checks reproduced paired
+raw/SQLite rows, frozen IDs, original metadata and explicit indices, complete
+episodes and grouped metrics. All earlier database rows are preserved.
+Canonical coverage remains 39/278; both requested selections are incomplete,
+and per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1205/ingested_summary.json),
+captured at **12:00:40** under archive tag `1205`, contains **220/2,669 IDs
+in 34 complete episodes**, with 148 successes, observed SR 67.2727% and SPL
+47.6189%. It adds all seven original subtasks of `00815-h1zeeAwLh9Z`
+episode 4, with six successes. Description/image/object counts are 70/74/76,
+with observed SR 45.7143/83.7838/71.0526% and SPL
+30.5396/68.5161/43.0026%. The
+[manifest](assets/full2669_progress_20261005_1205/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. The consistent database backup preserves all earlier
+rows. Canonical coverage remains 39/278; both requested selections are
+incomplete, and absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1210/ingested_summary.json),
+captured at **12:05:35** under archive tag `1210`, contains **226/2,669 IDs
+in 35 complete episodes**, with 150 successes, observed SR 66.3717% and SPL
+47.2397%. It adds all six original subtasks of `00890-6s7QHgap2fW`
+episode 3, with two successes. Description/image/object counts are 71/78/77,
+with observed SR 45.0704/80.7692/71.4286% and SPL
+30.1095/66.2845/43.7428%. The
+[manifest](assets/full2669_progress_20261005_1210/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 39/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+The `1215` [full snapshot](assets/full2669_progress_20261005_1215/ingested_summary.json)
+and [canonical snapshot](assets/canonical278_progress_20261005_1215/ingested_summary.json),
+captured at **12:09:23**, contain **240/2,669 IDs in 37 complete episodes**
+and **48/278 IDs in seven complete episodes**. The full observation has 160
+successes, observed SR 66.6667% and SPL 47.7761%; canonical has 38 successes,
+observed SR 79.1667% and SPL 57.2741%. Both add `00810-CrMo8WxCyVb`
+episode 0 (nine subtasks, eight successes); full also adds `00803-k1cupFYWXJ6`
+episode 4 (five subtasks, two successes). Full description/image/object
+counts are 74/85/81, with observed SR 44.5946/80.0000/72.8395% and SPL
+30.2402/66.4806/44.1684%. Canonical counts are 12/21/15, with observed SR
+75.0000/85.7143/73.3333% and SPL 51.7827/76.6978/34.4740%.
+
+Canonical raw metrics and metadata are copied only from the immutable full
+snapshot's split1 artifacts and retain its capture time. Its
+[manifest](assets/canonical278_progress_20261005_1215/run_manifest.json)
+records only the original split1 launch and recovery provenance; later-stage
+launches belong in the
+[full manifest](assets/full2669_progress_20261005_1215/run_manifest.json).
+Paired raw rows, frozen IDs, original metadata and explicit indices, complete
+episode groups and grouped database metrics were verified. The second,
+uniquely named database backup includes both observations and preserves all
+earlier rows. The original full-only backup is retained. Both requested
+selections remain incomplete, and absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1220/ingested_summary.json),
+captured at **12:19:17** under archive tag `1220`, contains **249/2,669 IDs
+in 38 complete episodes**, with 169 successes, observed SR 67.8715% and SPL
+47.5456%. It adds all nine original subtasks of `00877-4ok3usBNeis`
+episode 2, all successful. Description/image/object counts are 76/88/85,
+with observed SR 46.0526/80.6818/74.1176% and SPL
+30.3838/65.4632/44.3402%. The
+[manifest](assets/full2669_progress_20261005_1220/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 48/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1235/ingested_summary.json),
+captured at **12:31:22** under archive tag `1235`, contains **256/2,669 IDs
+in 39 complete episodes**, with 173 successes, observed SR 67.5781% and SPL
+47.2156%. It adds all seven original subtasks of `00827-BAbdmeyTvMZ`
+episode 4, with four successes. Description/image/object counts are 80/90/86,
+with observed SR 46.2500/80.0000/74.4186% and SPL
+30.3602/65.1196/44.1584%. The
+[manifest](assets/full2669_progress_20261005_1235/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 48/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1240/ingested_summary.json),
+captured at **12:33:39** under archive tag `1240`, contains **266/2,669 IDs
+in 40 complete episodes**, with 177 successes, observed SR 66.5414% and SPL
+46.3435%. It adds all ten original subtasks of `00853-5cdEh9F2hJL`
+episode 3, with four successes. Description/image/object counts are 83/94/89,
+with observed SR 45.7831/78.7234/73.0337% and SPL
+30.4275/63.8288/42.7190%. The
+[manifest](assets/full2669_progress_20261005_1240/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 48/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1245/ingested_summary.json),
+captured at **12:35:54** under archive tag `1245`, contains **282/2,669 IDs
+in 42 complete episodes**, with 188 successes, observed SR 66.6667% and SPL
+46.3513%. It adds `00800-TEEsavR23oF` episode 4 (seven subtasks, five
+successes) and `00876-mv2HUxq3B53` episode 6 (nine subtasks, six successes).
+Description/image/object counts are 92/96/94, with observed SR
+48.9130/78.1250/72.3404% and SPL 32.9279/63.4358/42.0412%. The
+[manifest](assets/full2669_progress_20261005_1245/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 48/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1250/ingested_summary.json),
+captured at **12:38:33** under archive tag `1250`, contains **292/2,669 IDs
+in 43 complete episodes**, with 196 successes, observed SR 67.1233% and SPL
+47.1985%. It adds all ten original subtasks of `00808-y9hTuugGdiq`
+episode 5, with eight successes. Description/image/object counts are 97/99/96,
+with observed SR 50.5155/78.7879/71.8750% and SPL
+34.6606/64.5438/41.9796%. The
+[manifest](assets/full2669_progress_20261005_1250/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 48/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1255/ingested_summary.json),
+captured at **12:44:23** under archive tag `1255`, contains **297/2,669 IDs
+in 44 complete episodes**, with 201 successes, observed SR 67.6768% and SPL
+48.0105%. It adds all five original subtasks of `00869-MHPLjHsuG27`
+episode 3, all successful. Description/image/object counts are 98/101/98,
+with observed SR 51.0204/79.2079/72.4490% and SPL
+35.3273/65.0198/43.1636%. The
+[manifest](assets/full2669_progress_20261005_1255/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 48/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1300/ingested_summary.json),
+captured at **12:54:34** under archive tag `1300`, contains **307/2,669 IDs
+in 45 complete episodes**, with 210 successes, observed SR 68.4039% and SPL
+48.8702%. It adds all ten original subtasks of `00862-LT9Jq6dN3Ea`
+episode 4, with nine successes. Description/image/object counts are 102/105/100,
+with observed SR 52.9412/79.0476/73.0000% and SPL
+37.6242/64.1471/44.3004%. The
+[manifest](assets/full2669_progress_20261005_1300/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 48/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1305/ingested_summary.json),
+captured at **12:57:06** under archive tag `1305`, contains **317/2,669 IDs
+in 46 complete episodes**, with 219 successes, observed SR 69.0852% and SPL
+49.6827%. It adds all ten original subtasks of `00839-zt1RVoi7PcG`
+episode 4, with nine successes. Description/image/object counts are 104/107/106,
+with observed SR 53.8462/79.4393/73.5849% and SPL
+38.6102/64.6937/45.3938%. The
+[manifest](assets/full2669_progress_20261005_1305/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, original metadata, frozen IDs and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 48/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+The `1310` [full snapshot](assets/full2669_progress_20261005_1310/ingested_summary.json)
+and [canonical snapshot](assets/canonical278_progress_20261005_1310/ingested_summary.json),
+captured at **13:00:22**, contain **324/2,669 IDs in 47 complete episodes**
+and **55/278 IDs in eight complete episodes**. Full has 222 successes,
+observed SR 68.5185% and SPL 49.2147%; canonical has 41 successes,
+observed SR 74.5455% and SPL 53.5509%. Both add all seven original subtasks
+of `00853-5cdEh9F2hJL` episode 0, with three successes. Full
+description/image/object counts are 107/109/108, with observed SR
+54.2056/78.8991/72.2222% and SPL 38.5031/64.3485/44.5531%. Canonical
+counts are 15/23/17, with observed SR 73.3333/82.6087/64.7059% and SPL
+48.3846/74.0182/30.4182%.
+
+Canonical primary files and metadata are copied only from the immutable full
+snapshot's split1 artifacts and share its capture time. The
+[canonical manifest](assets/canonical278_progress_20261005_1310/run_manifest.json)
+retains only split1's original launch and recovery provenance; the
+[full manifest](assets/full2669_progress_20261005_1310/run_manifest.json)
+retains all contributing stages. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. The second, uniquely named database backup includes both
+observations and preserves all earlier rows; the original full-only backup
+is retained. Both requested selections remain incomplete, and absent
+per-qid usage remains `NULL`.
+
+The `1315` [full snapshot](assets/full2669_progress_20261005_1315/ingested_summary.json)
+and [canonical snapshot](assets/canonical278_progress_20261005_1315/ingested_summary.json),
+captured at **13:07:10**, contain **336/2,669 IDs in 49 complete episodes**
+and **62/278 IDs in nine complete episodes**. Full has 230 successes,
+observed SR 68.4524% and SPL 48.7282%; canonical has 46 successes,
+observed SR 74.1935% and SPL 51.5705%. Both add `00829-QaLdnwvtxbs`
+episode 0 (seven subtasks, five successes); full also adds
+`00823-7MXmsvcQjpJ` episode 2 (five subtasks, three successes). Full
+description/image/object counts are 113/110/113, with observed SR
+53.9823/78.1818/73.4513% and SPL 37.7346/63.7636/45.0855%. Canonical
+counts are 20/23/19, with observed SR 70.0000/82.6087/68.4211% and SPL
+43.4973/74.0182/32.8950%.
+
+Canonical primary files and metadata are copied only from the immutable full
+snapshot's split1 artifacts and share its capture time. The
+[canonical manifest](assets/canonical278_progress_20261005_1315/run_manifest.json)
+retains only split1's original launch and recovery provenance; the
+[full manifest](assets/full2669_progress_20261005_1315/run_manifest.json)
+retains all contributing stages. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. The second, uniquely named database backup includes both
+observations and preserves all earlier rows; the original full-only backup
+is retained. Both requested selections remain incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1320/ingested_summary.json),
+captured at **13:17:55** under archive tag `1320`, contains **359/2,669 IDs
+in 52 complete episodes**, with 250 successes, observed SR 69.6379% and SPL
+49.5000%. It adds `00810-CrMo8WxCyVb` episode 6 (nine subtasks, nine
+successes), `00815-h1zeeAwLh9Z` episode 3 (nine subtasks, six successes)
+and `00832-qyAac8rV8Zk` episode 4 (five subtasks, five successes).
+Description/image/object counts are 120/118/121, with observed SR
+56.6667/79.6610/72.7273% and SPL 40.0744/64.3385/44.3772%. The
+[manifest](assets/full2669_progress_20261005_1320/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 62/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1335/ingested_summary.json),
+captured at **13:30:39** under archive tag `1335`, contains **375/2,669 IDs
+in 54 complete episodes**, with 264 successes, observed SR 70.4000% and SPL
+49.8265%. It adds `00808-y9hTuugGdiq` episode 6 (ten subtasks, eight
+successes) and `00890-6s7QHgap2fW` episode 2 (six subtasks, six successes).
+Description/image/object counts are 124/123/128, with observed SR
+58.0645/79.6748/73.4375% and SPL 41.0806/64.2700/44.4197%. The
+[manifest](assets/full2669_progress_20261005_1335/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Independent checks reproduced paired raw/SQLite
+rows, frozen IDs, original metadata and explicit indices, complete episodes
+and grouped metrics. All earlier database rows are preserved. Canonical
+coverage remains 62/278; both requested selections are incomplete, and
+absent per-qid usage remains `NULL`.
+
+At 13:31:25, a separate read-only process/log check found all 12 navigation
+workers alive and advancing relative to 12:49. Each had 80–141 additional
+model responses, its latest response was HTTP 200, and its log had updated
+within 1–23 seconds. Worker 1w0 had an intervening HTTP 504 and subsequently
+resumed; no terminal exit file, OOM, traceback or unrecovered API error was
+observed. `/data1` had 1,839,815,962,624 bytes available and host MemAvailable
+was 410.6 GiB. Healthy GPUs 0/2/3/4/5/6 had 5,829–6,845 MiB free, with two
+workers each; no current resource pressure was observed. GPU 1 was not read.
+These execution-health observations add no saved benchmark results.
+
+The [next full observation](assets/full2669_progress_20261005_1350/ingested_summary.json),
+captured at **13:46:19** under archive tag `1350`, contains **385/2,669 IDs
+in 55 complete episodes**, with 272 successes, observed SR 70.6494% and SPL
+50.3048%. It adds all ten original subtasks of `00829-QaLdnwvtxbs`
+episode 6, with eight successes. Description/image/object counts are
+130/124/131, with observed SR 58.4615/79.8387/74.0458% and SPL
+41.7852/64.5582/45.2677%. The
+[manifest](assets/full2669_progress_20261005_1350/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 62/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The `1400` [full snapshot](assets/full2669_progress_20261005_1400/ingested_summary.json)
+and [canonical snapshot](assets/canonical278_progress_20261005_1400/ingested_summary.json),
+captured at **13:52:48**, contain **391/2,669 IDs in 56 complete episodes**
+and **68/278 IDs in ten complete episodes**. Full has 277 successes,
+observed SR 70.8440% and SPL 50.5364%; canonical has 51 successes,
+observed SR 75.0000% and SPL 52.7902%. Both add all six original subtasks
+of `00869-MHPLjHsuG27` episode 0, with five successes. Full
+description/image/object counts are 131/127/133, with observed SR
+58.0153/80.3150/74.4361% and SPL 41.4662/64.9890/45.6695%. Canonical
+counts are 21/26/21, with observed SR 66.6667/84.6154/71.4286% and SPL
+41.4260/75.0310/36.6183%.
+
+Canonical primary files and metadata are copied only from the immutable full
+snapshot's split1 artifacts and share its capture time. The
+[canonical manifest](assets/canonical278_progress_20261005_1400/run_manifest.json)
+retains only split1's original launch and recovery provenance; the
+[full manifest](assets/full2669_progress_20261005_1400/run_manifest.json)
+retains all contributing stages. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. The second, uniquely named database backup includes both
+observations and preserves all earlier rows; the original full-only backup
+is retained. Both requested selections remain incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1415/ingested_summary.json),
+captured at **14:13:51** under archive tag `1415`, contains **398/2,669 IDs
+in 57 complete episodes**, with 281 successes, observed SR 70.6030% and SPL
+50.4152%. It adds all seven original subtasks of `00803-k1cupFYWXJ6`
+episode 3, with four successes. Description/image/object counts are
+133/129/136, with observed SR 57.1429/79.8450/75.0000% and SPL
+40.8426/64.7566/46.1733%. The
+[manifest](assets/full2669_progress_20261005_1415/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 68/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1420/ingested_summary.json),
+captured at **14:16:41** under archive tag `1420`, contains **408/2,669 IDs
+in 58 complete episodes**, with 288 successes, observed SR 70.5882% and SPL
+50.1433%. It adds all ten original subtasks of `00877-4ok3usBNeis`
+episode 5, with seven successes. Description/image/object counts are
+135/132/141, with observed SR 57.7778/79.5455/74.4681% and SPL
+41.3062/64.7687/44.9124%. The
+[manifest](assets/full2669_progress_20261005_1420/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 68/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1435/ingested_summary.json),
+captured at **14:29:58** under archive tag `1435`, contains **415/2,669 IDs
+in 59 complete episodes**, with 293 successes, observed SR 70.6024% and SPL
+50.2828%. It adds all seven original subtasks of `00871-VBzV5z6i1WS`
+episode 3, with five successes. Description/image/object counts are
+137/136/142, with observed SR 57.6642/79.4118/74.6479% and SPL
+41.3955/64.4518/45.2866%. The
+[manifest](assets/full2669_progress_20261005_1435/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 68/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1440/ingested_summary.json),
+captured at **14:33:19** under archive tag `1440`, contains **427/2,669 IDs
+in 61 complete episodes**, with 301 successes, observed SR 70.4918% and SPL
+50.4840%. It adds `00823-7MXmsvcQjpJ` episode 5 (five subtasks, three
+successes) and `00890-6s7QHgap2fW` episode 5 (seven subtasks, five successes).
+Description/image/object counts are 138/140/149, with observed SR
+57.2464/79.2857/74.4966% and SPL 41.0956/64.3962/46.1073%. The
+[manifest](assets/full2669_progress_20261005_1440/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 68/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1450/ingested_summary.json),
+captured at **14:49:05** under archive tag `1450`, contains **436/2,669 IDs
+in 62 complete episodes**, with 304 successes, observed SR 69.7248% and SPL
+49.8919%. It adds all nine original subtasks of `00800-TEEsavR23oF`
+episode 2, including three successes. Description/image/object counts are
+142/142/152, with observed SR 56.3380/78.8732/73.6842% and SPL
+40.5222/63.6642/45.7788%. The
+[manifest](assets/full2669_progress_20261005_1450/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 68/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1505/ingested_summary.json),
+captured at **15:03:25** under archive tag `1505`, contains **445/2,669 IDs
+in 63 complete episodes**, with 311 successes, observed SR 69.8876% and SPL
+49.8209%. It adds all nine original subtasks of `00847-bCPU9suPUw9`
+episode 3, including seven successes. Description/image/object counts are
+145/146/154, with observed SR 56.5517/79.4521/73.3766% and SPL
+40.6594/63.6511/45.3352%. The
+[manifest](assets/full2669_progress_20261005_1505/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 68/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1510/ingested_summary.json),
+captured at **15:07:10** under archive tag `1510`, contains **453/2,669 IDs
+in 64 complete episodes**, with 318 successes, observed SR 70.1987% and SPL
+50.2716%. It adds all eight original subtasks of `00823-7MXmsvcQjpJ`
+episode 6, including seven successes. Description/image/object counts are
+147/148/158, with observed SR 56.4626/79.7297/74.0506% and SPL
+40.6277/64.0472/46.3403%. The
+[manifest](assets/full2669_progress_20261005_1510/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 68/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1520/ingested_summary.json),
+captured at **15:16:04** under archive tag `1520`, contains **463/2,669 IDs
+in 65 complete episodes**, with 325 successes, observed SR 70.1944% and SPL
+49.7201%. It adds all ten original subtasks of `00877-4ok3usBNeis`
+episode 6, including seven successes. Description/image/object counts are
+149/152/162, with observed SR 55.7047/80.2632/74.0741% and SPL
+40.0824/63.1308/46.0017%. The
+[manifest](assets/full2669_progress_20261005_1520/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 68/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1525/ingested_summary.json)
+and [canonical observation](assets/canonical278_progress_20261005_1525/ingested_summary.json)
+share the immutable capture at **15:22:29**, archive tag `1525`. Full contains
+**475/2,669 IDs in 67 complete episodes**, with 335 successes, observed SR
+70.5263% and SPL 49.9552%. Canonical contains **75/278 IDs in 11 complete
+episodes**, with 58 successes, observed SR 77.3333% and SPL 54.2196%. Full
+adds `00853-5cdEh9F2hJL` episode 4 (five subtasks, three successes); both
+add `00871-VBzV5z6i1WS` episode 0 (seven subtasks, all successful).
+Full description/image/object counts are 153/159/163, with SR
+55.5556/81.1321/74.2331% and SPL 39.9372/63.8354/45.8191%; canonical
+counts are 22/31/22, with SR 68.1818/87.0968/72.7273% and SPL
+42.9621/75.3577/35.6917%. Both manifests retain capture time, new IDs,
+paired hashes, original episode groups and contributing launches. Paired
+raw/SQLite rows, original metadata, frozen IDs and explicit indices, complete
+episodes and grouped metrics were verified. Canonical raw inputs and capture
+time match the same full snapshot, and its rows equal the full/canonical-ID
+intersection. All earlier database rows are preserved. Both selections remain
+incomplete, and absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1530/ingested_summary.json)
+and [canonical observation](assets/canonical278_progress_20261005_1530/ingested_summary.json)
+share the immutable capture at **15:27:56**, archive tag `1530`. Full contains
+**485/2,669 IDs in 68 complete episodes**, with 343 successes, observed SR
+70.7216% and SPL 49.7260%. Canonical contains **85/278 IDs in 12 complete
+episodes**, with 66 successes, observed SR 77.6471% and SPL 52.4099%. Both
+add `00877-4ok3usBNeis` episode 0 (ten subtasks, eight successes).
+Full description/image/object counts are 157/159/169, with SR
+55.4140/81.1321/75.1479% and SPL 39.0306/63.8354/46.3874%; canonical
+counts are 26/31/28, with SR 65.3846/87.0968/78.5714% and SPL
+37.0220/75.3577/41.2923%. Both manifests retain capture time, new IDs,
+paired hashes, original episode groups and contributing launches. Paired
+raw/SQLite rows, original metadata, frozen IDs and explicit indices, complete
+episodes and grouped metrics were verified. Canonical raw inputs and capture
+time match the same full snapshot, and its rows equal the full/canonical-ID
+intersection. All earlier database rows are preserved. Both selections remain
+incomplete, and absent per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1540/ingested_summary.json),
+captured at **15:39:26** under archive tag `1540`, contains **495/2,669 IDs
+in 69 complete episodes**, with 345 successes, observed SR 69.6970% and SPL
+49.0431%. It adds all ten original subtasks of `00800-TEEsavR23oF`
+episode 6, including two successes. Description/image/object counts are
+160/161/174, with observed SR 54.3750/80.7453/73.5632% and SPL
+38.2987/63.6635/45.3949%. The
+[manifest](assets/full2669_progress_20261005_1540/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1550/ingested_summary.json),
+captured at **15:46:40** under archive tag `1550`, contains **500/2,669 IDs
+in 70 complete episodes**, with 347 successes, observed SR 69.4000% and SPL
+48.6721%. It adds all five original subtasks of `00894-HY1NcmCgn3n`
+episode 4, including two successes. Description/image/object counts are
+161/162/177, with observed SR 54.0373/80.8642/72.8814% and SPL
+38.0609/63.6328/44.6313%. The
+[manifest](assets/full2669_progress_20261005_1550/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1555/ingested_summary.json),
+captured at **15:55:36** under archive tag `1555`, contains **505/2,669 IDs
+in 71 complete episodes**, with 352 successes, observed SR 69.7030% and SPL
+49.0024%. It adds all five original subtasks of `00869-MHPLjHsuG27`
+episode 4, all successful. Description/image/object counts are 162/163/180,
+with observed SR 54.3210/80.9816/73.3333% and SPL
+38.4432/63.8559/45.0551%. The
+[manifest](assets/full2669_progress_20261005_1555/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1605/ingested_summary.json),
+captured at **16:00:12** under archive tag `1605`, contains **523/2,669 IDs
+in 74 complete episodes**, with 366 successes, observed SR 69.9809% and SPL
+49.6180%. It adds `00800-TEEsavR23oF` episode 5 (eight subtasks, six
+successes), `00839-zt1RVoi7PcG` episode 2 (five subtasks, four successes),
+and `00891-cvZr5TUy5C5` episode 4 (five subtasks, four successes).
+Description/image/object counts are 169/166/188, with observed SR
+55.6213/81.3253/72.8723% and SPL 40.0966/64.3658/45.1551%. The
+[manifest](assets/full2669_progress_20261005_1605/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1610/ingested_summary.json),
+captured at **16:06:08** under archive tag `1610`, contains **533/2,669 IDs
+in 75 complete episodes**, with 375 successes, observed SR 70.3565% and SPL
+50.2042%. It adds all ten original subtasks of `00849-a8BtkwhxdRV`
+episode 3, including nine successes. Description/image/object counts are
+171/171/191, with observed SR 56.1404/81.2865/73.2984% and SPL
+40.4798/64.6060/46.0165%. The
+[manifest](assets/full2669_progress_20261005_1610/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1625/ingested_summary.json),
+captured at **16:20:54** under archive tag `1625`, contains **549/2,669 IDs
+in 77 complete episodes**, with 384 successes, observed SR 69.9454% and SPL
+49.9748%. It adds `00815-h1zeeAwLh9Z` episode 5 (seven subtasks, three
+successes) and `00827-BAbdmeyTvMZ` episode 3 (nine subtasks, six successes).
+Description/image/object counts are 176/178/195, with observed SR
+56.2500/80.8989/72.3077% and SPL 40.6424/64.0935/45.5102%. The
+[manifest](assets/full2669_progress_20261005_1625/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1640/ingested_summary.json),
+captured at **16:37:59** under archive tag `1640`, contains **554/2,669 IDs
+in 78 complete episodes**, with 386 successes, observed SR 69.6751% and SPL
+49.8294%. It adds all five original subtasks of `00890-6s7QHgap2fW`
+episode 6, including two successes. Description/image/object counts are
+177/179/198, with observed SR 55.9322/81.0056/71.7172% and SPL
+40.4127/64.2767/45.1863%. The
+[manifest](assets/full2669_progress_20261005_1640/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1645/ingested_summary.json),
+captured at **16:40:58** under archive tag `1645`, contains **562/2,669 IDs
+in 79 complete episodes**, with 394 successes, observed SR 70.1068% and SPL
+50.0987%. It adds all eight original subtasks of `00839-zt1RVoi7PcG`
+episode 6, all successful. Description/image/object counts are 179/183/200,
+with observed SR 56.4246/81.4208/72.0000% and SPL
+40.9965/64.6727/44.9099%. The
+[manifest](assets/full2669_progress_20261005_1645/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1650/ingested_summary.json),
+captured at **16:44:02** under archive tag `1650`, contains **580/2,669 IDs
+in 81 complete episodes**, with 409 successes, observed SR 70.5172% and SPL
+50.5828%. It adds `00803-k1cupFYWXJ6` episode 5 (ten subtasks, nine
+successes) and `00839-zt1RVoi7PcG` episode 5 (eight subtasks, six successes).
+Description/image/object counts are 187/183/210, with observed SR
+57.7540/81.4208/72.3810% and SPL 42.5091/64.6727/45.4940%. The
+[manifest](assets/full2669_progress_20261005_1650/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1655/ingested_summary.json),
+captured at **16:48:13** under archive tag `1655`, contains **588/2,669 IDs
+in 82 complete episodes**, with 414 successes, observed SR 70.4082% and SPL
+50.6255%. It adds all eight original subtasks of `00861-GLAQ4DNUx5U`
+episode 4, including five successes. Description/image/object counts are
+188/187/213, with observed SR 57.4468/81.2834/72.3005% and SPL
+42.2830/64.8649/45.4877%. The
+[manifest](assets/full2669_progress_20261005_1655/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. All earlier database rows are preserved. Canonical coverage
+remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1720/ingested_summary.json),
+captured at **17:19:42** under archive tag `1720`, contains **605/2,669 IDs
+in 84 complete episodes**, with 422 successes, observed SR 69.7521% and SPL
+50.2384%. It adds `00815-h1zeeAwLh9Z` episode 2 (ten subtasks, three
+successes) and `00871-VBzV5z6i1WS` episode 4 (seven subtasks, five successes).
+Description/image/object counts are 195/193/217, with observed SR
+55.8974/81.3472/71.8894% and SPL 40.8374/65.1069/45.4623%. The
+[manifest](assets/full2669_progress_20261005_1720/run_manifest.json) retains
+exact capture time, new IDs, paired input hashes, original episode groups and
+contributing launch records. This capture preceded both patches; historical
+runtime/project provenance is retained. Paired raw/SQLite rows, original
+metadata, frozen IDs and explicit indices, complete episodes and grouped
+metrics were verified. All earlier database rows are preserved. Canonical
+coverage remains 85/278; both requested selections are incomplete, and absent
+per-qid usage remains `NULL`.
+
+The [next full observation](assets/full2669_progress_20261005_1805/ingested_summary.json)
+and [canonical observation](assets/canonical278_progress_20261005_1805/ingested_summary.json)
+share the immutable capture at **18:06:24**, archive tag `1805`. Full contains
+**637/2,669 IDs in 88 complete episodes**, with 446 successes, observed SR
+70.0157% and SPL 49.9642%. Canonical contains **102/278 IDs in 14 complete
+episodes**, with 80 successes, observed SR 78.4314% and SPL 51.3184%. Full
+adds `00847-bCPU9suPUw9` episode 4 (nine subtasks, six successes) and
+`00848-ziup5kvtCCR` episode 4 (six subtasks, four successes); both add
+`00847-bCPU9suPUw9` episode 0 (eight subtasks, six successes) and
+`00890-6s7QHgap2fW` episode 0 (nine subtasks, eight successes).
+Full description/image/object counts are 205/205/227, with SR
+56.0976/81.4634/72.2467% and SPL 39.9841/65.3850/45.0509%; canonical
+counts are 30/38/34, with SR 66.6667/84.2105/82.3529% and SPL
+32.3033/73.5709/43.2262%. Paired raw/SQLite rows, original metadata,
+frozen IDs and explicit indices, complete episodes and grouped metrics were
+verified. Canonical inputs and capture time match the same full snapshot,
+and its rows equal the full/canonical-ID intersection. Earlier database rows
+are preserved. The manifests link the
+[frozen restart-stage ID mapping](assets/scope_20261005/postfix_stage_id_provenance_20261005.json)
+and record zero newly saved IDs from the two patched worker attempts. Their
+44/51 pre-patch rows retain original provenance; active patched processes
+alone do not establish a contribution to this snapshot. Both selections remain
+incomplete, and absent per-qid usage remains `NULL`.
+
+The [18:20:32 full observation](assets/full2669_progress_20261005_1820/ingested_summary.json)
+contains **651/2,669 IDs in 90 complete episodes**, with 459 successes,
+observed SR 70.5069% and SPL 50.0097%. Relative to `1805`, it adds
+`00803-k1cupFYWXJ6` episode 2 (six subtasks, five successes) and
+`00820-mL8ThkuaVTM` episode 4 (eight subtasks, all successful). Canonical
+remains 102/278, so no duplicate canonical observation was created.
+Description/image/object counts are 209/209/233, with SR
+56.9378/81.3397/72.9614% and SPL 39.7621/65.3155/45.4724%.
+The [manifest](assets/full2669_progress_20261005_1820/run_manifest.json)
+maps all six new split-3 worker-1 IDs to the recovered runtime
+`bfffc2be995a7223c8a0e9c86c18064dbe878838`; the other rows retain their
+original runtime. The new SQL runtime field lists both revisions with a
+`mixed:` prefix, while every earlier observation remains unchanged.
+Coverage is incomplete, and absent per-qid usage remains `NULL`.
+
+## Independent request concurrency — 2026-10-05
+
+The user authorized three Gemini 3.8 Flash credentials, each with 500 QPM.
+The [transport preflight](assets/scope_20261005/three_key_transport_preflight_20261005.json)
+sent nine varied short text requests concurrently: all returned HTTP 200,
+with three requests on each credential slot, in 16.19 seconds. These are
+transport probes, not a representative benchmark throughput comparison.
+The new Mac bridge and reverse tunnel use loopback port 8897. Its per-key
+rolling limit is 500 dispatches per 60 seconds, with 64 HTTP requests in flight
+per key (192 total), and a cooldown for keys receiving HTTP 429. New ledger
+records include timestamps, credential slot and queue time, without credentials
+or prompt content. Earlier bridges remain available during worker migration.
+
+The [frontier patch](assets/scope_20261005/parallel_frontier_scoring_20261005.patch)
+is committed upstream as `606d29ca19901882015cdd432017b4a867cef978`.
+It scores independent eligible frontiers with up to 16 threads, then resolves
+results and updates the real PotentialGraph in the original frontier order.
+Duplicate eligible keys use the original serial loop. Prefilter, candidate
+selection and self-refinement keep their dependencies. Model, prompts,
+sampling parameters and thinking budget 2,000 are retained.
+The [AST validation](assets/scope_20261005/parallel_frontier_equivalence_20261005.json)
+executes the original and patched loops against the original graph class in
+ten cases, including overlapping nodes, skipped/duplicate candidates, `None`,
+exceptions and `SystemExit`: graph values, history and step counts agree.
+
+The [preparation record](assets/scope_20261005/acceleration_preparation_20261005.json)
+retains worker identities, frozen IDs, existing checkpoints and 19 config
+copies that append only `parallel_frontier_workers: 16`. Typed helper/bridge
+tests (98), original keyframe tests (53), lint, formatting and static checks
+passed. Linux Python 3.9 scorer/config validation and an owned-process
+pause/resume probe also passed. A checkpoint observer verifies process
+creation ticks and complete-episode progress before pausing a worker;
+migration launch records will identify actual contributing code versions.
+Preparation and transport probes alone do not establish that an evaluation
+worker has adopted the new parallel runtime.
+
+The parallel pilot resumed at 19:10:56 with 67 saved IDs unchanged and actual
+overlapping scoring calls on all three credential slots. All twelve workers
+then adopted the new runtime. That rollout exposed a transport bottleneck:
+all twelve ultimately exited with `APITimeoutError`; the Mac bridge's completed
+168 model calls were HTTP 200, while its elapsed time excluded Linux uploads.
+No unfinished-episode log entries were merged into primary metrics.
+
+An authenticated transport-only test sent 3 MiB invalid JSON, which the bridge
+rejects before a model call: one upload took 31.81 seconds, and all twelve
+simultaneous uploads hit a 60-second timeout. Two independent compressed SSH
+links reduced a single transfer to 14.37 seconds but did not pass the twelve-way
+burst. The new transport caches each complete image data URI by SHA256 and
+uploads it once, then sends compact references for concurrent completions.
+The Mac bridge resolves those references to exactly the original data URI
+before calling ModelHub. It changes neither pixels nor prompts. Upload
+concurrency is bounded separately from model inference.
+
+Six independent compressed SSH links, one per healthy GPU, now share one
+Mac image-cache/credential service on port 8889. Six concurrent 3 MiB cache
+uploads all returned verified acknowledgements in 0.51–6.27 seconds, without
+invoking a model. The integration and regression gate passed 138 tests; typed,
+lint and formatting checks passed. Linux Python 3.9 required the lightweight
+`eval-type-backport==0.2.2` package for shared Pydantic request annotations;
+the runtime union alias uses `typing.Union` for Python 3.9 compatibility.
+All twelve workers resumed between 20:39:56 and 20:44:10 at project launch
+commit `ba1a24c732cd826ede0b618e23aee724204c9fc4`, with upstream runtime
+`606d29ca19901882015cdd432017b4a867cef978`. GPU 0, 2, 3, 4, 5 and 6 use Linux
+loopback ports 8870 through 8875 respectively; all connect to the one Mac
+service on port 8889. The controller resumed at 20:44:12. A 20:50 live check
+confirmed all twelve worker processes, the controller and advancing evaluation
+logs. Saved coverage at 20:49:25 was 676/2,669, including 111/278 canonical
+subtasks. These remain partial results. Completed episodes and sustained
+throughput need further observation before claiming a benchmark speedup.
+
+The per-worker `cache_recovery_split*_worker*_20261005.json` records preserve
+saved IDs and archived failed attempts. Their `paused_old_pid` and
+`old_start_ticks` fields were inherited from the original acceleration
+preparation; they do not identify the immediately preceding failed parallel
+attempt. They must not be used as authoritative process identities for this
+cache recovery.
+The [20:58 live recovery audit](assets/scope_20261005/cache_recovery_live_20261005.json)
+confirms all twelve active workers and unchanged saved values: 676 subtasks
+from 93 complete episodes, with 72 primary metric files byte-identical to the
+recovery archives. It also corrects the inherited process-identity fields.
+
+The [20:53:43 cache bridge audit](assets/scope_20261005/cache_bridge_live_20261005.json)
+validates a fixed 202,871-byte ledger prefix containing 499 completed model
+responses, all HTTP 200, across all three credential slots. The last 120
+seconds contain 91 completed responses (45.5 QPM), with queue-time P95 below
+0.1 ms. Bridge elapsed time excludes Linux uploads; cache misses and corrupt
+cache returns are not recorded by that ledger. These counts therefore do not
+establish absence of every transport failure or completion of any episode.
+The metadata-only cache scan found 912 image files totaling 178,541,676 bytes.
+
+### Runtime attribution after recovery
+
+The old controller hardcoded the original runtime for every final fold. The
+[frozen per-ID source map](assets/scope_20261005/frozen_result_lineage.json)
+instead identifies 670 preserved IDs from `46f1e1f`, six preserved IDs from
+`bfffc2be`, and the active source `606d29ca` for later saved IDs. The active
+source is valid only while that runtime remains frozen. Older project launch
+heads that are not reconstructed per ID stay null; supporting launch and
+recovery records are retained. New workers check their actual upstream HEAD
+against `manifests/active_scope_runtime_commit.txt` before starting evaluation.
+
+`runtime_lineage.py` reads the actual primary samples and selected fold IDs,
+rejects unknown or conflicting IDs, and atomically writes `runtime_lineage.json`.
+Its runtime label includes only versions that contributed observed samples.
+The controller refuses ingestion when attribution fails and retains its exact
+coverage and modality checks. Public-episode metadata retains its original
+launch head and runtime. For other final folds, `commit_sha` identifies the
+archival controller launch; per-ID runtime and known worker launch provenance
+are in the lineage report, rather than being inferred from a split number.
+
+Validation passed 11 lineage tests, seven controller integration tests,
+37 existing metric-ingester tests and 53 keyframe tests. Source and touched-file
+Ruff, Black and mypy gates passed. Linux's actual `conceptgraph` Python also
+attributed a copied 676-row primary snapshot as exactly 670 original plus six
+visualization-fix rows. This smoke test did not rewrite running primary files.
+The [controller recovery record](assets/scope_20261005/lineage_controller_recovery_20261005.json)
+confirms deployment at launch head `babd602cf7a9f8053eee6eb956af49fa28c9efa0`.
+At 21:33:11, controller PID 3052890 was active in `scope-full-20261005`, waiting
+for both existing first-split workers. All twelve navigation worker PIDs,
+creation ticks and commands matched the pre-replacement identities; none was
+restarted or signaled. The actual upstream HEAD remained `606d29ca`, and the
+deployed controller, worker and attribution-helper hashes matched the project
+sources. No current controller exit marker was present.
+
+The old controller was stopped deliberately to deploy attribution. Its TERM
+handler produced a zero status file despite the signal; this was a planned
+controller stop with incomplete coverage, not a successful evaluation.
+The corrected controller explicitly exits 143 on TERM and 130 on INT. An
+owned-process regression reproduced the old zero marker and verified the
+new process return code and status file were both 143, without starting a
+navigation worker. Target lint, formatting, strict typing and shell checks
+passed after this two-line signal-handler change.
+
+### Immutable checkpoint captured at 21:20:46
+
+The full and canonical copies use the same frozen full snapshot, rather than
+independent live rereads. They preserve all older primary sample values.
+
+| Selection | Saved / requested subtasks | Complete episodes | Successes | Observed SR | Observed SPL |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| [Full observation](assets/full2669_progress_20261005_2120/ingested_summary.json) | 676 / 2,669 | 93 | 481 | 71.153846% | 50.093611% |
+| [Canonical observation](assets/canonical278_progress_20261005_2120/ingested_summary.json) | 111 / 278 | 15 | 89 | 80.180180% | 51.742571% |
+
+These are partial observations, not completed benchmark scores. Compared with
+`1820`, the full copy adds complete episodes `00849`/0, `00853`/6 and
+`00869`/6 (25 subtasks); canonical adds the same nine-subtask first episode of
+`00849`. Full observed modality counts are 218 description, 217 image and 241
+object subtasks. The attribution reports identify exactly 670 original plus
+six visualization-fix rows in full, and 111 original rows in canonical; no
+parallel-runtime episode is yet saved in this snapshot.
+
+Local checks validate paired raw/SQLite values, original frozen IDs and
+explicit indices, complete episodes, overall/per-modality metrics, and the
+source-map hash. Previous metric rows and prior run fields are preserved;
+the public episode's ingestion timestamp was refreshed during controller
+replay. Per-subtask usage remains unknown. Global API ledgers are separate
+from these primary-only copies, so their `api_ledger_present=false` does not
+mean no model requests occurred. Independent verification passed 43
+local/remote artifact hashes, exact raw/SQL values, both folds' lineage counts,
+complete episodes and prior sample preservation. The immutable SQLite backup
+SHA256 is `86576133c435ca9798cdf6551633eb0195e83210dbc41dfafca46ad9178162a9`.
+Verification details are retained in both observation manifests.
+
+### First completed parallel-runtime episodes — 21:48:02
+
+The [2145 immutable observation](assets/full2669_progress_20261005_2145/ingested_summary.json)
+contains 691/2,669 subtasks in 95 complete episodes, with 495 successes,
+observed SR 71.635311% and SPL 50.714604%. Compared with `2120`, it adds
+scene `00849` episode 4 (seven subtasks, all successful) and scene `00871`
+episode 6 (eight subtasks, seven successful). Canonical coverage remains
+111/278; no duplicate canonical copy was made.
+
+The [per-ID lineage](assets/full2669_progress_20261005_2145/runtime_lineage.json)
+identifies exactly 670 original, six visualization-fix and 15 parallel-runtime
+rows. This proves that the new runtime completed episodes, rather than only
+returning model responses. All old raw values are retained. Source-map hash,
+complete-episode and frozen-ID checks passed locally, with exact paired SQL
+values and overall/per-modality metrics. This remains a partial observation.
+The public run's notes and ingestion timestamp changed during the documented
+controller replay; other old run fields and all previous metric rows are
+unchanged. Independent remote validation is recorded in its manifest.
+The independent check passed 31 local/remote observation file hashes and
+exact old/new raw and SQL values, including both new episodes and all three
+runtime counts. The tracked and immutable/current remote databases agree
+for this observation. The final manifest is synchronized to Linux.
+
+### Remaining performance evidence
+
+A read-only two-second host sample at 21:41 found 48 physical cores / 96
+logical CPUs, CPU busy 98.68%, iowait 0.02% and one-minute load 336.27.
+Each of the twelve workers had about 165 threads; 536 threads were runnable
+in the sample. Several workers consumed 14–16 logical cores while other
+workers waited for VLM calls. A split-7 worker had adjacent steps without HTTP
+markers taking 52, 32 and 29 seconds; logged denoise and merge intervals were
+8.40 and 6.62 seconds. These observations support CPU oversubscription as an
+additional bottleneck; they do not attribute every step delay to the CPU.
+
+At 21:44 the bridge completed 59 requests over two minutes; queue P95 was
+0.093 ms and bridge elapsed P95 was 37.77 seconds. Bridge elapsed excludes
+Linux upload. Live worker thread-limit variables were unset, and the active
+source did not set Torch intra/inter-op limits. Library pool ownership cannot
+be reconstructed from the total thread count alone.
+
+Existing canonical episode outputs contain RGB visualizations and potential
+state pickles, but no depth arrays or denoise/merge point-cloud inputs. They
+cannot support a faithful offline replay of those operations. A controlled
+thread comparison therefore requires a future attempt to export real CPU
+object inputs and original parameters first, then compare operation outputs
+and timings. No thread settings, model parameters or running workers were
+changed during this diagnosis.
+
+### Optional real-input CPU calibration tools
+
+`run_scope.py --cpu-capture-dir /absolute/path` enables a one-time, actor-isolated
+capture. Its default is disabled and preserves the existing startup sequence.
+Enabled runs verify the fixed upstream entrypoint hash and its four environment
+assignments before early imports. The wrapper captures the first nontrivial
+`denoise_objects` input, with original integer IDs, XYZ/colors and all explicit
+parameters. Empty and single-point calls do not consume the capture; normals
+and covariances are refused because they would be lost in an XYZ/color replay.
+Original call arguments, returned object identity and exceptions are retained.
+
+The immutable capture directory contains typed JSON and non-pickle NPZ, with
+source/array hashes. Loading checks bounded NPY headers, shapes, dtype, C-order
+and actual payload lengths before allocating arrays. The separate CPU-only
+replay command uses the same source Git HEAD and function-file hash, then
+compares sorted coordinates and their corresponding colors, including skip
+and fallback outcomes, across requested thread counts. Its timings cover the
+point-cloud denoise core; they exclude bbox, merge, perception and model calls.
+
+The source and touched-file Ruff, Black and mypy gates passed, together with
+56 focused tests (15 capture/replay-boundary, 18 runner, 15 lineage and eight
+controller) and 53 keyframe tests. A fresh Linux Python 3.9.21 process imported
+the staged tools, confirmed disabled capture created no files or heavy module
+imports, validated the actual upstream entrypoint, and accepted the old lineage
+plan. No real Open3D replay or thread-speedup claim has been made yet.
+
+Per-stage active lineage overrides allow a future diagnostic launch to retain
+older sample sources and other actors' startup versions. A checkpoint observer
+for split 7 worker 0 (PID 3034461, creation tick 322716795) waits in tmux for
+new complete-episode progress beyond its 65 saved IDs before pausing that
+owned process. The existing evaluation parameters and thread limits remain
+unchanged while this boundary is pending.
+
+The [09:28 global API ledger audit](assets/scope_20261005/global_api_usage_20261005_0928.json)
+pins the complete 2,186,908-byte, 7,784-record ledger prefix by SHA256.
+After excluding the earlier preflight/public-episode rows, the full run has
+7,620 recorded bridge requests: 7,619 HTTP 200 and one earlier HTTP 504.
+The recovery interval beginning at ledger row 2,388 contains 5,396 requests,
+all HTTP 200. Every recorded full-run request names `gemini-3.8-flash` and
+thinking budget 2,000. Recovery request latency has median 7.149 seconds and
+95th percentile 32.095 seconds; these are bridge-request timings.
+
+The full-run known token totals are 130,596,004 prompt tokens, 399,546
+completion tokens, and 133,536,530 provider total tokens. One request has
+missing usage; reasoning-token usage is absent from 1,528 records. Each
+field retains its own known/missing denominator in the audit. These totals
+include ongoing episodes and earlier attempts, and cannot be assigned to
+the completed subtasks or either requested fold. Missing values remain
+unknown; no per-subtask usage was inserted into SQLite. The archived prefix
+hash was independently rechecked against the append-only ledger. The audit
+contains only model, transport and numeric usage metadata.
+
+### SSH tunnel recovery
+
+At 06:01, the Mac-to-Linux SSH reverse tunnel disconnected after an operation
+timeout. The Mac model bridge remained healthy, but all six workers raised
+`APIConnectionError` and exited 1; the controller also exited 1. Their terminal
+statuses, stdout, upstream logs, checkpoint copies and incomplete episode
+visualizations were preserved under
+`failed_attempts/network_disconnect_20261005_0601/`.
+
+Revision `59bc0d3` adds `scripts/scope/run_tunnel.sh`, which reconnects after
+SSH exits with delays of 2, 4, 8, 16 and at most 30 seconds. It runs in the
+Mac `scope-api-tunnel-20261005` tmux session, uses the private `bupt-scope` SSH
+alias, and stops its own child on TERM/INT. A real owned-SSH termination before
+worker restart recovered automatically in two seconds; Linux bridge health
+returned HTTP 200. Five fake integration tests, 53 keyframe tests, lint,
+formatting, type checking and shell syntax checks passed.
+
+At 06:14, all six workers and the controller restarted from a clean project
+checkout at `59bc0d30e40f326544fb2524956754bd094e08fb`. Each worker now uses the
+two-retry/240-second bootstrap. The original source skips the two completed
+episodes containing **12 saved subtasks**; incomplete episodes replay from
+their original initial poses. Log-only successes from failed attempts are not
+merged. Scene assets, model, prompts, sampling and navigation budgets are
+unchanged. The full evaluation remains incomplete. Exact PIDs, code hashes,
+archive paths and verification results are in the
+[network recovery record](assets/scope_20261005/network_recovery_20261005.json).
+The [checkpoint audit](assets/scope_20261005/network_checkpoint_audit_20261005.json)
+verifies each shard's primary metric ID sets, frozen requested IDs and exact
+archived incomplete episode folders.
+
+A separate [semantic fallback log audit](assets/scope_20261005/semantic_fallback_audit_20261005.json)
+captures the resumed attempt through 06:37:53. It uses only six upstream logs,
+with captured prefix lengths and hashes, excluding duplicated stdout and older
+attempts. It found 12 navigation-output validation warnings, including nine
+parse warnings, and six decisions that recovered through the original retries.
+Two retry sequences remained pending at the snapshot boundary. No marked retry
+exhaustion or forced/default confirmation was observed in that snapshot.
+The same-candidate rejection counter accumulates within one exploration step;
+it does not require consecutive rejections. Overall potential-value fallback
+counts remain unobservable because some default paths have no log marker.
+
+The updated [09:30:54 audit](assets/scope_20261005/semantic_fallback_audit_20261005_0930.json)
+captures fixed prefixes from all 12 current-attempt FileHandler logs. Every
+prefix has one run header, and an independent reread of the live files matched
+all twelve captured SHA256 values. It excludes duplicated stdout and old
+failed attempts. Counts below are observed markers or decisions in these
+prefixes, not failed task or episode counts.
+
+| Observed marker/decision | Count |
+| --- | ---: |
+| Navigation response validation warnings | 101 |
+| Format warnings, included in validation warnings | 80 |
+| Valid-selection markers after validation retry | 53 |
+| Valid-selection markers after format retry | 41 |
+| Format retry exhaustion returning `None` | 3 |
+| Generic retry exhaustion returning `None` | 13 |
+| Validation warnings reporting zero remaining retries | 4 |
+| Default `CONFIRM` from unclear/API-none self-refinement | 0 |
+| Same-candidate acceptance after three rejections | 6 |
+
+Exhaustion markers and zero-remaining warnings can overlap, so they must not
+be added as distinct failed tasks. The same-candidate counter accumulates
+within an exploration step. A valid-selection marker establishes syntactic
+recovery, not correct grounding; the six acceptance events belong to the
+unchanged released policy. The fixed prefixes contain no pending or unclosed
+validation-warning query, which does not imply that navigation has finished.
+Silent potential-score defaults remain `null`/unobservable. The 1,241 logged
+potential bodies all contain the numeric pattern checked by this audit, but
+this observable subset does not measure every neutral-score path. The report
+retains sanitized line, elapsed-time, task and step locations, and does not
+change the running algorithm.
+
+## Sources
+
+- [Official SCOPE code](https://github.com/mrwangyou/SCOPE).
+- [SCOPE paper](https://arxiv.org/html/2511.08935v1).
+- [Official Habitat dataset download requirements](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md).

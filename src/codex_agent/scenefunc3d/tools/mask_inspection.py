@@ -31,13 +31,6 @@ from ..final_mask_artifacts import (
     validate_points_world_npz,
 )
 from ..task import ApprovalAction, validate_fragment_approval_actions
-from .crop_recommendations import (
-    RecommendedCrop as SuggestedCrop,
-)
-from .crop_recommendations import (
-    RecommendedCropPayload,
-    recommended_crops_for_matched_objects,
-)
 from .keyframe_retrieval import (
     KeyframeMatchedObjectPayload,
     VisibleObjectFrameScore,
@@ -85,7 +78,6 @@ class SuggestedViewPayload(TypedDict):
     has_pose: bool
     view_diversity_score: float
     matched_objects: NotRequired[list[KeyframeMatchedObjectPayload]]
-    recommended_crops: NotRequired[list[RecommendedCropPayload]]
 
 
 class SuggestedViewsPayload(TypedDict):
@@ -388,7 +380,6 @@ class SuggestedView:
     has_pose: bool
     view_diversity_score: float
     matched_objects: tuple[KeyframeMatchedObjectPayload, ...] = ()
-    recommended_crops: tuple[SuggestedCrop, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate domain invariants for one suggested view."""
@@ -418,10 +409,6 @@ class SuggestedView:
         }
         if self.matched_objects:
             payload["matched_objects"] = list(self.matched_objects)
-        if self.recommended_crops:
-            payload["recommended_crops"] = [
-                crop.to_payload() for crop in self.recommended_crops
-            ]
         return payload
 
 
@@ -754,7 +741,6 @@ def suggest_additional_views(
             seed_lift_point_count=seed_lift_point_count,
             min_seed_point_count=args.min_seed_point_count,
             seed_lift_status=seed_lift_status,
-            task_description=args.task_description,
         )
         for rank, candidate in enumerate(ranked_candidates[: args.k], start=1)
     )
@@ -1108,7 +1094,6 @@ def _suggested_view_from_geometry(
     seed_lift_point_count: int,
     min_seed_point_count: int,
     seed_lift_status: SeedLiftStatus,
-    task_description: str | None,
 ) -> SuggestedView:
     return SuggestedView(
         frame_id=candidate.frame_id,
@@ -1124,10 +1109,6 @@ def _suggested_view_from_geometry(
         has_pose=candidate.has_pose,
         view_diversity_score=candidate.view_diversity_score,
         matched_objects=candidate.matched_objects,
-        recommended_crops=recommended_crops_for_matched_objects(
-            candidate.matched_objects,
-            task_description,
-        ),
     )
 
 
@@ -1452,9 +1433,7 @@ __all__ = [
     "MultiViewDecision",
     "MultiViewDecisionInput",
     "MultiViewDecisionPayload",
-    "RecommendedCropPayload",
     "SeedLiftStatus",
-    "SuggestedCrop",
     "SuggestAdditionalViewsArgs",
     "SuggestedView",
     "SuggestedViewPayload",

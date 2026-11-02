@@ -4,20 +4,27 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Literal, Protocol, TypeAlias, cast
+from typing import TYPE_CHECKING, Literal, Protocol, TypeAlias, cast
 
 import numpy as np
-import torch
 from numpy.typing import NDArray
 from PIL import Image, ImageDraw
-from torch import Tensor
-from transformers import AutoModelForCausalLM, AutoProcessor, GenerationConfig
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+
+if TYPE_CHECKING:
+    import torch
+    from torch import Tensor
+    from transformers import GenerationConfig
+    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+else:
+    Tensor = object
+    GenerationConfig = object
+    PreTrainedTokenizerBase = object
 
 PointSource = Literal["manual_pixel", "molmo_percent", "pixel_tuple"]
 MaskSelection = Literal["score", "smallest"]
@@ -244,6 +251,20 @@ def positive_int(raw_value: str) -> int:
     return value
 
 
+def _default_repo_root() -> Path:
+    env_repo_root = os.environ.get("REPO_ROOT")
+    if env_repo_root:
+        return Path(env_repo_root)
+    return Path(__file__).resolve().parents[4]
+
+
+def _default_dataset_root() -> Path:
+    env_dataset_root = os.environ.get("DATASET_ROOT")
+    if env_dataset_root:
+        return Path(env_dataset_root)
+    return _default_repo_root() / "data" / "SceneFuncVal-CG"
+
+
 def normalize_frame_id(frame_id: str) -> str:
     if not frame_id.isdigit():
         raise ValueError(f"frame_id must contain only digits: {frame_id}")
@@ -263,6 +284,8 @@ def load_rgb_image(image_path: Path) -> Image.Image:
 
 
 def require_cuda() -> None:
+    import torch
+
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is required for Molmo + SAM inference")
 
@@ -366,6 +389,9 @@ def force_legacy_generation_cache(model: DynamicCacheSwitchable) -> None:
 def load_molmo_model(
     config: SmokeConfig,
 ) -> tuple[MolmoModel, MolmoProcessor, tuple[MolmoPatchReport, ...]]:
+    import torch
+    from transformers import AutoModelForCausalLM, AutoProcessor
+
     require_cuda()
     model_path = Path(config.molmo_model_id).expanduser()
     local_files_only = model_path.exists()
@@ -399,6 +425,9 @@ def generate_molmo_text(
     *,
     max_new_tokens: int,
 ) -> str:
+    import torch
+    from transformers import GenerationConfig
+
     inputs = processor.process(images=[image], text=prompt)
     batch = MolmoBatch.from_processor_output(inputs, device=model.device)
     with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
@@ -828,13 +857,12 @@ def run_smoke(config: SmokeConfig) -> SmokeSummary:
 
 
 def parse_args(argv: Sequence[str] | None = None) -> CliRequest:
+    dataset_root_default = _default_dataset_root()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--dataset-root",
         type=Path,
-        default=Path(
-            "/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG"
-        ),
+        default=dataset_root_default,
     )
     parser.add_argument("--scene-id", required=True)
     parser.add_argument("--frame-id", required=True)
@@ -843,26 +871,22 @@ def parse_args(argv: Sequence[str] | None = None) -> CliRequest:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path(
-            "/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/"
-            "molmo_sam3d_smoke_20260627"
-        ),
+        default=dataset_root_default / "molmo_sam3d_smoke_20260627",
     )
     parser.add_argument("--molmo-model-id", default="allenai/Molmo-7B-D-0924")
     parser.add_argument(
         "--molmo-cache-dir",
         type=Path,
-        default=Path(
-            "/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/"
-            "models/cache/huggingface"
-        ),
+        default=dataset_root_default / "models" / "cache" / "huggingface",
     )
     parser.add_argument(
         "--sam-checkpoint",
         type=Path,
-        default=Path(
-            "/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG/"
-            "models/Grounded-Segment-Anything/sam_vit_h_4b8939.pth"
+        default=(
+            dataset_root_default
+            / "models"
+            / "Grounded-Segment-Anything"
+            / "sam_vit_h_4b8939.pth"
         ),
     )
     parser.add_argument("--depth-scale", type=positive_float, default=1000.0)

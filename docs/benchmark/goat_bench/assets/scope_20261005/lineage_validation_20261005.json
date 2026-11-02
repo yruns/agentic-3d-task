@@ -1,0 +1,44 @@
+{
+  "observed_at_utc": "2026-10-05T13:14:49Z",
+  "lineage_source_sha256": "3872925d569960324e30af1c5febc0184429ca32f710c1dc1d231837a5466de8",
+  "source_sha256": {
+    "runtime_lineage.py": "4cae0ccb2f8310d4951c17b65210bd53b262dc57da3dcea043e6a39f11dcce03",
+    "run_full.sh": "933d0026d8b2752a12cdd0b369ec044935a480f90ff9d6f46d8f546006e549f0",
+    "run_worker.sh": "61fdbf6ee6a8a17a68c3d6b556b8b3acd07621f2d06e1034dc63eefbe8ffc981"
+  },
+  "tests": {
+    "lineage": 11,
+    "controller": 7,
+    "metric_ingester": 37,
+    "keyframe": 53,
+    "total": 108
+  },
+  "gates": {
+    "ruff_src_and_touched": 0,
+    "black_src_and_touched": 0,
+    "mypy_src": 0,
+    "mypy_touched_strict": 0,
+    "shell_syntax": 0
+  },
+  "red_validation": {
+    "lineage_initial_collection": "missing implementation",
+    "controller_new_regressions_failed": 3
+  },
+  "native_linux_smoke": {
+    "environment": "conceptgraph",
+    "observed_subtasks": 676,
+    "requested_subtasks": 2669,
+    "runtime_counts": {
+      "46f1e1f78077219c30e35440540e4ef22995194c": 670,
+      "bfffc2be995a7223c8a0e9c86c18064dbe878838": 6
+    },
+    "source_map_sha256": "3872925d569960324e30af1c5febc0184429ca32f710c1dc1d231837a5466de8",
+    "output": "/home/ysh/Datasets/SCOPE/validation/lineage_native_20261005/output",
+    "running_primary_files_modified": false
+  },
+  "scope": {
+    "controller_deployed": false,
+    "worker_restarted": false,
+    "evaluation_complete": false
+  }
+}

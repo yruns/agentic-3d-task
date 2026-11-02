@@ -1,0 +1,46 @@
+{
+  "launch_time": "2026-10-05T07:06:54+08:00",
+  "head_commit_at_launch": "15726c1d3311f6976415db94f3954efe103df927",
+  "upstream_runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "bootstrap_revision": "08fdeba4c8529e7e01ce1e01f88b6e558e1e652f",
+  "frozen_plan": "/home/ysh/Datasets/SCOPE/manifests/storage_plan_parallel_v2.json",
+  "split": 5,
+  "worker": 1,
+  "physical_gpu": 2,
+  "pid": 2722839,
+  "tmux": "scope-s5-w1-20261005",
+  "expected_subtasks": 128,
+  "cfg_file": "/home/ysh/Datasets/SCOPE/manifests/eval_full2669_split5_worker1.yaml",
+  "output_dir": "/home/ysh/Datasets/SCOPE/outputs/REPRO_20261005_SCOPE_Gemini38Flash_full2669_split5_worker1",
+  "existing_gpu2_peer": {
+    "split": 1,
+    "worker": 1,
+    "pid": 2706516
+  },
+  "resource_preflight": {
+    "gpu2_total_mib": 24564,
+    "gpu2_used_mib": 9133,
+    "gpu2_free_mib": 14951,
+    "peer_process_mib": 9100,
+    "host_available_mib": 471715,
+    "six_workers_rss_gib": 31.1,
+    "data_disk_free_tb_approx": 1.8,
+    "root_disk_free_gb_approx": 804,
+    "six_samples_over_seconds": 20,
+    "gpu_memory_sample_constant": true,
+    "instantaneous_peak_not_proven": true
+  },
+  "post_launch_observation": {
+    "worker_elapsed_seconds": 216,
+    "existing_six_workers_and_controller_live": true,
+    "new_worker_live": true,
+    "new_worker_step": 3,
+    "gpu2_used_mib": 18248,
+    "gpu2_free_mib": 5836,
+    "peer_process_mib": 9100,
+    "new_process_mib": 9100,
+    "new_terminal_status_files": []
+  },
+  "concurrency": 7,
+  "notes": "Only one independent frozen future stage was launched early. Models, prompts, dataset IDs, memory resets and navigation budgets are unchanged. Output is isolated; the existing controller reuses the worker when split5 is reached. Resource samples support current capacity but do not bound every future scene peak. Launch commit was read back from git and corrected in the separate manifest. Ledger remains aggregate full-run usage with interleaved stages."
+}

@@ -1,0 +1,6 @@
+# Safe placeholder for private SceneFunc3D sidecar request headers.
+# Copy to configs/scenefunc3d_sidecar_headers.toml and fill in local cookies.
+# The real configs/scenefunc3d_sidecar_headers.toml is gitignored.
+
+[headers]
+Cookie = "replace-with-workspace-proxy-cookie"

@@ -4,9 +4,12 @@ set -euo pipefail
 export NO_COLOR=1
 export TERM=dumb
 
-REPO_ROOT="${REPO_ROOT:-/mlx_devbox/users/yueshuhao/playground/repos/agentic-3d-task/.worktrees/scenefunc3d-agent-tools}"
-DATASET_ROOT="${DATASET_ROOT:-/mlx_devbox/users/yueshuhao/playground/nas/Datasets/SceneFuncVal-CG}"
-RUN_ROOT="${RUN_ROOT:-${DATASET_ROOT}/agent_runner_e2e_20260629}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+
+REPO_ROOT="${REPO_ROOT:-${DEFAULT_REPO_ROOT}}"
+DATASET_ROOT="${DATASET_ROOT:-${REPO_ROOT}/data/SceneFuncVal-CG}"
+RUN_ROOT="${RUN_ROOT:-${REPO_ROOT}/tmp/scenefunc3d/agent_runner_e2e_20260629}"
 SAMPLE_ID_RAW="${SAMPLE_ID-}"
 SAMPLE_ID_WAS_SET="0"
 if [[ "${SAMPLE_ID+x}" == "x" ]]; then
@@ -15,18 +18,21 @@ fi
 SAMPLE_ID="${SAMPLE_ID:-421254::af0b7790-028c-4eed-945b-d90386d4f16b}"
 SAMPLE_IDS_PATH="${SAMPLE_IDS_PATH:-}"
 ALL_SAMPLES="${ALL_SAMPLES:-0}"
-SIDECAR_PYTHON_BIN="${SIDECAR_PYTHON_BIN:-/usr/bin/python}"
-RUNNER_PYTHON_BIN="${RUNNER_PYTHON_BIN:-/mlx_devbox/users/yueshuhao/miniforge3/envs/conceptgraph/bin/python}"
+SIDECAR_PYTHON_BIN="${SIDECAR_PYTHON_BIN:-python3}"
+RUNNER_PYTHON_BIN="${RUNNER_PYTHON_BIN:-python3}"
 USE_CODEX_AUTH="${USE_CODEX_AUTH:-0}"
 PRECHECK_ONLY="${PRECHECK_ONLY:-0}"
 HOST_UNAME="${HOST_UNAME:-$(uname -s)}"
+SIDECAR_MODE="${SIDECAR_MODE:-remote}"
+SCENEFUNC3D_SIDECAR_BASE_URL="${SCENEFUNC3D_SIDECAR_BASE_URL:-https://workspace-proxy-candy-maliva-tce.tiktok-row.org/pws54367p10640t1782831706e9geojby}"
+SCENEFUNC3D_SIDECAR_HEADERS_PATH="${SCENEFUNC3D_SIDECAR_HEADERS_PATH:-${REPO_ROOT}/configs/scenefunc3d_sidecar_headers.toml}"
 MOLMO_PROCESSOR_SNAPSHOT="${MOLMO_PROCESSOR_SNAPSHOT:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home/transformers/models--allenai--MolmoPoint-8B/snapshots/188130f961c8e0888a34e11121a1423c461a01ba}"
 MOLMO_CODE_SNAPSHOT="${MOLMO_CODE_SNAPSHOT:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home/hub/models--allenai--MolmoPoint-8B/snapshots/188130f961c8e0888a34e11121a1423c461a01ba}"
 MOLMO_MODEL_PATH="${MOLMO_MODEL_PATH:-${RUN_ROOT}/molmopoint_merged_model}"
 SAM_MODEL_PATH="${SAM_MODEL_PATH:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home/transformers/models--facebook--sam2.1-hiera-large/snapshots/665f8e2ad61cf5f53d65644ff27c8ee525124610}"
 HF_HOME="${HF_HOME:-${DATASET_ROOT}/molmopoint_sam21_20260628/hf_home}"
 if [[ "${USE_CODEX_AUTH}" == "1" ]]; then
-  CODEX_HOME="${CODEX_HOME:-/home/tiger/.codex}"
+  CODEX_HOME="${CODEX_HOME:-${HOME}/.codex}"
   CODEX_AGENT_MODEL="${CODEX_AGENT_MODEL:-gpt-5.5}"
   CODEX_AGENT_MODEL_PROVIDER="openai"
   CODEX_AGENT_COPY_AUTH="1"
@@ -40,7 +46,7 @@ if [[ "${HOST_UNAME}" == "Linux" ]]; then
   DEFAULT_START_ADAPTER="1"
 fi
 START_ADAPTER="${START_ADAPTER:-${DEFAULT_START_ADAPTER}}"
-ADAPTER_PYTHON_BIN="${ADAPTER_PYTHON_BIN:-/usr/bin/python}"
+ADAPTER_PYTHON_BIN="${ADAPTER_PYTHON_BIN:-python3}"
 ADAPTER_HOST="${ADAPTER_HOST:-127.0.0.1}"
 ADAPTER_PORT="${ADAPTER_PORT:-8787}"
 ADAPTER_ENV_PATH="${ADAPTER_ENV_PATH:-${REPO_ROOT}/codex_modelhub_adapter/.env}"
@@ -60,6 +66,9 @@ export RUNNER_PYTHON_BIN
 export USE_CODEX_AUTH
 export PRECHECK_ONLY
 export HOST_UNAME
+export SIDECAR_MODE
+export SCENEFUNC3D_SIDECAR_BASE_URL
+export SCENEFUNC3D_SIDECAR_HEADERS_PATH
 export MOLMO_PROCESSOR_SNAPSHOT
 export MOLMO_CODE_SNAPSHOT
 export MOLMO_MODEL_PATH
@@ -105,6 +114,7 @@ import urllib.request
 from pathlib import Path
 
 from codex_agent.errors import SceneFunc3dDataError
+from codex_agent.scenefunc3d.runner import check_sidecar_health
 from codex_agent.scenefunc3d.sample import SceneFunc3dSampleId
 
 
@@ -118,6 +128,9 @@ sample_ids_path = os.environ["SAMPLE_IDS_PATH"]
 all_samples_value = os.environ["ALL_SAMPLES"]
 sidecar_python_bin = os.environ["SIDECAR_PYTHON_BIN"]
 runner_python_bin = os.environ["RUNNER_PYTHON_BIN"]
+sidecar_mode = os.environ["SIDECAR_MODE"]
+sidecar_base_url = os.environ["SCENEFUNC3D_SIDECAR_BASE_URL"].rstrip("/")
+sidecar_headers_path = Path(os.environ["SCENEFUNC3D_SIDECAR_HEADERS_PATH"])
 molmo_processor_snapshot = Path(os.environ["MOLMO_PROCESSOR_SNAPSHOT"])
 molmo_code_snapshot = Path(os.environ["MOLMO_CODE_SNAPSHOT"])
 molmo_model_path = Path(os.environ["MOLMO_MODEL_PATH"])
@@ -289,20 +302,41 @@ def write_backend_config() -> None:
     run_root.mkdir(parents=True, exist_ok=True)
     output_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(
-        "\n".join(
+    if sidecar_mode == "remote":
+        backend_lines = (
+            f"sidecar_base_url = {json.dumps(sidecar_base_url)}",
+            f"request_headers_path = {json.dumps(str(sidecar_headers_path))}",
+            "request_timeout_seconds = 300.0",
             (
-                'molmo_url = "http://127.0.0.1:8711"',
-                'sam_url = "http://127.0.0.1:8712"',
-                "request_timeout_seconds = 300.0",
-                f'artifact_staging_root = "{run_root}"',
-                f'allowed_image_roots = ["{dataset_root.parent}", "{run_root}"]',
-                f'allowed_output_roots = ["{run_root}"]',
-                "",
-            )
-        ),
+                "allowed_image_roots = "
+                f"[{json.dumps(str(dataset_root.parent))}, {json.dumps(str(run_root))}]"
+            ),
+            f"allowed_output_roots = [{json.dumps(str(run_root))}]",
+            "",
+        )
+    elif sidecar_mode == "local":
+        backend_lines = (
+            'molmo_url = "http://127.0.0.1:8711"',
+            'sam_url = "http://127.0.0.1:8712"',
+            "request_timeout_seconds = 300.0",
+            (
+                "allowed_image_roots = "
+                f"[{json.dumps(str(dataset_root.parent))}, {json.dumps(str(run_root))}]"
+            ),
+            f"allowed_output_roots = [{json.dumps(str(run_root))}]",
+            "",
+        )
+    else:
+        raise RuntimeError("SIDECAR_MODE must be remote or local")
+    config_path.write_text(
+        "\n".join(backend_lines),
         encoding="utf-8",
     )
+
+
+def check_remote_sidecars_ready() -> None:
+    check_sidecar_health(config_path)
+    print(f"remote sidecars ready: base_url={sidecar_base_url}", flush=True)
 
 
 def start_process(name: str, args: list[str]) -> subprocess.Popen[bytes]:
@@ -409,7 +443,7 @@ def run_agent_runner(sample_args: list[str]) -> None:
     command = [
         runner_python_bin,
         "-m",
-        "codex_agent.scenefunc3d.runner",
+        "codex_agent.cli.run_scenefunc3d",
         "--dataset-root",
         str(dataset_root),
     ] + sample_args + [
@@ -461,6 +495,10 @@ def main() -> None:
             check_adapter_ready()
         if precheck_only:
             print("precheck complete", flush=True)
+            return
+        if sidecar_mode == "remote":
+            check_remote_sidecars_ready()
+            run_agent_runner(runner_sample_args)
             return
         prepare_molmo_model_dir()
         molmo = start_process(

@@ -1,0 +1,1385 @@
+{
+  "schema_version": 1,
+  "expected_subtasks": 278,
+  "observed_subtasks": 111,
+  "source_map_sha256": "3872925d569960324e30af1c5febc0184429ca32f710c1dc1d231837a5466de8",
+  "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "samples": [
+    {
+      "question_id": "00800-TEEsavR23oF_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00800-TEEsavR23oF_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00800-TEEsavR23oF_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00800-TEEsavR23oF_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00800-TEEsavR23oF_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00808-y9hTuugGdiq_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00808-y9hTuugGdiq_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00808-y9hTuugGdiq_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00808-y9hTuugGdiq_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00808-y9hTuugGdiq_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00810-CrMo8WxCyVb_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00810-CrMo8WxCyVb_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00810-CrMo8WxCyVb_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00810-CrMo8WxCyVb_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00810-CrMo8WxCyVb_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00810-CrMo8WxCyVb_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00810-CrMo8WxCyVb_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00810-CrMo8WxCyVb_0_7",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00810-CrMo8WxCyVb_0_8",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00823-7MXmsvcQjpJ_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00823-7MXmsvcQjpJ_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00823-7MXmsvcQjpJ_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00823-7MXmsvcQjpJ_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00823-7MXmsvcQjpJ_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00823-7MXmsvcQjpJ_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00823-7MXmsvcQjpJ_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00823-7MXmsvcQjpJ_0_7",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00824-Dd4bFSTQ8gi_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00824-Dd4bFSTQ8gi_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00824-Dd4bFSTQ8gi_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00824-Dd4bFSTQ8gi_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00824-Dd4bFSTQ8gi_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00824-Dd4bFSTQ8gi_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00824-Dd4bFSTQ8gi_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00829-QaLdnwvtxbs_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00829-QaLdnwvtxbs_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00829-QaLdnwvtxbs_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00829-QaLdnwvtxbs_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00829-QaLdnwvtxbs_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00829-QaLdnwvtxbs_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00829-QaLdnwvtxbs_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00839-zt1RVoi7PcG_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00839-zt1RVoi7PcG_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00839-zt1RVoi7PcG_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00839-zt1RVoi7PcG_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00839-zt1RVoi7PcG_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00847-bCPU9suPUw9_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00847-bCPU9suPUw9_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00847-bCPU9suPUw9_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00847-bCPU9suPUw9_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00847-bCPU9suPUw9_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00847-bCPU9suPUw9_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00847-bCPU9suPUw9_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00847-bCPU9suPUw9_0_7",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00849-a8BtkwhxdRV_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00849-a8BtkwhxdRV_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00849-a8BtkwhxdRV_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00849-a8BtkwhxdRV_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00849-a8BtkwhxdRV_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00849-a8BtkwhxdRV_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00849-a8BtkwhxdRV_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00849-a8BtkwhxdRV_0_7",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00849-a8BtkwhxdRV_0_8",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00853-5cdEh9F2hJL_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00853-5cdEh9F2hJL_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00853-5cdEh9F2hJL_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00853-5cdEh9F2hJL_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00853-5cdEh9F2hJL_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00853-5cdEh9F2hJL_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00853-5cdEh9F2hJL_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00869-MHPLjHsuG27_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00869-MHPLjHsuG27_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00869-MHPLjHsuG27_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00869-MHPLjHsuG27_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00869-MHPLjHsuG27_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00869-MHPLjHsuG27_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00871-VBzV5z6i1WS_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00871-VBzV5z6i1WS_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00871-VBzV5z6i1WS_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00871-VBzV5z6i1WS_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00871-VBzV5z6i1WS_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00871-VBzV5z6i1WS_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00871-VBzV5z6i1WS_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker0_20261005.json",
+          "cache_recovery_split1_worker0_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00876-mv2HUxq3B53_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00876-mv2HUxq3B53_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00876-mv2HUxq3B53_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00876-mv2HUxq3B53_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00876-mv2HUxq3B53_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00876-mv2HUxq3B53_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00876-mv2HUxq3B53_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00876-mv2HUxq3B53_0_7",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00876-mv2HUxq3B53_0_8",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00877-4ok3usBNeis_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00877-4ok3usBNeis_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00877-4ok3usBNeis_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00877-4ok3usBNeis_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00877-4ok3usBNeis_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00877-4ok3usBNeis_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00877-4ok3usBNeis_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00877-4ok3usBNeis_0_7",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00877-4ok3usBNeis_0_8",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00877-4ok3usBNeis_0_9",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00890-6s7QHgap2fW_0_0",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00890-6s7QHgap2fW_0_1",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00890-6s7QHgap2fW_0_2",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00890-6s7QHgap2fW_0_3",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00890-6s7QHgap2fW_0_4",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00890-6s7QHgap2fW_0_5",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00890-6s7QHgap2fW_0_6",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00890-6s7QHgap2fW_0_7",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    },
+    {
+      "question_id": "00890-6s7QHgap2fW_0_8",
+      "disposition": "preserved",
+      "source": {
+        "runtime_commit_sha": "46f1e1f78077219c30e35440540e4ef22995194c",
+        "project_launch_head": null,
+        "evidence_records": [
+          "parallel_migration_split1_worker1_20261005.json",
+          "cache_recovery_split1_worker1_20261005.json",
+          "postfix_stage_id_provenance_20261005.json"
+        ]
+      }
+    }
+  ]
+}

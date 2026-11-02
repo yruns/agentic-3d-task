@@ -1,0 +1,56 @@
+seed: 3407
+exp_name: REPRO_20261005_SCOPE_Gemini38Flash_public_example_ep0
+output_parent_dir: /home/ysh/Datasets/SCOPE/outputs
+scene_dataset_config_path: /home/ysh/Datasets/SCOPE/scene_datasets/hm3d/hm3d_annotated_basis.scene_dataset_config.json
+scene_data_path: /home/ysh/Datasets/SCOPE/scene_datasets/hm3d
+test_data_dir: /home/ysh/Datasets/SCOPE/datasets/goat_bench/public_example/content
+concept_graph_config_path: /home/ysh/codecase/SCOPE-repro/SCOPE/cfg/concept_graph_default.yaml
+choose_every_step: true
+egocentric_views: true
+prefiltering: true
+top_k_categories: 10
+use_self_refine: true
+yolo_model_name: /home/ysh/Datasets/SCOPE/weights/yolov8x-world.pt
+sam_model_name: /home/ysh/Datasets/SCOPE/weights/sam_l.pt
+class_set: scannet200
+min_detection: 1
+camera_height: 1.5
+camera_tilt_deg: -30
+img_width: 1280
+img_height: 1280
+hfov: 120
+success_distance: 1.0
+clear_up_memory_every_subtask: false
+use_full_obj_list: false
+save_visualization: true
+prompt_h: 360
+prompt_w: 360
+init_clearance: 0.3
+max_step_room_size_ratio: 2
+extra_view_phase_1: 2
+extra_view_angle_deg_phase_1: 60
+extra_view_phase_2: 6
+extra_view_angle_deg_phase_2: 40
+explored_depth: 1.7
+tsdf_grid_size: 0.1
+margin_w_ratio: 0.25
+margin_h_ratio: 0.6
+planner:
+  eps: 1
+  max_dist_from_cur_phase_1: 1
+  max_dist_from_cur_phase_2: 1
+  final_observe_distance: 1.5
+  surrounding_explored_radius: 0.7
+  frontier_edge_area_min: 4
+  frontier_edge_area_max: 6
+  frontier_area_min: 8
+  frontier_area_max: 9
+  min_frontier_area: 20
+  max_frontier_angle_range_deg: 150
+  region_equal_threshold: 0.95
+scene_graph:
+  confidence: 0.003
+  nms_threshold: 0.1
+  iou_threshold: 0.5
+  obj_include_dist: 3.5
+  target_obj_iou_threshold: 0.6

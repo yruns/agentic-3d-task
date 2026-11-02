@@ -1,0 +1,114 @@
+{
+  "diagnostic": "v9_skill20_explicit_skill",
+  "date": "2026-07-01",
+  "head": "9b262f4cb46b42ab17b9f086b75a1c03e498b240",
+  "worktree_dirty": true,
+  "output_dir": "tmp/nr3d_tools_skill20_explicit_skill_20260701",
+  "n": 20,
+  "mode": {
+    "tools": true,
+    "skill_name": "nr3d-codex-tools",
+    "skill_path": ".agents/skills/nr3d-codex-tools/SKILL.md",
+    "workers": 20,
+    "limit": 20,
+    "reasoning_summary": "auto",
+    "turn_timeout_s": 900
+  },
+  "summary": {
+    "mean_iou": 0.8503601099366837,
+    "acc_at_025": 0.85,
+    "acc_at_050": 0.85,
+    "cache_hit_rate": 0.85,
+    "mean_cache_ratio": 0.8224479678827933
+  },
+  "correct_counts": {
+    "v7_first20": 16,
+    "v8_first20": 16,
+    "skill20": 17
+  },
+  "slices": {
+    "Overall": {
+      "n": 20,
+      "v7_correct": 16,
+      "v8_correct": 16,
+      "skill20_correct": 17,
+      "skill20_acc": 0.85
+    },
+    "Easy": {
+      "n": 11,
+      "v7_correct": 10,
+      "v8_correct": 10,
+      "skill20_correct": 10,
+      "skill20_acc": 0.9090909090909091
+    },
+    "Hard": {
+      "n": 9,
+      "v7_correct": 6,
+      "v8_correct": 6,
+      "skill20_correct": 7,
+      "skill20_acc": 0.7777777777777778
+    },
+    "View-Dep": {
+      "n": 11,
+      "v7_correct": 7,
+      "v8_correct": 7,
+      "skill20_correct": 8,
+      "skill20_acc": 0.7272727272727273
+    },
+    "View-Indep": {
+      "n": 9,
+      "v7_correct": 9,
+      "v8_correct": 9,
+      "skill20_correct": 9,
+      "skill20_acc": 1.0
+    }
+  },
+  "health": {
+    "status_completed": 20,
+    "reasoning_summary_count": 19,
+    "business_summary_count": 20,
+    "latency_s_median": 121.14349999999999,
+    "latency_s_max": 399.321
+  },
+  "transport": {
+    "responses_posts": 203,
+    "chat_or_chat_completions_posts": 0,
+    "crawl_posts": 0,
+    "http_400": 0,
+    "http_5xx": 1,
+    "invalid_encrypted_content": 0
+  },
+  "loop_signals": {
+    "skill_md_log_matches": 0,
+    "max_tool_call_interrupts": 0,
+    "repeated_tool_call_interrupts": 0,
+    "turn_timeout_interrupts": 0,
+    "permanent_failures": 0
+  },
+  "wrong_or_failed_samples": [
+    {
+      "sample_id": "scannet/scene0500_00::25::13471",
+      "category": "window",
+      "selected_object_id": 26,
+      "iou": 0.0,
+      "status": "completed",
+      "summary": "Proposal 26 is the best match: frame 140 shows #23 as the corner window immediately adjacent to the chalkboard, while frames 50 and 40 show that #25, #26, and #27 form the row of windows along the wall to the left of the chalkboard, with #26 positioned between #25 and #27 as the middle window."
+    },
+    {
+      "sample_id": "scannet/scene0608_00::9::17679",
+      "category": "ottoman",
+      "selected_object_id": 8,
+      "iou": 0.0,
+      "status": "completed",
+      "summary": "Proposal 8 is the black ottoman in front of the loveseat-like couch (#26) with the green pillow (#27). In frame 127, #8 sits directly in front of couch #26, while rival ottoman #9 is instead in front of sofa chair #29. Frame 101 also shows #8 at the front-left edge of the same couch with pillow #27 visible on the couch."
+    },
+    {
+      "sample_id": "scannet/scene0164_00::14::23053",
+      "category": "kitchen cabinet",
+      "selected_object_id": 15,
+      "iou": 0.007202198733655447,
+      "status": "completed",
+      "summary": "Frame 79 shows the refrigerator (#16) on the left and the nearby upper cabinets across the top; among those cabinets, the top-left one is proposal #15, positioned above the fridge and left of cabinets #14 and #11."
+    }
+  ]
+}

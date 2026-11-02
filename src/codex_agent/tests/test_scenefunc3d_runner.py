@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
+import sys
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from http.server import ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import TypeVar, cast
 
@@ -16,11 +18,16 @@ import numpy as np
 import pytest
 
 import codex_agent.scenefunc3d.runner as runner
-from codex_agent.errors import CodexResponseError, SceneFunc3dDataError
+from codex_agent.cli import runtime_preflight
+from codex_agent.config import CodexAgentConfig
+from codex_agent.errors import (
+    CodexResponseError,
+    CodexTurnError,
+    SceneFunc3dDataError,
+)
 from codex_agent.models import CodexTaskResult, CodexTurnMetadata, CodexTurnResult
 from codex_agent.scenefunc3d.runner import (
     SCENEFUNC3D_ALLOWED_TOOL_NAMES,
-    SceneFunc3dMaskOutcome,
     SceneFunc3dMaskTask,
     SceneFunc3dRunnerConfig,
     build_arg_parser,
@@ -34,20 +41,24 @@ from codex_agent.scenefunc3d.servers.http_json import (
     JsonObject,
     make_json_handler,
 )
-from codex_agent.scenefunc3d.task import ApprovalAction
+from codex_agent.scenefunc3d.task import SEED_APPROVAL_ACTIONS
 from codex_agent.tasks.base import CodexExecutor, CodexTask
 
 ResultT = TypeVar("ResultT")
 
-_APPROVED_FRAGMENT_ACTIONS = (
-    ApprovalAction.SELECT_EVIDENCE.value,
-    ApprovalAction.PROPOSE_MOLMO_POINT.value,
-    ApprovalAction.APPROVE_MOLMO_POINT.value,
-    ApprovalAction.PROPOSE_SAM_CANDIDATES.value,
-    ApprovalAction.APPROVE_SAM_CANDIDATE.value,
-    ApprovalAction.CREATE_FIRST_LIFT.value,
-    ApprovalAction.APPROVE_FIRST_LIFT.value,
-)
+_SEED_APPROVAL_VALUES = tuple(action.value for action in SEED_APPROVAL_ACTIONS)
+
+
+def _capture_runtime_preflight(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[CodexAgentConfig]:
+    calls: list[CodexAgentConfig] = []
+
+    def fake_preflight(config: CodexAgentConfig) -> None:
+        calls.append(config)
+
+    monkeypatch.setattr(runtime_preflight, "preflight_codex_runtime", fake_preflight)
+    return calls
 
 
 def test_build_arg_parser_accepts_single_case_runtime_options(
@@ -100,17 +111,361 @@ def test_build_arg_parser_accepts_all_samples_batch_runtime_options(
     assert args.score is True
 
 
+def test_build_arg_parser_accepts_positive_workers(
+    tmp_path: Path,
+) -> None:
+    parser = build_arg_parser()
+
+    args = parser.parse_args(
+        [
+            "--dataset-root",
+            str(tmp_path / "data"),
+            "--sample-ids-path",
+            str(tmp_path / "sample_ids.json"),
+            "--backend-config",
+            str(tmp_path / "backends.toml"),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--workers",
+            "20",
+        ]
+    )
+
+    assert args.workers == 20
+
+
+def test_build_arg_parser_rejects_non_positive_workers(
+    tmp_path: Path,
+) -> None:
+    parser = build_arg_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(
+            [
+                "--dataset-root",
+                str(tmp_path / "data"),
+                "--sample-ids-path",
+                str(tmp_path / "sample_ids.json"),
+                "--backend-config",
+                str(tmp_path / "backends.toml"),
+                "--output-dir",
+                str(tmp_path / "out"),
+                "--workers",
+                "0",
+            ]
+        )
+
+
+def test_build_arg_parser_help_omits_skip_sidecar_health_check() -> None:
+    parser = build_arg_parser()
+
+    assert "--skip-sidecar-health-check" not in parser.format_help()
+
+
+def test_main_prints_one_json_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result_path = tmp_path / "out" / "result.json"
+
+    def _fake_build_executor() -> CodexExecutor:
+        return cast(CodexExecutor, object())
+
+    def _fake_run_single_sample(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_id: str,
+        executor: CodexExecutor,
+        check_sidecars: bool,
+    ) -> Path:
+        assert check_sidecars is True
+        _ = (config, sample_id, executor)
+        return result_path
+
+    monkeypatch.setattr(runner, "_build_executor", _fake_build_executor)
+    monkeypatch.setattr(runner, "run_single_sample", _fake_run_single_sample)
+
+    exit_code = main(
+        [
+            "--dataset-root",
+            str(tmp_path / "data"),
+            "--sample-id",
+            "421254::desc-a",
+            "--backend-config",
+            str(tmp_path / "backends.toml"),
+            "--output-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert exit_code == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert lines == [json.dumps({"result_path": str(result_path)})]
+
+
+def test_main_propagates_single_sample_failure_without_success_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_scene(tmp_path / "data")
+    turn_error = CodexTurnError("cli turn failed")
+
+    def _fake_build_executor() -> CodexExecutor:
+        return _FailingCodexTurnExecutor(turn_error)
+
+    def _skip_sidecar_health(_backend_config_path: Path) -> None:
+        return None
+
+    monkeypatch.setattr(runner, "_build_executor", _fake_build_executor)
+    monkeypatch.setattr(runner, "check_sidecar_health", _skip_sidecar_health)
+
+    with pytest.raises(CodexTurnError, match="cli turn failed") as exc_info:
+        main(
+            [
+                "--dataset-root",
+                str(tmp_path / "data"),
+                "--sample-id",
+                "421254::desc-a",
+                "--backend-config",
+                str(tmp_path / "backends.toml"),
+                "--output-dir",
+                str(tmp_path / "out"),
+            ]
+        )
+
+    assert exc_info.value is turn_error
+    assert capsys.readouterr().out == ""
+    assert (tmp_path / "out" / "421254" / "desc-a" / "failure.json").is_file()
+
+
+def test_run_from_args_always_checks_sidecars_for_single_sample(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    result_path = tmp_path / "out" / "result.json"
+    args = argparse.Namespace(
+        dataset_root=tmp_path / "data",
+        sample_id="421254::desc-a",
+        sample_ids_path=None,
+        all_samples=False,
+        backend_config=tmp_path / "backends.toml",
+        output_dir=tmp_path / "out",
+        score=False,
+        skip_sidecar_health_check=True,
+    )
+
+    def _fake_build_executor() -> CodexExecutor:
+        return cast(CodexExecutor, object())
+
+    def _fake_run_single_sample(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_id: str,
+        executor: CodexExecutor,
+        check_sidecars: bool,
+    ) -> Path:
+        assert config.dataset_root == tmp_path / "data"
+        assert sample_id == "421254::desc-a"
+        assert check_sidecars is True
+        _ = executor
+        return result_path
+
+    monkeypatch.setattr(runner, "_build_executor", _fake_build_executor)
+    monkeypatch.setattr(runner, "run_single_sample", _fake_run_single_sample)
+
+    assert runner.run_from_args(args) == 0
+
+
+def test_run_from_args_always_checks_sidecars_for_batch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    sample_ids_path = tmp_path / "sample_ids.json"
+    sample_ids_path.write_text(json.dumps(["421254::desc-a"]), encoding="utf-8")
+    args = argparse.Namespace(
+        dataset_root=tmp_path / "data",
+        sample_id=None,
+        sample_ids_path=sample_ids_path,
+        all_samples=False,
+        backend_config=tmp_path / "backends.toml",
+        output_dir=tmp_path / "out",
+        score=True,
+        workers=3,
+        skip_sidecar_health_check=True,
+    )
+
+    def _fake_build_executor() -> CodexExecutor:
+        return cast(CodexExecutor, object())
+
+    def _fake_run_samples(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_ids: tuple[str, ...],
+        executor: CodexExecutor,
+        check_sidecars: bool = True,
+        score: bool = True,
+        continue_on_error: bool = True,
+        workers: int = 1,
+    ) -> runner.SceneFunc3dBatchRunSummary:
+        assert config.output_dir == tmp_path / "out"
+        assert sample_ids == ("421254::desc-a",)
+        assert check_sidecars is True
+        assert score is True
+        assert workers == 3
+        _ = (executor, continue_on_error)
+        return runner.SceneFunc3dBatchRunSummary(
+            scoring_enabled=True,
+            sample_count=1,
+            completed_count=1,
+            failed_count=0,
+            scored_count=1,
+            mean_iou=0.25,
+            mean_precision=0.5,
+            mean_recall=0.75,
+            mean_f1=0.6,
+            results=(),
+        )
+
+    monkeypatch.setattr(runner, "_build_executor", _fake_build_executor)
+    monkeypatch.setattr(runner, "run_samples", _fake_run_samples)
+
+    assert runner.run_from_args(args) == 0
+
+
+def test_run_samples_rejects_non_positive_workers(tmp_path: Path) -> None:
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    with pytest.raises(ValueError, match="workers must be positive"):
+        run_samples(
+            config,
+            sample_ids=("421254::desc-a",),
+            executor=cast(CodexExecutor, object()),
+            check_sidecars=False,
+            score=False,
+            workers=0,
+        )
+
+
+def test_run_samples_uses_workers_for_multiple_samples(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+    active_count = 0
+    max_active_count = 0
+    lock = threading.Lock()
+    first_sample_started = threading.Event()
+    allow_first_sample_to_finish = threading.Event()
+
+    def _fake_run_single_sample(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_id: str,
+        executor: CodexExecutor,
+        check_sidecars: bool,
+    ) -> Path:
+        nonlocal active_count, max_active_count
+        assert check_sidecars is False
+        _ = (config, executor)
+        with lock:
+            active_count += 1
+            max_active_count = max(max_active_count, active_count)
+        if sample_id == "421254::desc-a":
+            first_sample_started.set()
+            assert allow_first_sample_to_finish.wait(timeout=2.0)
+        else:
+            assert first_sample_started.wait(timeout=2.0)
+            allow_first_sample_to_finish.set()
+        with lock:
+            active_count -= 1
+        return tmp_path / "out" / sample_id.replace("::", "_") / "result.json"
+
+    monkeypatch.setattr(runner, "run_single_sample", _fake_run_single_sample)
+
+    summary = run_samples(
+        config,
+        sample_ids=("421254::desc-a", "421254::desc-b"),
+        executor=cast(CodexExecutor, object()),
+        check_sidecars=False,
+        score=False,
+        workers=2,
+    )
+
+    assert max_active_count == 2
+    assert summary.sample_count == 2
+    assert summary.completed_count == 2
+    assert [result.sample_id for result in summary.results] == [
+        "421254::desc-a",
+        "421254::desc-b",
+    ]
+
+
+def test_run_samples_fail_stop_does_not_start_later_samples_with_workers(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+    started_sample_ids: list[str] = []
+
+    def _fake_run_single_sample(
+        config: SceneFunc3dRunnerConfig,
+        *,
+        sample_id: str,
+        executor: CodexExecutor,
+        check_sidecars: bool,
+    ) -> Path:
+        assert check_sidecars is False
+        _ = (config, executor)
+        started_sample_ids.append(sample_id)
+        if sample_id == "421254::desc-a":
+            raise CodexTurnError("first sample failed")
+        return tmp_path / "out" / sample_id.replace("::", "_") / "result.json"
+
+    monkeypatch.setattr(runner, "run_single_sample", _fake_run_single_sample)
+
+    with pytest.raises(CodexTurnError, match="first sample failed"):
+        run_samples(
+            config,
+            sample_ids=("421254::desc-a", "421254::desc-b"),
+            executor=cast(CodexExecutor, object()),
+            check_sidecars=False,
+            score=False,
+            continue_on_error=False,
+            workers=2,
+        )
+
+    assert started_sample_ids == ["421254::desc-a"]
+
+
 def test_mask_task_prompt_inlines_tools_without_attachments(
     tmp_path: Path,
 ) -> None:
     scene_root = tmp_path / "421254"
     backend_config_path = tmp_path / "backends.toml"
     output_dir = tmp_path / "out"
-    task = SceneFunc3dMaskTask(
+    tool_context_path = output_dir / "tool_context.json"
+    tool_context_path.parent.mkdir(parents=True)
+    tool_context_path.write_text("{}", encoding="utf-8")
+    task = _mask_task(
         sample=_sample(),
         scene_root=scene_root,
         output_dir=output_dir,
         backend_config_path=backend_config_path,
+        tool_context_path=tool_context_path,
     )
 
     request = task.build_turn_request()
@@ -119,13 +474,17 @@ def test_mask_task_prompt_inlines_tools_without_attachments(
     assert request.image_paths == ()
     assert "Molmo point" in request.prompt
     assert "SAM candidates" in request.prompt
-    assert "--backend-config" in request.prompt
+    assert f"--context {tool_context_path}" in request.prompt
     assert (
         f"python -m codex_agent.scenefunc3d.tools <tool> "
-        f"--scene-root {scene_root} "
-        f"--backend-config {backend_config_path} "
-        f"--out-dir {output_dir} --args '<json>'"
+        f"--context {tool_context_path} --args '<json>'"
     ) in request.prompt
+    tool_command = request.prompt.split("- invoke: ", maxsplit=1)[1].split(
+        "\n", maxsplit=1
+    )[0]
+    assert "--scene-root" not in tool_command
+    assert "--backend-config" not in tool_command
+    assert "--out-dir" not in tool_command
     assert "set yield_time_ms=30000" in request.prompt
     assert "Process running with session ID" in request.prompt
     assert "wait on that same session until it exits and returns JSON" in (
@@ -142,801 +501,19 @@ def test_mask_task_prompt_inlines_tools_without_attachments(
     assert "Never re-run a tool with identical arguments" in hard_limits
 
 
-def test_mask_task_parses_strict_final_json(
+def test_mask_task_rejects_missing_tool_context_before_prompt(
     tmp_path: Path,
 ) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-    payload = _outcome_payload(output_dir)
-
-    outcome = task.parse_response(json.dumps(payload))
-
-    assert task.is_valid_response(json.dumps(payload)) is True
-    assert isinstance(outcome, SceneFunc3dMaskOutcome)
-    assert outcome.mask_artifact_path == output_dir / "mask_artifact.json"
-    assert outcome.mask_npz_path == output_dir / "mask.npz"
-    assert outcome.mask_ply_path == output_dir / "mask.ply"
-    assert outcome.selected_frame_ids == ("000010",)
-    assert outcome.accepted_fragment_ids == ("frag-a",)
-    assert outcome.confidence == 0.87
-    assert outcome.uncertainties == ("partial occlusion",)
-    assert outcome.to_payload() == payload
-
-
-def test_mask_decision_schema_points_final_paths_to_fuse_tool() -> None:
-    schema = runner.SceneFunc3dMaskDecision.model_json_schema()
-
-    assert (
-        "fuse_accepted_masks"
-        in schema["properties"]["mask_artifact_path"]["description"]
-    )
-    assert "fuse_accepted_masks" in schema["properties"]["mask_npz_path"]["description"]
-    assert "fuse_accepted_masks" in schema["properties"]["mask_ply_path"]["description"]
-
-
-def test_mask_task_rejects_artifact_without_multi_view_decision(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload.pop("multi_view_decision", None)
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-
-    with pytest.raises(CodexResponseError, match="multi_view_decision"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_artifact_without_fragment_lift_geometry(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir, include_fragment_lift_geometry=False)
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="lift_geometry"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_fragment_lift_geometry_mismatch(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir, include_fragment_lift_geometry=True)
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["lift_geometry"][
-        "max_extent_meters"
-    ] = 0.1
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="lift_geometry.*must match"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_nonexistent_final_artifacts(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    task = SceneFunc3dMaskTask(
+    task = _mask_task(
         sample=_sample(),
         scene_root=tmp_path / "421254",
-        output_dir=output_dir,
+        output_dir=tmp_path / "out",
         backend_config_path=tmp_path / "backends.toml",
+        tool_context_path=tmp_path / "out" / "tool_context.json",
     )
-    response_text = json.dumps(_outcome_payload(output_dir))
 
-    assert task.is_valid_response(response_text) is False
-    with pytest.raises(CodexResponseError, match="does not exist"):
-        task.parse_response(response_text)
-
-
-def test_mask_task_rejects_invalid_mask_npz_contents(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    (output_dir / "mask.npz").write_bytes(b"npz")
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="mask_npz_path"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_corrupt_zip_mask_npz_contents(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    (output_dir / "mask.npz").write_bytes(b"PK\x03\x04bad")
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    assert task.is_valid_response(json.dumps(_outcome_payload(output_dir))) is False
-    with pytest.raises(CodexResponseError, match="mask_npz_path"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_mask_npz_without_point_indices(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    points_world = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
-    np.savez_compressed(output_dir / "mask.npz", points_world=points_world)
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="point_indices"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_invalid_mask_ply_contents(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    (output_dir / "mask.ply").write_text("ply\n", encoding="ascii")
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="mask_ply_path"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_final_artifact_path_mismatch(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["mask_npz_path"] = str(output_dir / "other.npz")
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="mask_npz_path"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_accepted_fragment_mismatch(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir, accepted_fragment_ids=("frag-b",))
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="accepted_fragment_ids"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_fragment_point_count_sum_mismatch(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"] = [
-        {
-            "fragment_id": "frag-a",
-            "frame_id": "000010",
-            "point_count": 1,
-            "lift_geometry": _test_lift_geometry_payload(),
-            "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
-            "review_artifacts": _write_review_artifacts(
-                output_dir / "review_artifacts" / "frag-a"
-            ),
-        }
-    ]
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="point_count"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_selected_frame_missing_from_scene(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254", frame_ids=("000010",))
-    _write_outcome_artifacts(output_dir)
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    payload = _outcome_payload(output_dir, selected_frame_ids=("000020",))
-    with pytest.raises(CodexResponseError, match="selected_frame_ids"):
-        task.parse_response(json.dumps(payload))
-
-
-def test_mask_task_rejects_selected_frame_mismatch_with_final_artifact(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir, accepted_frame_ids=("000010",))
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-    payload = _outcome_payload(output_dir, selected_frame_ids=("000020",))
-
-    with pytest.raises(CodexResponseError, match="selected_frame_ids"):
-        task.parse_response(json.dumps(payload))
-
-
-def test_mask_task_rejects_artifact_accepted_frame_mismatch_with_fragments(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_frame_ids"] = ["000020"]
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-    payload = _outcome_payload(output_dir, selected_frame_ids=("000020",))
-
-    with pytest.raises(CodexResponseError, match="accepted_frame_ids"):
-        task.parse_response(json.dumps(payload))
-
-
-def test_mask_task_rejects_fragment_without_approval_actions(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0].pop("approval_actions")
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="approval_actions"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_fragment_approval_actions_out_of_order(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["approval_actions"] = [
-        ApprovalAction.SELECT_EVIDENCE.value,
-        ApprovalAction.PROPOSE_SAM_CANDIDATES.value,
-    ]
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="approval_actions"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_missing_fragment_review_artifact(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["review_artifacts"][
-        "molmo_overlay_path"
-    ] = str(output_dir / "missing_overlay.jpg")
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="review_artifacts"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_review_artifact_from_wrong_fragment(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    wrong_review_artifacts = _write_review_artifacts(
-        output_dir / "review_artifacts" / "wrong-fragment"
-    )
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["review_artifacts"][
-        "lift_overlay_path"
-    ] = wrong_review_artifacts["lift_overlay_path"]
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="review_artifacts"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_lift_overlay_with_nonstandard_filename(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    nonstandard_overlay_path = output_dir / "review_artifacts" / "frag-a" / "other.txt"
-    nonstandard_overlay_path.write_text("reviewed\n", encoding="utf-8")
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["review_artifacts"][
-        "lift_overlay_path"
-    ] = str(nonstandard_overlay_path)
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="lift_overlay.txt"):
-        task.parse_response(json.dumps(_outcome_payload(output_dir)))
-
-
-def test_mask_task_rejects_lift_overlay_as_final_artifact_with_fuse_hint(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(output_dir)
-    review_artifacts = _write_review_artifacts(
-        output_dir / "review_artifacts" / "frag-a"
-    )
-    payload = _outcome_payload(output_dir)
-    payload["mask_artifact_path"] = review_artifacts["lift_overlay_path"]
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="fuse_accepted_masks"):
-        task.parse_response(json.dumps(payload))
-
-
-def test_mask_task_rejects_molmo_raw_text_from_wrong_frame(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(
-        output_dir,
-        accepted_fragment_ids=("000010_mask_00",),
-        accepted_frame_ids=("000010",),
-    )
-    review_artifacts = _write_standard_review_artifacts(
-        output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    wrong_raw_text_path = output_dir / "molmo" / "000011_raw.txt"
-    wrong_raw_text_path.parent.mkdir(parents=True, exist_ok=True)
-    wrong_raw_text_path.write_text("wrong frame\n", encoding="utf-8")
-    review_artifacts["molmo_raw_text_path"] = str(wrong_raw_text_path)
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="molmo_raw_text_path"):
-        task.parse_response(
-            json.dumps(
-                _outcome_payload(
-                    output_dir,
-                    accepted_fragment_ids=("000010_mask_00",),
-                )
-            )
-        )
-
-
-def test_mask_task_rejects_sam_contact_sheet_from_wrong_frame(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(
-        output_dir,
-        accepted_fragment_ids=("000010_mask_00",),
-        accepted_frame_ids=("000010",),
-    )
-    review_artifacts = _write_standard_review_artifacts(
-        output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    wrong_contact_sheet_path = output_dir / "sam" / "000011" / "contact_sheet.jpg"
-    wrong_contact_sheet_path.parent.mkdir(parents=True, exist_ok=True)
-    wrong_contact_sheet_path.write_text("wrong frame\n", encoding="utf-8")
-    review_artifacts["sam_contact_sheet_path"] = str(wrong_contact_sheet_path)
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="sam_contact_sheet_path"):
-        task.parse_response(
-            json.dumps(
-                _outcome_payload(
-                    output_dir,
-                    accepted_fragment_ids=("000010_mask_00",),
-                )
-            )
-        )
-
-
-def test_mask_task_rejects_sam_candidate_overlay_from_wrong_candidate(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(
-        output_dir,
-        accepted_fragment_ids=("000010_mask_00",),
-        accepted_frame_ids=("000010",),
-    )
-    review_artifacts = _write_standard_review_artifacts(
-        output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    wrong_candidate_overlay_path = output_dir / "sam" / "000010" / "mask_01_overlay.jpg"
-    wrong_candidate_overlay_path.parent.mkdir(parents=True, exist_ok=True)
-    wrong_candidate_overlay_path.write_text("wrong candidate\n", encoding="utf-8")
-    review_artifacts["sam_candidate_overlay_path"] = str(wrong_candidate_overlay_path)
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="sam_candidate_overlay_path"):
-        task.parse_response(
-            json.dumps(
-                _outcome_payload(
-                    output_dir,
-                    accepted_fragment_ids=("000010_mask_00",),
-                )
-            )
-        )
-
-
-def test_mask_task_rejects_standard_review_artifacts_from_other_run(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    other_output_dir = tmp_path / "other-out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(
-        output_dir,
-        accepted_fragment_ids=("000010_mask_00",),
-        accepted_frame_ids=("000010",),
-    )
-    review_artifacts = _write_standard_review_artifacts(
-        other_output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="expected_path"):
-        task.parse_response(
-            json.dumps(
-                _outcome_payload(
-                    output_dir,
-                    accepted_fragment_ids=("000010_mask_00",),
-                )
-            )
-        )
-
-
-def test_mask_task_rejects_lift_overlay_candidate_mismatch(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(
-        output_dir,
-        accepted_fragment_ids=("000010_mask_00",),
-        accepted_frame_ids=("000010",),
-    )
-    review_artifacts = _write_standard_review_artifacts(
-        output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    _write_lift_overlay_summary(
-        Path(review_artifacts["lift_overlay_path"]),
-        frame_id="000010",
-        candidate_id="mask_01",
-    )
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="candidate_id"):
-        task.parse_response(
-            json.dumps(
-                _outcome_payload(
-                    output_dir,
-                    accepted_fragment_ids=("000010_mask_00",),
-                )
-            )
-        )
-
-
-def test_mask_task_rejects_lift_overlay_frame_mismatch(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(
-        output_dir,
-        accepted_fragment_ids=("000010_mask_00",),
-        accepted_frame_ids=("000010",),
-    )
-    review_artifacts = _write_standard_review_artifacts(
-        output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    _write_lift_overlay_summary(
-        Path(review_artifacts["lift_overlay_path"]),
-        frame_id="000011",
-        candidate_id="mask_00",
-    )
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="frame_id"):
-        task.parse_response(
-            json.dumps(
-                _outcome_payload(
-                    output_dir,
-                    accepted_fragment_ids=("000010_mask_00",),
-                )
-            )
-        )
-
-
-def test_mask_task_rejects_standard_fragment_point_count_mismatch(
-    tmp_path: Path,
-) -> None:
-    output_dir = tmp_path / "out"
-    scene_root = _write_scene_root(tmp_path / "421254")
-    _write_outcome_artifacts(
-        output_dir,
-        accepted_fragment_ids=("000010_mask_00",),
-        accepted_frame_ids=("000010",),
-    )
-    review_artifacts = _write_standard_review_artifacts(
-        output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    _write_fragment_points_artifact(
-        output_dir / "fragments" / "000010_mask_00",
-        point_count=1,
-    )
-    artifact_payload = json.loads(
-        (output_dir / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    artifact_payload["accepted_fragments"][0]["review_artifacts"] = review_artifacts
-    (output_dir / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-    task = SceneFunc3dMaskTask(
-        sample=_sample(),
-        scene_root=scene_root,
-        output_dir=output_dir,
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="point_count"):
-        task.parse_response(
-            json.dumps(
-                _outcome_payload(
-                    output_dir,
-                    accepted_fragment_ids=("000010_mask_00",),
-                )
-            )
-        )
+    with pytest.raises(SceneFunc3dDataError, match="tool context is missing"):
+        task.build_turn_request()
 
 
 def test_check_sidecar_health_passes_for_healthy_fake_servers(
@@ -950,6 +527,33 @@ def test_check_sidecar_health_passes_for_healthy_fake_servers(
         molmo_url=molmo_server.base_url,
         sam_url=sam_server.base_url,
         root=tmp_path,
+    )
+
+    try:
+        check_sidecar_health(backend_config_path)
+    finally:
+        molmo_server.close()
+        sam_server.close()
+
+
+def test_check_sidecar_health_sends_configured_headers(tmp_path: Path) -> None:
+    molmo_server = _start_header_health_server(model_name="fake-molmo")
+    sam_server = _start_header_health_server(model_name="fake-sam")
+    headers_path = tmp_path / "headers.toml"
+    headers_path.write_text(
+        """
+[headers]
+X-Sidecar-Auth = "expected-secret"
+""",
+        encoding="utf-8",
+    )
+    backend_config_path = tmp_path / "backends.toml"
+    _write_backend_config(
+        backend_config_path,
+        molmo_url=molmo_server.base_url,
+        sam_url=sam_server.base_url,
+        root=tmp_path,
+        request_headers_path=headers_path,
     )
 
     try:
@@ -997,6 +601,7 @@ def test_check_sidecars_script_uses_backend_config(
     )
     script_path = Path("scripts/scenefunc3d/check_sidecars.sh").resolve()
     env = dict(os.environ)
+    env["PYTHON"] = sys.executable
     env["PYTHONPATH"] = "src"
 
     try:
@@ -1014,1349 +619,61 @@ def test_check_sidecars_script_uses_backend_config(
     assert "sidecars ok" in result.stdout
 
 
-def test_run_single_sample_writes_result_json_with_outcome_payload(
+def test_run_single_sample_writes_failure_json_when_codex_turn_fails(
     tmp_path: Path,
 ) -> None:
     _write_scene(tmp_path / "data")
     sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(
-        sample_output_dir,
-        rejected_suggested_frame_ids=("000020", "000030"),
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("frag-a",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_suggest_additional_views_event(
-            sample_output_dir,
-            expansion_recommendation="expand",
-            frame_ids=("000020", "000030"),
-        )
-        _write_fuse_accepted_masks_event(sample_output_dir)
-
-    executor = _FakeExecutor(
-        outcome,
-        on_execute=write_tool_events,
-    )
+    turn_error = CodexTurnError("executor turn failed")
+    executor = _FailingCodexTurnExecutor(turn_error)
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path / "data",
         output_dir=tmp_path / "out",
         backend_config_path=tmp_path / "backends.toml",
     )
 
-    result_path = run_single_sample(
-        config,
-        sample_id="421254::desc-a",
-        executor=executor,
-        check_sidecars=False,
-    )
+    with pytest.raises(CodexTurnError, match="executor turn failed") as exc_info:
+        run_single_sample(
+            config,
+            sample_id="421254::desc-a",
+            executor=executor,
+            check_sidecars=False,
+        )
 
-    assert result_path == tmp_path / "out" / "421254" / "desc-a" / "result.json"
-    payload = json.loads(result_path.read_text(encoding="utf-8"))
-    assert payload["task_name"] == "scenefunc3d_mask_generation"
-    assert payload["sample_id"] == "421254::desc-a"
-    assert payload["outcome"] == _outcome_payload(sample_output_dir)
-    assert payload["artifact"] == {
-        "accepted_frame_ids": ["000010"],
-        "accepted_fragment_ids": ["frag-a"],
-        "final_point_count": 2,
-        "multi_view_decision": {
-            "seed_fragment_id": "frag-a",
-            "action": "stop",
-            "reason": "test artifact records the first-lift multi-view decision",
-            "suggested_frame_ids": [],
-            "rejected_suggested_frame_ids": ["000020", "000030"],
-        },
-    }
-    assert payload["turn"] == {
-        "turn_id": "fake-turn",
-        "status": "completed",
-        "duration_ms": None,
-        "usage": None,
-        "input_tokens": None,
-        "cached_input_tokens": None,
-        "reasoning_summary": None,
-        "run_home": None,
-        "attempts": [],
-    }
-    assert executor.task_name == "scenefunc3d_mask_generation"
-    assert str(tmp_path / "data" / "421254") in executor.prompt
-    summary_path = sample_output_dir / "summary.json"
-    summary_payload = json.loads(summary_path.read_text(encoding="utf-8"))
-    assert summary_payload["sample_id"] == "421254::desc-a"
-    assert summary_payload["visit_id"] == "421254"
-    assert summary_payload["desc_id"] == "desc-a"
-    assert summary_payload["task_description"] == "Open the lower drawer."
-    assert summary_payload["status"] == "success"
-    assert summary_payload["selected_frame_ids"] == ["000010"]
-    assert summary_payload["accepted_fragment_ids"] == ["frag-a"]
-    assert summary_payload["failure_type"] == ""
-    assert summary_payload["stop_reason"] == "single_view_complete"
-    assert summary_payload["mask_artifact_path"] == str(
-        sample_output_dir / "mask_artifact.json"
-    )
-    assert summary_payload["mask_npz_path"] == str(sample_output_dir / "mask.npz")
-    assert summary_payload["mask_ply_path"] == str(sample_output_dir / "mask.ply")
-    assert summary_payload["confidence"] == 0.87
-    assert summary_payload["uncertainties"] == ["partial occlusion"]
-    assert summary_payload["final_point_count"] == 2
-    assert summary_payload["multi_view_decision"] == {
-        "seed_fragment_id": "frag-a",
-        "action": "stop",
-        "reason": "test artifact records the first-lift multi-view decision",
-        "suggested_frame_ids": [],
-        "rejected_suggested_frame_ids": ["000020", "000030"],
-    }
-    event_lines = (
-        (sample_output_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
-    )
-    assert len(event_lines) == 3
-    completion_event = json.loads(event_lines[-1])
-    assert completion_event == {
-        "event_type": "run_completed",
+    assert exc_info.value is turn_error
+    failure_path = sample_output_dir / "failure.json"
+    payload = json.loads(failure_path.read_text(encoding="utf-8"))
+    assert payload == {
+        "task_name": "scenefunc3d_mask_generation",
         "sample_id": "421254::desc-a",
-        "status": "success",
-        "result_path": str(result_path),
-        "summary_path": str(summary_path),
-        "mask_artifact_path": str(sample_output_dir / "mask_artifact.json"),
+        "status": "failed",
+        "failure_stage": "codex_turn",
+        "error_type": "CodexTurnError",
+        "error_message": "executor turn failed",
+        "events_path": str(sample_output_dir / "events.jsonl"),
+        "tool_context_path": str(sample_output_dir / "tool_context.json"),
+        "turn": _empty_failure_turn_payload(),
     }
 
 
-def test_run_single_sample_rejects_final_artifact_without_fuse_tool_event(
-    tmp_path: Path,
+def test_run_single_sample_writes_pipeline_result_from_seed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _write_scene(tmp_path / "data")
     sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(sample_output_dir)
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("frag-a",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-    executor = _FakeExecutor(outcome)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="fuse_accepted_masks"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_rejects_standard_fragment_without_upstream_tool_events(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts(
-        sample_output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("000010_mask_00",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-    executor = _FakeExecutor(
-        outcome,
-        on_execute=lambda: _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        ),
-    )
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="molmo_point"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_rejects_standard_fragment_with_wrong_molmo_event_path(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-        tmp_path,
-        tool_name="molmo_point",
-        result_mutator=_set_wrong_molmo_raw_text_path,
-        match="molmo_point",
-    )
-
-
-def test_run_single_sample_rejects_standard_fragment_with_wrong_sam_candidate(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-        tmp_path,
-        tool_name="sam_mask",
-        result_mutator=_set_wrong_sam_candidate_id,
-        match="sam_mask",
-    )
-
-
-def test_run_single_sample_rejects_standard_fragment_with_wrong_sam_point(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-        tmp_path,
-        tool_name="sam_mask",
-        result_mutator=_keep_tool_result,
-        args_mutator=_set_wrong_sam_point_prompt,
-        match="Molmo point",
-    )
-
-
-def test_run_single_sample_rejects_standard_fragment_without_evidence_view_event(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-        tmp_path,
-        tool_name="view_frame",
-        event_mutator=_set_failed_tool_event_status,
-        result_mutator=_keep_tool_result,
-        match="view_frame or view_crop",
-    )
-
-
-def test_run_single_sample_rejects_standard_fragment_with_wrong_sam_image_path(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-        tmp_path,
-        tool_name="sam_mask",
-        args_mutator=_set_wrong_sam_image_path,
-        result_mutator=_keep_tool_result,
-        match="sam_mask",
-    )
-
-
-def test_run_single_sample_rejects_standard_fragment_with_wrong_lift_event_path(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-        tmp_path,
-        tool_name="lift_mask_to_3d",
-        result_mutator=_set_wrong_lift_mask_ply_path,
-        match="lift_mask_to_3d",
-    )
-
-
-def test_run_single_sample_rejects_standard_fragment_with_wrong_lift_input_mask(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-        tmp_path,
-        tool_name="lift_mask_to_3d",
-        result_mutator=_keep_tool_result,
-        args_mutator=_set_wrong_lift_mask_input_path,
-        match="lift_mask_to_3d",
-    )
-
-
-def test_run_single_sample_rejects_standard_fragment_without_lift_inspection(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-        tmp_path,
-        tool_name="inspect_mask_artifact",
-        event_mutator=_set_failed_tool_event_status,
-        result_mutator=_keep_tool_result,
-        match="inspect_mask_artifact",
-    )
-
-
-def test_run_single_sample_rejects_standard_fragment_with_wrong_inspection_mask(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-        tmp_path,
-        tool_name="inspect_mask_artifact",
-        args_mutator=_set_wrong_inspection_mask_path,
-        result_mutator=_keep_tool_result,
-        match="inspect_mask_artifact",
-    )
-
-
-def test_run_single_sample_rejects_standard_fragment_inspected_before_lift(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_reordered_upstream_event(
-        tmp_path,
-        tool_name="inspect_mask_artifact",
-        before_tool_name="lift_mask_to_3d",
-        match="inspect_mask_artifact",
-    )
-
-
-def test_run_single_sample_rejects_standard_expand_suggested_before_inspection(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts_for_fragments(
-        sample_output_dir,
-        fragments=(("000010", "mask_00"), ("000020", "mask_00")),
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010", "000020"),
-        accepted_fragment_ids=("000010_mask_00", "000020_mask_00"),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _write_suggest_additional_views_event(
-            sample_output_dir,
-            expansion_recommendation="expand",
-            frame_ids=("000020",),
-            seed_fragment_id="000010_mask_00",
-            accepted_frame_id="000010",
-        )
-        _move_first_tool_event_before(
-            sample_output_dir,
-            tool_name="suggest_additional_views",
-            before_tool_name="inspect_mask_artifact",
-        )
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000020",
-            candidate_id="mask_00",
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00", "000020_mask_00"),
-            accepted_frame_ids=("000010", "000020"),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="inspect_mask_artifact"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_rejects_standard_stop_suggested_before_inspection(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts(
-        sample_output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("000010_mask_00",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _write_suggest_additional_views_event(
-            sample_output_dir,
-            expansion_recommendation="expand",
-            frame_ids=("000020",),
-            seed_fragment_id="000010_mask_00",
-            accepted_frame_id="000010",
-        )
-        _move_first_tool_event_before(
-            sample_output_dir,
-            tool_name="suggest_additional_views",
-            before_tool_name="inspect_mask_artifact",
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="inspect_mask_artifact"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_rejects_standard_expand_with_wrong_seed_artifact_path(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts_for_fragments(
-        sample_output_dir,
-        fragments=(("000010", "mask_00"), ("000020", "mask_00")),
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010", "000020"),
-        accepted_fragment_ids=("000010_mask_00", "000020_mask_00"),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _write_suggest_additional_views_event(
-            sample_output_dir,
-            expansion_recommendation="expand",
-            frame_ids=("000020",),
-            seed_fragment_id="000010_mask_00",
-            accepted_frame_id="000010",
-            args_overrides=_standard_suggest_seed_args(
-                sample_output_dir,
-                seed_fragment_id="wrong_seed",
-            ),
-        )
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000020",
-            candidate_id="mask_00",
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00", "000020_mask_00"),
-            accepted_frame_ids=("000010", "000020"),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="suggest_additional_views"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_accepts_standard_expand_with_seed_artifact_paths(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts_for_fragments(
-        sample_output_dir,
-        fragments=(("000010", "mask_00"), ("000020", "mask_00")),
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010", "000020"),
-        accepted_fragment_ids=("000010_mask_00", "000020_mask_00"),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _write_suggest_additional_views_event(
-            sample_output_dir,
-            expansion_recommendation="expand",
-            frame_ids=("000020",),
-            seed_fragment_id="000010_mask_00",
-            accepted_frame_id="000010",
-            args_overrides=_standard_suggest_seed_args(sample_output_dir),
-        )
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000020",
-            candidate_id="mask_00",
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00", "000020_mask_00"),
-            accepted_frame_ids=("000010", "000020"),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    result_path = run_single_sample(
-        config,
-        sample_id="421254::desc-a",
-        executor=executor,
-        check_sidecars=False,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
-
-
-def test_run_single_sample_rejects_standard_fragment_re_lifted_without_reinspection(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts(
-        sample_output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("000010_mask_00",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _append_standard_lift_mask_event(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="inspect_mask_artifact"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_rejects_standard_fragment_with_non_completed_tool_event(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-        tmp_path,
-        tool_name="molmo_point",
-        event_mutator=_set_non_completed_tool_event_type,
-        result_mutator=_keep_tool_result,
-        match="molmo_point",
-    )
-
-
-def test_run_single_sample_rejects_standard_fragment_fused_before_upstream_events(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts(
-        sample_output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("000010_mask_00",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="before fuse_accepted_masks"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_accepts_standard_fragment_when_later_fuse_has_ordered_chain(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts(
-        sample_output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("000010_mask_00",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    result_path = run_single_sample(
-        config,
-        sample_id="421254::desc-a",
-        executor=executor,
-        check_sidecars=False,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
-
-
-def test_run_single_sample_rejects_standard_fragment_lifted_before_sam_event(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_standard_fragment_with_reordered_upstream_event(
-        tmp_path,
-        tool_name="lift_mask_to_3d",
-        before_tool_name="sam_mask",
-        match="Molmo point -> SAM mask -> lift_mask_to_3d",
-    )
-
-
-def test_run_single_sample_accepts_standard_fragment_with_upstream_tool_events(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts(
-        sample_output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("000010_mask_00",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    result_path = run_single_sample(
-        config,
-        sample_id="421254::desc-a",
-        executor=executor,
-        check_sidecars=False,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
-
-
-def test_run_single_sample_accepts_standard_fragment_with_later_matching_molmo_point(
-    tmp_path: Path,
-) -> None:
-    def write_tool_events(sample_output_dir: Path) -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _rewrite_first_tool_result(
-            sample_output_dir,
-            tool_name="molmo_point",
-            args_mutator=lambda args: _keep_tool_args(args, sample_output_dir),
-            event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
-            result_mutator=lambda result: _set_stale_molmo_point_prompt(
-                result, sample_output_dir
-            ),
-        )
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
-        tmp_path,
-        write_tool_events,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
-
-
-def test_run_single_sample_accepts_standard_fragment_with_sam_point_alias(
-    tmp_path: Path,
-) -> None:
-    def write_tool_events(sample_output_dir: Path) -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _rewrite_first_tool_result(
-            sample_output_dir,
-            tool_name="sam_mask",
-            args_mutator=lambda args: _set_sam_single_point_alias_with_different_text(
-                args, sample_output_dir
-            ),
-            event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
-            result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
-        tmp_path,
-        write_tool_events,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
-
-
-def test_run_single_sample_accepts_standard_fragment_with_sam_point_xy_alias(
-    tmp_path: Path,
-) -> None:
-    def write_tool_events(sample_output_dir: Path) -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _rewrite_first_tool_result(
-            sample_output_dir,
-            tool_name="sam_mask",
-            args_mutator=lambda args: _set_sam_point_xy_alias_with_different_text(
-                args, sample_output_dir
-            ),
-            event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
-            result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
-        tmp_path,
-        write_tool_events,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
-
-
-def test_run_single_sample_accepts_standard_fragment_with_lift_overlay_path_alias(
-    tmp_path: Path,
-) -> None:
-    def write_tool_events(sample_output_dir: Path) -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _rewrite_first_tool_result(
-            sample_output_dir,
-            tool_name="inspect_mask_artifact",
-            args_mutator=_set_inspect_lift_overlay_path_alias,
-            event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
-            result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
-        tmp_path,
-        write_tool_events,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
-
-
-def test_run_single_sample_accepts_standard_fragment_with_crop_evidence_image(
-    tmp_path: Path,
-) -> None:
-    def write_tool_events(sample_output_dir: Path) -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _rewrite_first_tool_result(
-            sample_output_dir,
-            tool_name="view_frame",
-            args_mutator=lambda args: _keep_tool_args(args, sample_output_dir),
-            event_mutator=lambda event: _set_view_crop_tool_event(
-                event, sample_output_dir
-            ),
-            result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
-        tmp_path,
-        write_tool_events,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
-
-
-def test_run_single_sample_accepts_standard_fragment_with_molmo_frame_inferred(
-    tmp_path: Path,
-) -> None:
-    def write_tool_events(sample_output_dir: Path) -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _rewrite_first_tool_result(
-            sample_output_dir,
-            tool_name="molmo_point",
-            args_mutator=lambda args: _remove_frame_id_arg(args, sample_output_dir),
-            event_mutator=lambda event: _keep_tool_event(event, sample_output_dir),
-            result_mutator=lambda result: _keep_tool_result(result, sample_output_dir),
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    sample_output_dir, result_path = _run_single_sample_with_standard_outcome(
-        tmp_path,
-        write_tool_events,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
-
-
-def test_run_single_sample_rejects_incomplete_fuse_tool_event(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_fuse_event(
-        tmp_path,
-        event_writer=_write_minimal_fuse_accepted_masks_event,
-        match="fuse_accepted_masks",
-    )
-
-
-def test_run_single_sample_rejects_non_completed_fuse_success_event(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_fuse_event(
-        tmp_path,
-        event_writer=lambda root: _write_fuse_accepted_masks_event(
-            root, event_type="run_completed"
-        ),
-        match="tool_completed",
-    )
-
-
-def test_run_single_sample_rejects_malformed_fuse_path(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_fuse_event(
-        tmp_path,
-        event_writer=lambda root: _write_fuse_accepted_masks_event(
-            root,
-            result_overrides={"mask_npz_path": f"{root}/bad\u0000path.npz"},
-        ),
-        match="mask_npz_path",
-    )
-
-
-def test_run_single_sample_wraps_non_utf8_tool_events(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_fuse_event(
-        tmp_path,
-        event_writer=_write_non_utf8_tool_events,
-        match="could not read SceneFunc3D tool event",
-    )
-
-
-def test_fuse_provenance_reader_wraps_non_utf8_tool_events(
-    tmp_path: Path,
-) -> None:
-    events_path = tmp_path / "events.jsonl"
-    events_path.write_bytes(b"\xff")
-
-    with pytest.raises(
-        CodexResponseError, match="could not read SceneFunc3D tool event log"
-    ):
-        runner._successful_fuse_tool_events(events_path)
-
-
-def test_run_single_sample_rejects_artifact_mutated_after_fuse_event(
-    tmp_path: Path,
-) -> None:
-    _assert_run_rejects_fuse_event(
-        tmp_path,
-        event_writer=_write_fuse_event_then_mutate_artifact,
-        match="mask_artifact",
-    )
-
-
-@pytest.mark.parametrize(
-    ("event_writer", "match"),
-    [
-        (
-            lambda root: _write_fuse_accepted_masks_event(
-                root,
-                result_overrides={
-                    "mask_artifact_path": str(root / "other_mask_artifact.json")
-                },
-            ),
-            "mask_artifact_path",
-        ),
-        (
-            lambda root: _write_fuse_accepted_masks_event(
-                root,
-                result_overrides={"mask_npz_path": str(root / "other_mask.npz")},
-            ),
-            "mask_npz_path",
-        ),
-        (
-            lambda root: _write_fuse_accepted_masks_event(
-                root,
-                result_overrides={"mask_ply_path": str(root / "other_mask.ply")},
-            ),
-            "mask_ply_path",
-        ),
-        (
-            lambda root: _write_fuse_accepted_masks_event(
-                root,
-                accepted_frame_ids=("000020",),
-            ),
-            "selected_frame_ids",
-        ),
-        (
-            lambda root: _write_fuse_accepted_masks_event(
-                root,
-                accepted_fragment_ids=("frag-b",),
-            ),
-            "accepted_fragment_ids",
-        ),
-    ],
-)
-def test_run_single_sample_rejects_fuse_tool_event_mismatches(
-    tmp_path: Path,
-    event_writer: Callable[[Path], None],
-    match: str,
-) -> None:
-    _assert_run_rejects_fuse_event(
-        tmp_path,
-        event_writer=event_writer,
-        match=match,
-    )
-
-
-def test_run_single_sample_rejects_stop_missing_expand_rejected_frames(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(sample_output_dir)
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("frag-a",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_suggest_additional_views_event(
-            sample_output_dir,
-            expansion_recommendation="expand",
-            frame_ids=("000020", "000030"),
-        )
-        _write_fuse_accepted_masks_event(sample_output_dir)
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="missing_rejected_suggested"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_rejects_expand_without_suggest_event(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(
-        sample_output_dir,
-        accepted_fragment_ids=("frag-a", "frag-b"),
-        accepted_frame_ids=("000010", "000020"),
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010", "000020"),
-        accepted_fragment_ids=("frag-a", "frag-b"),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-    executor = _FakeExecutor(
-        outcome,
-        on_execute=lambda: _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("frag-a", "frag-b"),
-            accepted_frame_ids=("000010", "000020"),
-        ),
-    )
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="suggest_additional_views"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_accepts_expand_with_suggest_event(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(
-        sample_output_dir,
-        accepted_fragment_ids=("frag-a", "frag-b"),
-        accepted_frame_ids=("000010", "000020"),
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010", "000020"),
-        accepted_fragment_ids=("frag-a", "frag-b"),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_suggest_additional_views_event(
-            sample_output_dir,
-            expansion_recommendation="expand",
-            frame_ids=("000020",),
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("frag-a", "frag-b"),
-            accepted_frame_ids=("000010", "000020"),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    result_path = run_single_sample(
-        config,
-        sample_id="421254::desc-a",
-        executor=executor,
-        check_sidecars=False,
-    )
-
-    assert result_path == sample_output_dir / "result.json"
-
-
-def test_run_single_sample_rejects_expand_missing_rejected_suggested_frame(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(
-        sample_output_dir,
-        accepted_fragment_ids=("frag-a", "frag-b"),
-        accepted_frame_ids=("000010", "000020"),
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010", "000020"),
-        accepted_fragment_ids=("frag-a", "frag-b"),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_suggest_additional_views_event(
-            sample_output_dir,
-            expansion_recommendation="expand",
-            frame_ids=("000020", "000030"),
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("frag-a", "frag-b"),
-            accepted_frame_ids=("000010", "000020"),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="missing_rejected_suggested"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_rejects_expand_with_suggest_after_fuse_event(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(
-        sample_output_dir,
-        accepted_fragment_ids=("frag-a", "frag-b"),
-        accepted_frame_ids=("000010", "000020"),
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010", "000020"),
-        accepted_fragment_ids=("frag-a", "frag-b"),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("frag-a", "frag-b"),
-            accepted_frame_ids=("000010", "000020"),
-        )
-        _write_suggest_additional_views_event(
-            sample_output_dir,
-            expansion_recommendation="expand",
-            frame_ids=("000020",),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match="before fuse_accepted_masks"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def test_run_single_sample_ignores_stale_expand_events_from_previous_run(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(sample_output_dir)
-    _write_suggest_additional_views_event(
-        sample_output_dir,
-        expansion_recommendation="expand",
-        frame_ids=("000020", "000030"),
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("frag-a",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-    executor = _FakeExecutor(
-        outcome,
-        on_execute=lambda: _write_fuse_accepted_masks_event(sample_output_dir),
+    fragment_npz = _write_seed_fragment_npz(tmp_path / "seed_fragment.npz")
+
+    monkeypatch.setattr(
+        runner, "_lift_seed_fragment", _fake_lift_seed_fragment(fragment_npz)
+    )
+    monkeypatch.setattr(
+        runner,
+        "run_anchor_multiview_pipeline",
+        lambda **_: _fake_pipeline_result((0, 1)),
+    )
+    executor = _SeedFakeExecutor(
+        _seed_confirmation_payload(),
+        on_execute=lambda: _write_seed_sam_event(sample_output_dir),
     )
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path / "data",
@@ -2365,31 +682,127 @@ def test_run_single_sample_ignores_stale_expand_events_from_previous_run(
     )
 
     result_path = run_single_sample(
-        config,
-        sample_id="421254::desc-a",
-        executor=executor,
-        check_sidecars=False,
+        config, sample_id="421254::desc-a", executor=executor, check_sidecars=False
     )
 
-    event_lines = (
-        (sample_output_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    assert payload["result_kind"] == "anchor_multiview_pipeline"
+    assert payload["outcome"]["seed"]["seed_fragment_id"] == "000010_cand-a"
+    assert payload["outcome"]["seed"]["seed_point_count"] == 2
+    assert payload["outcome"]["selected_frame_ids"] == ["000010"]
+    assert payload["outcome"]["confidence"] == pytest.approx(0.66)
+    fused_npz = sample_output_dir / "fused" / "mask_data.npz"
+    assert fused_npz.is_file()
+    assert payload["outcome"]["mask_npz_path"] == str(fused_npz)
+
+
+def test_run_single_sample_fails_closed_on_missing_seed_sam_event(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_scene(tmp_path / "data")
+    monkeypatch.setattr(
+        runner,
+        "_lift_seed_fragment",
+        lambda **_: (_ for _ in ()).throw(AssertionError("must not lift")),
     )
-    assert len(event_lines) == 2
-    assert json.loads(event_lines[0])["tool_name"] == "fuse_accepted_masks"
-    assert json.loads(event_lines[1])["event_type"] == "run_completed"
-    assert result_path == sample_output_dir / "result.json"
+    executor = _SeedFakeExecutor(_seed_confirmation_payload(), on_execute=lambda: None)
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+    with pytest.raises(CodexResponseError, match="no successful sam_mask"):
+        run_single_sample(
+            config, sample_id="421254::desc-a", executor=executor, check_sidecars=False
+        )
+    failure_path = tmp_path / "out" / "421254" / "desc-a" / "failure.json"
+    assert failure_path.is_file()
+    failure_payload = json.loads(failure_path.read_text(encoding="utf-8"))
+    assert failure_payload["failure_stage"] == "response_validation"
+
+
+def test_run_single_sample_fails_closed_on_empty_fused_mask(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    fragment_npz = _write_seed_fragment_npz(tmp_path / "seed_fragment.npz")
+    monkeypatch.setattr(
+        runner, "_lift_seed_fragment", _fake_lift_seed_fragment(fragment_npz)
+    )
+    monkeypatch.setattr(
+        runner, "run_anchor_multiview_pipeline", lambda **_: _fake_pipeline_result(())
+    )
+    executor = _SeedFakeExecutor(
+        _seed_confirmation_payload(),
+        on_execute=lambda: _write_seed_sam_event(sample_output_dir),
+    )
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+    with pytest.raises(SceneFunc3dDataError, match="empty fused mask"):
+        run_single_sample(
+            config, sample_id="421254::desc-a", executor=executor, check_sidecars=False
+        )
+    assert (tmp_path / "out" / "421254" / "desc-a" / "failure.json").is_file()
+
+
+def test_lift_seed_fragment_fails_closed_when_seed_mask_missing(
+    tmp_path: Path,
+) -> None:
+    from codex_agent.scenefunc3d.seed_contract import SceneFunc3dSeedOutcome
+    from codex_agent.tests.scenefunc3d_synthetic_scene import (
+        SyntheticFrame,
+        write_synthetic_scene,
+    )
+
+    intrinsics = np.array([[20.0, 0.0, 20.0], [0.0, 20.0, 20.0], [0.0, 0.0, 1.0]])
+    vertices = np.array(
+        [[0.0, 0.0, 2.0], [0.01, 0.0, 2.0], [0.0, 0.01, 2.0]], dtype=np.float64
+    )
+    scene = write_synthetic_scene(
+        tmp_path / "scene",
+        frames=(SyntheticFrame("000000", np.eye(4), depth_value_m=2.0),),
+        vertices_world=vertices,
+        intrinsics=intrinsics,
+    )
+    outcome = SceneFunc3dSeedOutcome(
+        seed_frame_id="000000",
+        seed_candidate_id="cand-a",
+        seed_fragment_id="000000_cand-a",
+        affordance_concept="the drawer handle",
+        approval_actions=SEED_APPROVAL_ACTIONS,
+        uncertainties=(),
+        seed_sam_mask_npz_path=tmp_path / "missing" / "cand-a.npz",
+    )
+
+    with pytest.raises(SceneFunc3dDataError, match="missing or invalid on disk"):
+        runner._lift_seed_fragment(
+            scene=scene, seed_outcome=outcome, out_dir=tmp_path / "out"
+        )
 
 
 def test_run_samples_writes_batch_evaluation_summary(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _write_two_sample_scene(tmp_path / "data")
+    fragment_npz = _write_seed_fragment_npz(tmp_path / "seed_fragment.npz")
+    monkeypatch.setattr(
+        runner, "_lift_seed_fragment", _fake_lift_seed_fragment(fragment_npz)
+    )
+    monkeypatch.setattr(
+        runner,
+        "run_anchor_multiview_pipeline",
+        lambda **_: _fake_pipeline_result((10, 12)),
+    )
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path / "data",
         output_dir=tmp_path / "out",
         backend_config_path=tmp_path / "backends.toml",
     )
-    executor = _DynamicSceneFuncExecutor()
+    executor = _SeedDynamicExecutor()
 
     summary = run_samples(
         config,
@@ -2430,9 +843,18 @@ def test_run_samples_writes_batch_evaluation_summary(
 
 
 def test_run_samples_preserves_result_path_when_scoring_fails(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _write_unscorable_scene(tmp_path / "data")
+    fragment_npz = _write_seed_fragment_npz(tmp_path / "seed_fragment.npz")
+    monkeypatch.setattr(
+        runner, "_lift_seed_fragment", _fake_lift_seed_fragment(fragment_npz)
+    )
+    monkeypatch.setattr(
+        runner,
+        "run_anchor_multiview_pipeline",
+        lambda **_: _fake_pipeline_result((10, 12)),
+    )
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path / "data",
         output_dir=tmp_path / "out",
@@ -2442,7 +864,7 @@ def test_run_samples_preserves_result_path_when_scoring_fails(
     summary = run_samples(
         config,
         sample_ids=("421254::desc-a",),
-        executor=_DynamicSceneFuncExecutor(),
+        executor=_SeedDynamicExecutor(),
         check_sidecars=False,
         score=True,
     )
@@ -2471,10 +893,58 @@ def test_run_samples_preserves_result_path_when_scoring_fails(
     assert payload["results"][0]["failure_stage"] == "score"
 
 
-def test_run_samples_marks_unscored_batch_metrics_as_not_computed(
+def test_run_samples_records_failure_path_when_run_writes_failure_json(
     tmp_path: Path,
 ) -> None:
+    _write_scene(tmp_path / "data")
+    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
+    config = SceneFunc3dRunnerConfig(
+        dataset_root=tmp_path / "data",
+        output_dir=tmp_path / "out",
+        backend_config_path=tmp_path / "backends.toml",
+    )
+
+    summary = run_samples(
+        config,
+        sample_ids=("421254::desc-a",),
+        executor=_SeedFakeExecutor(
+            _seed_confirmation_payload(), on_execute=lambda: None
+        ),
+        check_sidecars=False,
+        score=False,
+    )
+
+    failure_path = sample_output_dir / "failure.json"
+    assert failure_path.is_file()
+    assert summary.sample_count == 1
+    assert summary.completed_count == 0
+    assert summary.failed_count == 1
+    assert summary.results[0].status == "failed"
+    assert summary.results[0].failure_stage == "run"
+    assert summary.results[0].result_path is None
+    assert summary.results[0].failure_path == failure_path
+    assert summary.results[0].score is None
+
+    payload = json.loads(
+        (tmp_path / "out" / "evaluation_summary.json").read_text(encoding="utf-8")
+    )
+    assert payload["results"][0]["result_path"] is None
+    assert payload["results"][0]["failure_path"] == str(failure_path)
+
+
+def test_run_samples_marks_unscored_batch_metrics_as_not_computed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _write_two_sample_scene(tmp_path / "data")
+    fragment_npz = _write_seed_fragment_npz(tmp_path / "seed_fragment.npz")
+    monkeypatch.setattr(
+        runner, "_lift_seed_fragment", _fake_lift_seed_fragment(fragment_npz)
+    )
+    monkeypatch.setattr(
+        runner,
+        "run_anchor_multiview_pipeline",
+        lambda **_: _fake_pipeline_result((10, 12)),
+    )
     config = SceneFunc3dRunnerConfig(
         dataset_root=tmp_path / "data",
         output_dir=tmp_path / "out",
@@ -2484,7 +954,7 @@ def test_run_samples_marks_unscored_batch_metrics_as_not_computed(
     summary = run_samples(
         config,
         sample_ids=("421254::desc-a", "421254::desc-b"),
-        executor=_DynamicSceneFuncExecutor(),
+        executor=_SeedDynamicExecutor(),
         check_sidecars=False,
         score=False,
     )
@@ -2523,21 +993,12 @@ def test_main_with_score_prints_result_path_and_score(
         check_sidecars: bool = True,
     ) -> Path:
         assert sample_id == "421254::desc-a"
-        assert check_sidecars is False
+        assert check_sidecars is True
         _ = executor
         sample_output_dir = config.output_dir / "421254" / "desc-a"
-        _write_outcome_artifacts(sample_output_dir)
         result_path = sample_output_dir / "result.json"
-        result_path.write_text(
-            json.dumps(
-                {
-                    "task_name": "scenefunc3d_mask_generation",
-                    "sample_id": sample_id,
-                    "outcome": _outcome_payload(sample_output_dir),
-                    "turn": {},
-                }
-            ),
-            encoding="utf-8",
+        _write_pipeline_result_json(
+            result_path, sample_id=sample_id, point_indices=(10, 12)
         )
         return result_path
 
@@ -2557,7 +1018,6 @@ def test_main_with_score_prints_result_path_and_score(
             str(tmp_path / "backends.toml"),
             "--output-dir",
             str(tmp_path / "out"),
-            "--skip-sidecar-health-check",
             "--score",
         ]
     )
@@ -2590,13 +1050,15 @@ def test_main_all_samples_prints_batch_summary_path(
         check_sidecars: bool = True,
         score: bool = True,
         continue_on_error: bool = True,
+        workers: int = 1,
     ) -> runner.SceneFunc3dBatchRunSummary:
         _ = executor
         _ = continue_on_error
+        assert workers == 1
         assert config.dataset_root == tmp_path / "data"
         assert config.output_dir == tmp_path / "out"
         assert config.backend_config_path == tmp_path / "backends.toml"
-        assert check_sidecars is False
+        assert check_sidecars is True
         assert score is True
         captured_sample_ids.extend(sample_ids)
         return runner.SceneFunc3dBatchRunSummary(
@@ -2627,7 +1089,6 @@ def test_main_all_samples_prints_batch_summary_path(
             str(tmp_path / "backends.toml"),
             "--output-dir",
             str(tmp_path / "out"),
-            "--skip-sidecar-health-check",
             "--score",
         ]
     )
@@ -2661,12 +1122,14 @@ def test_main_sample_ids_path_strips_file_entries_before_batch_run(
         check_sidecars: bool = True,
         score: bool = True,
         continue_on_error: bool = True,
+        workers: int = 1,
     ) -> runner.SceneFunc3dBatchRunSummary:
         _ = config
         _ = executor
         _ = check_sidecars
         _ = score
         _ = continue_on_error
+        assert workers == 1
         captured_sample_ids.extend(sample_ids)
         return runner.SceneFunc3dBatchRunSummary(
             scoring_enabled=True,
@@ -2697,7 +1160,6 @@ def test_main_sample_ids_path_strips_file_entries_before_batch_run(
             str(tmp_path / "backends.toml"),
             "--output-dir",
             str(tmp_path / "out"),
-            "--skip-sidecar-health-check",
             "--score",
         ]
     )
@@ -2728,7 +1190,6 @@ def test_main_validates_sample_ids_path_before_building_executor(
                 str(tmp_path / "backends.toml"),
                 "--output-dir",
                 str(tmp_path / "out"),
-                "--skip-sidecar-health-check",
             ]
         )
 
@@ -2754,7 +1215,6 @@ def test_main_rejects_empty_all_samples_before_building_executor(
                 str(tmp_path / "backends.toml"),
                 "--output-dir",
                 str(tmp_path / "out"),
-                "--skip-sidecar-health-check",
             ]
         )
 
@@ -2768,10 +1228,12 @@ def test_build_executor_uses_tool_writable_runtime_defaults(
     monkeypatch.setenv("CODEX_HOME", str(config_path))
     monkeypatch.delenv("CODEX_AGENT_SANDBOX", raising=False)
     monkeypatch.delenv("CODEX_AGENT_SANDBOX_NETWORK", raising=False)
+    preflight_calls = _capture_runtime_preflight(monkeypatch)
 
     executor = runner._build_executor()
 
     assert isinstance(executor, CodexAgentRuntime)
+    assert preflight_calls == [executor.config]
     assert executor.config.sandbox == "workspace_write"
     assert executor.config.sandbox_network_access is True
 
@@ -2785,10 +1247,12 @@ def test_build_executor_preserves_full_access_runtime_override(
     monkeypatch.setenv("CODEX_HOME", str(config_path))
     monkeypatch.setenv("CODEX_AGENT_SANDBOX", "full_access")
     monkeypatch.delenv("CODEX_AGENT_SANDBOX_NETWORK", raising=False)
+    preflight_calls = _capture_runtime_preflight(monkeypatch)
 
     executor = runner._build_executor()
 
     assert isinstance(executor, CodexAgentRuntime)
+    assert preflight_calls == [executor.config]
     assert executor.config.sandbox == "full_access"
     assert executor.config.sandbox_network_access is False
 
@@ -2802,95 +1266,23 @@ def test_build_executor_upgrades_read_only_runtime_override(
     monkeypatch.setenv("CODEX_HOME", str(config_path))
     monkeypatch.setenv("CODEX_AGENT_SANDBOX", "read_only")
     monkeypatch.setenv("CODEX_AGENT_SANDBOX_NETWORK", "false")
+    preflight_calls = _capture_runtime_preflight(monkeypatch)
 
     executor = runner._build_executor()
 
     assert isinstance(executor, CodexAgentRuntime)
+    assert preflight_calls == [executor.config]
     assert executor.config.sandbox == "workspace_write"
     assert executor.config.sandbox_network_access is True
 
 
-def test_run_single_sample_revalidates_executor_outcome(
-    tmp_path: Path,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(sample_output_dir)
-    (sample_output_dir / "mask.npz").write_bytes(b"npz")
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("frag-a",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-    executor = _FakeExecutor(outcome)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
+class _SeedFakeExecutor:
+    """Fake executor returning a canned SeedConfirmation final response."""
 
-    with pytest.raises(CodexResponseError, match="mask_npz_path"):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def _do_nothing() -> None:
-    return None
-
-
-def _assert_run_rejects_fuse_event(
-    tmp_path: Path,
-    *,
-    event_writer: Callable[[Path], None],
-    match: str,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_outcome_artifacts(sample_output_dir)
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("frag-a",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-    executor = _FakeExecutor(
-        outcome,
-        on_execute=lambda: event_writer(sample_output_dir),
-    )
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match=match):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-class _FakeExecutor:
     def __init__(
-        self,
-        outcome: SceneFunc3dMaskOutcome,
-        *,
-        on_execute: Callable[[], None] = _do_nothing,
+        self, response_payload: Mapping[str, object], *, on_execute: Callable[[], None]
     ) -> None:
-        self._outcome = outcome
+        self._response_payload = dict(response_payload)
         self._on_execute = on_execute
         self.task_name = ""
         self.prompt = ""
@@ -2900,17 +1292,20 @@ class _FakeExecutor:
         self.task_name = task.task_name
         self.prompt = request.prompt
         self._on_execute()
+        outcome = task.parse_response(json.dumps(self._response_payload))
         return CodexTaskResult(
             task_name=task.task_name,
-            outcome=cast(ResultT, self._outcome),
+            outcome=cast(ResultT, outcome),
             turn=CodexTurnResult(
-                final_response=json.dumps(self._outcome.to_payload()),
+                final_response=json.dumps(self._response_payload),
                 metadata=CodexTurnMetadata(turn_id="fake-turn", status="completed"),
             ),
         )
 
 
-class _DynamicSceneFuncExecutor:
+class _SeedDynamicExecutor:
+    """Seed-aware executor that writes the SAM event and parses the seed outcome."""
+
     def __init__(self) -> None:
         self.sample_output_dirs: tuple[Path, ...] = ()
 
@@ -2918,32 +1313,204 @@ class _DynamicSceneFuncExecutor:
         if not isinstance(task, SceneFunc3dMaskTask):
             raise AssertionError("expected SceneFunc3dMaskTask")
         sample_output_dir = task.output_dir
-        _write_outcome_artifacts(sample_output_dir)
-        _write_fuse_accepted_masks_event(sample_output_dir)
+        _write_seed_sam_event(sample_output_dir)
         self.sample_output_dirs = (*self.sample_output_dirs, sample_output_dir)
-        outcome = SceneFunc3dMaskOutcome(
-            mask_artifact_path=sample_output_dir / "mask_artifact.json",
-            mask_npz_path=sample_output_dir / "mask.npz",
-            mask_ply_path=sample_output_dir / "mask.ply",
-            selected_frame_ids=("000010",),
-            accepted_fragment_ids=("frag-a",),
-            confidence=0.87,
-            uncertainties=("partial occlusion",),
-        )
+        response = json.dumps(_seed_confirmation_payload())
+        outcome = task.parse_response(response)
         return CodexTaskResult(
             task_name=task.task_name,
             outcome=cast(ResultT, outcome),
             turn=CodexTurnResult(
-                final_response=json.dumps(outcome.to_payload()),
+                final_response=response,
                 metadata=CodexTurnMetadata(turn_id="fake-turn", status="completed"),
             ),
         )
+
+
+class _FailingCodexTurnExecutor:
+    def __init__(self, error: CodexTurnError) -> None:
+        self.error = error
+
+    def execute(self, task: CodexTask[ResultT]) -> CodexTaskResult[ResultT]:
+        _ = task.build_turn_request()
+        raise self.error
 
 
 class _UnusedExecutor:
     def execute(self, task: CodexTask[ResultT]) -> CodexTaskResult[ResultT]:
         _ = task
         raise AssertionError("test patched run_single_sample must not execute tasks")
+
+
+def _empty_failure_turn_payload() -> dict[str, object]:
+    return {
+        "turn_id": None,
+        "status": None,
+        "duration_ms": None,
+        "usage": None,
+        "input_tokens": None,
+        "cached_input_tokens": None,
+        "reasoning_summary": None,
+        "run_home": None,
+        "attempts": [],
+    }
+
+
+def _seed_confirmation_payload(
+    *, seed_frame_id: str = "000010", seed_candidate_id: str = "cand-a"
+) -> dict[str, object]:
+    return {
+        "seed_frame_id": seed_frame_id,
+        "seed_candidate_id": seed_candidate_id,
+        "affordance_concept": "the drawer handle",
+        "approval_actions": list(_SEED_APPROVAL_VALUES),
+        "uncertainties": ["partial occlusion"],
+    }
+
+
+def _write_seed_sam_event(
+    output_dir: Path, *, frame_id: str = "000010", candidate_id: str = "cand-a"
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with (output_dir / "events.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps(
+                {
+                    "event_type": "tool_completed",
+                    "tool_name": "sam_mask",
+                    "status": "success",
+                    "args": {"frame_id": frame_id, "image_path": f"{frame_id}-rgb.png"},
+                    "result": {
+                        "frame_id": frame_id,
+                        "candidates": [
+                            {
+                                "candidate_id": candidate_id,
+                                "mask_npz_path": str(
+                                    output_dir
+                                    / "sam"
+                                    / frame_id
+                                    / f"{candidate_id}.npz"
+                                ),
+                                "overlay_path": f"{candidate_id}_overlay.jpg",
+                            }
+                        ],
+                        "contact_sheet_path": "contact_sheet.jpg",
+                    },
+                    "error": "",
+                }
+            )
+            + "\n"
+        )
+
+
+def _fake_lift_seed_fragment(fragment_npz: Path) -> Callable[..., object]:
+    from codex_agent.scenefunc3d.tools.mask_lifting import LiftMaskResult
+
+    def _fake(*, scene: object, seed_outcome: object, out_dir: Path) -> LiftMaskResult:
+        _ = (scene, seed_outcome, out_dir)
+        return LiftMaskResult(
+            frame_id="000010",
+            candidate_id="cand-a",
+            lifted_point_count=2,
+            mask_npz_path=fragment_npz,
+            mask_ply_path=fragment_npz.with_name("lifted_points.ply"),
+            overlay_path=fragment_npz.with_name("lift_overlay.txt"),
+        )
+
+    return _fake
+
+
+def _fake_pipeline_result(point_indices: tuple[int, ...]) -> object:
+    from codex_agent.scenefunc3d.backends.fusion import FusedMask, FusionParams
+    from codex_agent.scenefunc3d.pipeline import (
+        AnchorMultiViewResult,
+        PerFrameOutcome,
+    )
+
+    return AnchorMultiViewResult(
+        fused=FusedMask(
+            point_indices=point_indices,
+            confidence=0.66,
+            instances=(),
+            params=FusionParams(),
+        ),
+        selected_frames=(),
+        per_frame=(
+            PerFrameOutcome(
+                frame_id="000010",
+                point_indices=point_indices,
+                centroid=(0.0, 0.0, 2.0),
+                accepted=True,
+                reject_reason="",
+                molmo_fallback_used=False,
+            ),
+        ),
+    )
+
+
+def _write_seed_fragment_npz(path: Path) -> Path:
+    from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return write_lift_npz(
+        path,
+        np.array([[0.0, 0.0, 2.0], [0.01, 0.0, 2.0]], dtype=np.float64),
+        point_indices=np.array([0, 1], dtype=np.int64),
+    )
+
+
+def _write_pipeline_result_json(
+    result_path: Path, *, sample_id: str, point_indices: tuple[int, ...]
+) -> None:
+    from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz
+
+    fused_dir = result_path.parent / "fused"
+    fused_dir.mkdir(parents=True, exist_ok=True)
+    fused_npz = write_lift_npz(
+        fused_dir / "mask_data.npz",
+        np.zeros((len(point_indices), 3), dtype=np.float64),
+        point_indices=np.array(point_indices, dtype=np.int64),
+    )
+    result_path.parent.mkdir(parents=True, exist_ok=True)
+    result_path.write_text(
+        json.dumps(
+            {
+                "task_name": "scenefunc3d_mask_generation",
+                "sample_id": sample_id,
+                "result_kind": "anchor_multiview_pipeline",
+                "outcome": {
+                    "result_kind": "anchor_multiview_pipeline",
+                    "mask_npz_path": str(fused_npz),
+                    "mask_ply_path": str(fused_dir / "lifted_points.ply"),
+                    "confidence": 0.5,
+                    "selected_frame_ids": ["000010"],
+                    "seed": {
+                        "seed_frame_id": "000010",
+                        "seed_candidate_id": "cand-a",
+                        "seed_fragment_id": "000010_cand-a",
+                        "affordance_concept": "the drawer handle",
+                        "seed_point_count": 2,
+                    },
+                    "per_frame": [],
+                    "fusion_params": {
+                        "agreement_tau": 0.5,
+                        "radius_scale": 1.0,
+                        "cluster_link_eps_m": 0.02,
+                        "min_cluster_points": 10,
+                    },
+                    "uncertainties": [],
+                },
+                "turn": {
+                    "turn_id": "fake-turn",
+                    "status": "completed",
+                    "duration_ms": None,
+                    "reasoning_summary": None,
+                    "run_home": None,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 @dataclass(frozen=True)
@@ -2960,6 +1527,40 @@ class _HealthServer:
 
 def _start_health_server(*, model_name: str) -> _HealthServer:
     return _start_health_server_with_state(model_name=model_name, model_loaded=True)
+
+
+def _start_header_health_server(*, model_name: str) -> _HealthServer:
+    class HeaderHealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            if self.headers.get("X-Sidecar-Auth") != "expected-secret":
+                self.send_response(403)
+                self.end_headers()
+                return
+            body = json.dumps(
+                {
+                    "status": "ok",
+                    "model_name": model_name,
+                    "model_loaded": True,
+                }
+            ).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format: str, *args: object) -> None:
+            """Suppress noisy access logs in tests."""
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), HeaderHealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    port = int(server.server_address[1])
+    return _HealthServer(
+        base_url=f"http://127.0.0.1:{port}",
+        server=server,
+        thread=thread,
+    )
 
 
 def _start_health_server_with_state(
@@ -3005,925 +1606,27 @@ def _sample() -> SceneFunc3dSample:
     )
 
 
-def _outcome_payload(
-    root: Path,
+def _mask_task(
     *,
-    selected_frame_ids: tuple[str, ...] = ("000010",),
-    accepted_fragment_ids: tuple[str, ...] = ("frag-a",),
-) -> dict[str, object]:
-    return {
-        "mask_artifact_path": str(root / "mask_artifact.json"),
-        "mask_npz_path": str(root / "mask.npz"),
-        "mask_ply_path": str(root / "mask.ply"),
-        "selected_frame_ids": list(selected_frame_ids),
-        "accepted_fragment_ids": list(accepted_fragment_ids),
-        "confidence": 0.87,
-        "uncertainties": ["partial occlusion"],
-    }
-
-
-def _write_outcome_artifacts(
-    root: Path,
-    *,
-    accepted_fragment_ids: tuple[str, ...] = ("frag-a",),
-    accepted_frame_ids: tuple[str, ...] = ("000010",),
-    rejected_suggested_frame_ids: tuple[str, ...] = (),
-    include_fragment_lift_geometry: bool = True,
-) -> None:
-    from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
-
-    root.mkdir(parents=True, exist_ok=True)
-    fragment_points_world = np.array(
-        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64
-    )
-    if len(accepted_fragment_ids) == 1:
-        points_world = fragment_points_world
-        point_indices = np.array([10, 12], dtype=np.int64)
-    else:
-        points_world = np.array(
-            [
-                [float(index), float(index + 1), float(index + 2)]
-                for index in range(len(accepted_fragment_ids) * 2)
-            ],
-            dtype=np.float64,
-        )
-        point_indices = np.arange(points_world.shape[0], dtype=np.int64) + 10
-    mask_npz_path = write_lift_npz(
-        root / "mask.npz", points_world, point_indices=point_indices
-    )
-    mask_ply_path = write_lift_ply(root / "mask.ply", points_world)
-    accepted_fragments: list[dict[str, object]] = []
-    for fragment_id, frame_id in zip(
-        accepted_fragment_ids, accepted_frame_ids, strict=True
-    ):
-        fragment_payload: dict[str, object] = {
-            "fragment_id": fragment_id,
-            "frame_id": frame_id,
-            "point_count": int(fragment_points_world.shape[0]),
-            "approval_actions": list(_APPROVED_FRAGMENT_ACTIONS),
-            "review_artifacts": _write_review_artifacts(
-                root / "review_artifacts" / fragment_id
-            ),
-        }
-        if include_fragment_lift_geometry:
-            fragment_payload["lift_geometry"] = _test_lift_geometry_payload()
-        accepted_fragments.append(fragment_payload)
-    unique_frame_ids = _unique_frame_ids(accepted_frame_ids)
-    multi_view_action = "expand" if len(unique_frame_ids) > 1 else "stop"
-    artifact_payload: dict[str, object] = {
-        "accepted_frame_ids": list(accepted_frame_ids),
-        "accepted_fragments": accepted_fragments,
-        "multi_view_decision": {
-            "seed_fragment_id": accepted_fragment_ids[0],
-            "action": multi_view_action,
-            "reason": "test artifact records the first-lift multi-view decision",
-            "suggested_frame_ids": (
-                list(unique_frame_ids[1:]) if multi_view_action == "expand" else []
-            ),
-            "rejected_suggested_frame_ids": list(rejected_suggested_frame_ids),
-        },
-        "mask_npz_path": str(mask_npz_path),
-        "mask_ply_path": str(mask_ply_path),
-    }
-    (root / "mask_artifact.json").write_text(
-        json.dumps(artifact_payload), encoding="utf-8"
-    )
-
-
-def _write_standard_outcome_artifacts(
-    root: Path, *, frame_id: str, candidate_id: str
-) -> None:
-    fragment_id = f"{frame_id}_{candidate_id}"
-    _write_outcome_artifacts(
-        root,
-        accepted_fragment_ids=(fragment_id,),
-        accepted_frame_ids=(frame_id,),
-    )
-    artifact_path = root / "mask_artifact.json"
-    artifact_payload = json.loads(artifact_path.read_text(encoding="utf-8"))
-    artifact_payload["accepted_fragments"][0]["review_artifacts"] = (
-        _write_standard_review_artifacts(
-            root,
-            frame_id=frame_id,
-            candidate_id=candidate_id,
-        )
-    )
-    artifact_path.write_text(json.dumps(artifact_payload), encoding="utf-8")
-
-
-def _write_standard_outcome_artifacts_for_fragments(
-    root: Path, *, fragments: tuple[tuple[str, str], ...]
-) -> None:
-    accepted_fragment_ids = tuple(
-        f"{frame_id}_{candidate_id}" for frame_id, candidate_id in fragments
-    )
-    accepted_frame_ids = tuple(frame_id for frame_id, _candidate_id in fragments)
-    _write_outcome_artifacts(
-        root,
-        accepted_fragment_ids=accepted_fragment_ids,
-        accepted_frame_ids=accepted_frame_ids,
-    )
-    artifact_path = root / "mask_artifact.json"
-    artifact_payload = json.loads(artifact_path.read_text(encoding="utf-8"))
-    accepted_fragments = artifact_payload.get("accepted_fragments")
-    if not isinstance(accepted_fragments, list):
-        raise AssertionError("test artifact must contain accepted_fragments")
-    for fragment_payload, (frame_id, candidate_id) in zip(
-        accepted_fragments, fragments, strict=True
-    ):
-        if not isinstance(fragment_payload, dict):
-            raise AssertionError("test accepted fragment must be a JSON object")
-        fragment_payload["review_artifacts"] = _write_standard_review_artifacts(
-            root,
-            frame_id=frame_id,
-            candidate_id=candidate_id,
-        )
-    artifact_path.write_text(json.dumps(artifact_payload), encoding="utf-8")
-
-
-def _test_lift_geometry_payload() -> dict[str, object]:
-    return {
-        "bbox_min_xyz": [1.0, 2.0, 3.0],
-        "bbox_max_xyz": [4.0, 5.0, 6.0],
-        "bbox_extent_xyz": [3.0, 3.0, 3.0],
-        "max_extent_meters": 3.0,
-    }
-
-
-def _write_suggest_additional_views_event(
-    root: Path,
-    *,
-    expansion_recommendation: str,
-    frame_ids: tuple[str, ...],
-    seed_fragment_id: str = "frag-a",
-    accepted_frame_id: str = "000010",
-    args_overrides: dict[str, object] | None = None,
-) -> None:
-    args_payload: dict[str, object] = {
-        "seed_fragment_id": seed_fragment_id,
-        "accepted_frame_id": accepted_frame_id,
-    }
-    if args_overrides is not None:
-        args_payload.update(args_overrides)
-    event_payload = {
-        "event_type": "tool_completed",
-        "tool_name": "suggest_additional_views",
-        "status": "success",
-        "args": args_payload,
-        "result": {
-            "seed_fragment_id": seed_fragment_id,
-            "seed_lift_point_count": 2,
-            "seed_lift_status": "usable",
-            "expansion_recommendation": expansion_recommendation,
-            "expansion_reason": "test suggested views",
-            "views": [
-                {
-                    "frame_id": frame_id,
-                    "reason": "test follow-up view",
-                    "rank": rank,
-                    "has_depth": True,
-                    "has_intrinsics": True,
-                    "has_pose": True,
-                    "view_diversity_score": 1.0,
-                }
-                for rank, frame_id in enumerate(frame_ids, start=1)
-            ],
-        },
-        "error": "",
-    }
-    events_path = root / "events.jsonl"
-    events_path.parent.mkdir(parents=True, exist_ok=True)
-    with events_path.open("a", encoding="utf-8") as event_file:
-        event_file.write(json.dumps(event_payload, ensure_ascii=False) + "\n")
-
-
-def _standard_suggest_seed_args(
-    root: Path, *, seed_fragment_id: str = "000010_mask_00"
-) -> dict[str, object]:
-    return {
-        "seed_fragment_id": seed_fragment_id,
-        "accepted_frame_id": "000010",
-        "seed_mask_npz_path": str(
-            root / "fragments" / seed_fragment_id / "mask_data.npz"
+    sample: SceneFunc3dSample,
+    scene_root: Path,
+    output_dir: Path,
+    backend_config_path: Path,
+    tool_context_path: Path | None = None,
+    tool_cli_module: str = runner.DEFAULT_TOOL_CLI_MODULE,
+) -> SceneFunc3dMaskTask:
+    return SceneFunc3dMaskTask(
+        sample=sample,
+        scene_root=scene_root,
+        output_dir=output_dir,
+        backend_config_path=backend_config_path,
+        tool_context_path=(
+            output_dir / "tool_context.json"
+            if tool_context_path is None
+            else tool_context_path
         ),
-        "seed_mask_ply_path": str(
-            root / "fragments" / seed_fragment_id / "lifted_points.ply"
-        ),
-        "seed_lift_overlay_path": str(
-            root / "fragments" / seed_fragment_id / "lift_overlay.txt"
-        ),
-    }
-
-
-def _write_standard_upstream_tool_events(
-    root: Path, *, frame_id: str, candidate_id: str
-) -> None:
-    fragment_id = f"{frame_id}_{candidate_id}"
-    evidence_image_path = root / "421254" / f"{frame_id}.jpg"
-    _append_event_payload(
-        root,
-        {
-            "event_type": "tool_completed",
-            "tool_name": "view_frame",
-            "status": "success",
-            "args": {"frame_id": frame_id},
-            "result": {
-                "frames": [
-                    {
-                        "frame_id": frame_id,
-                        "image_path": str(evidence_image_path),
-                        "image_width": 1280,
-                        "image_height": 720,
-                    }
-                ]
-            },
-            "error": "",
-        },
+        tool_cli_module=tool_cli_module,
     )
-    _append_event_payload(
-        root,
-        {
-            "event_type": "tool_completed",
-            "tool_name": "molmo_point",
-            "status": "success",
-            "args": {
-                "frame_id": frame_id,
-                "image_path": str(evidence_image_path),
-                "prompt": "point to the target handle",
-                "image_width": 1280,
-                "image_height": 720,
-            },
-            "result": {
-                "frame_id": frame_id,
-                "prompt": "point to the target handle",
-                "points": [
-                    {
-                        "x_px": 12.5,
-                        "y_px": 34.25,
-                        "source": '<point x="12.5" y="34.25">handle</point>',
-                        "label": "handle",
-                    }
-                ],
-                "raw_text_path": str(root / "molmo" / f"{frame_id}_raw.txt"),
-                "overlay_path": str(root / "molmo" / f"{frame_id}_points.jpg"),
-            },
-            "error": "",
-        },
-    )
-    _append_event_payload(
-        root,
-        {
-            "event_type": "tool_completed",
-            "tool_name": "sam_mask",
-            "status": "success",
-            "args": {
-                "frame_id": frame_id,
-                "image_path": str(evidence_image_path),
-                "points": [
-                    {
-                        "x_px": 12.5,
-                        "y_px": 34.25,
-                        "source": '<point x="12.5" y="34.25">handle</point>',
-                        "label": "handle",
-                    }
-                ],
-            },
-            "result": {
-                "frame_id": frame_id,
-                "candidates": [
-                    {
-                        "candidate_id": candidate_id,
-                        "score": 0.9,
-                        "pixel_count": 2,
-                        "coverage_percent": 0.1,
-                        "mask_npz_path": str(
-                            root
-                            / "sam"
-                            / frame_id
-                            / "candidates"
-                            / f"{candidate_id}.npz"
-                        ),
-                        "overlay_path": str(
-                            root / "sam" / frame_id / f"{candidate_id}_overlay.jpg"
-                        ),
-                    }
-                ],
-                "contact_sheet_path": str(
-                    root / "sam" / frame_id / "contact_sheet.jpg"
-                ),
-            },
-            "error": "",
-        },
-    )
-    _append_standard_lift_mask_event(
-        root,
-        frame_id=frame_id,
-        candidate_id=candidate_id,
-    )
-    _append_event_payload(
-        root,
-        {
-            "event_type": "tool_completed",
-            "tool_name": "inspect_mask_artifact",
-            "status": "success",
-            "args": {
-                "mask_npz_path": str(
-                    root / "fragments" / fragment_id / "mask_data.npz"
-                ),
-                "mask_ply_path": str(
-                    root / "fragments" / fragment_id / "lifted_points.ply"
-                ),
-                "overlay_paths": [
-                    str(root / "fragments" / fragment_id / "lift_overlay.txt")
-                ],
-            },
-            "result": {
-                "artifact_path": None,
-                "overlay_paths": [
-                    str(root / "fragments" / fragment_id / "lift_overlay.txt")
-                ],
-                "lifted_point_count": 2,
-                "bbox_min_xyz": [0.0, 0.0, 0.0],
-                "bbox_max_xyz": [0.2, 0.1, 0.1],
-                "bbox_extent_xyz": [0.2, 0.1, 0.1],
-                "max_extent_meters": 0.2,
-                "status": "valid",
-            },
-            "error": "",
-        },
-    )
-
-
-def _append_standard_lift_mask_event(
-    root: Path, *, frame_id: str, candidate_id: str
-) -> None:
-    fragment_id = f"{frame_id}_{candidate_id}"
-    _append_event_payload(
-        root,
-        {
-            "event_type": "tool_completed",
-            "tool_name": "lift_mask_to_3d",
-            "status": "success",
-            "args": {
-                "frame_id": frame_id,
-                "candidate_id": candidate_id,
-                "mask_path": str(
-                    root / "sam" / frame_id / "candidates" / f"{candidate_id}.npz"
-                ),
-            },
-            "result": {
-                "frame_id": frame_id,
-                "candidate_id": candidate_id,
-                "lifted_point_count": 2,
-                "mask_npz_path": str(
-                    root / "fragments" / fragment_id / "mask_data.npz"
-                ),
-                "mask_ply_path": str(
-                    root / "fragments" / fragment_id / "lifted_points.ply"
-                ),
-                "overlay_path": str(
-                    root / "fragments" / fragment_id / "lift_overlay.txt"
-                ),
-            },
-            "error": "",
-        },
-    )
-
-
-def _keep_tool_args(args: dict[str, object], root: Path) -> None:
-    _ = args, root
-
-
-def _keep_tool_result(result: dict[str, object], root: Path) -> None:
-    _ = result, root
-
-
-def _keep_tool_event(event: dict[str, object], root: Path) -> None:
-    _ = event, root
-
-
-def _run_single_sample_with_standard_outcome(
-    tmp_path: Path,
-    write_tool_events: Callable[[Path], None],
-) -> tuple[Path, Path]:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts(
-        sample_output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("000010_mask_00",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    executor = _FakeExecutor(
-        outcome,
-        on_execute=lambda: write_tool_events(sample_output_dir),
-    )
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    result_path = run_single_sample(
-        config,
-        sample_id="421254::desc-a",
-        executor=executor,
-        check_sidecars=False,
-    )
-    return sample_output_dir, result_path
-
-
-def _assert_run_rejects_standard_fragment_with_mutated_upstream_event(
-    tmp_path: Path,
-    *,
-    tool_name: str,
-    result_mutator: Callable[[dict[str, object], Path], None],
-    args_mutator: Callable[[dict[str, object], Path], None] = _keep_tool_args,
-    event_mutator: Callable[[dict[str, object], Path], None] = _keep_tool_event,
-    match: str,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts(
-        sample_output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("000010_mask_00",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _rewrite_first_tool_result(
-            sample_output_dir,
-            tool_name=tool_name,
-            args_mutator=lambda args: args_mutator(args, sample_output_dir),
-            event_mutator=lambda event: event_mutator(event, sample_output_dir),
-            result_mutator=lambda result: result_mutator(result, sample_output_dir),
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match=match):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def _assert_run_rejects_standard_fragment_with_reordered_upstream_event(
-    tmp_path: Path,
-    *,
-    tool_name: str,
-    before_tool_name: str,
-    match: str,
-) -> None:
-    _write_scene(tmp_path / "data")
-    sample_output_dir = tmp_path / "out" / "421254" / "desc-a"
-    _write_standard_outcome_artifacts(
-        sample_output_dir,
-        frame_id="000010",
-        candidate_id="mask_00",
-    )
-    outcome = SceneFunc3dMaskOutcome(
-        mask_artifact_path=sample_output_dir / "mask_artifact.json",
-        mask_npz_path=sample_output_dir / "mask.npz",
-        mask_ply_path=sample_output_dir / "mask.ply",
-        selected_frame_ids=("000010",),
-        accepted_fragment_ids=("000010_mask_00",),
-        confidence=0.87,
-        uncertainties=("partial occlusion",),
-    )
-
-    def write_tool_events() -> None:
-        _write_standard_upstream_tool_events(
-            sample_output_dir,
-            frame_id="000010",
-            candidate_id="mask_00",
-        )
-        _move_first_tool_event_before(
-            sample_output_dir,
-            tool_name=tool_name,
-            before_tool_name=before_tool_name,
-        )
-        _write_fuse_accepted_masks_event(
-            sample_output_dir,
-            accepted_fragment_ids=("000010_mask_00",),
-            accepted_frame_ids=("000010",),
-        )
-
-    executor = _FakeExecutor(outcome, on_execute=write_tool_events)
-    config = SceneFunc3dRunnerConfig(
-        dataset_root=tmp_path / "data",
-        output_dir=tmp_path / "out",
-        backend_config_path=tmp_path / "backends.toml",
-    )
-
-    with pytest.raises(CodexResponseError, match=match):
-        run_single_sample(
-            config,
-            sample_id="421254::desc-a",
-            executor=executor,
-            check_sidecars=False,
-        )
-
-
-def _set_wrong_molmo_raw_text_path(result: dict[str, object], root: Path) -> None:
-    result["raw_text_path"] = str(root / "molmo" / "wrong_raw.txt")
-
-
-def _set_wrong_sam_candidate_id(result: dict[str, object], root: Path) -> None:
-    candidates = result.get("candidates")
-    if not isinstance(candidates, list):
-        raise AssertionError("test sam_mask result must contain candidates")
-    candidate = candidates[0]
-    if not isinstance(candidate, dict):
-        raise AssertionError("test sam_mask candidate must be a JSON object")
-    candidate["candidate_id"] = "mask_99"
-
-
-def _set_wrong_sam_point_prompt(args: dict[str, object], root: Path) -> None:
-    _ = root
-    points = args.get("points")
-    if not isinstance(points, list):
-        raise AssertionError("test sam_mask args must contain points")
-    point = points[0]
-    if not isinstance(point, dict):
-        raise AssertionError("test sam_mask point must be a JSON object")
-    point["x_px"] = 98.0
-
-
-def _set_wrong_sam_image_path(args: dict[str, object], root: Path) -> None:
-    args["image_path"] = str(root / "421254" / "000011.jpg")
-
-
-def _remove_frame_id_arg(args: dict[str, object], root: Path) -> None:
-    _ = root
-    args.pop("frame_id", None)
-
-
-def _set_stale_molmo_point_prompt(result: dict[str, object], root: Path) -> None:
-    _ = root
-    point = _copy_first_tool_point(result)
-    point["x_px"] = 98.0
-    result["points"] = [point]
-
-
-def _set_sam_single_point_alias_with_different_text(
-    args: dict[str, object], root: Path
-) -> None:
-    _ = root
-    point = _copy_first_tool_point(args)
-    point["source"] = '<point x="12.5" y="34.25">different text</point>'
-    point["label"] = "different text"
-    args.pop("points", None)
-    args["point"] = point
-
-
-def _set_sam_point_xy_alias_with_different_text(
-    args: dict[str, object], root: Path
-) -> None:
-    _ = root
-    point = _copy_first_tool_point(args)
-    x_px = point.get("x_px")
-    y_px = point.get("y_px")
-    if isinstance(x_px, bool) or not isinstance(x_px, int | float):
-        raise AssertionError("test point x_px must be numeric")
-    if isinstance(y_px, bool) or not isinstance(y_px, int | float):
-        raise AssertionError("test point y_px must be numeric")
-    args.pop("points", None)
-    args["point_xy"] = [float(x_px), float(y_px)]
-    args["point_source"] = '<point x="12.5" y="34.25">different text</point>'
-    args["point_label"] = "different text"
-
-
-def _copy_first_tool_point(payload: dict[str, object]) -> dict[str, object]:
-    points = payload.get("points")
-    if not isinstance(points, list):
-        raise AssertionError("test payload must contain points")
-    point = points[0]
-    if not isinstance(point, dict):
-        raise AssertionError("test point must be a JSON object")
-    return dict(cast(dict[str, object], point))
-
-
-def _set_wrong_lift_mask_ply_path(result: dict[str, object], root: Path) -> None:
-    result["mask_ply_path"] = str(
-        root / "fragments" / "000010_mask_00" / "wrong_lifted_points.ply"
-    )
-
-
-def _set_wrong_lift_mask_input_path(args: dict[str, object], root: Path) -> None:
-    args["mask_path"] = str(root / "stale" / "sam" / "mask_00.npz")
-
-
-def _set_wrong_inspection_mask_path(args: dict[str, object], root: Path) -> None:
-    args["mask_npz_path"] = str(root / "fragments" / "wrong" / "mask_data.npz")
-
-
-def _set_non_completed_tool_event_type(event: dict[str, object], root: Path) -> None:
-    _ = root
-    event["event_type"] = "manual_success"
-
-
-def _set_failed_tool_event_status(event: dict[str, object], root: Path) -> None:
-    _ = root
-    event["event_type"] = "tool_failed"
-    event["status"] = "failed"
-    event["error"] = "test failed event"
-
-
-def _set_view_crop_tool_event(event: dict[str, object], root: Path) -> None:
-    _ = root
-    event["tool_name"] = "view_crop"
-
-
-def _set_inspect_lift_overlay_path_alias(args: dict[str, object]) -> None:
-    overlay_paths = args.pop("overlay_paths")
-    if not isinstance(overlay_paths, list) or len(overlay_paths) != 1:
-        raise AssertionError("test inspect event must have one overlay path")
-    overlay_path = overlay_paths[0]
-    if not isinstance(overlay_path, str):
-        raise AssertionError("test inspect overlay path must be a string")
-    args["lift_overlay_path"] = overlay_path
-
-
-def _rewrite_first_tool_result(
-    root: Path,
-    *,
-    tool_name: str,
-    args_mutator: Callable[[dict[str, object]], None],
-    event_mutator: Callable[[dict[str, object]], None],
-    result_mutator: Callable[[dict[str, object]], None],
-) -> None:
-    events_path = root / "events.jsonl"
-    rewritten_lines: list[str] = []
-    did_rewrite = False
-    for raw_line in events_path.read_text(encoding="utf-8").splitlines():
-        event_payload = json.loads(raw_line)
-        if not isinstance(event_payload, dict):
-            raise AssertionError("test event line must be a JSON object")
-        event = cast(dict[str, object], event_payload)
-        if event.get("tool_name") == tool_name and not did_rewrite:
-            event_mutator(event)
-            args = event.get("args")
-            if not isinstance(args, dict):
-                raise AssertionError("test tool event args must be a JSON object")
-            result = event.get("result")
-            if not isinstance(result, dict):
-                raise AssertionError("test tool event result must be a JSON object")
-            args_mutator(cast(dict[str, object], args))
-            result_mutator(cast(dict[str, object], result))
-            did_rewrite = True
-        rewritten_lines.append(json.dumps(event, ensure_ascii=False))
-    if not did_rewrite:
-        raise AssertionError(f"test did not find tool event: tool_name={tool_name}")
-    events_path.write_text("\n".join(rewritten_lines) + "\n", encoding="utf-8")
-
-
-def _move_first_tool_event_before(
-    root: Path, *, tool_name: str, before_tool_name: str
-) -> None:
-    events_path = root / "events.jsonl"
-    event_lines = events_path.read_text(encoding="utf-8").splitlines()
-    tool_line_index = _first_tool_event_line_index(event_lines, tool_name=tool_name)
-    before_line_index = _first_tool_event_line_index(
-        event_lines, tool_name=before_tool_name
-    )
-    tool_line = event_lines.pop(tool_line_index)
-    if tool_line_index < before_line_index:
-        before_line_index -= 1
-    event_lines.insert(before_line_index, tool_line)
-    events_path.write_text("\n".join(event_lines) + "\n", encoding="utf-8")
-
-
-def _first_tool_event_line_index(event_lines: list[str], *, tool_name: str) -> int:
-    for index, raw_line in enumerate(event_lines):
-        event_payload = json.loads(raw_line)
-        if not isinstance(event_payload, dict):
-            raise AssertionError("test event line must be a JSON object")
-        if event_payload.get("tool_name") == tool_name:
-            return index
-    raise AssertionError(f"test did not find tool event: tool_name={tool_name}")
-
-
-def _write_fuse_accepted_masks_event(
-    root: Path,
-    *,
-    accepted_fragment_ids: tuple[str, ...] = ("frag-a",),
-    accepted_frame_ids: tuple[str, ...] = ("000010",),
-    event_type: str = "tool_completed",
-    result_overrides: dict[str, object] | None = None,
-) -> None:
-    result_payload = _fuse_event_result_payload(
-        root,
-        accepted_fragment_ids=accepted_fragment_ids,
-        accepted_frame_ids=accepted_frame_ids,
-    )
-    if result_overrides is not None:
-        result_payload.update(result_overrides)
-    event_payload = {
-        "event_type": event_type,
-        "tool_name": "fuse_accepted_masks",
-        "status": "success",
-        "args": {},
-        "result": result_payload,
-        "error": "",
-    }
-    _append_event_payload(root, event_payload)
-
-
-def _write_minimal_fuse_accepted_masks_event(root: Path) -> None:
-    event_payload = {
-        "event_type": "tool_completed",
-        "tool_name": "fuse_accepted_masks",
-        "status": "success",
-        "args": {},
-        "result": {
-            "accepted_frame_ids": ["000010"],
-            "accepted_fragments": [
-                {
-                    "fragment_id": "frag-a",
-                    "frame_id": "000010",
-                }
-            ],
-            "multi_view_decision": {
-                "seed_fragment_id": "frag-a",
-                "action": "stop",
-                "reason": "test minimal fuse event",
-                "suggested_frame_ids": [],
-                "rejected_suggested_frame_ids": [],
-            },
-            "mask_artifact_path": str(root / "mask_artifact.json"),
-            "mask_npz_path": str(root / "mask.npz"),
-            "mask_ply_path": str(root / "mask.ply"),
-        },
-        "error": "",
-    }
-    _append_event_payload(root, event_payload)
-
-
-def _fuse_event_result_payload(
-    root: Path,
-    *,
-    accepted_fragment_ids: tuple[str, ...],
-    accepted_frame_ids: tuple[str, ...],
-) -> dict[str, object]:
-    artifact_payload = json.loads(
-        (root / "mask_artifact.json").read_text(encoding="utf-8")
-    )
-    result_payload = cast(dict[str, object], artifact_payload)
-    result_payload["mask_artifact_path"] = str(root / "mask_artifact.json")
-    result_payload["accepted_frame_ids"] = list(accepted_frame_ids)
-    accepted_fragments = result_payload.get("accepted_fragments")
-    if not isinstance(accepted_fragments, list):
-        raise AssertionError("test artifact must contain accepted_fragments")
-    for fragment, fragment_id, frame_id in zip(
-        accepted_fragments,
-        accepted_fragment_ids,
-        accepted_frame_ids,
-        strict=True,
-    ):
-        if not isinstance(fragment, dict):
-            raise AssertionError("test accepted fragment must be a JSON object")
-        fragment["fragment_id"] = fragment_id
-        fragment["frame_id"] = frame_id
-    multi_view_decision = result_payload.get("multi_view_decision")
-    if not isinstance(multi_view_decision, dict):
-        raise AssertionError("test artifact must contain multi_view_decision")
-    multi_view_decision["seed_fragment_id"] = accepted_fragment_ids[0]
-    return result_payload
-
-
-def _append_event_payload(root: Path, event_payload: Mapping[str, object]) -> None:
-    events_path = root / "events.jsonl"
-    events_path.parent.mkdir(parents=True, exist_ok=True)
-    with events_path.open("a", encoding="utf-8") as event_file:
-        event_file.write(json.dumps(event_payload, ensure_ascii=False) + "\n")
-
-
-def _write_non_utf8_tool_events(root: Path) -> None:
-    (root / "events.jsonl").write_bytes(b"\xff")
-
-
-def _write_fuse_event_then_mutate_artifact(root: Path) -> None:
-    _write_fuse_accepted_masks_event(root)
-    artifact_path = root / "mask_artifact.json"
-    artifact_payload = json.loads(artifact_path.read_text(encoding="utf-8"))
-    artifact_payload["multi_view_decision"]["reason"] = "mutated after fuse"
-    artifact_path.write_text(json.dumps(artifact_payload), encoding="utf-8")
-
-
-def _write_review_artifacts(root: Path) -> dict[str, str]:
-    root.mkdir(parents=True, exist_ok=True)
-    paths = {
-        "molmo_raw_text_path": root / "molmo_raw.txt",
-        "molmo_overlay_path": root / "molmo_overlay.jpg",
-        "sam_contact_sheet_path": root / "sam_contact_sheet.jpg",
-        "sam_candidate_overlay_path": root / "sam_candidate_overlay.jpg",
-        "lift_overlay_path": root / "lift_overlay.txt",
-    }
-    for path in paths.values():
-        path.write_text("reviewed\n", encoding="utf-8")
-    return {key: str(path) for key, path in paths.items()}
-
-
-def _write_standard_review_artifacts(
-    root: Path, *, frame_id: str, candidate_id: str
-) -> dict[str, str]:
-    fragment_id = f"{frame_id}_{candidate_id}"
-    paths = {
-        "molmo_raw_text_path": root / "molmo" / f"{frame_id}_raw.txt",
-        "molmo_overlay_path": root / "molmo" / f"{frame_id}_points.jpg",
-        "sam_contact_sheet_path": root / "sam" / frame_id / "contact_sheet.jpg",
-        "sam_candidate_overlay_path": (
-            root / "sam" / frame_id / f"{candidate_id}_overlay.jpg"
-        ),
-        "lift_overlay_path": root / "fragments" / fragment_id / "lift_overlay.txt",
-    }
-    for path in paths.values():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("reviewed\n", encoding="utf-8")
-    _write_lift_overlay_summary(
-        paths["lift_overlay_path"],
-        frame_id=frame_id,
-        candidate_id=candidate_id,
-    )
-    _write_fragment_points_artifact(root / "fragments" / fragment_id, point_count=2)
-    return {key: str(path) for key, path in paths.items()}
-
-
-def _write_fragment_points_artifact(root: Path, *, point_count: int) -> None:
-    from codex_agent.scenefunc3d.backends.lift_3d import write_lift_npz, write_lift_ply
-
-    root.mkdir(parents=True, exist_ok=True)
-    if point_count == 2:
-        points_world = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
-    else:
-        points_world = np.array(
-            [
-                [float(index), float(index + 1), float(index + 2)]
-                for index in range(point_count)
-            ],
-            dtype=np.float64,
-        )
-    point_indices = np.arange(point_count, dtype=np.int64)
-    write_lift_npz(root / "mask_data.npz", points_world, point_indices=point_indices)
-    write_lift_ply(root / "lifted_points.ply", points_world)
-
-
-def _write_lift_overlay_summary(
-    path: Path, *, frame_id: str, candidate_id: str
-) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        f"frame_id={frame_id}\n"
-        f"candidate_id={candidate_id}\n"
-        "lifted_point_count=2\n",
-        encoding="utf-8",
-    )
-
-
-def _unique_frame_ids(frame_ids: tuple[str, ...]) -> tuple[str, ...]:
-    seen_frame_ids: set[str] = set()
-    unique_frame_ids: list[str] = []
-    for frame_id in frame_ids:
-        if frame_id not in seen_frame_ids:
-            unique_frame_ids.append(frame_id)
-            seen_frame_ids.add(frame_id)
-    return tuple(unique_frame_ids)
 
 
 def _write_backend_config(
@@ -3932,14 +1635,20 @@ def _write_backend_config(
     molmo_url: str,
     sam_url: str,
     root: Path,
+    request_headers_path: Path | None = None,
 ) -> None:
+    header_lines: list[str] = []
+    if request_headers_path is not None:
+        header_lines.append(
+            f"request_headers_path = {json.dumps(str(request_headers_path))}"
+        )
     path.write_text(
         "\n".join(
             (
                 f"molmo_url = {json.dumps(molmo_url)}",
                 f"sam_url = {json.dumps(sam_url)}",
+                *header_lines,
                 "request_timeout_seconds = 2.0",
-                f"artifact_staging_root = {json.dumps(str(root / 'stage'))}",
                 f"allowed_image_roots = [{json.dumps(str(root))}]",
                 f"allowed_output_roots = [{json.dumps(str(root / 'out'))}]",
                 "",
@@ -3950,6 +1659,12 @@ def _write_backend_config(
 
 
 def _write_scene(root: Path) -> None:
+    _write_backend_config(
+        root.parent / "backends.toml",
+        molmo_url="http://127.0.0.1:8001",
+        sam_url="http://127.0.0.1:8002",
+        root=root.parent,
+    )
     scene_dir = root / "421254"
     _write_scene_root(scene_dir)
     (scene_dir / "421254_descriptions.json").write_text(
@@ -4001,6 +1716,12 @@ def _write_scene(root: Path) -> None:
 
 
 def _write_two_sample_scene(root: Path) -> None:
+    _write_backend_config(
+        root.parent / "backends.toml",
+        molmo_url="http://127.0.0.1:8001",
+        sam_url="http://127.0.0.1:8002",
+        root=root.parent,
+    )
     scene_dir = root / "421254"
     _write_scene_root(scene_dir)
     (scene_dir / "421254_descriptions.json").write_text(
@@ -4098,4 +1819,22 @@ def _write_scene_root(
     raw_dir.mkdir(parents=True, exist_ok=True)
     for frame_id in frame_ids:
         (raw_dir / f"{frame_id}-rgb.png").write_bytes(b"fake-png")
+    _write_raw_mesh(raw_dir / "mesh.ply", vertex_count=100)
     return scene_dir
+
+
+def _write_raw_mesh(path: Path, *, vertex_count: int) -> None:
+    points = np.zeros(
+        vertex_count,
+        dtype=np.dtype([("x", "<f4"), ("y", "<f4"), ("z", "<f4")]),
+    )
+    header = (
+        "ply\n"
+        "format binary_little_endian 1.0\n"
+        f"element vertex {vertex_count}\n"
+        "property float x\n"
+        "property float y\n"
+        "property float z\n"
+        "end_header\n"
+    )
+    path.write_bytes(header.encode("ascii") + points.tobytes())

@@ -1,0 +1,106 @@
+{
+  "diagnostic": "v7_v8_flip41_repeat",
+  "date": "2026-07-01",
+  "head": "b3e23be7f3417dc9ed30d612db68d4d55651d429",
+  "sample_ids_path": "docs/benchmark/nr3d/assets/v7_v8_flip41_sample_ids_20260701.json",
+  "output_dir": "tmp/nr3d_tools_flip41_v8_repeat_20260701",
+  "n": 41,
+  "summary": {
+    "mean_iou": 0.515763725222009,
+    "acc_at_025": 0.5121951219512195,
+    "acc_at_050": 0.5121951219512195,
+    "cache_hit_rate": 1.0,
+    "mean_cache_ratio": 0.9637274953323374
+  },
+  "correct_counts": {
+    "v7": 25,
+    "v8": 16,
+    "repeat": 21
+  },
+  "status_counts": {
+    "v7": {
+      "completed": 41
+    },
+    "v8": {
+      "completed": 40,
+      "failed": 1
+    },
+    "repeat": {
+      "completed": 40,
+      "failed": 1
+    }
+  },
+  "original_flip_groups": {
+    "v7_right_v8_wrong": {
+      "n": 25,
+      "repeat_correct": 12,
+      "repeat_wrong": 13
+    },
+    "v7_wrong_v8_right": {
+      "n": 16,
+      "repeat_correct": 9,
+      "repeat_wrong": 7
+    }
+  },
+  "slices": {
+    "Overall": {
+      "n": 41,
+      "v7_correct": 25,
+      "v8_correct": 16,
+      "repeat_correct": 21,
+      "repeat_acc": 0.5121951219512195
+    },
+    "Easy": {
+      "n": 13,
+      "v7_correct": 9,
+      "v8_correct": 4,
+      "repeat_correct": 7,
+      "repeat_acc": 0.5384615384615384
+    },
+    "Hard": {
+      "n": 28,
+      "v7_correct": 16,
+      "v8_correct": 12,
+      "repeat_correct": 14,
+      "repeat_acc": 0.5
+    },
+    "View-Dep": {
+      "n": 23,
+      "v7_correct": 17,
+      "v8_correct": 6,
+      "repeat_correct": 11,
+      "repeat_acc": 0.4782608695652174
+    },
+    "View-Indep": {
+      "n": 18,
+      "v7_correct": 8,
+      "v8_correct": 10,
+      "repeat_correct": 10,
+      "repeat_acc": 0.5555555555555556
+    }
+  },
+  "agreement": {
+    "correctness_repeat_vs_v7": 19,
+    "correctness_repeat_vs_v8": 22,
+    "selected_id_repeat_vs_v7": 17,
+    "selected_id_repeat_vs_v8": 17
+  },
+  "reasoning_summary_count": 41,
+  "business_summary_count": 41,
+  "transport": {
+    "responses_posts": 415,
+    "chat_or_chat_completions_posts": 0,
+    "crawl_posts": 0,
+    "http_400": 0,
+    "http_5xx": 0,
+    "invalid_encrypted_content": 0
+  },
+  "failed_repeat_samples": [
+    {
+      "sample_id": "scannet/scene0221_00::51::24914",
+      "category": "towel",
+      "summary": "The two towel-labeled proposals in this scene do not match the query: BEV places them together in the entry alcove corner, and frame 86 shows #50 is a wall sconce and #51 is a wall-mounted hairdryer cord. The apparent hanging towel in the far corner is not covered by any visible proposal in that frame, so the described target is absent from the pool.",
+      "error": null
+    }
+  ]
+}

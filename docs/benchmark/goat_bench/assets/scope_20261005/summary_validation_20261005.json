@@ -1,0 +1,46 @@
+{
+  "code_commit": "dd33c67f013fdef29c3ed66ca01df4af3d199881",
+  "summary_module_sha256": "f50b139561614dea367c470680b5ee92620bad23763d4ef2e7546cc74bf7dd0b",
+  "ingester_sha256": "cffb2ff52ea31829576de2c05434a6d218c38610082c7dd10c841e1a1fcf5f61",
+  "checks": {
+    "ruff": 0,
+    "black": 0,
+    "mypy_src": 0,
+    "mypy_summary": 0,
+    "keyframe": 0,
+    "summary": 0,
+    "diff": 0
+  },
+  "commands": [
+    "ruff check src/ scripts/scope/summarize_metrics.py tests/test_scope_summary.py",
+    "black --check src/ scripts/scope/summarize_metrics.py tests/test_scope_summary.py",
+    "mypy src/",
+    "mypy --strict --explicit-package-bases scripts/scope/summarize_metrics.py tests/test_scope_summary.py",
+    "PYTHONPATH=src pytest src/keyframe/tests -q",
+    "PYTHONPATH=.:src pytest tests/test_scope_summary.py -q",
+    "git diff --check"
+  ],
+  "passed_tests": {
+    "keyframe": 53,
+    "summary": 26
+  },
+  "initial_invocation_errors": {
+    "mypy": "namespace module was discovered with two names; corrected with --explicit-package-bases",
+    "pytest": "scripts namespace absent from PYTHONPATH=src; corrected with PYTHONPATH=.:src"
+  },
+  "linux_python": "3.10.19 (conceptgraph)",
+  "linux_matching_module_hash_verified": true,
+  "real_saved_episode_fixture": {
+    "scene_id": "00824-Dd4bFSTQ8gi",
+    "episode_id": 0,
+    "n": 7,
+    "sr": 71.42857142857143,
+    "spl": 45.69536223296411,
+    "subtask_index_groups": 7,
+    "fingerprinted_inputs": 4,
+    "complete_metadata_superset_accepted": true
+  },
+  "actual_linux_partial278_rejected_without_report": true,
+  "benchmark_run_started": false,
+  "notes": "Existing completed-episode fixture verifies CLI arithmetic; no new evaluation fold, model call or DB mutation. Navigation processes were untouched. The utility validates complete metric coverage; terminal-status acceptance remains a separate controller gate. Original input files are preserved."
+}

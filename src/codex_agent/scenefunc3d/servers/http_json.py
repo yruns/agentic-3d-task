@@ -32,10 +32,7 @@ def make_json_handler(routes: dict[str, JsonRoute]) -> type[BaseHTTPRequestHandl
 
     class JsonHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
-            if self.path != "/health":
-                self._write_json(404, {"error": "unknown_route"})
-                return
-            route = routes.get("/health")
+            route = routes.get(self.path)
             if route is None:
                 self._write_json(404, {"error": "unknown_route"})
                 return

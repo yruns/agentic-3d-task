@@ -1,0 +1,19 @@
+{
+  "requests": 162,
+  "http_200": 162,
+  "model": "gemini-3.8-flash",
+  "ledger_lines_zero_based": [
+    2,
+    164
+  ],
+  "tokens": {
+    "prompt_tokens": 1875211,
+    "completion_tokens": 7207,
+    "total_tokens": 1934222,
+    "reasoning_tokens": 51804,
+    "cached_prompt_tokens": 0
+  },
+  "attribution": "run-level only; no per-subtask attribution",
+  "runtime_seconds_from_upstream_log": 2305,
+  "terminal_exit": 0
+}

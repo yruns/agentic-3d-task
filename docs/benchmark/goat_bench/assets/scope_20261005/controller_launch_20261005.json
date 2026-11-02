@@ -1,0 +1,29 @@
+{
+  "branch": "feat/realtime-model",
+  "controller_code_commit": "ac081c67455aa6c5218fd7eb5b5fecb30d7fcc9e",
+  "original_worker_head_commit": "89dd5337df953374c26b0ebcb67b3bb8663b9ad8",
+  "runtime_source_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "controller_replaced_local_time": "2026-10-05 03:46:03 Asia/Shanghai",
+  "controller_pid": 2664053,
+  "retained_worker_pids": [2655312, 2655314],
+  "worker_restart_count_during_repair": 0,
+  "model": "gemini-3.8-flash",
+  "thinking_budget_tokens": 2000,
+  "full_run_ledger_start_line_zero_based": 164,
+  "command": "bash /home/ysh/Datasets/SCOPE/scripts/run_full.sh > /home/ysh/Datasets/SCOPE/logs/full_run.log 2>&1",
+  "tmux_session": "scope-full-20261005",
+  "source_hashes": {
+    "run_full.sh": "02a0b4e2ab36b4bbea4630515024185d16ce4ecd5d13905b930d142a53f9ac53",
+    "run_worker.sh": "bd5831d727c9b9e7277f08f5de075edc75dcd1c065a2a5e52dc7085c0cf1e5b5",
+    "ingest_goat_bench_run.py": "cffb2ff52ea31829576de2c05434a6d218c38610082c7dd10c841e1a1fcf5f61"
+  },
+  "verified_at_replacement": {
+    "project_tracked_worktree_clean": true,
+    "upstream_tracked_worktree_clean": true,
+    "remote_and_local_code_hashes_match": true,
+    "bridge_health_linux_and_mac": "ok",
+    "existing_workers_reused": true,
+    "canonical278_complete": false,
+    "full2669_complete": false
+  }
+}

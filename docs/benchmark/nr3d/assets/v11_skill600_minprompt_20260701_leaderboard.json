@@ -1,0 +1,99 @@
+{
+  "diagnostic": "v11_skill600_minprompt",
+  "date": "2026-07-01",
+  "head": "9b262f4cb46b42ab17b9f086b75a1c03e498b240",
+  "worktree_dirty": true,
+  "output_dir": "tmp/nr3d_tools_skill600_minprompt_20260701",
+  "n": 600,
+  "mode": {
+    "tools": true,
+    "skill_name": "nr3d-codex-tools",
+    "skill_path": ".agents/skills/nr3d-codex-tools/SKILL.md",
+    "prompt_tool_context": false,
+    "prompt_inline_playbook": false,
+    "workers": 40,
+    "reasoning_summary": "auto",
+    "turn_timeout_s": 900
+  },
+  "summary": {
+    "mean_iou": 0.8476062093975638,
+    "acc_at_025": 0.845,
+    "acc_at_050": 0.845,
+    "cache_hit_rate": 0.9916666666666667,
+    "mean_cache_ratio": 0.9434395597668709
+  },
+  "slices": {
+    "Overall": {
+      "n": 600,
+      "correct": 507,
+      "acc": 0.845
+    },
+    "Easy": {
+      "n": 290,
+      "correct": 259,
+      "acc": 0.8931034482758621
+    },
+    "Hard": {
+      "n": 310,
+      "correct": 248,
+      "acc": 0.8
+    },
+    "View-Dep": {
+      "n": 211,
+      "correct": 167,
+      "acc": 0.7914691943127962
+    },
+    "View-Indep": {
+      "n": 389,
+      "correct": 340,
+      "acc": 0.8740359897172236
+    }
+  },
+  "comparison": {
+    "v7_correct": 516,
+    "v8_correct": 507,
+    "v11_correct": 507,
+    "v11_minus_v8_pp": 0.0,
+    "v11_minus_v7_pp": -1.5
+  },
+  "health": {
+    "status_completed": 598,
+    "status_failed": 2,
+    "wrong_or_failed_count": 93,
+    "reasoning_summary_count": 569,
+    "business_summary_count": 600,
+    "latency_s_median": 193.5,
+    "latency_s_mean": 230.9,
+    "latency_s_p90": 390.0,
+    "latency_s_max": 891.7
+  },
+  "transport": {
+    "responses_posts": 5842,
+    "chat_or_chat_completions_posts": 0,
+    "crawl_posts": 0,
+    "http_400": 0,
+    "http_5xx": 0,
+    "invalid_encrypted_content": 0
+  },
+  "loop_signals": {
+    "skill_md_loop_matches": 0,
+    "max_tool_call_interrupts": 0,
+    "repeated_tool_call_interrupts": 0,
+    "turn_timeout_interrupts": 7,
+    "permanent_failures": 0
+  },
+  "failed_samples": [
+    {
+      "sample_id": "scannet/scene0435_00::21::13508",
+      "selected_object_id": null,
+      "query": "The door to the bathroom.",
+      "summary": "The model judged the bathroom door absent from the proposal pool."
+    },
+    {
+      "sample_id": "scannet/scene0169_00::26::28815",
+      "selected_object_id": null,
+      "query": "The smaller cabinet.",
+      "summary": "The model judged the smaller cabinet absent as a standalone proposal in the pool."
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "fold": "v9_3_strat600",
+  "n": 600,
+  "metric": "oriented_3d_iou@0.25",
+  "slices": {
+    "Overall": {
+      "n": 600,
+      "correct": 516,
+      "acc": 0.86
+    },
+    "Easy": {
+      "n": 290,
+      "correct": 262,
+      "acc": 0.903448275862069
+    },
+    "Hard": {
+      "n": 310,
+      "correct": 254,
+      "acc": 0.8193548387096774
+    },
+    "View-Dep": {
+      "n": 211,
+      "correct": 174,
+      "acc": 0.8246445497630331
+    },
+    "View-Indep": {
+      "n": 389,
+      "correct": 342,
+      "acc": 0.8791773778920309
+    }
+  },
+  "mean_iou": 0.8617412034426037,
+  "cache_hit_rate": 0.9866666666666667,
+  "mean_cache_ratio": 0.9297198739952754,
+  "status": {
+    "completed": 598,
+    "failed": 2
+  },
+  "with_reasoning_summary": 542,
+  "reasoning_summary_rate": 0.9033333333333333,
+  "latency_s": {
+    "median": 165.29,
+    "p90": 378.32730000000004,
+    "max": 830.563
+  },
+  "top_errors": []
+}

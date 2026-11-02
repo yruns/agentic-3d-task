@@ -1,0 +1,28 @@
+{
+  "n": 475,
+  "expected_subtasks": 2669,
+  "sr": 70.52631578947368,
+  "spl": 49.955220692843675,
+  "completion_rate": 0.17796927688272762,
+  "complete": false,
+  "expected_ids_verified": true,
+  "modality_complete": true,
+  "per_modality": {
+    "description": {
+      "n": 153,
+      "sr": 55.55555555555556,
+      "spl": 39.93720894225842
+    },
+    "image": {
+      "n": 159,
+      "sr": 81.13207547169812,
+      "spl": 63.835417866487255
+    },
+    "object": {
+      "n": 163,
+      "sr": 74.23312883435582,
+      "spl": 45.81905165744633
+    }
+  },
+  "api_ledger_present": false
+}

@@ -7,18 +7,20 @@ from collections.abc import Set
 from dataclasses import dataclass
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Annotated, TypeAlias
+from typing import Annotated, Literal, TypeAlias
 from zipfile import BadZipFile
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic.types import StringConstraints
 
 from codex_agent.errors import CodexResponseError, SceneFunc3dDataError
+from codex_agent.scenefunc3d.backends.lift_3d import load_scene_mesh_vertex_count
 from codex_agent.scenefunc3d.final_mask_artifacts import (
     FinalMaskArtifactDocument,
     validate_final_mask_artifact,
 )
 from codex_agent.scenefunc3d.sample import load_sample, scene_dir_for
+from codex_agent.scenefunc3d.tools.models import ToolInputError
 
 from .metrics import MaskMetrics, compute_mask_metrics
 
@@ -68,6 +70,85 @@ class _ScoringResultFile(BaseModel):
     task_name: NonEmptyString
     sample_id: NonEmptyString
     outcome: _ScoringResultOutcome
+
+
+class _PipelineScoringOutcome(BaseModel):
+    """Subset of a pipeline result outcome needed by the scorer."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    mask_npz_path: NonEmptyString
+
+
+class _PipelineScoringResultFile(BaseModel):
+    """Subset of a Phase-2c pipeline result JSON needed by the scorer."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    task_name: NonEmptyString
+    sample_id: NonEmptyString
+    result_kind: Literal["anchor_multiview_pipeline"]
+    outcome: _PipelineScoringOutcome
+
+
+_PIPELINE_RESULT_KIND = "anchor_multiview_pipeline"
+
+
+def score_pipeline_result_file(
+    *, data_root: Path, result_path: Path, failure_type: str = ""
+) -> SceneFunc3dScore:
+    """Score a Phase-2c anchor multi-view pipeline result against hidden GT."""
+    result_file = _load_pipeline_result_file(result_path)
+    if result_file.task_name != _SCENEFUNC3D_TASK_NAME:
+        raise SceneFunc3dDataError(
+            "runner result task_name is not a SceneFun3D mask task: "
+            f"task_name={result_file.task_name!r}; result_path={result_path}"
+        )
+    mask_npz_path = _resolve_artifact_member_path(
+        artifact_path=result_path,
+        raw_member_path=result_file.outcome.mask_npz_path,
+    )
+    return score_mask_npz(
+        data_root=data_root,
+        sample_id=result_file.sample_id,
+        mask_npz_path=mask_npz_path,
+        failure_type=failure_type,
+    )
+
+
+def _load_pipeline_result_file(result_path: Path) -> _PipelineScoringResultFile:
+    if not result_path.is_file():
+        raise SceneFunc3dDataError(f"runner result JSON is missing: {result_path}")
+    try:
+        payload: object = json.loads(result_path.read_text(encoding="utf-8"))
+    except JSONDecodeError as exc:
+        raise SceneFunc3dDataError(
+            f"runner result is not valid JSON: {result_path}"
+        ) from exc
+    try:
+        return _PipelineScoringResultFile.model_validate(payload)
+    except ValidationError as exc:
+        raise SceneFunc3dDataError(
+            "pipeline runner result failed scorer validation: "
+            f"result_path={result_path}; error={exc}"
+        ) from exc
+
+
+def _result_kind(result_path: Path) -> str:
+    if not result_path.is_file():
+        raise SceneFunc3dDataError(f"runner result JSON is missing: {result_path}")
+    try:
+        payload: object = json.loads(result_path.read_text(encoding="utf-8"))
+    except JSONDecodeError as exc:
+        raise SceneFunc3dDataError(
+            f"runner result is not valid JSON: {result_path}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise SceneFunc3dDataError(
+            f"runner result must be a JSON object: {result_path}"
+        )
+    raw_kind = payload.get("result_kind", "")
+    return raw_kind if isinstance(raw_kind, str) else ""
 
 
 @dataclass(frozen=True)
@@ -202,13 +283,51 @@ def score_mask_npz(
     mask_npz_path: Path,
     failure_type: str = "",
 ) -> SceneFunc3dScore:
-    """Score a mask NPZ containing predicted point ids against hidden GT."""
+    """Score a mask NPZ containing raw/source-scene point ids against hidden GT."""
+    predicted_ids = load_predicted_point_ids(mask_npz_path)
+    _validate_predicted_point_ids_within_raw_mesh(
+        data_root=data_root,
+        sample_id=sample_id,
+        predicted_ids=predicted_ids,
+        mask_npz_path=mask_npz_path,
+    )
     return score_point_ids(
         sample_id=sample_id,
-        predicted_ids=load_predicted_point_ids(mask_npz_path),
+        predicted_ids=predicted_ids,
         gt_ids=load_gt_point_ids(data_root, sample_id),
         failure_type=failure_type,
     )
+
+
+def _validate_predicted_point_ids_within_raw_mesh(
+    *,
+    data_root: Path,
+    sample_id: str,
+    predicted_ids: Set[int],
+    mask_npz_path: Path,
+) -> None:
+    if not predicted_ids:
+        return
+    root = Path(data_root)
+    sample = load_sample(root, sample_id)
+    raw_mesh_path = scene_dir_for(root, sample.visit_id) / "raw" / "mesh.ply"
+    try:
+        raw_vertex_count = load_scene_mesh_vertex_count(raw_mesh_path)
+    except ToolInputError as exc:
+        raise SceneFunc3dDataError(
+            "could not validate predicted point ids against raw SceneFunc3D mesh: "
+            f"sample_id={sample_id!r}; mask_npz_path={mask_npz_path}; "
+            f"raw_mesh_path={raw_mesh_path}; error={exc}"
+        ) from exc
+
+    max_predicted_id = max(predicted_ids)
+    if max_predicted_id >= raw_vertex_count:
+        raise SceneFunc3dDataError(
+            "predicted point id is outside raw mesh vertex range: "
+            f"sample_id={sample_id!r}; mask_npz_path={mask_npz_path}; "
+            f"raw_mesh_path={raw_mesh_path}; raw_vertex_count={raw_vertex_count}; "
+            f"max_predicted_id={max_predicted_id}"
+        )
 
 
 def score_mask_artifact(
@@ -232,6 +351,19 @@ def score_mask_artifact(
 
 
 def score_result_file(
+    *, data_root: Path, result_path: Path, failure_type: str = ""
+) -> SceneFunc3dScore:
+    """Score a SceneFunc3D runner result JSON (pipeline or legacy) against GT."""
+    if _result_kind(result_path) == _PIPELINE_RESULT_KIND:
+        return score_pipeline_result_file(
+            data_root=data_root, result_path=result_path, failure_type=failure_type
+        )
+    return _score_legacy_result_file(
+        data_root=data_root, result_path=result_path, failure_type=failure_type
+    )
+
+
+def _score_legacy_result_file(
     *,
     data_root: Path,
     result_path: Path,
@@ -443,6 +575,7 @@ __all__ = [
     "load_predicted_point_ids",
     "score_mask_artifact",
     "score_mask_npz",
+    "score_pipeline_result_file",
     "score_point_ids",
     "score_result_file",
 ]

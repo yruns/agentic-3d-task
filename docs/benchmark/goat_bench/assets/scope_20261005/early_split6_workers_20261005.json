@@ -1,0 +1,53 @@
+{
+  "launch_time": "2026-10-05T08:21:43+08:00",
+  "head_commit_at_launch": "22927e8d75edf9794a66b5699a7a14bbc2e1b09f",
+  "upstream_runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "bootstrap_revision": "08fdeba4c8529e7e01ce1e01f88b6e558e1e652f",
+  "frozen_plan": "/home/ysh/Datasets/SCOPE/manifests/storage_plan_parallel_v2.json",
+  "workers": [
+    {
+      "split": 6,
+      "worker": 0,
+      "physical_gpu": 3,
+      "pid": 2741946,
+      "expected_subtasks": 118,
+      "tmux": "scope-s6-w0-20261005",
+      "peer_pid": 2706525
+    },
+    {
+      "split": 6,
+      "worker": 1,
+      "physical_gpu": 4,
+      "pid": 2741948,
+      "expected_subtasks": 133,
+      "tmux": "scope-s6-w1-20261005",
+      "peer_pid": 2706522
+    }
+  ],
+  "preflight": {
+    "exact_frozen_ids_verified": true,
+    "worker_ids_disjoint": true,
+    "total_expected_subtasks": 251,
+    "configs_byte_identical_to_baseline_except_exp_name": true,
+    "actual_output_paths_match_isolated_plan_dirs": true,
+    "project_and_upstream_clean": true,
+    "bridge_health_ok": true,
+    "gpu3_used_mib": 8678,
+    "gpu3_free_mib": 15405,
+    "gpu4_used_mib": 9133,
+    "gpu4_free_mib": 14951
+  },
+  "post_launch": {
+    "observed_at": "2026-10-05T08:23:35+08:00",
+    "all_eight_previous_workers_and_controller_live": true,
+    "both_new_workers_live": true,
+    "real_rendering_and_potential_requests_logged": true,
+    "gpu3_used_mib": 16315,
+    "gpu3_free_mib": 7769,
+    "gpu4_used_mib": 17224,
+    "gpu4_free_mib": 6860,
+    "new_terminal_status_files": []
+  },
+  "concurrency": 10,
+  "notes": "Two existing isolated frozen split6 stages were started early, sharing GPUs3/4 with split3. Algorithm, prompts, model, original task IDs, sensor settings, seed and navigation budgets are unchanged. The existing controller reuses live or terminal workers at the corresponding stage. Current resource evidence does not bound every future scene peak. Model calls remain interleaved full-run usage."
+}

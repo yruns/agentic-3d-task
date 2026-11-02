@@ -1,0 +1,11 @@
+{
+  "source_commit": "bfffc2be995a7223c8a0e9c86c18064dbe878838",
+  "entrypoint_sha256": "f67dad1c64c756052dbebe403a6c7c36bfc0fd28aeb49da902afac8cd4153da3",
+  "original_block_start_line": 367,
+  "original_block_end_line": 402,
+  "original_block_bytes": 2261,
+  "original_block_sha256": "66f315b3c356827e1d95cafbc07d6c3e4916470914708e4e8457bac40ccc9989",
+  "patched_entrypoint_sha256": "ea2189b53f36f5cc7537a55c190ad0770d27cea0b56f8956dbd589a37203f3f9",
+  "parallel_default_workers": 16,
+  "duplicate_key_policy": "If any eligible frontier keys repeat, submit no futures and use original sequential calls."
+}

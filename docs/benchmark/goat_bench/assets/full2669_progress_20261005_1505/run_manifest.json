@@ -1,0 +1,398 @@
+{
+  "observed_at": "2026-10-05T15:03:25+08:00",
+  "run_id": "REPRO_20261005_SCOPE_Gemini38Flash_full2669_progress_1505",
+  "requested_subtasks": 2669,
+  "observed_subtasks": 445,
+  "complete_episodes": 63,
+  "complete": false,
+  "successes": 311,
+  "sr": 69.88764044943821,
+  "spl": 49.82086728901424,
+  "saved_episodes": [
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "2",
+      "n": 9
+    },
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00800-TEEsavR23oF",
+      "episode_id": "4",
+      "n": 7
+    },
+    {
+      "scene_id": "00803-k1cupFYWXJ6",
+      "episode_id": "3",
+      "n": 7
+    },
+    {
+      "scene_id": "00803-k1cupFYWXJ6",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "2",
+      "n": 8
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "5",
+      "n": 10
+    },
+    {
+      "scene_id": "00808-y9hTuugGdiq",
+      "episode_id": "6",
+      "n": 10
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "0",
+      "n": 9
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "2",
+      "n": 6
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "3",
+      "n": 6
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "4",
+      "n": 8
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "5",
+      "n": 7
+    },
+    {
+      "scene_id": "00810-CrMo8WxCyVb",
+      "episode_id": "6",
+      "n": 9
+    },
+    {
+      "scene_id": "00815-h1zeeAwLh9Z",
+      "episode_id": "3",
+      "n": 9
+    },
+    {
+      "scene_id": "00815-h1zeeAwLh9Z",
+      "episode_id": "4",
+      "n": 7
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "0",
+      "n": 8
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "2",
+      "n": 5
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00823-7MXmsvcQjpJ",
+      "episode_id": "5",
+      "n": 5
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "2",
+      "n": 6
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "5",
+      "n": 6
+    },
+    {
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": "6",
+      "n": 5
+    },
+    {
+      "scene_id": "00827-BAbdmeyTvMZ",
+      "episode_id": "4",
+      "n": 7
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "2",
+      "n": 10
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "4",
+      "n": 6
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "5",
+      "n": 7
+    },
+    {
+      "scene_id": "00829-QaLdnwvtxbs",
+      "episode_id": "6",
+      "n": 10
+    },
+    {
+      "scene_id": "00832-qyAac8rV8Zk",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "0",
+      "n": 5
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "3",
+      "n": 9
+    },
+    {
+      "scene_id": "00839-zt1RVoi7PcG",
+      "episode_id": "4",
+      "n": 10
+    },
+    {
+      "scene_id": "00847-bCPU9suPUw9",
+      "episode_id": "3",
+      "n": 9
+    },
+    {
+      "scene_id": "00853-5cdEh9F2hJL",
+      "episode_id": "0",
+      "n": 7
+    },
+    {
+      "scene_id": "00853-5cdEh9F2hJL",
+      "episode_id": "3",
+      "n": 10
+    },
+    {
+      "scene_id": "00862-LT9Jq6dN3Ea",
+      "episode_id": "4",
+      "n": 10
+    },
+    {
+      "scene_id": "00869-MHPLjHsuG27",
+      "episode_id": "0",
+      "n": 6
+    },
+    {
+      "scene_id": "00869-MHPLjHsuG27",
+      "episode_id": "3",
+      "n": 5
+    },
+    {
+      "scene_id": "00871-VBzV5z6i1WS",
+      "episode_id": "3",
+      "n": 7
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "0",
+      "n": 9
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "2",
+      "n": 10
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "3",
+      "n": 6
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "4",
+      "n": 5
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "5",
+      "n": 5
+    },
+    {
+      "scene_id": "00876-mv2HUxq3B53",
+      "episode_id": "6",
+      "n": 9
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "2",
+      "n": 9
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "3",
+      "n": 8
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "4",
+      "n": 6
+    },
+    {
+      "scene_id": "00877-4ok3usBNeis",
+      "episode_id": "5",
+      "n": 10
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "2",
+      "n": 6
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "3",
+      "n": 6
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "4",
+      "n": 10
+    },
+    {
+      "scene_id": "00890-6s7QHgap2fW",
+      "episode_id": "5",
+      "n": 7
+    }
+  ],
+  "upstream_runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "initial_launch_heads": [
+    "89dd5337df953374c26b0ebcb67b3bb8663b9ad8",
+    "6625cdf9fd5ac07c594dbd1ec73958d4f688ffb2"
+  ],
+  "recovery_head": "59bc0d30e40f326544fb2524956754bd094e08fb",
+  "initial_bootstrap_revision": "d5c24a5e676d8729fd1f6d0f890d5bf5760b5827",
+  "recovery_bootstrap_revision": "08fdeba4c8529e7e01ce1e01f88b6e558e1e652f",
+  "launch_record_paths": [
+    "../scope_20261005/controller_launch_20261005.json",
+    "../scope_20261005/early_parallel_workers_20261005.json",
+    "../scope_20261005/network_recovery_20261005.json",
+    "../scope_20261005/co_gpu_worker_launch_20261005.json",
+    "../scope_20261005/co_gpu_paired_worker_launch_20261005.json",
+    "../scope_20261005/early_split6_workers_20261005.json",
+    "../scope_20261005/early_split7_workers_20261005.json"
+  ],
+  "early_split5_worker0_launch_head": "19fdb08812f37105ec08972ee2b946450801d60a",
+  "early_split5_worker1_launch_head": "15726c1d3311f6976415db94f3954efe103df927",
+  "input_sha256": {
+    "expected_subtask_ids.json": "ebe0a923affe64ad0a10bbe96ab36d8faa4b1fe0431e58906185d7a0de4b0b24",
+    "spl_by_distance_0.0_0.5_1.pkl": "3b6e57207a87d78945bbca388104d3239d11003993fbbfc01450c6c48730d1a8",
+    "spl_by_distance_0.0_0.5_3.pkl": "9fd7f8f465816a12c4da985a03d0b6bacb40522c1a6b4cbdbcea4b04f2bb02c3",
+    "spl_by_distance_0.0_0.5_4.pkl": "620f7609987dfd229174cf95c660d40c2125132adf5fe2a26d1af3703326bd80",
+    "spl_by_distance_0.0_0.5_5.pkl": "52bee45959a4b49a9376f796d9d2d8393986949fce35025944120ee6cd2e164c",
+    "spl_by_distance_0.0_0.5_6.pkl": "512c08cfcdb3e50fc6d299bf90e1f779d21b93e3c1dfb55228c670764ed311f1",
+    "spl_by_distance_0.0_0.5_7.pkl": "c8c13ed23a003e920c8f1cfe3a32e24b7017ff1de83d696bb8af67bafa6e1f47",
+    "spl_by_distance_0.5_1.0_1.pkl": "05ab177a320a947c0ebe79b7ab8191a24e250e7e6bf478e26bfc6a40f3824f4e",
+    "spl_by_distance_0.5_1.0_3.pkl": "f1391df60d9581d7b81fdda30ac485a8c0a5d5de464d6730d269c844906cf4c4",
+    "spl_by_distance_0.5_1.0_4.pkl": "d4f47ab8bec6fe9972afa888576745bef6611a6efb1dc22e727275c02fe35897",
+    "spl_by_distance_0.5_1.0_5.pkl": "7d7e487c2021874d8d292e4a84e323284ceadf2a8826cd76f8002206e15032fa",
+    "spl_by_distance_0.5_1.0_6.pkl": "49ad827fd7fd2e87430dbf4d9277d2d0f56d1b83b1b3fb26f1c5dcb386e3a4c3",
+    "spl_by_distance_0.5_1.0_7.pkl": "a4793021f1461a3f70f442aadc14ed92e542bdfa0bf10002f921aac661c37cd7",
+    "subtask_metadata.json": "885491e6f8d205ef2cb7c80deccf8ca66c95dbd19cbe223bfd932d8e35c303de",
+    "success_by_distance_0.0_0.5_1.pkl": "df78c2d80055521bf22d03c113b83cfd0cfcd861b31f8075faca719a6c9fc763",
+    "success_by_distance_0.0_0.5_3.pkl": "960f03b062237e32cb967eaeddb152eb209cdcdac438ad9ef0f4c5a67ff5161e",
+    "success_by_distance_0.0_0.5_4.pkl": "dbc2b20d1da8f823a5dfcb57b032a240ff47ed16b0262388e672f4a7b3ab4346",
+    "success_by_distance_0.0_0.5_5.pkl": "974bd4bef2d2ec96e489464baa8660b514a877c7be646a9e0f6375a1227b039c",
+    "success_by_distance_0.0_0.5_6.pkl": "3b5cbaffbc8f9f73234128b2360d2f86d0ab7580666993dc9c907e8c5180f952",
+    "success_by_distance_0.0_0.5_7.pkl": "eac0f601ac5f869a28538320b09c348167df85ef76fdc90743ee5c36d1ef851f",
+    "success_by_distance_0.5_1.0_1.pkl": "f5cc0194eab6ceb862adfda7f0d15890399224f39d2ccbdaaaeb10580794b9a7",
+    "success_by_distance_0.5_1.0_3.pkl": "d943d7a3c26f7c2ebb9b469f43204a1c9cd6b51d8f552e18fcc9c4c7da293eee",
+    "success_by_distance_0.5_1.0_4.pkl": "10375a1cadf91ec84fffd0cae32d80066d415cf813b6817a0cd5339a8218aeff",
+    "success_by_distance_0.5_1.0_5.pkl": "da5a227057b01457fc9633dd342c7cabf472f5112cb8c4b589298e3b846fce56",
+    "success_by_distance_0.5_1.0_6.pkl": "22a6eb60784909592a8d0f5f5ebd0ee0f947a2d63c272ef690947cf391c20abd",
+    "success_by_distance_0.5_1.0_7.pkl": "59d73c9cdcb896394a6cf35003498a85a9be0c7e298bec98c5288e8fa6f1ea81"
+  },
+  "local_sqlite_verified": true,
+  "notes": "Incomplete immutable progress observation of the original frozen requested fold. Paired primary metrics and exact IDs match SQLite; all observed episodes contain their original full subtask set. Initial and recovery transport clients contributed. SCOPE source, model, prompts, selection and navigation budget are unchanged. Global interleaved API usage has no per-fold or per-qid attribution; absent traces are not zero calls.",
+  "remote_sqlite_verified": true,
+  "sql_aggregate_tolerance": 1e-10,
+  "missing_per_qid_usage_remains_null": true,
+  "all_previous_sqlite_rows_preserved": true,
+  "verification_method": "Consistent remote SQLite backup, independently compared with paired raw artifacts and original frozen IDs; all prior rows preserved.",
+  "progress_baseline_run_id": "REPRO_20261005_SCOPE_Gemini38Flash_full2669_progress_1450",
+  "new_ids_since_baseline": [
+    "00847-bCPU9suPUw9_3_0",
+    "00847-bCPU9suPUw9_3_1",
+    "00847-bCPU9suPUw9_3_2",
+    "00847-bCPU9suPUw9_3_3",
+    "00847-bCPU9suPUw9_3_4",
+    "00847-bCPU9suPUw9_3_5",
+    "00847-bCPU9suPUw9_3_6",
+    "00847-bCPU9suPUw9_3_7",
+    "00847-bCPU9suPUw9_3_8"
+  ],
+  "early_split6_workers_launch_head": "22927e8d75edf9794a66b5699a7a14bbc2e1b09f",
+  "early_split7_workers_launch_head": "154d11e55a47ca6d67dad8fe0e214847477bd2bb",
+  "independent_remote_verification_recorded_at_utc": "2026-10-05T07:05:42.200405+00:00",
+  "independent_remote_verification_scope": "Paired raw rows, original metadata bytes, frozen-ID subset and explicit indices, complete observed episodes, overall/per-modality SQL metrics, exact new episodes versus 1450; per-qid usage remains null."
+}

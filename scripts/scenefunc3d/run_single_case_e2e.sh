@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-"${PYTHON:-python}" -m codex_agent.scenefunc3d.runner "$@"
+"${PYTHON:-python3}" -m codex_agent.cli.run_scenefunc3d "$@"

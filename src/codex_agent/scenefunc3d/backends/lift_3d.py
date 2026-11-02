@@ -41,7 +41,7 @@ _PLY_LITTLE_ENDIAN_DTYPES: dict[str, str] = {
 
 @dataclass(frozen=True)
 class _PlyVertexLayout:
-    """Binary PLY vertex layout parsed from a SceneFuncVal-CG mesh header."""
+    """Binary PLY vertex layout parsed from a SceneFunc3D mesh header."""
 
     vertex_count: int
     dtype_fields: tuple[tuple[str, str], ...]
@@ -149,7 +149,7 @@ def backproject_mask_to_world(
 
 
 def load_scene_mesh_vertices(mesh_ply_path: Path) -> FloatArray:
-    """Load ordered XYZ vertices from a SceneFuncVal-CG binary mesh PLY."""
+    """Load ordered XYZ vertices from a SceneFunc3D binary mesh PLY."""
     try:
         with mesh_ply_path.open("rb") as handle:
             layout = _read_binary_ply_vertex_layout(handle, mesh_ply_path)
@@ -180,6 +180,19 @@ def load_scene_mesh_vertices(mesh_ply_path: Path) -> FloatArray:
     return _validate_points_world(
         cast(FloatArray, points_world), field_name=f"vertices at {mesh_ply_path}"
     )
+
+
+def load_scene_mesh_vertex_count(mesh_ply_path: Path) -> int:
+    """Load only the vertex count from a SceneFunc3D binary mesh PLY header."""
+    try:
+        with mesh_ply_path.open("rb") as handle:
+            layout = _read_binary_ply_vertex_layout(handle, mesh_ply_path)
+    except OSError as exc:
+        raise ToolInputError(
+            "could not read SceneFunc3D mesh PLY header: "
+            f"path={mesh_ply_path}; error_type={exc.__class__.__name__}"
+        ) from exc
+    return layout.vertex_count
 
 
 def assign_nearest_scene_point_indices(
@@ -530,6 +543,7 @@ __all__ = [
     "assign_nearest_scene_point_indices",
     "backproject_mask_to_world",
     "load_mask_npz",
+    "load_scene_mesh_vertex_count",
     "load_scene_mesh_vertices",
     "write_lift_npz",
     "write_lift_ply",

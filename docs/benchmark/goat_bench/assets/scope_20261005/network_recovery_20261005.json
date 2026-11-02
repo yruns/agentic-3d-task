@@ -1,0 +1,118 @@
+{
+  "observed_at": "2026-10-05T06:14:17+08:00",
+  "incident": "SSH reverse tunnel exited after Operation timed out; all six workers raised APIConnectionError and exited 1 at 06:01",
+  "upstream_model_bridge_health": "healthy before and after tunnel restoration",
+  "failed_attempt_root": "/home/ysh/Datasets/SCOPE/failed_attempts/network_disconnect_20261005_0601",
+  "archived_artifacts": [
+    "controller stdout and terminal exit",
+    "six worker stdout/upstream logs and terminal exits",
+    "worker-specific existing primary metric checkpoints",
+    "six incomplete episode visualization folders"
+  ],
+  "retained_checkpoint_subtasks": 12,
+  "checkpoint_complete_episodes": [
+    {
+      "split": 1,
+      "worker": 0,
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": 0,
+      "n": 7
+    },
+    {
+      "split": 4,
+      "worker": 0,
+      "scene_id": "00824-Dd4bFSTQ8gi",
+      "episode_id": 3,
+      "n": 5
+    }
+  ],
+  "head_commit_at_relaunch": "59bc0d30e40f326544fb2524956754bd094e08fb",
+  "runtime_commit": "46f1e1f78077219c30e35440540e4ef22995194c",
+  "bootstrap_revision": "08fdeba4c8529e7e01ce1e01f88b6e558e1e652f",
+  "bootstrap_sha256": "2070ca2d1787ecdd9655eef7932abebf72477848b05cde54f207151e7c4b3328",
+  "controller_revision": "82860f002a4fec57ece1f455c330ae425e7b5650",
+  "controller_sha256": "4c1018adbbf4d1d10b4b2f8a2242c848c50a30107257b8047e843786c9aee2a4",
+  "controller_pid": 2706487,
+  "tunnel_helper_sha256": "5fa424bb7a6cb59edda56b9e9250638e2e787d3864ed64fa3c2085a280c1deef",
+  "tunnel_helper_tmux": "scope-api-tunnel-20261005",
+  "real_reconnect_probe": {
+    "before_workers_restarted": true,
+    "owned_ssh_terminated_at": "2026-10-04T22:11:47Z",
+    "second_connection_started_at": "2026-10-04T22:11:49Z",
+    "linux_loopback_health_after": "HTTP 200; gemini-3.8-flash"
+  },
+  "ledger_first_zero_based_line_for_relaunch": 2388,
+  "client_timeout_seconds": 240,
+  "client_max_retries": 2,
+  "relaunch_at": "2026-10-05T06:14:01+08:00",
+  "workers": [
+    {
+      "split": 1,
+      "worker": 0,
+      "physical_gpu": 0,
+      "pid": 2706523
+    },
+    {
+      "split": 1,
+      "worker": 1,
+      "physical_gpu": 2,
+      "pid": 2706516
+    },
+    {
+      "split": 3,
+      "worker": 0,
+      "physical_gpu": 3,
+      "pid": 2706525
+    },
+    {
+      "split": 3,
+      "worker": 1,
+      "physical_gpu": 4,
+      "pid": 2706522
+    },
+    {
+      "split": 4,
+      "worker": 0,
+      "physical_gpu": 5,
+      "pid": 2706521
+    },
+    {
+      "split": 4,
+      "worker": 1,
+      "physical_gpu": 6,
+      "pid": 2706527
+    }
+  ],
+  "quality_gate_exit_codes": {
+    "ruff": 0,
+    "black": 0,
+    "mypy_tunnel": 0,
+    "diff": 0,
+    "mypy_src": 0,
+    "keyframe": 0,
+    "bash": 0,
+    "tunnel": 0
+  },
+  "passed_tests": {
+    "keyframe": 53,
+    "tunnel": 5
+  },
+  "complete": false,
+  "notes": "Checkpointed complete episodes are skipped by original SCOPE code; incomplete episodes restart from original poses. Log-only successes are not merged. Same model, prompts, assets and navigation budgets; all relaunched workers now use the two-retry/240s bootstrap. Ledger has no per-qid attribution.",
+  "post_relaunch_probe": {
+    "observed_at_utc": "2026-10-04T22:17:07.573509+00:00",
+    "six_worker_gpu_pids_present": true,
+    "controller_waiting_for_live_split1_workers": true,
+    "completed_episode_skip_logged_by_original_code": [
+      "00824-Dd4bFSTQ8gi episode 0",
+      "00824-Dd4bFSTQ8gi episode 3"
+    ],
+    "new_completed_api_calls_in_ledger": 85,
+    "http_status_counts": {
+      "200": 85
+    },
+    "model": "gemini-3.8-flash"
+  },
+  "checkpoint_audit": "network_checkpoint_audit_20261005.json",
+  "mkdocs_build_exit": 0
+}

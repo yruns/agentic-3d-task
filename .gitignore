@@ -100,6 +100,11 @@ conceptgraph/configs/slam_pipeline/*.yaml
 # Keep configs/llm.example.toml (placeholders) tracked instead.
 configs/llm.toml
 
+# SceneFunc3D sidecar runtime config may contain private proxy paths/cookies.
+# Keep the *.example.toml placeholders tracked instead.
+configs/scenefunc3d_backends.toml
+configs/scenefunc3d_sidecar_headers.toml
+
 # Codex ModelHub adapter secrets: real AKs live only in the gitignored upstream
 # TOML / .env. Keep the *.example.toml + .env.example placeholders tracked.
 # (Defense-in-depth; codex_modelhub_adapter/.gitignore already ignores these.)

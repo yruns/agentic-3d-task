@@ -1,0 +1,26 @@
+{
+  "port": 8898,
+  "calls": [
+    {
+      "index": 0,
+      "model_matches": true,
+      "finish_reason": "stop",
+      "stripped_content_characters": 90,
+      "returned_original_content": true
+    },
+    {
+      "index": 1,
+      "model_matches": true,
+      "finish_reason": "stop",
+      "stripped_content_characters": 5,
+      "returned_original_content": true
+    },
+    {
+      "index": 2,
+      "model_matches": true,
+      "finish_reason": "stop",
+      "stripped_content_characters": 0,
+      "returned_original_content": true
+    }
+  ]
+}

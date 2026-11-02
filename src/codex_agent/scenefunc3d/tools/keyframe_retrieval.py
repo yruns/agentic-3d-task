@@ -9,7 +9,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Annotated, TypeAlias
+from typing import Annotated, Literal, TypedDict
 
 from pydantic import (
     BaseModel,
@@ -20,12 +20,8 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from typing_extensions import NotRequired
 
-from .crop_recommendations import (
-    MatchedObjectCropPayload,
-    RecommendedCrop,
-    recommended_crops_for_matched_objects,
-)
 from .models import ToolInputError
 from .scene_context import SceneFunc3dToolScene
 
@@ -171,7 +167,15 @@ class KeyframeSelectorArgs(BaseModel):
         return values
 
 
-KeyframeMatchedObjectPayload: TypeAlias = MatchedObjectCropPayload
+class KeyframeMatchedObjectPayload(TypedDict, total=False):
+    """Visible object metadata returned with selected frames."""
+
+    object_id: str
+    label: str
+    score: float
+    source: str
+    bbox_xyxy: NotRequired[list[float]]
+    bbox_format: NotRequired[Literal["pixel_xyxy"]]
 
 
 @dataclass(frozen=True)
@@ -183,7 +187,6 @@ class KeyframeSelection:
     score: float
     reason: str
     matched_objects: tuple[KeyframeMatchedObjectPayload, ...] = ()
-    recommended_crops: tuple[RecommendedCrop, ...] = ()
 
     def to_payload(self) -> dict[str, object]:
         """Return this selection as a JSON-ready mapping."""
@@ -195,10 +198,6 @@ class KeyframeSelection:
         }
         if self.matched_objects:
             payload["matched_objects"] = list(self.matched_objects)
-        if self.recommended_crops:
-            payload["recommended_crops"] = [
-                crop.to_payload() for crop in self.recommended_crops
-            ]
         return payload
 
 
@@ -286,7 +285,6 @@ def keyframe_selector(
                 frame_id,
                 rank=rank,
                 visible_object_match=score_by_frame_id.get(frame_id),
-                query=args.query,
             )
             for rank, frame_id in enumerate(selected_frame_ids, start=1)
         )
@@ -345,7 +343,6 @@ def _selection_for_visible_object_frame(
     *,
     rank: int,
     visible_object_match: VisibleObjectFrameScore | None,
-    query: str,
 ) -> KeyframeSelection:
     if visible_object_match is None:
         return KeyframeSelection(
@@ -360,10 +357,6 @@ def _selection_for_visible_object_frame(
         score=visible_object_match.score,
         reason="visible_object_query_match",
         matched_objects=visible_object_match.matched_objects,
-        recommended_crops=recommended_crops_for_matched_objects(
-            visible_object_match.matched_objects,
-            query,
-        ),
     )
 
 

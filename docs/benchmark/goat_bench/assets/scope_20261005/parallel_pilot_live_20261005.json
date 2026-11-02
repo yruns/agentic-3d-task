@@ -1,0 +1,23 @@
+{
+  "observed_at_utc": "2026-10-05T11:14:29.851763+00:00",
+  "project_launch_head": "f141b9136d75d150c6574beee57896aa41d0cd19",
+  "parallel_runtime_commit": "606d29ca19901882015cdd432017b4a867cef978",
+  "pid": 3006585,
+  "split": 1,
+  "worker": 0,
+  "preserved_checkpoint_ids": 67,
+  "bridge_port": 8897,
+  "parallel_frontier_workers": 16,
+  "completed_eval_requests": 16,
+  "max_observed_request_overlap": 2,
+  "statuses": {
+    "200": 16
+  },
+  "credential_slot_counts": {
+    "0": 6,
+    "1": 5,
+    "2": 5
+  },
+  "preflight_rows_excluded": 9,
+  "scope": "Only this migrated worker used the new bridge during the captured prefix. API overlap is observed from dispatch/response timestamps, not a claimed whole-pipeline speedup."
+}

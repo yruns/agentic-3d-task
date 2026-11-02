@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import io
 import json
 import math
 import struct
@@ -14,7 +17,10 @@ import pytest
 from pydantic import ValidationError
 
 from codex_agent.errors import SceneFunc3dDataError
+from codex_agent.scenefunc3d.backends import sam_rpc
+from codex_agent.scenefunc3d.backends.config import HttpHeader
 from codex_agent.scenefunc3d.servers.http_json import JsonRoute, make_json_handler
+from codex_agent.scenefunc3d.servers.schemas import SamMaskResponse
 from codex_agent.scenefunc3d.tools.__main__ import main
 from codex_agent.scenefunc3d.tools.models import ToolInputError
 from codex_agent.scenefunc3d.tools.molmo_pointing import (
@@ -293,6 +299,8 @@ def test_cli_molmo_point_returns_recoverable_backend_error(
             "molmo_point",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps(args_payload),
         ]
@@ -640,6 +648,8 @@ def test_cli_sam_mask_returns_recoverable_backend_error(
             "sam_mask",
             "--scene-root",
             str(scene_dir),
+            "--out-dir",
+            str(tmp_path / "direct_out"),
             "--args",
             json.dumps(args_payload),
         ]
@@ -720,6 +730,381 @@ def test_cli_sam_mask_uses_configured_fake_backend(
     assert payload["candidates"][0]["candidate_id"] == "mask_00"
     assert Path(payload["candidates"][0]["mask_npz_path"]).exists()
     assert Path(payload["contact_sheet_path"]).exists()
+
+
+def test_cli_sam_mask_materializes_inline_remote_mask(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    mask = np.zeros((80, 100), dtype=np.bool_)
+    mask[20:30, 10:30] = True
+    mask_bytes_io = io.BytesIO()
+    np.savez_compressed(mask_bytes_io, mask=mask)
+    mask_bytes = mask_bytes_io.getvalue()
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": "/mnt/bn/remote/mask_00.npz",
+                        "mask_npz_base64": base64.b64encode(mask_bytes).decode("ascii"),
+                        "mask_npz_sha256": hashlib.sha256(mask_bytes).hexdigest(),
+                        "pixel_count": 200,
+                        "coverage_percent": 2.5,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    try:
+        code = main(
+            [
+                "sam_mask",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(image_path),
+                        "points": [
+                            {
+                                "x_px": 10.0,
+                                "y_px": 20.0,
+                                "source": '<point x="10" y="20">drawer</point>',
+                                "label": "drawer",
+                            }
+                        ],
+                    }
+                ),
+                "--out-dir",
+                str(output_root),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    materialized_path = Path(payload["candidates"][0]["mask_npz_path"])
+    assert (
+        materialized_path
+        == output_root / "sam" / "000000" / "candidates" / "mask_00.npz"
+    )
+    assert materialized_path.is_file()
+    assert Path(payload["contact_sheet_path"]).exists()
+
+
+def test_cli_sam_mask_materializes_rle_remote_mask(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    np = pytest.importorskip("numpy")
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    expected_mask = np.zeros((80, 100), dtype=np.bool_)
+    expected_mask[0, 0:3] = True
+    expected_mask[1, 0:3] = True
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_rle": {
+                            "encoding": "row_major_counts",
+                            "height": 80,
+                            "width": 100,
+                            "counts": [0, 3, 97, 3, 7897],
+                        },
+                        "pixel_count": 6,
+                        "coverage_percent": 0.075,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    try:
+        code = main(
+            [
+                "sam_mask",
+                "--scene-root",
+                str(scene_dir),
+                "--backend-config",
+                str(config_path),
+                "--args",
+                json.dumps(
+                    {
+                        "frame_id": "000000",
+                        "image_path": str(image_path),
+                        "points": [
+                            {
+                                "x_px": 10.0,
+                                "y_px": 20.0,
+                                "source": '<point x="10" y="20">drawer</point>',
+                                "label": "drawer",
+                            }
+                        ],
+                    }
+                ),
+                "--out-dir",
+                str(output_root),
+            ]
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    materialized_path = Path(payload["candidates"][0]["mask_npz_path"])
+    assert (
+        materialized_path
+        == output_root / "sam" / "000000" / "candidates" / "mask_00.npz"
+    )
+    with np.load(materialized_path) as archive:
+        np.testing.assert_array_equal(archive["mask"], expected_mask)
+    assert Path(payload["contact_sheet_path"]).exists()
+
+
+def test_sam_mask_rejects_remote_path_only_candidate(
+    tmp_path: Path,
+) -> None:
+    _, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    output_root.mkdir()
+    server = _start_json_server(
+        {
+            "/v1/masks": lambda payload: {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": "/mnt/bn/remote/mask_00.npz",
+                        "pixel_count": 6,
+                        "coverage_percent": 0.075,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        }
+    )
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url=f"http://127.0.0.1:{server.server_port}",
+    )
+    args = SamMaskArgs.model_validate(
+        {
+            "frame_id": "000000",
+            "image_path": image_path,
+            "points": [
+                {
+                    "x_px": 10.0,
+                    "y_px": 20.0,
+                    "source": '<point x="10" y="20">drawer</point>',
+                    "label": "drawer",
+                },
+            ],
+        }
+    )
+    try:
+        with pytest.raises(
+            ToolInputError,
+            match="candidate_id='mask_00'.*payloads=mask_npz_path",
+        ):
+            sam_mask(args, out_dir=output_root, backend_config_path=config_path)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_sam_mask_rejects_https_path_only_candidate_even_when_path_exists(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    np = pytest.importorskip("numpy")
+    _, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    stale_mask_path = output_root / "stale_remote_masks" / "mask_00.npz"
+    stale_mask_path.parent.mkdir(parents=True)
+    np.savez_compressed(
+        stale_mask_path,
+        mask=np.zeros((80, 100), dtype=np.bool_),
+    )
+
+    captured_payload: dict[str, object] = {}
+
+    def fake_post_json(
+        url: str,
+        *,
+        payload: dict[str, object],
+        response_model: type[SamMaskResponse],
+        timeout_seconds: float,
+        request_headers: tuple[HttpHeader, ...] = (),
+    ) -> SamMaskResponse:
+        captured_payload.update(payload)
+        return response_model.model_validate(
+            {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(stale_mask_path),
+                        "pixel_count": 0,
+                        "coverage_percent": 0.0,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        )
+
+    monkeypatch.setattr(sam_rpc, "post_json", fake_post_json)
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url="https://sidecar.example/sam",
+    )
+    args = SamMaskArgs.model_validate(
+        {
+            "frame_id": "000000",
+            "image_path": image_path,
+            "points": [
+                {
+                    "x_px": 10.0,
+                    "y_px": 20.0,
+                    "source": '<point x="10" y="20">drawer</point>',
+                    "label": "drawer",
+                },
+            ],
+        }
+    )
+
+    with pytest.raises(
+        ToolInputError,
+        match="remote HTTPS.*candidate_id='mask_00'.*payloads=mask_npz_path",
+    ) as exc_info:
+        sam_mask(args, out_dir=output_root, backend_config_path=config_path)
+
+    assert str(stale_mask_path) not in str(exc_info.value)
+    assert stale_mask_path.is_file()
+    assert "image" in captured_payload
+    assert "image_path" not in captured_payload
+
+
+def test_cli_sam_mask_redacts_https_path_only_candidate_from_events(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    np = pytest.importorskip("numpy")
+    scene_dir, image_path = _write_cli_scene_with_real_image(tmp_path)
+    output_root = tmp_path / "out"
+    stale_mask_path = output_root / "stale_remote_masks" / "mask_00.npz"
+    stale_mask_path.parent.mkdir(parents=True)
+    np.savez_compressed(
+        stale_mask_path,
+        mask=np.zeros((80, 100), dtype=np.bool_),
+    )
+
+    def fake_post_json(
+        url: str,
+        *,
+        payload: dict[str, object],
+        response_model: type[SamMaskResponse],
+        timeout_seconds: float,
+        request_headers: tuple[HttpHeader, ...] = (),
+    ) -> SamMaskResponse:
+        return response_model.model_validate(
+            {
+                "request_id": payload["request_id"],
+                "model_name": "SAM2.1-Hiera-L",
+                "candidates": [
+                    {
+                        "candidate_id": "mask_00",
+                        "score": 0.91,
+                        "mask_npz_path": str(stale_mask_path),
+                        "pixel_count": 0,
+                        "coverage_percent": 0.0,
+                    }
+                ],
+                "latency_ms": 1.0,
+            }
+        )
+
+    monkeypatch.setattr(sam_rpc, "post_json", fake_post_json)
+    config_path = _write_backend_config(
+        tmp_path,
+        molmo_url="http://127.0.0.1:8711",
+        sam_url="https://sidecar.example/sam",
+    )
+
+    code = main(
+        [
+            "sam_mask",
+            "--scene-root",
+            str(scene_dir),
+            "--backend-config",
+            str(config_path),
+            "--args",
+            json.dumps(
+                {
+                    "frame_id": "000000",
+                    "image_path": str(image_path),
+                    "points": [
+                        {
+                            "x_px": 10.0,
+                            "y_px": 20.0,
+                            "source": '<point x="10" y="20">drawer</point>',
+                            "label": "drawer",
+                        }
+                    ],
+                }
+            ),
+            "--out-dir",
+            str(output_root),
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert "remote HTTPS" in payload["error"]
+    assert str(stale_mask_path) not in payload["error"]
+    event_lines = (
+        (output_root / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    )
+    event = json.loads(event_lines[-1])
+    assert event["tool_name"] == "sam_mask"
+    assert event["status"] == "failed"
+    assert "mask_npz_path" in event["error"]
+    assert str(stale_mask_path) not in event["error"]
 
 
 def test_cli_sam_mask_expands_crop_mask_to_full_frame(
@@ -1725,7 +2110,6 @@ def _write_backend_config(tmp_path: Path, *, molmo_url: str, sam_url: str) -> Pa
 molmo_url = "{molmo_url}"
 sam_url = "{sam_url}"
 request_timeout_seconds = 2.0
-artifact_staging_root = "{output_root}"
 allowed_image_roots = ["{tmp_path}"]
 allowed_output_roots = ["{output_root}"]
 """,

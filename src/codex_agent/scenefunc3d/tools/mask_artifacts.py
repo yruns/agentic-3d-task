@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TypedDict
 
 from ...errors import SceneFunc3dDataError
-from ..final_mask_artifacts import FinalMaskMultiViewDecision
 
 
 class ArtifactStatus(str, Enum):
@@ -40,37 +39,6 @@ class SceneFunc3dRunSummaryPayload(TypedDict):
     accepted_fragment_ids: list[str]
     failure_type: str
     stop_reason: str
-
-
-class SceneFunc3dRunMultiViewDecisionPayload(TypedDict):
-    """JSON-ready first-lift multi-view decision stored in run summary."""
-
-    seed_fragment_id: str
-    action: str
-    reason: str
-    suggested_frame_ids: list[str]
-    rejected_suggested_frame_ids: list[str]
-
-
-class SceneFunc3dCompletedRunSummaryPayload(TypedDict):
-    """JSON-ready payload for a successful SceneFunc3D run summary."""
-
-    sample_id: str
-    visit_id: str
-    desc_id: str
-    task_description: str
-    status: str
-    selected_frame_ids: list[str]
-    accepted_fragment_ids: list[str]
-    failure_type: str
-    stop_reason: str
-    mask_artifact_path: str
-    mask_npz_path: str
-    mask_ply_path: str
-    confidence: float
-    uncertainties: list[str]
-    multi_view_decision: SceneFunc3dRunMultiViewDecisionPayload
-    final_point_count: int
 
 
 class SceneFunc3dRunCompletionEventPayload(TypedDict):
@@ -142,53 +110,6 @@ class SceneFunc3dRunSummary:
             "failure_type": self.failure_type,
             "stop_reason": self.stop_reason,
         }
-
-
-@dataclass(frozen=True)
-class SceneFunc3dCompletedRunSummary:
-    """Durable run summary after a valid final mask artifact is produced."""
-
-    sample_id: str
-    visit_id: str
-    desc_id: str
-    task_description: str
-    selected_frame_ids: tuple[str, ...]
-    accepted_fragment_ids: tuple[str, ...]
-    mask_artifact_path: Path
-    mask_npz_path: Path
-    mask_ply_path: Path
-    confidence: float
-    uncertainties: tuple[str, ...]
-    multi_view_decision: FinalMaskMultiViewDecision
-    final_point_count: int
-
-    def to_payload(self) -> SceneFunc3dCompletedRunSummaryPayload:
-        """Return the JSON-ready representation stored in ``summary.json``."""
-        return {
-            "sample_id": self.sample_id,
-            "visit_id": self.visit_id,
-            "desc_id": self.desc_id,
-            "task_description": self.task_description,
-            "status": ArtifactStatus.SUCCESS.value,
-            "selected_frame_ids": list(self.selected_frame_ids),
-            "accepted_fragment_ids": list(self.accepted_fragment_ids),
-            "failure_type": "",
-            "stop_reason": self._stop_reason(),
-            "mask_artifact_path": str(self.mask_artifact_path),
-            "mask_npz_path": str(self.mask_npz_path),
-            "mask_ply_path": str(self.mask_ply_path),
-            "confidence": self.confidence,
-            "uncertainties": list(self.uncertainties),
-            "multi_view_decision": _multi_view_decision_payload(
-                self.multi_view_decision
-            ),
-            "final_point_count": self.final_point_count,
-        }
-
-    def _stop_reason(self) -> str:
-        if self.multi_view_decision.action.value == "stop":
-            return "single_view_complete"
-        return "multiview_expanded"
 
 
 @dataclass(frozen=True)
@@ -284,18 +205,6 @@ def write_run_summary(paths: MaskArtifactPaths, summary: SceneFunc3dRunSummary) 
     return paths.summary_json
 
 
-def write_completed_run_summary(
-    paths: MaskArtifactPaths, summary: SceneFunc3dCompletedRunSummary
-) -> Path:
-    """Write the successful run summary and return the written JSON path."""
-    paths.create_dirs()
-    paths.summary_json.write_text(
-        json.dumps(summary.to_payload(), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return paths.summary_json
-
-
 def append_run_completion_event(
     paths: MaskArtifactPaths, event: SceneFunc3dRunCompletionEvent
 ) -> Path:
@@ -321,15 +230,3 @@ def append_tool_invocation_event(
             f"events_path={events_path}; error_type={exc.__class__.__name__}"
         ) from exc
     return events_path
-
-
-def _multi_view_decision_payload(
-    decision: FinalMaskMultiViewDecision,
-) -> SceneFunc3dRunMultiViewDecisionPayload:
-    return {
-        "seed_fragment_id": decision.seed_fragment_id,
-        "action": decision.action.value,
-        "reason": decision.reason,
-        "suggested_frame_ids": list(decision.suggested_frame_ids),
-        "rejected_suggested_frame_ids": list(decision.rejected_suggested_frame_ids),
-    }

@@ -44,6 +44,7 @@ from ..openeqa.question import (
 )
 from ..openeqa.scene import filter_questions_with_local_scenes
 from ..runtime import CodexAgentRuntime
+from .runtime_preflight import preflight_codex_runtime
 
 # Wall-clock budget is OFF by default (per-turn latency scales with adapter
 # contention under concurrency); the tool-call cap is the primary, timing-
@@ -178,6 +179,7 @@ def main(argv: list[str] | None = None) -> int:
         max_tool_calls=args.max_tool_calls,
         max_repeated_tool_calls=args.max_repeated_tool_calls,
     )
+    preflight_codex_runtime(config)
     runtime = CodexAgentRuntime(config)
     judge = _build_judge(
         no_judge=args.no_judge, llm_config=args.llm_config, judge_model=args.judge_model

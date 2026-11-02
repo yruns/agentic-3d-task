@@ -1,0 +1,29 @@
+{
+  "models": [
+    {
+      "file": "/home/ysh/Datasets/SCOPE/weights/yolov8x-world.pt",
+      "source_archive": "/home/ysh/Datasets/SCOPE/downloads/yolov8x-world.pt",
+      "bytes": 147961954,
+      "sha256": "9b99398e46cffbf2b9a7e668512fa295f0d710d173ae0a815ec706ced5d1099b",
+      "zip_crc": "passed",
+      "zip_members": 666
+    },
+    {
+      "file": "/home/ysh/Datasets/SCOPE/weights/sam_l.pt",
+      "source_archive": "/home/ysh/Datasets/SCOPE/downloads/sam_l.pt",
+      "bytes": 1249524607,
+      "sha256": "3adcc4315b642a4d2101128f611684e8734c41232a17c648ed1693702a49a622",
+      "zip_crc": "passed",
+      "zip_members": 483
+    },
+    {
+      "file": "/home/ysh/Datasets/SCOPE/weights/openclip/CLIP-ViT-B-32-laion2B-s34B-b79K/open_clip_pytorch_model.bin",
+      "source_archive": "/home/ysh/Datasets/SCOPE/downloads/open_clip_pytorch_model.bin",
+      "bytes": 605219813,
+      "sha256": "1bd3c7172de5b207ceac554f5ab5266166f3b9baccc9af5989bc801016d080ad",
+      "zip_crc": "passed",
+      "zip_members": 304
+    }
+  ],
+  "status": "passed"
+}

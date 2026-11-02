@@ -6,6 +6,8 @@ and other assets stay beside the records that cite them.
 
 ## Benchmarks
 
+- [GOAT-Bench Timeline](goat_bench/README.md): SCOPE reproduction preparation,
+  continuous multimodal navigation, and exact episode/protocol records.
 - [NR3D Timeline](nr3d/README.md): visual grounding evaluations, stage-1
   keyframe coverage, tool-loop runs, and reasoning-path ablations.
 - [OpenEQA Timeline](openeqa/README.md): embodied QA evaluations, no-frame

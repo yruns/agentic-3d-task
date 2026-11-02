@@ -1,0 +1,118 @@
+{
+  "observed_at_utc": "2026-10-05T12:53:43.422602+00:00",
+  "ledger": {
+    "source_relative_path": "tmp/scope_repro_20261005/modelhub_calls_image_cache.jsonl",
+    "read_started_at_unix": 1791204823.419801,
+    "read_finished_at_unix": 1791204823.422602,
+    "bytes_read": 202871,
+    "validated_complete_prefix_bytes": 202871,
+    "validated_complete_prefix_sha256": "7b13315247602c30c5abbdc67e451c2631a21f0ec94795a7855ba445301fed70",
+    "excluded_incomplete_tail_bytes": 0,
+    "validated_rows": 499,
+    "validator": "scripts.scope.modelhub_bridge.LedgerRecord",
+    "http_status_counts": {
+      "200": 499
+    },
+    "credential_slot_counts": {
+      "0": 160,
+      "1": 166,
+      "2": 173,
+      "unassigned": 0
+    },
+    "rows_missing_queue_ms": 0,
+    "queue_ms": {
+      "n": 499,
+      "min": 0.014458084478974342,
+      "p50": 0.04237494431436062,
+      "p90": 0.08691598195582627,
+      "p95": 0.13391190441325304,
+      "p99": 0.293208693619816,
+      "max": 10.845666052773595
+    },
+    "elapsed_ms": {
+      "n": 499,
+      "min": 969.6465421002358,
+      "p50": 7074.62316704914,
+      "p90": 15930.202066688798,
+      "p95": 19743.76954223261,
+      "p99": 28835.8609447464,
+      "max": 48761.49479101878
+    },
+    "rows_missing_completed_timestamp": 0,
+    "last_recorded_at_unix": 1791204823.181907,
+    "elapsed_excludes_linux_upload": true,
+    "elapsed_clock_boundary": "BridgeService.forward starts after the handler reads and validates the complete HTTP body; elapsed includes cache resolution and credential queue/upstream work after this boundary."
+  },
+  "last_120_seconds": {
+    "start_at_unix": 1791204703.422602,
+    "end_at_unix": 1791204823.422602,
+    "completed_ledger_responses": 91,
+    "completed_ledger_qpm": 45.5,
+    "http_status_counts": {
+      "200": 91
+    },
+    "credential_slot_counts": {
+      "0": 30,
+      "1": 29,
+      "2": 32,
+      "unassigned": 0
+    },
+    "credential_assigned_completed_responses": 91,
+    "credential_assigned_completed_qpm": 45.5,
+    "http200_completed_responses": 91,
+    "http200_completed_qpm": 45.5,
+    "queue_ms": {
+      "n": 91,
+      "min": 0.014458084478974342,
+      "p50": 0.03216706681996584,
+      "p90": 0.06208301056176424,
+      "p95": 0.08039554813876748,
+      "p99": 0.3006458049640054,
+      "max": 0.3874580143019557
+    }
+  },
+  "cache_inventory": {
+    "scan_started_at_unix": 1791204823.424432,
+    "scan_finished_at_unix": 1791204823.4502242,
+    "regular_files": 912,
+    "regular_file_bytes": 178541676,
+    "finalized_digest_files": 912,
+    "finalized_digest_file_bytes": 178541676,
+    "temporary_atomic_write_files": 0,
+    "temporary_atomic_write_file_bytes": 0,
+    "directories": 0,
+    "entries_vanished_during_scan": 0,
+    "content_files_read": 0,
+    "recursive": false,
+    "consistency": "One metadata-only pass over the active flat cache; not a stopped or transactional cache snapshot."
+  },
+  "bridge_source": {
+    "checkout_head": "ba1a24c732cd826ede0b618e23aee724204c9fc4",
+    "relative_file": "scripts/scope/modelhub_bridge.py",
+    "file_sha256": "8b77ccee10dbd77bef61550c672415f9b06df5e7dd207333c996b05346d363a9",
+    "file_matches_checkout_head": true,
+    "listener_port": 8889,
+    "listener_pids": [
+      40009
+    ],
+    "process_pid_ppid_start_command": "40009  8311 Mon Oct  5 20:25:46 2026     .venv/bin/python",
+    "live_process_loaded_bytes_verified": false
+  },
+  "scope": {
+    "secret_configs_read": 0,
+    "image_content_files_read": 0,
+    "model_requests_sent": 0,
+    "load_probes_sent": 0,
+    "process_mutations": 0,
+    "image_upload_probes_are_not_model_ledger_rows": true,
+    "ledger_http200_is_not_episode_completion": true,
+    "all_http_paths_have_ledger_rows": false,
+    "unrecorded_cache_miss_http409_count": null,
+    "unrecorded_cache_read_failure_http502_count": null,
+    "cache_error_returns_without_ledger_source_lines": [
+      501,
+      509
+    ],
+    "upload_requests_are_not_in_model_ledger": true
+  }
+}
