@@ -52,6 +52,24 @@ def test_crop_by_pixel_bbox(tool_scene: OpenEqaToolScene, tmp_path: Path) -> Non
         assert out.size[0] > 0 and out.size[1] > 0
 
 
+def test_crop_distinct_boxes_on_same_frame_use_unique_paths(
+    tool_scene: OpenEqaToolScene, tmp_path: Path
+) -> None:
+    first = view_crop(
+        tool_scene,
+        ViewCropArgs(frame_id=3, bbox=[0.0, 0.0, 0.7, 0.7]),
+        out_dir=tmp_path,
+    )
+    second = view_crop(
+        tool_scene,
+        ViewCropArgs(frame_id=3, bbox=[0.25, 0.25, 1.0, 1.0]),
+        out_dir=tmp_path,
+    )
+    assert first.image_path != second.image_path
+    assert first.image_path.exists()
+    assert second.image_path.exists()
+
+
 def test_crop_bad_frame_is_recoverable(
     tool_scene: OpenEqaToolScene, tmp_path: Path
 ) -> None:

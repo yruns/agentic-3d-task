@@ -24,7 +24,12 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..scene import DEFAULT_MAX_IMAGE_SIZE
-from .imaging import box_looks_normalized, crop_rgb_for_view, normalized_box_to_pixels
+from .imaging import (
+    box_looks_normalized,
+    clamp_box,
+    crop_rgb_for_view,
+    normalized_box_to_pixels,
+)
 from .models import ToolInputError
 from .scene_context import OpenEqaToolScene, build_selector
 
@@ -106,13 +111,15 @@ def _crop_by_bbox(
             f"({scene.total_frames} frames)"
         )
     raw_path = scene.raw_rgb_path(frame_id)
+    width, height = _image_size(raw_path)
     box = tuple(args.bbox)
     if box_looks_normalized(box):  # type: ignore[arg-type]
-        width, height = _image_size(raw_path)
         box = normalized_box_to_pixels(box, width, height)  # type: ignore[arg-type]
-    destination = out_dir / f"{tool_scene.clip_id}_crop_{frame_id:06d}.jpg"
+    clamped = clamp_box(box, width, height)  # type: ignore[arg-type]
+    box_token = "_".join(str(coord) for coord in clamped)
+    destination = out_dir / f"{tool_scene.clip_id}_crop_{frame_id:06d}_{box_token}.jpg"
     saved, applied = crop_rgb_for_view(
-        raw_path, destination, box=box, max_size=args.max_image_size  # type: ignore[arg-type]
+        raw_path, destination, box=clamped, max_size=args.max_image_size
     )
     return ViewCropResult(
         image_path=saved,
@@ -144,11 +151,14 @@ def _crop_by_object(
             f"object {args.object_id} has no stored 2D detection box; "
             "showing a centered crop of its best view"
         )
+    clamped = clamp_box(box, width, height)
+    box_token = "_".join(str(coord) for coord in clamped)
     destination = (
-        out_dir / f"{tool_scene.clip_id}_objcrop_{args.object_id}_{frame_id:06d}.jpg"
+        out_dir
+        / f"{tool_scene.clip_id}_objcrop_{args.object_id}_{frame_id:06d}_{box_token}.jpg"
     )
     saved, applied = crop_rgb_for_view(
-        raw_path, destination, box=box, max_size=args.max_image_size
+        raw_path, destination, box=clamped, max_size=args.max_image_size
     )
     return ViewCropResult(
         image_path=saved,

@@ -19,6 +19,8 @@ package keeps importing without it (mirrors
 from __future__ import annotations
 
 import math
+import os
+import threading
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -122,17 +124,27 @@ def crop_rgb_for_view(
         raise OpenEqaDataError(f"max_size must be positive, got {max_size}")
     image_mod, _, _ = _load_pillow()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with image_mod.open(source) as image:  # type: ignore[attr-defined]
-        rgb = image.convert("RGB")
-        applied = clamp_box(box, rgb.width, rgb.height)
-        crop = rgb.crop(applied)
-        longest = max(crop.width, crop.height)
-        if longest > max_size:
-            scale = max_size / longest
-            crop = crop.resize(
-                (max(1, round(crop.width * scale)), max(1, round(crop.height * scale)))
-            )
-        crop.save(destination, format="JPEG", quality=jpeg_quality)
+    tmp_path = destination.with_name(
+        f".{destination.stem}.{os.getpid()}.{threading.get_ident()}{destination.suffix}"
+    )
+    try:
+        with image_mod.open(source) as image:  # type: ignore[attr-defined]
+            rgb = image.convert("RGB")
+            applied = clamp_box(box, rgb.width, rgb.height)
+            crop = rgb.crop(applied)
+            longest = max(crop.width, crop.height)
+            if longest > max_size:
+                scale = max_size / longest
+                crop = crop.resize(
+                    (
+                        max(1, round(crop.width * scale)),
+                        max(1, round(crop.height * scale)),
+                    )
+                )
+            crop.save(tmp_path, format="JPEG", quality=jpeg_quality)
+        tmp_path.replace(destination)
+    finally:
+        tmp_path.unlink(missing_ok=True)
     return destination, applied
 
 
@@ -196,7 +208,14 @@ def compose_contact_sheet(
         drawer.text((x0 + 4, y0 + tile_px + 1), label, fill=_LABEL_FG, font=font)
 
     destination.parent.mkdir(parents=True, exist_ok=True)
-    sheet.save(destination, format="JPEG", quality=jpeg_quality)
+    tmp_path = destination.with_name(
+        f".{destination.stem}.{os.getpid()}.{threading.get_ident()}{destination.suffix}"
+    )
+    try:
+        sheet.save(tmp_path, format="JPEG", quality=jpeg_quality)
+        tmp_path.replace(destination)
+    finally:
+        tmp_path.unlink(missing_ok=True)
     return destination
 
 

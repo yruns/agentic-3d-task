@@ -53,8 +53,15 @@ def test_prompt_says_no_images_and_guides_tools(
     assert "python -m codex_agent.openeqa.tools" in prompt
     assert str(openeqa_fixture.clip_id) in prompt
     # Every tool is documented in the inlined playbook.
-    for name in ("list_objects", "keyframe_selector", "view_frame", "view_bev"):
+    for name in (
+        "list_objects",
+        "keyframe_selector",
+        "view_frame",
+        "view_crop",
+        "view_bev",
+    ):
         assert name in prompt
+    assert "five OpenEQA tools" in prompt
 
 
 def test_is_valid_response(openeqa_fixture: OpenEqaFixture) -> None:
