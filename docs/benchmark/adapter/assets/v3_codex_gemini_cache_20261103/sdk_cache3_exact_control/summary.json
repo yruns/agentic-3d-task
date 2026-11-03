@@ -1,0 +1,31 @@
+{
+  "session_id": "gemini_sdk_cache_20261103_083b5bd490c9",
+  "source_request_id": "0a1d7a5041f050e440b617866fb45608",
+  "http_status": 200,
+  "max_tokens": 8192,
+  "only_model_input_change": "remove all signature fields; empty redacted reasoning_content restored using verified hash",
+  "usage": {
+    "completion_tokens": 1,
+    "prompt_tokens": 698,
+    "total_tokens": 699,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "traffic_type": "PROVISIONED_THROUGHPUT",
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 698
+      }
+    ],
+    "candidatesTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 1
+      }
+    ]
+  },
+  "error": null,
+  "elapsed_s": 2.9418631670996547,
+  "source_sha256": "03f286d62c844f9f6e06a9981e7ca9baa9c5be6e946433f1fead20456aabd17a"
+}

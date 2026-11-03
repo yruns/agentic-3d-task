@@ -1,0 +1,30 @@
+{
+  "turn_number": 3,
+  "method": "rawResponseItem/completed",
+  "payload": {
+    "params": {
+      "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+      "turnId": "01a1a16b-e809-7aa2-b666-8a2c9f84e767",
+      "item": {
+        "type": "message",
+        "status": "completed",
+        "id": "msg_fe39bf63b00b791cd106ddcc",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "S = 5, A = 4, T = 6, U = 7, R = 9, N = 0, P = 1, L = 3, E = 8\n\n  546790 (SATURN)\n+ 794075 (URANUS)\n--------\n 1340865 (PLANETS)",
+            "annotations": []
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a1a16b-e809-7aa2-b666-8a2c9f84e767",
+          "content_item_kinds": [
+            "unknown"
+          ]
+        }
+      }
+    }
+  },
+  "state_fields": []
+}

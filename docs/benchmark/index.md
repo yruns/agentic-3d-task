@@ -12,6 +12,8 @@ and other assets stay beside the records that cite them.
   redesign runs, judge notes, and failure trace analysis.
 - [SceneFunc Molmo SAM3D Timeline](scenefunc_molmo_sam3d/README.md):
   SceneFuncVal-CG small-object Molmo/SAM/3D-lifting feasibility checks.
+- [Adapter Protocol Diagnostics](adapter/README.md): direct HTTP tool/history
+  and opaque-state checks, archived separately from task accuracy leaderboards.
 
 ## Process Rules
 
@@ -27,6 +29,16 @@ Per-run data is ingested into the benchmark's local SQLite database:
 `openeqa/runs.sqlite` via `scripts/ingest_openeqa_run.py`, and `nr3d/runs.sqlite`
 via `scripts/ingest_nr3d_run.py`. Keep durable summaries/traces alongside the
 version records so the ignored databases can be rebuilt.
+Adapter protocol probes use `adapter/runs.sqlite`, rebuilt from their durable
+assets with the version's `ingest.py`.
+
+Latest SDK/protocol diagnostic:
+[v3 Codex–Gemini state/cache](adapter/v3_codex_gemini_cache_20261103.md)
+— 65 upstream requests, six dynamic tools, 34 completed SDK turns. The isolated
+SDK bridge preserved native signed state and observed cache hits; an exact
+accounting control supports a 3,315-token historical reasoning/state cache lower
+bound. Failed and zero-cache runs remain archived. Production adapter source is
+unchanged; GPT remains native Responses-only.
 
 Latest local API validation:
 [v13 office Responses NR3D smoke10](nr3d/v13_office_responses_smoke10_20261103.md)

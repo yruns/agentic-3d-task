@@ -1,0 +1,7 @@
+{
+  "error_type": "RuntimeError",
+  "message": "unexpected status 502 Bad Gateway: upstream_http_error, url: http://127.0.0.1:8791/v1/responses",
+  "stderr_tail": [
+    "\u001b[2m2026-11-03T12:26:21.298373Z\u001b[0m \u001b[33m WARN\u001b[0m \u001b[2mcodex_models_manager::model_info\u001b[0m\u001b[2m:\u001b[0m Unknown model gpt-5.6-luna is used. This will use fallback model metadata."
+  ]
+}

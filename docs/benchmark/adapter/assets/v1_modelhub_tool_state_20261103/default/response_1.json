@@ -1,0 +1,6 @@
+{
+  "error": {
+    "message": "This model is no longer available on this endpoint; use the unified protocol.",
+    "code": "-1002"
+  }
+}

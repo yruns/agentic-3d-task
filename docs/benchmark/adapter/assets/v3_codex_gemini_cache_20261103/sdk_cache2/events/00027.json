@@ -1,0 +1,19 @@
+{
+  "turn_number": 2,
+  "method": "item/completed",
+  "payload": {
+    "completedAtMs": 1793709378192,
+    "item": {
+      "delivery": null,
+      "id": "msg_8c44e11ace3fdf06c4b03ae9",
+      "memoryCitation": null,
+      "phase": null,
+      "questions": null,
+      "text": "D = 5, O = 2, N = 6, A = 4, L = 8, G = 1, E = 9, R = 7, B = 3, T = 0\n\n  526485 (DONALD)\n+ 197485 (GERALD)\n--------\n  723970 (ROBERT)",
+      "type": "agentMessage"
+    },
+    "threadId": "01a1a168-65a7-7561-a5c8-a3309863c558",
+    "turnId": "01a1a168-e0c8-78d3-96ab-961fc0ed0a5b"
+  },
+  "state_fields": []
+}

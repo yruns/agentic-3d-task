@@ -1,0 +1,19 @@
+{
+  "turn_number": 2,
+  "method": "item/completed",
+  "payload": {
+    "completedAtMs": 1793708961659,
+    "item": {
+      "delivery": null,
+      "id": "msg_ab9c3ebface9b257b738690c",
+      "memoryCitation": null,
+      "phase": null,
+      "questions": null,
+      "text": "{\n  \"marker\": \"context-2145a5a712ce\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-2e654647d04e\",\n  \"beta_receipt\": \"receipt-0d3bc7eff8ca\"\n}",
+      "type": "agentMessage"
+    },
+    "threadId": "01a1a162-644a-79a0-9e28-4fb7795b77d4",
+    "turnId": "01a1a162-9887-70c2-8566-fd0e9689b75f"
+  },
+  "state_fields": []
+}

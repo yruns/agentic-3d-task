@@ -1,0 +1,30 @@
+{
+  "turn_number": 2,
+  "method": "rawResponseItem/completed",
+  "payload": {
+    "params": {
+      "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+      "turnId": "01a1a16b-9519-7fd2-aa22-b18d2b09a244",
+      "item": {
+        "type": "message",
+        "status": "completed",
+        "id": "msg_273ffdfec6500a7b0aaf5e47",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "D = 5, O = 2, N = 6, A = 4, L = 8, G = 1, E = 9, R = 7, B = 3, T = 0\n\n  526485 (DONALD)\n+ 197485 (GERALD)\n--------\n  723970 (ROBERT)",
+            "annotations": []
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a1a16b-9519-7fd2-aa22-b18d2b09a244",
+          "content_item_kinds": [
+            "unknown"
+          ]
+        }
+      }
+    }
+  },
+  "state_fields": []
+}

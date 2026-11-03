@@ -1,0 +1,6 @@
+{
+  "error": {
+    "message": "400: Invalid thought signature.",
+    "code": "-4003"
+  }
+}

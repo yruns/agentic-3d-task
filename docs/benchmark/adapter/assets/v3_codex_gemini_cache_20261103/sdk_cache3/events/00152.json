@@ -1,0 +1,11 @@
+{
+  "turn_number": 11,
+  "method": "item/agentMessage/delta",
+  "payload": {
+    "delta": "OK",
+    "itemId": "msg_8eadd302961e71830e8e5d5d",
+    "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+    "turnId": "01a1a16c-dd4a-7302-9610-8674d48377e2"
+  },
+  "state_fields": []
+}

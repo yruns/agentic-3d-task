@@ -1,0 +1,140 @@
+{
+  "id": "resp_05cd4f20bfbb270f016ae9be82ee5881939cf6076bc65c06b1",
+  "object": "response",
+  "created_at": 1793703555,
+  "status": "completed",
+  "access_programs": null,
+  "background": false,
+  "completed_at": 1793703557,
+  "content_filters": [
+    {
+      "blocked": false,
+      "source_type": "prompt",
+      "content_filter_raw": [],
+      "content_filter_results": {},
+      "content_filter_offsets": {
+        "start_offset": 0,
+        "end_offset": 890,
+        "check_offset": 0
+      }
+    }
+  ],
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 1600,
+  "max_tool_calls": null,
+  "model": "deployment-gpt-6-luna-platform-global",
+  "moderation": null,
+  "output": [
+    {
+      "id": "rs_05cd4f20bfbb270f016ae9be8537b48193984763eeae03854e",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": {
+        "redacted_state": true,
+        "length": 1592,
+        "sha256": "48c1c4363e4d7001baa387214f869826a70ff81c20ddb8b8a05572121daf7276"
+      },
+      "summary": []
+    },
+    {
+      "id": "msg_05cd4f20bfbb270f016ae9be854e048193805ea5d692a87253",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\"marker\":\"context-ab073861bc73\",\"sum\":348,\"alpha_receipt\":\"receipt-d387b8d8b859\",\"beta_receipt\":\"receipt-c1f1c57049b1\"}"
+        }
+      ],
+      "phase": "final_answer",
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "24h",
+  "reasoning": {
+    "context": "all_turns",
+    "effort": "medium",
+    "mode": "standard",
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 0
+    }
+  },
+  "tools": [
+    {
+      "type": "function",
+      "description": "Look up one record and return its numeric value and unique receipt.",
+      "name": "lookup_record",
+      "output_schema": null,
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "enum": [
+              "alpha",
+              "beta"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "strict": true
+    }
+  ],
+  "top_logprobs": 0,
+  "top_p": 0.98,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 420,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 66,
+    "output_tokens_details": {
+      "reasoning_tokens": 17
+    },
+    "total_tokens": 486
+  },
+  "user": null,
+  "metadata": {}
+}

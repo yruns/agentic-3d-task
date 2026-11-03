@@ -1,0 +1,62 @@
+{
+  "run_id": "modelhub_tool_state_20261103_78eaf94fd2",
+  "timestamp": "2026-11-03T18:57:46.404950+08:00",
+  "branch": "feat/upgrade_codex_adapter",
+  "head": "255b091849c0bafeef8f5e494d022a7750eefa91",
+  "tracked_drift": false,
+  "executed_probe_sha256": "eae440a8d099512398a50f7cc065cd03fb8af4e0707721d12a7faa782afd46ff",
+  "endpoint_without_credentials": "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/unified/v1/chat/completions",
+  "protocol": "unified_chat",
+  "model": "gpt-6-luna",
+  "stream": false,
+  "credential_source": "Explicit user curl from this chat; loaded in memory only",
+  "same_credential_all_requests": true,
+  "session_id": "modelhub_tool_state_20261103_78eaf94fd2",
+  "effort": "medium",
+  "max_tokens": 1600,
+  "requests": [
+    {
+      "index": 1,
+      "logid": "modelhub_tool_state_20261103_78eaf94fd2_1",
+      "request_state_fields": [
+        {
+          "path": "$.reasoning_effort",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "c082456a7766e23a18db084cd34b6ff510baef506548b897cc80e9b7d3e121c8",
+          "length": 6,
+          "opaque_name": false
+        }
+      ],
+      "assistant_replay_hashes": [],
+      "output_replay_hashes": [],
+      "outputs_present_in_request": true,
+      "http_status": 400,
+      "elapsed_s": 1.283,
+      "response_fields": [
+        "$.error",
+        "$.error.code",
+        "$.error.message",
+        "$.error.type",
+        "$.error.upstream_body",
+        "$.error.upstream_body.error",
+        "$.error.upstream_body.error.message",
+        "$.error.upstream_body.error.type",
+        "$.error.upstream_body.error.param",
+        "$.error.upstream_body.error.code"
+      ],
+      "response_state_fields": [],
+      "usage": null,
+      "response_model": null
+    }
+  ],
+  "tool_executions": [],
+  "result": "upstream_http_failure",
+  "expected": {
+    "marker": "context-f84bb31d2846",
+    "sum": 348,
+    "alpha_receipt": "receipt-7279b6a40515",
+    "beta_receipt": "receipt-472157253208"
+  },
+  "scope": "Direct HTTP protocol smoke; no Codex SDK, adapter, dataset or benchmark scoring"
+}

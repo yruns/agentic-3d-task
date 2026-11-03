@@ -1,0 +1,51 @@
+{
+  "turn_number": 5,
+  "method": "rawResponse/completed",
+  "payload": {
+    "params": {
+      "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+      "turnId": "01a1a16c-61a0-7031-8394-888e97af37b4",
+      "responseId": "resp_be7e493aeee63a8d2ffff09a902d1306",
+      "usage": {
+        "totalTokens": 8497,
+        "inputTokens": 8468,
+        "cachedInputTokens": 4051,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 29,
+        "reasoningOutputTokens": 28
+      },
+      "usageMetadata": {
+        "amount": null,
+        "metadata": {
+          "input_tokens": 8468,
+          "input_tokens_details": {
+            "cached_tokens": 4051
+          },
+          "output_tokens": 29,
+          "output_tokens_details": {
+            "reasoning_tokens": 28
+          },
+          "total_tokens": 8497
+        }
+      }
+    }
+  },
+  "state_fields": [
+    {
+      "path": "$.payload.params.usage.reasoningOutputTokens",
+      "type": "int",
+      "nonempty": true,
+      "sha256": "59e19706d51d39f66711c2653cd7eb1291c94d9b55eb14bda74ce4dc636d015a",
+      "length": null,
+      "opaque_name": false
+    },
+    {
+      "path": "$.payload.params.usageMetadata.metadata.output_tokens_details.reasoning_tokens",
+      "type": "int",
+      "nonempty": true,
+      "sha256": "59e19706d51d39f66711c2653cd7eb1291c94d9b55eb14bda74ce4dc636d015a",
+      "length": null,
+      "opaque_name": false
+    }
+  ]
+}

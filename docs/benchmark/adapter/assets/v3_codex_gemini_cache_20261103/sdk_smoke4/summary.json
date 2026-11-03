@@ -1,0 +1,318 @@
+{
+  "branch": "",
+  "head": "255b091849c0bafeef8f5e494d022a7750eefa91",
+  "tracked_drift": false,
+  "worktree": "/home/ysh/codebase/agentic-3d-task/tmp/gemini_codex_cache_worktree_20261103",
+  "sdk_version": "0.163.0",
+  "local_python_sha256": {
+    "bridge.py": "dd1007fb09c877f3cfd340910891bf89caf795d7d1fa0635339dce66837605cd",
+    "bridge_v1.py": "5301bffb1111af5455cad58e410a369ee1f7438f152f3bfa1167a268a4fa528d",
+    "cache_probe.py": "505ce2f105bb72fddd7a894e1a704141f712ed769028a68e53026eae28b42cfc",
+    "cache_probe_v1.py": "5521a485bee94fe269e0453a5cfabf1a95cab8062ca83596a7966376a8c8735d",
+    "probe_support.py": "db454076251200a577b615f657fdde4e99e1aa2390ec991aa2113f63afd51e4d",
+    "sdk_driver.py": "a3893317d5a4a36d3d213e6ce399f5cbd6148af0e4abfc14568ec6953a1cb9a8",
+    "sdk_driver_v1.py": "4451c5677317fc7db0a704db9022ed1d8ac6ab1072359caa826b4f1d3c073d56",
+    "sdk_driver_v2.py": "860b4bde7f871ed43ebd57ece3d7701fa570ba379b5992a77d9c8dc245be1d99",
+    "test_bridge.py": "59b2dfc1fbbdad3c1b497c47df06db07d1f0892f47d17699f2de4c3bdb1b8e4b"
+  },
+  "sdk_python_sha256": {
+    "__init__.py": "9a58d9301d099824b21c15fef2fdc4e98191aa9ee4fb1b9b9026e5d700590bd3",
+    "_approval_mode.py": "9cd7dbf7f20529b97adb9291832ed01645befff58d9642670f1fb8b774bd1b62",
+    "_goal.py": "b61a1a25322e8d385ded39a1a93f0c4131d5bf0c66461cee89989930d2352643",
+    "_initialize_metadata.py": "9ab05330ae46e2c2fc1e6279efeca98789a759f43b19601e887e4772d0f4f6da",
+    "_inputs.py": "6b6b92ce54bb65c8eb68585e794207d3c800434a5486d91b38c4eefefdb371ce",
+    "_login.py": "0acc5d5e801afbb9b1b73ce2867412031dbb099fb4747713fdaec41b3c02e91b",
+    "_message_router.py": "8c1239bae89e3128ea797fd1ed23619bccab5614212908f3cb498f84ea67c396",
+    "_run.py": "ca0e0c0d9a2c3ae8606cc5986c93bae100c47583df6c4e5643dc5cc582428263",
+    "_runtime_requirements.py": "dab856ff4ff4a02c567b3f362c5b1298b0cdeaed6d2a84384c5dc87765447d28",
+    "_sandbox.py": "01ab6cabc1642941ba958b287c34a5475066c934b67e4fd194d78b4bb2eb27b2",
+    "_version.py": "678f4945d9906b0150a3d84cfc217e06824b9a963e7d248bd4b0d0fb51210658",
+    "api.py": "bd9cac51820997fa4d3fa4ac5c24894f45b92da8ba481d49c44cb96dcc9af430",
+    "async_client.py": "7d1e291eed8ce7a907b9dafd79580f286451224c12c59302b61918046a01f99c",
+    "client.py": "8452afbd8148ea212c94e8a6727468054b175acb0daf95002c84b66b604d05a6",
+    "errors.py": "104b435d7e9f293c3327ad59fc7985363503fb4d919cadbb73f943d12a75a615",
+    "generated/__init__.py": "0fa172a905073649a4c73e2559c8f3c81816da814ebb692ee812d67ae0dcc599",
+    "generated/notification_registry.py": "d4d1b15daede7394b70e0a4d5498171fc671a123f6503269c4b651eb936c228f",
+    "generated/v2_all.py": "7e76ff20474dc44ef05b66778904d7304fdc930839ed0a0ed98cab603e999289",
+    "models.py": "f0a33994b07369711e4d5b2c7a977d20dfbad5d9e0a72b922ca14ce639a6c4fd",
+    "retry.py": "0d0d048748a675ea29a2df497ae416d79887d5a69d03453fb7ca7387c4c8af47",
+    "types.py": "31a95f0a42e1e4f655663db0473927d102664547f534713ec2040cdb913c8afc"
+  },
+  "run_id": "gemini_codex_sdk_20261103_83e9b00d4834",
+  "session_id": "gemini_codex_sdk_20261103_83e9b00d4834",
+  "timestamp": "2026-11-03T20:28:30.659564+08:00",
+  "model": "gemini-3.8-flash",
+  "adapter_url": "http://127.0.0.1:8791/v1",
+  "credential_source": "Current chat user credential; memory/env only",
+  "same_credential_all_requests": true,
+  "scope": "Real Codex SDK/app-server -> isolated Responses adapter -> ModelHub Gemini",
+  "result": "passed",
+  "expected": {
+    "marker": "context-bcf1a1eb15ab",
+    "sum": 348,
+    "alpha_receipt": "receipt-80b1f4be8ba4",
+    "beta_receipt": "receipt-7c605eda8df3"
+  },
+  "turns": [
+    {
+      "id": "01a1a161-e945-7640-969c-eb0e52f52bac",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793708910,
+      "completed_at": 1793708921,
+      "duration_ms": 10472,
+      "final_response": "```json\n{\n  \"marker\": \"context-bcf1a1eb15ab\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-80b1f4be8ba4\",\n  \"beta_receipt\": \"receipt-7c605eda8df3\"\n}\n```",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "The original marker is context-bcf1a1eb15ab. First call lookup_record for alpha, wait for its result, then call lookup_record for beta and wait for its result. Do not call both together. Return only a JSON object with marker (the original marker), sum (sum of the two returned values), alpha_receipt and beta_receipt (exact tool receipts). Do not invent receipts. Use no other tools.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a161-e96b-7682-8ab0-3e902958044e",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_4a2ff8195becf81b421201eb",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "arguments": {
+            "name": "alpha"
+          },
+          "contentItems": [
+            {
+              "text": "{\"name\": \"alpha\", \"value\": 137, \"receipt\": \"receipt-80b1f4be8ba4\"}",
+              "type": "inputText"
+            }
+          ],
+          "durationMs": 2,
+          "id": "call_e9754f6f3eb255505f7b1ea066f12181_0",
+          "namespace": null,
+          "status": "completed",
+          "success": true,
+          "tool": "lookup_record",
+          "type": "dynamicToolCall"
+        },
+        {
+          "content": [],
+          "id": "rs_da58f44e163a6eaa3eedfe06",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "arguments": {
+            "name": "beta"
+          },
+          "contentItems": [
+            {
+              "text": "{\"name\": \"beta\", \"value\": 211, \"receipt\": \"receipt-7c605eda8df3\"}",
+              "type": "inputText"
+            }
+          ],
+          "durationMs": 2,
+          "id": "call_64bc7a49e855ee0ea9ccbc086ef71cc5_0",
+          "namespace": null,
+          "status": "completed",
+          "success": true,
+          "tool": "lookup_record",
+          "type": "dynamicToolCall"
+        },
+        {
+          "content": [],
+          "id": "rs_01c5d8d304752095ae967fb5",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_e64b06e1409ce54ddbcb06ca",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "```json\n{\n  \"marker\": \"context-bcf1a1eb15ab\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-80b1f4be8ba4\",\n  \"beta_receipt\": \"receipt-7c605eda8df3\"\n}\n```",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 460,
+          "outputTokens": 204,
+          "reasoningOutputTokens": 127,
+          "totalTokens": 664
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 1144,
+          "outputTokens": 357,
+          "reasoningOutputTokens": 248,
+          "totalTokens": 1501
+        }
+      },
+      "answer": {
+        "marker": "context-bcf1a1eb15ab",
+        "sum": 348,
+        "alpha_receipt": "receipt-80b1f4be8ba4",
+        "beta_receipt": "receipt-7c605eda8df3"
+      },
+      "answer_format": "markdown_json",
+      "answer_matches_expected": true
+    },
+    {
+      "id": "01a1a162-123b-7be3-b8a9-3bc3cf1b89b0",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793708921,
+      "completed_at": 1793708926,
+      "duration_ms": 4776,
+      "final_response": "```json\n{\n  \"marker\": \"context-bcf1a1eb15ab\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-80b1f4be8ba4\",\n  \"beta_receipt\": \"receipt-7c605eda8df3\"\n}\n```",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "Verify by calling lookup_record for alpha exactly once more, wait for its result, then repeat the SAME JSON using the ORIGINAL marker, sum, alpha_receipt and beta_receipt from our conversation. Use no other tools.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a162-1244-74f0-95b9-d79cb087eb30",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_10ebf79a2cd1af1483352638",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "arguments": {
+            "name": "alpha"
+          },
+          "contentItems": [
+            {
+              "text": "{\"name\": \"alpha\", \"value\": 137, \"receipt\": \"receipt-80b1f4be8ba4\"}",
+              "type": "inputText"
+            }
+          ],
+          "durationMs": 2,
+          "id": "call_a6a5204fe0e2f72d94e44ea9900d2cd3_0",
+          "namespace": null,
+          "status": "completed",
+          "success": true,
+          "tool": "lookup_record",
+          "type": "dynamicToolCall"
+        },
+        {
+          "content": [],
+          "id": "rs_7bbf2e5bac28bfc63065ab4e",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_1f883d6293f4941bc3c54c30",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "```json\n{\n  \"marker\": \"context-bcf1a1eb15ab\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-80b1f4be8ba4\",\n  \"beta_receipt\": \"receipt-7c605eda8df3\"\n}\n```",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 795,
+          "outputTokens": 83,
+          "reasoningOutputTokens": 6,
+          "totalTokens": 878
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 2648,
+          "outputTokens": 507,
+          "reasoningOutputTokens": 305,
+          "totalTokens": 3155
+        }
+      },
+      "answer": {
+        "marker": "context-bcf1a1eb15ab",
+        "sum": 348,
+        "alpha_receipt": "receipt-80b1f4be8ba4",
+        "beta_receipt": "receipt-7c605eda8df3"
+      },
+      "answer_format": "markdown_json",
+      "answer_matches_expected": true
+    }
+  ],
+  "tool_executions": [
+    {
+      "turn_number": 1,
+      "thread_id": "01a1a161-e92e-7c60-8c3d-f99d86e0f6d2",
+      "turn_id": "01a1a161-e945-7640-969c-eb0e52f52bac",
+      "call_id": "call_e9754f6f3eb255505f7b1ea066f12181_0",
+      "tool": "lookup_record",
+      "arguments": {
+        "name": "alpha"
+      },
+      "result": {
+        "name": "alpha",
+        "value": 137,
+        "receipt": "receipt-80b1f4be8ba4"
+      }
+    },
+    {
+      "turn_number": 1,
+      "thread_id": "01a1a161-e92e-7c60-8c3d-f99d86e0f6d2",
+      "turn_id": "01a1a161-e945-7640-969c-eb0e52f52bac",
+      "call_id": "call_64bc7a49e855ee0ea9ccbc086ef71cc5_0",
+      "tool": "lookup_record",
+      "arguments": {
+        "name": "beta"
+      },
+      "result": {
+        "name": "beta",
+        "value": 211,
+        "receipt": "receipt-7c605eda8df3"
+      }
+    },
+    {
+      "turn_number": 2,
+      "thread_id": "01a1a161-e92e-7c60-8c3d-f99d86e0f6d2",
+      "turn_id": "01a1a162-123b-7be3-b8a9-3bc3cf1b89b0",
+      "call_id": "call_a6a5204fe0e2f72d94e44ea9900d2cd3_0",
+      "tool": "lookup_record",
+      "arguments": {
+        "name": "alpha"
+      },
+      "result": {
+        "name": "alpha",
+        "value": 137,
+        "receipt": "receipt-80b1f4be8ba4"
+      }
+    }
+  ],
+  "compact_disabled": true,
+  "native_tools_disabled": true,
+  "dynamic_tools": [
+    "lookup_record"
+  ],
+  "effort": "omitted: provider default",
+  "cli_version": "0.163.0",
+  "thread_id": "01a1a161-e92e-7c60-8c3d-f99d86e0f6d2",
+  "tool_order_correct": true,
+  "elapsed_s": 15.566,
+  "event_count": 37
+}

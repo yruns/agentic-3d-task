@@ -1,0 +1,110 @@
+{
+  "headers": {
+    "Content-Type": "application/json",
+    "X-TT-LOGID": "modelhub_tool_state_20261103_0359bc2079_5_removed",
+    "extra": "{\"session_id\": \"modelhub_tool_state_20261103_0359bc2079\", \"chat_run_id\": \"modelhub_tool_state_20261103_0359bc2079\", \"source\": \"codex_adapter_protocol_probe\"}"
+  },
+  "body": {
+    "model": "gpt-6-luna",
+    "stream": false,
+    "max_output_tokens": 1600,
+    "store": false,
+    "include": [
+      "reasoning.encrypted_content"
+    ],
+    "input": [
+      {
+        "role": "system",
+        "content": "You are testing a tool protocol. Always use lookup_record to obtain the requested records. First call alpha, wait for its result, then call beta, wait for its result, then return only JSON with marker, sum, alpha_receipt, beta_receipt. Never invent tool results. Do not call both tools in the same response. Preserve the user's marker exactly."
+      },
+      {
+        "role": "user",
+        "content": "Fetch records alpha and beta, add their values, and report their receipts. The marker is context-ab073861bc73."
+      },
+      {
+        "id": "fc_05cd4f20bfbb270f016ae9be781e448193bf075fd2c6557093",
+        "type": "function_call",
+        "status": "completed",
+        "arguments": "{\"name\":\"alpha\"}",
+        "call_id": "call_7zSs5A1uI2WHJi7qLUxlxDbT",
+        "name": "lookup_record"
+      },
+      {
+        "type": "function_call_output",
+        "call_id": "call_7zSs5A1uI2WHJi7qLUxlxDbT",
+        "output": "{\"name\": \"alpha\", \"value\": 137, \"receipt\": \"receipt-d387b8d8b859\"}"
+      },
+      {
+        "id": "fc_05cd4f20bfbb270f016ae9be79fc0c819391c1d16ec59d6d16",
+        "type": "function_call",
+        "status": "completed",
+        "arguments": "{\"name\":\"beta\"}",
+        "call_id": "call_lqOmyUSLu3znHHyO8k5Ny1xs",
+        "name": "lookup_record"
+      },
+      {
+        "type": "function_call_output",
+        "call_id": "call_lqOmyUSLu3znHHyO8k5Ny1xs",
+        "output": "{\"name\": \"beta\", \"value\": 211, \"receipt\": \"receipt-c1f1c57049b1\"}"
+      },
+      {
+        "id": "msg_05cd4f20bfbb270f016ae9be7be04c8193bb64ccaf9bef5af4",
+        "type": "message",
+        "status": "completed",
+        "content": [
+          {
+            "type": "output_text",
+            "annotations": [],
+            "logprobs": [],
+            "text": "{\"marker\":\"context-ab073861bc73\",\"sum\":348,\"alpha_receipt\":\"receipt-d387b8d8b859\",\"beta_receipt\":\"receipt-c1f1c57049b1\"}"
+          }
+        ],
+        "phase": "final_answer",
+        "role": "assistant"
+      },
+      {
+        "role": "user",
+        "content": "Now verify by calling lookup_record for alpha once more. After the tool returns, repeat the same final JSON with the ORIGINAL marker, sum, alpha_receipt and beta_receipt from our conversation. Do not invent receipts."
+      },
+      {
+        "id": "fc_05cd4f20bfbb270f016ae9be7f1a4081938e9742071c0bbf66",
+        "type": "function_call",
+        "status": "completed",
+        "arguments": "{\"name\":\"alpha\"}",
+        "call_id": "call_eXvswrmFoSKQQGPVrF7Y3CZA",
+        "name": "lookup_record"
+      },
+      {
+        "type": "function_call_output",
+        "call_id": "call_eXvswrmFoSKQQGPVrF7Y3CZA",
+        "output": "{\"name\": \"alpha\", \"value\": 137, \"receipt\": \"receipt-d387b8d8b859\"}"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "name": "lookup_record",
+        "description": "Look up one record and return its numeric value and unique receipt.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "enum": [
+                "alpha",
+                "beta"
+              ]
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    "reasoning": {
+      "effort": "medium"
+    }
+  }
+}

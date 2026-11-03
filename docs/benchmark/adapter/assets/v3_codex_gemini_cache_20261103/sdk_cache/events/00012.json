@@ -1,0 +1,19 @@
+{
+  "turn_number": 1,
+  "method": "item/completed",
+  "payload": {
+    "completedAtMs": 1793709187270,
+    "item": {
+      "delivery": null,
+      "id": "msg_5e446f86722aeb24f985b828",
+      "memoryCitation": null,
+      "phase": null,
+      "questions": null,
+      "text": "C = 9, R = 6, O = 2, S = 3, A = 5, D = 1, N = 8, G = 7, E = 4\n\n  96233 (CROSS)\n+ 62513 (ROADS)\n-------\n 158746 (DANGER)",
+      "type": "agentMessage"
+    },
+    "threadId": "01a1a165-a1a2-7e21-8f6b-80fc5da96c99",
+    "turnId": "01a1a165-a1bb-7893-b7ec-04aeba167a8b"
+  },
+  "state_fields": []
+}

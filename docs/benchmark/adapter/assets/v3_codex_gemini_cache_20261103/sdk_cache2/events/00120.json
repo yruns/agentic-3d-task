@@ -1,0 +1,16 @@
+{
+  "turn_number": 9,
+  "method": "item/started",
+  "payload": {
+    "item": {
+      "content": [],
+      "id": "rs_f26998e664aab158b03e9d60",
+      "summary": [],
+      "type": "reasoning"
+    },
+    "startedAtMs": 1793709416990,
+    "threadId": "01a1a168-65a7-7561-a5c8-a3309863c558",
+    "turnId": "01a1a169-8f40-7a21-90a4-d9567f05a4e7"
+  },
+  "state_fields": []
+}

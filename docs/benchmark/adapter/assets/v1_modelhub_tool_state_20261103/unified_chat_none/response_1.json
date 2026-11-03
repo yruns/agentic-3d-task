@@ -1,0 +1,61 @@
+{
+  "choices": [
+    {
+      "finish_reason": "tool_calls",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "annotations": [],
+        "content": null,
+        "refusal": null,
+        "role": "assistant",
+        "tool_calls": [
+          {
+            "function": {
+              "arguments": "{\"name\":\"alpha\"}",
+              "name": "lookup_record"
+            },
+            "id": "call_dTZmeI8u3GAYwk15IitvVOeF",
+            "type": "function"
+          }
+        ]
+      }
+    }
+  ],
+  "created": 1793703543,
+  "id": "chatcmpl-Eg6WFl70sDz4BoaE0uGjTvut7UemK",
+  "model": "gpt-6-luna-2026-09-22",
+  "object": "chat.completion",
+  "routing": {
+    "serving_pipereplica": "d20261029004509-bbeb370a-prefill-r4-dp0-prefill"
+  },
+  "service_tier": "default",
+  "system_fingerprint": null,
+  "usage": {
+    "completion_tokens": 17,
+    "completion_tokens_details": {
+      "accepted_prediction_tokens": 0,
+      "audio_tokens": 0,
+      "reasoning_tokens": 0,
+      "rejected_prediction_tokens": 0
+    },
+    "latency_checkpoint": {
+      "engine_tbt_ms": 7,
+      "engine_ttft_ms": 439,
+      "engine_ttlt_ms": 557,
+      "pre_inference_ms": 95,
+      "service_tbt_ms": 5,
+      "service_ttft_ms": 713,
+      "service_ttlt_ms": 796,
+      "user_visible_ttft_ms": 618
+    },
+    "prompt_tokens": 240,
+    "prompt_tokens_details": {
+      "audio_tokens": 0,
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "total_tokens": 257,
+    "cache_creation_input_tokens": 0
+  }
+}

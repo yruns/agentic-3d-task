@@ -1,0 +1,11 @@
+{
+  "turn_number": 2,
+  "method": "item/agentMessage/delta",
+  "payload": {
+    "delta": "{\n  \"marker\": \"context-2145a5a712ce\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-2e654647d04e\",\n  \"beta_receipt\": \"receipt-0d3bc7",
+    "itemId": "msg_ab9c3ebface9b257b738690c",
+    "threadId": "01a1a162-644a-79a0-9e28-4fb7795b77d4",
+    "turnId": "01a1a162-9887-70c2-8566-fd0e9689b75f"
+  },
+  "state_fields": []
+}

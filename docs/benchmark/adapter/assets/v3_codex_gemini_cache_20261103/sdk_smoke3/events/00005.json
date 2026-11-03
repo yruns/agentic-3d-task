@@ -1,0 +1,28 @@
+{
+  "turn_number": 1,
+  "method": "turn/completed",
+  "payload": {
+    "threadId": "01a1a15f-eede-7b91-a258-524a31e9e0c4",
+    "turn": {
+      "completedAt": 1793708782,
+      "durationMs": 1150,
+      "error": {
+        "additionalDetails": null,
+        "codexErrorInfo": {
+          "httpConnectionFailed": {
+            "httpStatusCode": 502
+          }
+        },
+        "message": "unexpected status 502 Bad Gateway: upstream_http_error, url: http://127.0.0.1:8791/v1/responses",
+        "misalignment": null
+      },
+      "id": "01a1a15f-eef8-7e23-b4c7-66430ef79abb",
+      "items": [],
+      "itemsView": "notLoaded",
+      "rootTurnId": "01a1a15f-eef8-7e23-b4c7-66430ef79abb",
+      "startedAt": 1793708781,
+      "status": "failed"
+    }
+  },
+  "state_fields": []
+}

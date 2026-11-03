@@ -1,0 +1,763 @@
+{
+  "run_id": "gemini_sdk_cache_20261103_7edca3e0dd69",
+  "session_id": "gemini_sdk_cache_20261103_7edca3e0dd69",
+  "timestamp": "2026-11-03T20:32:34.466362+08:00",
+  "model": "gemini-3.8-flash",
+  "adapter_url": "http://127.0.0.1:8791/v1",
+  "same_credential_all_requests": true,
+  "credential_source": "Current chat user credential; memory/env only",
+  "scope": "Real Codex SDK -> isolated Responses adapter -> ModelHub Gemini",
+  "case": "short_puzzle_reasoning_then_eight_same_thread_acknowledgements",
+  "result": "passed",
+  "pass_definition": "Seed and all eight acknowledgement turns completed with nonempty final responses",
+  "puzzle_accuracy_evaluated": false,
+  "cache_hit_required_for_pass": false,
+  "dynamic_tools": [],
+  "native_tools_disabled": true,
+  "repeats": 8,
+  "repeat_delay_seconds": 2.0,
+  "seed_prompt_sha256": "9b51778557bb5e5df6299dca05971de069f14ae0babecb2ac3e9a2d788b712f7",
+  "turns": [
+    {
+      "id": "01a1a165-a1bb-7893-b7ec-04aeba167a8b",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793709154,
+      "completed_at": 1793709187,
+      "duration_ms": 32527,
+      "final_response": "C = 9, R = 6, O = 2, S = 3, A = 5, D = 1, N = 8, G = 7, E = 4\n\n  96233 (CROSS)\n+ 62513 (ROADS)\n-------\n 158746 (DANGER)",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "Solve the base-10 alphametic CROSS + ROADS = DANGER. Different letters are different digits; leading letters are nonzero. Do not assume a memorized answer: check column constraints and verify the solution carefully internally. Use no tools or code. Output only one valid digit mapping and its arithmetic check, with no reasoning text.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a165-a1db-79d3-8552-588028fa1d49",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_f2f14ba511744238d6129ad8",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_5e446f86722aeb24f985b828",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "C = 9, R = 6, O = 2, S = 3, A = 5, D = 1, N = 8, G = 7, E = 4\n\n  96233 (CROSS)\n+ 62513 (ROADS)\n-------\n 158746 (DANGER)",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 196,
+          "outputTokens": 5218,
+          "reasoningOutputTokens": 5138,
+          "totalTokens": 5414
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 196,
+          "outputTokens": 5218,
+          "reasoningOutputTokens": 5138,
+          "totalTokens": 5414
+        }
+      },
+      "turn_number": 1,
+      "kind": "seed",
+      "completed_with_answer": true,
+      "acknowledgement_is_ok": null,
+      "elapsed_s": 32.541
+    },
+    {
+      "id": "01a1a166-28ac-7c70-acfc-7abcb3540d08",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793709189,
+      "completed_at": 1793709192,
+      "duration_ms": 3539,
+      "final_response": "OK",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "Acknowledge the preceding solution with OK only; do not redo the calculation.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a166-28b5-7580-9162-d138a64939b3",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_a41d356fbfdac0d2650eeeab",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_b452b270eeded7ab908583e8",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "OK",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 5430,
+          "outputTokens": 1,
+          "reasoningOutputTokens": 0,
+          "totalTokens": 5431
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 5626,
+          "outputTokens": 5219,
+          "reasoningOutputTokens": 5138,
+          "totalTokens": 10845
+        }
+      },
+      "turn_number": 2,
+      "kind": "acknowledgement",
+      "completed_with_answer": true,
+      "acknowledgement_is_ok": true,
+      "elapsed_s": 3.549
+    },
+    {
+      "id": "01a1a166-3e5b-77d3-bec3-c7c05bb4b52e",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793709194,
+      "completed_at": 1793709197,
+      "duration_ms": 2782,
+      "final_response": "OK",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "Acknowledge the preceding solution with OK only; do not redo the calculation.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a166-3e69-72a1-b9b6-83f0684c22ab",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_b5eb82960e362f9e98ca930b",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_545642a91ca56bd8af8c40df",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "OK",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 5447,
+          "outputTokens": 1,
+          "reasoningOutputTokens": 0,
+          "totalTokens": 5448
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 11073,
+          "outputTokens": 5220,
+          "reasoningOutputTokens": 5138,
+          "totalTokens": 16293
+        }
+      },
+      "turn_number": 3,
+      "kind": "acknowledgement",
+      "completed_with_answer": true,
+      "acknowledgement_is_ok": true,
+      "elapsed_s": 2.792
+    },
+    {
+      "id": "01a1a166-5117-7001-82c1-0fa913474dc8",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793709199,
+      "completed_at": 1793709202,
+      "duration_ms": 2561,
+      "final_response": "OK",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "Acknowledge the preceding solution with OK only; do not redo the calculation.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a166-5124-7bc1-a778-ffc2ea20362c",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_a3c9e63f1086db180a87774b",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_84bf1e28b7b4ee7e10618c27",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "OK",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 5464,
+          "outputTokens": 1,
+          "reasoningOutputTokens": 0,
+          "totalTokens": 5465
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 16537,
+          "outputTokens": 5221,
+          "reasoningOutputTokens": 5138,
+          "totalTokens": 21758
+        }
+      },
+      "turn_number": 4,
+      "kind": "acknowledgement",
+      "completed_with_answer": true,
+      "acknowledgement_is_ok": true,
+      "elapsed_s": 2.571
+    },
+    {
+      "id": "01a1a166-62f5-7d00-931d-2a878ce598a2",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793709204,
+      "completed_at": 1793709206,
+      "duration_ms": 2466,
+      "final_response": "OK",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "Acknowledge the preceding solution with OK only; do not redo the calculation.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a166-6301-7453-8c2c-0cc1b778e2f4",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_d9f6085b7ebc8835261471a3",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_4d5ed220ab8b57ca83f94455",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "OK",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 5481,
+          "outputTokens": 1,
+          "reasoningOutputTokens": 0,
+          "totalTokens": 5482
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 22018,
+          "outputTokens": 5222,
+          "reasoningOutputTokens": 5138,
+          "totalTokens": 27240
+        }
+      },
+      "turn_number": 5,
+      "kind": "acknowledgement",
+      "completed_with_answer": true,
+      "acknowledgement_is_ok": true,
+      "elapsed_s": 2.475
+    },
+    {
+      "id": "01a1a166-7475-7d82-b82f-84a14b30733e",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793709208,
+      "completed_at": 1793709211,
+      "duration_ms": 2768,
+      "final_response": "OK",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "Acknowledge the preceding solution with OK only; do not redo the calculation.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a166-7480-7e11-9c55-f737b56c2eaf",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_112ed9a7646b74c96e051730",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_1d9e55c1536a33d7722d764b",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "OK",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 5498,
+          "outputTokens": 1,
+          "reasoningOutputTokens": 0,
+          "totalTokens": 5499
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 27516,
+          "outputTokens": 5223,
+          "reasoningOutputTokens": 5138,
+          "totalTokens": 32739
+        }
+      },
+      "turn_number": 6,
+      "kind": "acknowledgement",
+      "completed_with_answer": true,
+      "acknowledgement_is_ok": true,
+      "elapsed_s": 2.778
+    },
+    {
+      "id": "01a1a166-8723-7410-afc6-34ec6175a791",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793709213,
+      "completed_at": 1793709216,
+      "duration_ms": 2762,
+      "final_response": "OK",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "Acknowledge the preceding solution with OK only; do not redo the calculation.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a166-872e-7111-b91c-9612d00b36bb",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_f2476da58771feab25e1319e",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_85c9cc479c86a5fcecba85f4",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "OK",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 5515,
+          "outputTokens": 1,
+          "reasoningOutputTokens": 0,
+          "totalTokens": 5516
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 33031,
+          "outputTokens": 5224,
+          "reasoningOutputTokens": 5138,
+          "totalTokens": 38255
+        }
+      },
+      "turn_number": 7,
+      "kind": "acknowledgement",
+      "completed_with_answer": true,
+      "acknowledgement_is_ok": true,
+      "elapsed_s": 2.771
+    },
+    {
+      "id": "01a1a166-99cc-7752-b220-ff63f159eeff",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793709218,
+      "completed_at": 1793709221,
+      "duration_ms": 3072,
+      "final_response": "OK",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "Acknowledge the preceding solution with OK only; do not redo the calculation.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a166-99d8-7181-b780-41e6d6097c2b",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_e6b9b27b50cc2c9bd786c605",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_6f44449948cb4e9c492b1718",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "OK",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 5532,
+          "outputTokens": 1,
+          "reasoningOutputTokens": 0,
+          "totalTokens": 5533
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 38563,
+          "outputTokens": 5225,
+          "reasoningOutputTokens": 5138,
+          "totalTokens": 43788
+        }
+      },
+      "turn_number": 8,
+      "kind": "acknowledgement",
+      "completed_with_answer": true,
+      "acknowledgement_is_ok": true,
+      "elapsed_s": 3.08
+    },
+    {
+      "id": "01a1a166-adaa-7a92-a210-80a666b939fd",
+      "status": "completed",
+      "error": null,
+      "started_at": 1793709223,
+      "completed_at": 1793709227,
+      "duration_ms": 4191,
+      "final_response": "OK",
+      "items": [
+        {
+          "clientId": null,
+          "content": [
+            {
+              "text": "Acknowledge the preceding solution with OK only; do not redo the calculation.",
+              "text_elements": [],
+              "type": "text"
+            }
+          ],
+          "id": "01a1a166-adb4-7613-80bb-579fb829fb5a",
+          "type": "userMessage"
+        },
+        {
+          "content": [],
+          "id": "rs_d6d1181f3eef40e4b3ee0d60",
+          "summary": [],
+          "type": "reasoning"
+        },
+        {
+          "delivery": null,
+          "id": "msg_9719409b13a944d6e0da77c4",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "OK",
+          "type": "agentMessage"
+        }
+      ],
+      "usage": {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 5549,
+          "outputTokens": 1,
+          "reasoningOutputTokens": 0,
+          "totalTokens": 5550
+        },
+        "modelContextWindow": null,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 0,
+          "inputTokens": 44112,
+          "outputTokens": 5226,
+          "reasoningOutputTokens": 5138,
+          "totalTokens": 49338
+        }
+      },
+      "turn_number": 9,
+      "kind": "acknowledgement",
+      "completed_with_answer": true,
+      "acknowledgement_is_ok": true,
+      "elapsed_s": 4.2
+    }
+  ],
+  "sdk_opaque_state_fields": [
+    {
+      "turn_number": 1,
+      "event_index": 9,
+      "method": "rawResponseItem/completed",
+      "fields": [
+        {
+          "path": "$.payload.params.item.encrypted_content",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "9e64a9f3dbf70f960bfc0b4a9f15f6efcbccdee6b1f8775cc1c0df07a4a8692d",
+          "length": 117,
+          "opaque_name": true
+        }
+      ]
+    },
+    {
+      "turn_number": 2,
+      "event_index": 23,
+      "method": "rawResponseItem/completed",
+      "fields": [
+        {
+          "path": "$.payload.params.item.encrypted_content",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "9c1c35b1770e63d0980a7e2f4d72bcd84821a3dde3d8aae30acce4f7e25901e0",
+          "length": 117,
+          "opaque_name": true
+        }
+      ]
+    },
+    {
+      "turn_number": 3,
+      "event_index": 37,
+      "method": "rawResponseItem/completed",
+      "fields": [
+        {
+          "path": "$.payload.params.item.encrypted_content",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "1082936832603dca7fdc1745210139404f079d893c4799c5e8d93fb1bfe60581",
+          "length": 117,
+          "opaque_name": true
+        }
+      ]
+    },
+    {
+      "turn_number": 4,
+      "event_index": 51,
+      "method": "rawResponseItem/completed",
+      "fields": [
+        {
+          "path": "$.payload.params.item.encrypted_content",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "8fe58256e65cfdcb052d803b8d59b2e6497fbc1fe3e30bbc7cff1312857ec10b",
+          "length": 117,
+          "opaque_name": true
+        }
+      ]
+    },
+    {
+      "turn_number": 5,
+      "event_index": 65,
+      "method": "rawResponseItem/completed",
+      "fields": [
+        {
+          "path": "$.payload.params.item.encrypted_content",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "334caead8ba1d37892de24d906c2b6b4e04aa5cb30d4625c85e6321f2cd4749c",
+          "length": 117,
+          "opaque_name": true
+        }
+      ]
+    },
+    {
+      "turn_number": 6,
+      "event_index": 79,
+      "method": "rawResponseItem/completed",
+      "fields": [
+        {
+          "path": "$.payload.params.item.encrypted_content",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "498da8cabfcc46b796084ca7ec43b28b462d592ab5497a99e35d54d253f320e9",
+          "length": 117,
+          "opaque_name": true
+        }
+      ]
+    },
+    {
+      "turn_number": 7,
+      "event_index": 93,
+      "method": "rawResponseItem/completed",
+      "fields": [
+        {
+          "path": "$.payload.params.item.encrypted_content",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "b20189f13b8f1cdaca7a80c8f445ff36b318a5377cf94ac67ee3884d507041d3",
+          "length": 117,
+          "opaque_name": true
+        }
+      ]
+    },
+    {
+      "turn_number": 8,
+      "event_index": 107,
+      "method": "rawResponseItem/completed",
+      "fields": [
+        {
+          "path": "$.payload.params.item.encrypted_content",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "16c33d6e139f5b39fd19390f5848a736aacbe432d9ca33e6723babc3bfe33bd7",
+          "length": 117,
+          "opaque_name": true
+        }
+      ]
+    },
+    {
+      "turn_number": 9,
+      "event_index": 121,
+      "method": "rawResponseItem/completed",
+      "fields": [
+        {
+          "path": "$.payload.params.item.encrypted_content",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "22112f992ba65eb40567219bfdedef3b5997a5e96ae8ffda0a794e2657f25bd8",
+          "length": 117,
+          "opaque_name": true
+        }
+      ]
+    }
+  ],
+  "branch": "",
+  "head": "255b091849c0bafeef8f5e494d022a7750eefa91",
+  "tracked_drift": false,
+  "worktree": "/home/ysh/codebase/agentic-3d-task/tmp/gemini_codex_cache_worktree_20261103",
+  "sdk_version": "0.163.0",
+  "local_python_sha256": {
+    "bridge.py": "d1cb08b54b3b54f6dff012b3f07b42c28cca3f751eb2d012d324166db09528e7",
+    "bridge_v1.py": "5301bffb1111af5455cad58e410a369ee1f7438f152f3bfa1167a268a4fa528d",
+    "bridge_v2.py": "dd1007fb09c877f3cfd340910891bf89caf795d7d1fa0635339dce66837605cd",
+    "cache_probe.py": "505ce2f105bb72fddd7a894e1a704141f712ed769028a68e53026eae28b42cfc",
+    "cache_probe_v1.py": "5521a485bee94fe269e0453a5cfabf1a95cab8062ca83596a7966376a8c8735d",
+    "probe_support.py": "db454076251200a577b615f657fdde4e99e1aa2390ec991aa2113f63afd51e4d",
+    "sdk_cache_driver.py": "60292621d5a4ed732ab2a478abd20d5550ee6e751a5c1926f2730aa65b6e1464",
+    "sdk_driver.py": "a3893317d5a4a36d3d213e6ce399f5cbd6148af0e4abfc14568ec6953a1cb9a8",
+    "sdk_driver_v1.py": "4451c5677317fc7db0a704db9022ed1d8ac6ab1072359caa826b4f1d3c073d56",
+    "sdk_driver_v2.py": "860b4bde7f871ed43ebd57ece3d7701fa570ba379b5992a77d9c8dc245be1d99",
+    "test_bridge.py": "45e34852e4ed7fb8431dafc69e6f07e077a0737ae8b5cf4ca7fe1aaf9766d218"
+  },
+  "sdk_python_sha256": {
+    "__init__.py": "9a58d9301d099824b21c15fef2fdc4e98191aa9ee4fb1b9b9026e5d700590bd3",
+    "_approval_mode.py": "9cd7dbf7f20529b97adb9291832ed01645befff58d9642670f1fb8b774bd1b62",
+    "_goal.py": "b61a1a25322e8d385ded39a1a93f0c4131d5bf0c66461cee89989930d2352643",
+    "_initialize_metadata.py": "9ab05330ae46e2c2fc1e6279efeca98789a759f43b19601e887e4772d0f4f6da",
+    "_inputs.py": "6b6b92ce54bb65c8eb68585e794207d3c800434a5486d91b38c4eefefdb371ce",
+    "_login.py": "0acc5d5e801afbb9b1b73ce2867412031dbb099fb4747713fdaec41b3c02e91b",
+    "_message_router.py": "8c1239bae89e3128ea797fd1ed23619bccab5614212908f3cb498f84ea67c396",
+    "_run.py": "ca0e0c0d9a2c3ae8606cc5986c93bae100c47583df6c4e5643dc5cc582428263",
+    "_runtime_requirements.py": "dab856ff4ff4a02c567b3f362c5b1298b0cdeaed6d2a84384c5dc87765447d28",
+    "_sandbox.py": "01ab6cabc1642941ba958b287c34a5475066c934b67e4fd194d78b4bb2eb27b2",
+    "_version.py": "678f4945d9906b0150a3d84cfc217e06824b9a963e7d248bd4b0d0fb51210658",
+    "api.py": "bd9cac51820997fa4d3fa4ac5c24894f45b92da8ba481d49c44cb96dcc9af430",
+    "async_client.py": "7d1e291eed8ce7a907b9dafd79580f286451224c12c59302b61918046a01f99c",
+    "client.py": "8452afbd8148ea212c94e8a6727468054b175acb0daf95002c84b66b604d05a6",
+    "errors.py": "104b435d7e9f293c3327ad59fc7985363503fb4d919cadbb73f943d12a75a615",
+    "generated/__init__.py": "0fa172a905073649a4c73e2559c8f3c81816da814ebb692ee812d67ae0dcc599",
+    "generated/notification_registry.py": "d4d1b15daede7394b70e0a4d5498171fc671a123f6503269c4b651eb936c228f",
+    "generated/v2_all.py": "7e76ff20474dc44ef05b66778904d7304fdc930839ed0a0ed98cab603e999289",
+    "models.py": "f0a33994b07369711e4d5b2c7a977d20dfbad5d9e0a72b922ca14ce639a6c4fd",
+    "retry.py": "0d0d048748a675ea29a2df497ae416d79887d5a69d03453fb7ca7387c4c8af47",
+    "types.py": "31a95f0a42e1e4f655663db0473927d102664547f534713ec2040cdb913c8afc"
+  },
+  "cli_version": "0.163.0",
+  "thread_id": "01a1a165-a1a2-7e21-8f6b-80fc5da96c99",
+  "event_count": 128,
+  "all_acknowledgements_ok": true,
+  "elapsed_s": 73.109
+}

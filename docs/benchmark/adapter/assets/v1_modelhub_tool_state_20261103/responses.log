@@ -1,0 +1,4 @@
+{"round": 1, "http_status": 200, "finish_reason": "completed", "message_fields": ["role", "content", "tool_calls"], "state_field_paths": ["$.reasoning", "$.usage.output_tokens_details.reasoning_tokens"], "tool_calls": 1, "elapsed_s": 2.108}
+{"round": 2, "http_status": 200, "finish_reason": "completed", "message_fields": ["role", "content", "tool_calls"], "state_field_paths": ["$.reasoning", "$.usage.output_tokens_details.reasoning_tokens"], "tool_calls": 1, "elapsed_s": 1.717}
+{"round": 3, "http_status": 200, "finish_reason": "completed", "message_fields": ["role", "content", "tool_calls"], "state_field_paths": ["$.output[0].encrypted_content", "$.reasoning", "$.usage.output_tokens_details.reasoning_tokens"], "tool_calls": 0, "elapsed_s": 2.063}
+{"result": "passed", "opaque_state_observed": true, "replay_hashes_match": true}

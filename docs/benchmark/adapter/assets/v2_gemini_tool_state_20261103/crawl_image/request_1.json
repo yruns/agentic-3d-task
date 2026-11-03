@@ -1,0 +1,58 @@
+{
+  "headers": {
+    "Content-Type": "application/json",
+    "X-TT-LOGID": "gemini_tool_state_20261103_73d41d533d_1",
+    "extra": "{\"session_id\": \"gemini_tool_state_20261103_73d41d533d\", \"chat_run_id\": \"gemini_tool_state_20261103_73d41d533d\", \"source\": \"codex_adapter_protocol_probe\"}"
+  },
+  "body": {
+    "model": "gemini-3.8-flash",
+    "stream": false,
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are testing a tool protocol. Always use lookup_record to obtain the requested records. First call alpha, wait for its result, then call beta, wait for its result, then return only JSON with marker, sum, alpha_receipt, beta_receipt. Never invent tool results. Do not call both tools in the same response. Preserve the user's marker exactly."
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Fetch records alpha and beta, add their values, and report their receipts. The marker is context-5205a62386c2."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "https://static.wixstatic.com/media/ba2cd3_71d0deba7b87452b85caa20ee07cb1b9~mv2.jpg/v1/fill/w_585,h_405,al_c,q_80,enc_auto/ba2cd3_71d0deba7b87452b85caa20ee07cb1b9~mv2.jpg"
+            }
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "lookup_record",
+          "description": "Look up one record and return its numeric value and unique receipt.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": [
+                  "alpha",
+                  "beta"
+                ]
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    ]
+  }
+}

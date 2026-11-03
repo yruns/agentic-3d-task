@@ -1,0 +1,10 @@
+{"run_id": "gemini_sdk_cache_20261103_7edca3e0dd69", "turn": 1, "status": "completed", "acknowledgement_is_ok": null}
+{"run_id": "gemini_sdk_cache_20261103_7edca3e0dd69", "turn": 2, "status": "completed", "acknowledgement_is_ok": true}
+{"run_id": "gemini_sdk_cache_20261103_7edca3e0dd69", "turn": 3, "status": "completed", "acknowledgement_is_ok": true}
+{"run_id": "gemini_sdk_cache_20261103_7edca3e0dd69", "turn": 4, "status": "completed", "acknowledgement_is_ok": true}
+{"run_id": "gemini_sdk_cache_20261103_7edca3e0dd69", "turn": 5, "status": "completed", "acknowledgement_is_ok": true}
+{"run_id": "gemini_sdk_cache_20261103_7edca3e0dd69", "turn": 6, "status": "completed", "acknowledgement_is_ok": true}
+{"run_id": "gemini_sdk_cache_20261103_7edca3e0dd69", "turn": 7, "status": "completed", "acknowledgement_is_ok": true}
+{"run_id": "gemini_sdk_cache_20261103_7edca3e0dd69", "turn": 8, "status": "completed", "acknowledgement_is_ok": true}
+{"run_id": "gemini_sdk_cache_20261103_7edca3e0dd69", "turn": 9, "status": "completed", "acknowledgement_is_ok": true}
+{"result": "passed", "run_id": "gemini_sdk_cache_20261103_7edca3e0dd69", "turns": 9, "all_acknowledgements_ok": true}

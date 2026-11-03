@@ -1,0 +1,19 @@
+{
+  "turn_number": 8,
+  "method": "item/completed",
+  "payload": {
+    "completedAtMs": 1793709614864,
+    "item": {
+      "delivery": null,
+      "id": "msg_a87c6097f73a064d602d02bf",
+      "memoryCitation": null,
+      "phase": null,
+      "questions": null,
+      "text": "OK",
+      "type": "agentMessage"
+    },
+    "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+    "turnId": "01a1a16c-9c60-7a52-bd9b-a12f19390014"
+  },
+  "state_fields": []
+}

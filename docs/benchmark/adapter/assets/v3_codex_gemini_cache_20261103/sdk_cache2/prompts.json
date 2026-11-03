@@ -1,0 +1,5 @@
+{
+  "base_instructions": "Follow the user task exactly. Work internally; do not print reasoning.",
+  "seed": "Solve the base-10 alphametic CROSS + ROADS = DANGER. Different letters are different digits; leading letters are nonzero. Do not assume a memorized answer: check column constraints and verify the solution carefully internally. Use no tools or code. Output only one valid digit mapping and its arithmetic check, with no reasoning text.",
+  "acknowledgement": "Acknowledge the preceding solution with OK only; do not redo the calculation."
+}

@@ -1,0 +1,29 @@
+{
+  "turn_number": 1,
+  "method": "rawResponseItem/completed",
+  "payload": {
+    "params": {
+      "threadId": "01a1a168-65a7-7561-a5c8-a3309863c558",
+      "turnId": "01a1a168-65bf-7251-939d-dc733a8905a3",
+      "item": {
+        "type": "message",
+        "id": "msg_01a1a168-65d9-70a0-ba09-4ce1004552c6",
+        "role": "developer",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "<permissions instructions>\nFilesystem sandboxing defines which files can be read or written. `sandbox_mode` is `read-only`: The sandbox only permits reading files. Network access is restricted.\nApproval policy is currently never. Do not provide the `sandbox_permissions` for any reason, commands will be rejected.\n</permissions instructions>"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a1a168-65bf-7251-939d-dc733a8905a3",
+          "create_time": 1793709336.025592,
+          "content_item_kinds": [
+            "permissions.instructions"
+          ]
+        }
+      }
+    }
+  },
+  "state_fields": []
+}

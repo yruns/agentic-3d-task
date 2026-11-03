@@ -1,0 +1,59 @@
+{
+  "object": "chat.completion",
+  "model": "gemini-3.8-flash",
+  "choices": [
+    {
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "STOP",
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "",
+        "signature": {
+          "redacted_state": true,
+          "length": 464,
+          "sha256": "ff1570cd173ce66a280de3e105be35f3bfae10f7364a940b0de6b8c0180b42a7"
+        },
+        "tool_calls": [
+          {
+            "index": 0,
+            "id": "",
+            "type": "function",
+            "function": {
+              "name": "lookup_record",
+              "arguments": "{\"name\":\"alpha\"}"
+            },
+            "signature": {
+              "redacted_state": true,
+              "length": 464,
+              "sha256": "ff1570cd173ce66a280de3e105be35f3bfae10f7364a940b0de6b8c0180b42a7"
+            }
+          }
+        ]
+      },
+      "groundingMetadata": null
+    }
+  ],
+  "usage": {
+    "completion_tokens": 16,
+    "prompt_tokens": 665,
+    "total_tokens": 745,
+    "reasoning_tokens": 64,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "traffic_type": "PROVISIONED_THROUGHPUT",
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 665
+      }
+    ],
+    "candidatesTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 16
+      }
+    ]
+  }
+}

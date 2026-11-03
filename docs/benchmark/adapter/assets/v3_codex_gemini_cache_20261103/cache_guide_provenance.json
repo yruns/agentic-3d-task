@@ -1,0 +1,15 @@
+{
+  "source": "User-provided pasted ModelHub prompt-cache guide",
+  "source_sha256": "5cdb23fdf5e28c70574ef49200c06329ca843e4c137e730b4568a5f1b38d0a9f",
+  "used_conditions": [
+    "extra header is a JSON string with stable session_id",
+    "platform and business-model affinity switches are prerequisites",
+    "Gemini threshold examples state >2048; broader best-practice note says generally >4k",
+    "cache is best effort and backend deployment scheduling can produce misses"
+  ],
+  "not_assumed": [
+    "Fixed AK/session pins a physical backend forever",
+    "A signature length directly equals reasoning token count",
+    "Every repeated request must hit cache"
+  ]
+}

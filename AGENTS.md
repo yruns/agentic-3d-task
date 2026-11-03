@@ -72,6 +72,9 @@ reuse other-machine NAS paths without verification.
   `curl -fsS http://127.0.0.1:8787/health`. SDK startup alone does not verify
   upstream credentials. Runtime settings: `src/codex_agent/config.py` and
   `.codex-home/config.toml`.
+- GPT-family agent requests must use Responses end to end. Do not route GPT
+  models through Chat Completions, translate them to Chat, or fall back to Chat.
+  Preserve completed Chat probes as historical evidence, not supported routes.
 - Query parsing/judging reads `configs/llm.toml` (`KEYFRAME_LLM_CONFIG` override).
   SceneFunc3D requires a backend TOML and running MolmoPoint/SAM2 sidecars; use
   `scripts/scenefunc3d/serve_local_agentic3d.sh` for the combined local service.

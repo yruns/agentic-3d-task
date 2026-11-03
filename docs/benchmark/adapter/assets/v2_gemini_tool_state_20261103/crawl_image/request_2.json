@@ -1,0 +1,89 @@
+{
+  "headers": {
+    "Content-Type": "application/json",
+    "X-TT-LOGID": "gemini_tool_state_20261103_73d41d533d_2",
+    "extra": "{\"session_id\": \"gemini_tool_state_20261103_73d41d533d\", \"chat_run_id\": \"gemini_tool_state_20261103_73d41d533d\", \"source\": \"codex_adapter_protocol_probe\"}"
+  },
+  "body": {
+    "model": "gemini-3.8-flash",
+    "stream": false,
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are testing a tool protocol. Always use lookup_record to obtain the requested records. First call alpha, wait for its result, then call beta, wait for its result, then return only JSON with marker, sum, alpha_receipt, beta_receipt. Never invent tool results. Do not call both tools in the same response. Preserve the user's marker exactly."
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Fetch records alpha and beta, add their values, and report their receipts. The marker is context-5205a62386c2."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "https://static.wixstatic.com/media/ba2cd3_71d0deba7b87452b85caa20ee07cb1b9~mv2.jpg/v1/fill/w_585,h_405,al_c,q_80,enc_auto/ba2cd3_71d0deba7b87452b85caa20ee07cb1b9~mv2.jpg"
+            }
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "",
+        "signature": {
+          "redacted_state": true,
+          "length": 712,
+          "sha256": "30564693f317731039d3b8ae50558f0466eddbb814483b4bdb728bcecaf8fe75"
+        },
+        "tool_calls": [
+          {
+            "index": 0,
+            "id": "",
+            "type": "function",
+            "function": {
+              "name": "lookup_record",
+              "arguments": "{\"name\":\"alpha\"}"
+            },
+            "signature": {
+              "redacted_state": true,
+              "length": 712,
+              "sha256": "30564693f317731039d3b8ae50558f0466eddbb814483b4bdb728bcecaf8fe75"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "",
+        "content": "{\"name\": \"alpha\", \"value\": 137, \"receipt\": \"receipt-ce4c8da06957\"}"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "lookup_record",
+          "description": "Look up one record and return its numeric value and unique receipt.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": [
+                  "alpha",
+                  "beta"
+                ]
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    ]
+  }
+}

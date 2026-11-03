@@ -1,0 +1,19 @@
+{
+  "label": "short_prompt_reasoning_seed",
+  "headers": {
+    "Content-Type": "application/json",
+    "X-TT-LOGID": "gemini_cache_20261103_d7e66e673a10_1",
+    "extra": "{\"session_id\": \"gemini_cache_20261103_d7e66e673a10\", \"chat_run_id\": \"gemini_cache_20261103_d7e66e673a10\", \"source\": \"cache_diagnostic\"}"
+  },
+  "body": {
+    "model": "gemini-3.8-flash",
+    "stream": false,
+    "max_tokens": 8192,
+    "messages": [
+      {
+        "role": "user",
+        "content": "Solve the base-10 alphametic CROSS + ROADS = DANGER. Different letters are different digits; leading letters are nonzero. Do not assume a memorized answer: check column constraints and verify the solution carefully internally. Use no tools or code. Output only one valid digit mapping and its arithmetic check, with no reasoning text."
+      }
+    ]
+  }
+}

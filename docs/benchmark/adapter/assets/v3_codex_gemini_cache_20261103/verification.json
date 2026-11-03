@@ -1,0 +1,20 @@
+{
+  "credential_scan": "passed",
+  "files_scanned": 2480,
+  "mock_tests_passed": 16,
+  "ruff_current_files": "passed",
+  "black_current_files": "passed",
+  "mypy_bridge": "passed",
+  "mkdocs_build": "passed with existing warnings",
+  "executed_core_source_references_verified": 36,
+  "upstream_model_requests": 65,
+  "http_status_counts": {
+    "200": 64,
+    "400": 1
+  },
+  "completed_sdk_turns": 34,
+  "dynamic_tool_executions": 6,
+  "production_adapter_modified": false,
+  "isolated_service_8791": "stopped",
+  "exact_reasoning_cache_lower_bound": 3315
+}
