@@ -44,11 +44,14 @@ uv sync --extra adapter --extra codex --extra dev
 ```
 
 Copy `configs/codex_adapter.example.toml` to the ignored
-`configs/codex_adapter.toml`. Secrets are environment references, never literal
-AKs in TOML. No implicit `.env` loading or legacy key fallback occurs. Inject
-credentials and the state key securely before running the commands.
+`configs/codex_adapter.toml`. Each model contains `[[models.upstreams]]` entries,
+each with its own `url`, direct `ak`, and `weight`. Real AKs go only in this
+ignored private TOML; the tracked example contains placeholders. Protect the file
+with owner-only permissions. There is no model-AK environment lookup, `ak_env`,
+`secret_env`, implicit `.env` loading or legacy key fallback. State encryption and
+optional adapter authentication remain separate from upstream AK configuration.
 
-The sample registers `gpt-6-luna` and `gemini-3.8-flash`. The model string sent by
+The sample registers `gpt-5.4-2026-03-05` and `gemini-3.8-flash`. The model string sent by
 Codex must exactly match a registered ID. It is not rewritten to a hidden alias.
 A request for any other model returns `model_not_registered` before an upstream
 call.
@@ -90,11 +93,13 @@ python -m codex_adapter models --config configs/codex_adapter.toml
 
 ## Model registration and credential lifecycle
 
-Each model specifies its protocol, full fixed endpoint, capabilities, and a
-credential list. A credential has a stable ID, version, environment reference,
-nonnegative integer weight, and `active`, `draining`, or `revoked` status.
+Each model specifies its exact ID, protocol, capabilities, and an upstream list;
+there is no model-level URL. Each `[[models.upstreams]]` entry contains its own
+stable `id`, `version`, full `url`, direct `ak`, nonnegative integer `weight`,
+and `active`, `draining`, or `revoked` status. Two entries may share a URL but use
+different AKs, or share an AK but use different URLs; they remain distinct routes.
 
-- Only a model's own positive-weight active credentials receive new sessions.
+- Only a model's own positive-weight active upstreams receive new sessions.
 - Weights describe probabilities across new sessions, not exact short-run
   percentages, per-request balancing, token load, latency, or model selection.
 - The first choice is committed atomically to SQLite. All subsequent model
@@ -114,6 +119,17 @@ The service does not reload a private configuration on every request. Restart
 with the same database and required state keys to apply configuration changes;
 existing bindings are checked against the new registry.
 
+### Migrating configuration schema 1
+
+Schema 1 is rejected explicitly. Move each old credential into
+`[[models.upstreams]]`, copy the old model endpoint to that entry's `url`, replace
+its environment reference with the actual `ak`, and remove model-level
+`endpoint`/`credentials`. Preserve every route's old ID, version, URL and AK to
+continue existing sessions. This does not require rebuilding SQLite: its
+`endpoint` and internal `credential_id/version/fingerprint` columns already
+represent the selected upstream. Neither state claims nor cryptographic identity
+are rewritten merely for this configuration change.
+
 ## Codex provider and session identity
 
 The active provider is `codex_adapter`, with `wire_api="responses"`. The runtime
@@ -130,7 +146,7 @@ session metadata are rejected, not forwarded.
 Initialize a fresh Codex home with the current bootstrap script:
 
 ```bash
-scripts/codex_agent/bootstrap_codex_home.sh --model gpt-6-luna
+scripts/codex_agent/bootstrap_codex_home.sh --model gpt-5.4-2026-03-05
 ```
 
 The bootstrap must not overwrite an existing configuration silently. Back up
@@ -193,8 +209,9 @@ as compatible. Re-run the local SDK contract suite when upgrading.
 
 ## Persistence, retry and failure semantics
 
-Configuration and public API documents use schema version 1; the persistent
-database uses internal schema version 2 and carriers use
+Configuration uses schema version 2; public health/capability documents still
+use their existing version-1 contract. The persistent database retains internal
+schema version 2 and carriers use
 `codex_adapter.state.v2`. Pre-release prototype databases/carriers are explicitly
 rejected, not automatically migrated or replaced. The complete carrier claims
 are AEAD-sealed, so clients cannot decode internal routes or credential identities.

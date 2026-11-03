@@ -11,7 +11,7 @@ from test_state_support import store as store
 
 from codex_adapter.application.ports import StateStore
 from codex_adapter.domain.errors import AdapterError
-from codex_adapter.domain.models import Credential, CredentialStatus
+from codex_adapter.domain.models import Upstream, UpstreamStatus
 from codex_adapter.domain.state import StateKey
 from codex_adapter.infrastructure.sqlite_state import SQLiteStateStore
 
@@ -117,7 +117,7 @@ def test_binding_is_sticky_across_restarts(
         restarted.ready()
         rebound = restarted.bind("session", registered_model())
         assert rebound.binding == bound.binding
-        assert rebound.credential == bound.credential
+        assert rebound.upstream == bound.upstream
     finally:
         restarted.close()
 
@@ -145,7 +145,7 @@ def test_concurrent_first_bind_draws_once_and_returns_a_unique_binding(
                 )
             )
         assert len({route.binding.id for route in routes}) == 1
-        assert {route.credential.id for route in routes} == {"credential-b"}
+        assert {route.upstream.id for route in routes} == {"credential-b"}
         assert draws == (4,)
     finally:
         instance.close()
@@ -158,26 +158,32 @@ def test_weight_changes_and_new_credentials_do_not_rebalance_existing_bindings(
     original = store.bind("old-session", model)
     revised = replace(
         model,
-        credentials=(
-            replace(model.credentials[0], weight=0),
-            model.credentials[1],
-            Credential("new", "v1", "new-test-ak", 50),
+        upstreams=(
+            replace(model.upstreams[0], weight=0),
+            model.upstreams[1],
+            Upstream(
+                "new",
+                "v1",
+                "https://upstream.example/chat/completions",
+                "new-test-ak",
+                50,
+            ),
         ),
     )
     assert store.bind("old-session", revised).binding == original.binding
-    assert store.bind("new-session", revised).credential.id == "credential-b"
+    assert store.bind("new-session", revised).upstream.id == "credential-b"
 
 
 @pytest.mark.parametrize("status,weight", [("draining", 3), ("active", 0)])
 def test_old_bindings_allow_draining_and_zero_weight_credentials(
-    store: SQLiteStateStore, status: CredentialStatus, weight: int
+    store: SQLiteStateStore, status: UpstreamStatus, weight: int
 ) -> None:
     model = registered_model()
     original = store.bind("session", model)
-    changed = replace(model.credentials[0], status=status, weight=weight)
-    revised = replace(model, credentials=(changed, model.credentials[1]))
+    changed = replace(model.upstreams[0], status=status, weight=weight)
+    revised = replace(model, upstreams=(changed, model.upstreams[1]))
     assert store.bind("session", revised).binding == original.binding
-    assert store.bind("another-session", revised).credential.id == "credential-b"
+    assert store.bind("another-session", revised).upstream.id == "credential-b"
 
 
 @pytest.mark.parametrize(
@@ -190,31 +196,37 @@ def test_changed_route_or_credential_reference_fails_closed(
     model = registered_model()
     store.bind("session", model)
     changes = {
-        "deleted": replace(model, credentials=(model.credentials[1],)),
+        "deleted": replace(model, upstreams=(model.upstreams[1],)),
         "revoked": replace(
             model,
-            credentials=(
-                replace(model.credentials[0], status="revoked"),
-                model.credentials[1],
+            upstreams=(
+                replace(model.upstreams[0], status="revoked"),
+                model.upstreams[1],
             ),
         ),
         "secret": replace(
             model,
-            credentials=(
-                replace(model.credentials[0], secret="replacement-ak"),
-                model.credentials[1],
+            upstreams=(
+                replace(model.upstreams[0], secret="replacement-ak"),
+                model.upstreams[1],
             ),
         ),
         "version": replace(
             model,
-            credentials=(
-                replace(model.credentials[0], version="v2"),
-                model.credentials[1],
+            upstreams=(
+                replace(model.upstreams[0], version="v2"),
+                model.upstreams[1],
             ),
         ),
         "model": replace(model, id="other-model"),
         "endpoint": replace(
-            model, endpoint="https://different.example/chat/completions"
+            model,
+            upstreams=(
+                replace(
+                    model.upstreams[0], url="https://different.example/chat/completions"
+                ),
+                model.upstreams[1],
+            ),
         ),
         "protocol": replace(model, protocol="responses"),
     }
@@ -354,6 +366,6 @@ def test_binding_record_does_not_contain_plaintext_credentials(
     route = store.bind("session", registered_model())
     store.close()
     contents = state_settings(tmp_path).database.read_bytes()
-    assert route.credential.secret.encode() not in contents
-    assert route.binding.credential_fingerprint != route.credential.secret
+    assert route.upstream.secret.encode() not in contents
+    assert route.binding.credential_fingerprint != route.upstream.secret
     assert len(route.binding.credential_fingerprint) == 64

@@ -11,29 +11,29 @@ from fastapi.testclient import TestClient
 
 from codex_adapter.config import AdapterSettings, ServerSettings
 from codex_adapter.domain.models import (
-    Credential,
     ModelCapabilities,
     RegisteredModel,
     Registry,
+    Upstream,
 )
 from codex_adapter.domain.state import StateKey, StateSettings
 from codex_adapter.interfaces.app import create_app
 
 
 def settings(tmp_path: Path) -> AdapterSettings:
-    credential = Credential("fake-key", "v1", "never-log-test-secret")
+    credential = Upstream(
+        "fake-key", "v1", "https://upstream.example/responses", "never-log-test-secret"
+    )
     gpt = RegisteredModel(
         "gpt-test",
         "responses",
-        "https://upstream.example/responses",
         (credential,),
         ModelCapabilities(),
     )
     gemini = RegisteredModel(
         "gemini-test",
         "gemini_chat",
-        "https://upstream.example/chat",
-        (credential,),
+        (replace(credential, url="https://upstream.example/chat"),),
         ModelCapabilities(
             reasoning_efforts=(), default_reasoning_effort=None, reasoning_summary=False
         ),

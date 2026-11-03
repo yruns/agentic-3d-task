@@ -101,6 +101,37 @@ def test_replay_checks_optional_previous_tool_calls_against_native_snapshot() ->
         prepare_request(request(inputs), MODEL, (forged,))
 
 
+@pytest.mark.parametrize(
+    "choice",
+    [
+        {
+            "index": 1,
+            "message": {"role": "assistant", "content": "ok"},
+            "finish_reason": "stop",
+        },
+        {
+            "index": True,
+            "message": {"role": "assistant", "content": "ok"},
+            "finish_reason": "stop",
+        },
+        {
+            "index": 0,
+            "message": {"role": "assistant", "content": "ok"},
+            "finish_reason": "unexpected",
+        },
+        {
+            "index": 0,
+            "message": {"role": "user", "content": "ok"},
+            "finish_reason": "stop",
+        },
+    ],
+)
+def test_response_rejects_invalid_native_choice_metadata(choice: JsonObject) -> None:
+    prepared = prepare_request(request("hello"), MODEL, ())
+    with pytest.raises(AdapterError):
+        convert_response({"choices": [choice]}, prepared, lease(), MODEL)
+
+
 def test_namespace_identity_is_part_of_stable_options_digest() -> None:
     namespace: JsonObject = {"type": "namespace", "name": "records", "tools": [TOOL]}
     base = request("hello", tools=[namespace])

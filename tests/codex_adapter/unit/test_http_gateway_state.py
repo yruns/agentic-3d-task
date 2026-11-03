@@ -15,10 +15,10 @@ from codex_adapter.application.requests import RequestEnvelope
 from codex_adapter.config import AdapterSettings, ServerSettings
 from codex_adapter.domain.errors import AdapterError
 from codex_adapter.domain.models import (
-    Credential,
     ModelCapabilities,
     RegisteredModel,
     Registry,
+    Upstream,
 )
 from codex_adapter.domain.state import (
     Binding,
@@ -37,8 +37,7 @@ def model() -> RegisteredModel:
     return RegisteredModel(
         "gemini-test",
         "gemini_chat",
-        "https://example.invalid/chat",
-        (Credential("key", "v1", "test-secret"),),
+        (Upstream("key", "v1", "https://example.invalid/chat", "test-secret"),),
         ModelCapabilities(reasoning_efforts=(), default_reasoning_effort=None),
     )
 
@@ -109,7 +108,7 @@ class RecordingStore:
         self, session_id: str, model: RegisteredModel, *, principal: str = "local"
     ) -> BoundRoute:
         self.events.append("bind")
-        return BoundRoute(binding(), model, model.credentials[0])
+        return BoundRoute(binding(), model, model.upstreams[0])
 
     def reserve(
         self,

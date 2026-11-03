@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .errors import AdapterError
-from .models import Credential, RegisteredModel
+from .models import RegisteredModel, Upstream
 
 _STATE_KEY_BYTES = 32
 
@@ -94,7 +94,7 @@ class Binding:
 class BoundRoute:
     binding: Binding
     model: RegisteredModel
-    credential: Credential
+    upstream: Upstream
 
 
 @dataclass(frozen=True)

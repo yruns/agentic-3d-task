@@ -1,11 +1,11 @@
-# Copy to codex_adapter.toml (ignored); inject secrets in the service environment.
-# No wildcard matching, implicit model aliases, or fallback credential pools.
-schema_version = 1
+# Copy to the ignored codex_adapter.toml and replace each upstream's AK.
+# Real AKs belong only in the private file, never in this tracked example.
+schema_version = 2
 
 [server]
 host = "127.0.0.1"
 port = 8787
-# Required for non-loopback listeners; contains the adapter token, not a ModelHub AK.
+# Optional local adapter authentication, not an upstream model AK.
 # auth_env = "CODEX_ADAPTER_TOKEN"
 max_request_bytes = 33554432
 max_response_bytes = 67108864
@@ -22,36 +22,45 @@ max_sessions = 10000
 max_turns = 256
 max_state_bytes = 33554432
 
+# State encryption is separate from model AKs; retain this key across restarts.
 [[state.keys]]
 id = "state-v1"
 secret_env = "CODEX_ADAPTER_STATE_KEY_V1"
 
 [[models]]
-id = "gpt-6-luna"
+id = "gpt-5.4-2026-03-05"
 protocol = "responses"
-endpoint = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/unified/v1/responses"
 
-[[models.credentials]]
-id = "gpt-primary"
+# Every route carries its own full URL + AK + weight. URLs may differ.
+[[models.upstreams]]
+id = "gpt54_a"
 version = "v1"
-secret_env = "MODELHUB_GPT_AK"
-weight = 3
+url = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/unified/v1/responses"
+ak = "replace-with-gpt54-a-ak"
+weight = 200
 status = "active"
 
-[[models.credentials]]
-id = "gpt-secondary"
+[[models.upstreams]]
+id = "gpt54_b"
 version = "v1"
-secret_env = "MODELHUB_GPT_SECONDARY_AK"
-weight = 1
+url = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/unified/v1/responses"
+ak = "replace-with-gpt54-b-ak"
+weight = 20
+status = "active"
+
+[[models.upstreams]]
+id = "gpt54_c"
+version = "v1"
+url = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/unified/v1/responses"
+ak = "replace-with-gpt54-c-ak"
+weight = 100
 status = "active"
 
 [[models]]
 id = "gemini-3.8-flash"
 protocol = "gemini_chat"
-endpoint = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl"
 
-# Conservative defaults: enable only after verifying the particular upstream.
-# Setting a flag declares a capability; it does not prove ModelHub supports it.
+# Declare schema/images only after validating this particular upstream contract.
 [models.capabilities]
 structured_output = false
 images = false
@@ -60,11 +69,28 @@ namespace_tools = true
 parallel_tools = true
 reasoning_summary = false
 reasoning_efforts = []
-default_max_output_tokens = 8192
+default_max_output_tokens = 10240
 
-[[models.credentials]]
-id = "gemini-primary"
+[[models.upstreams]]
+id = "gemini_flash_a"
 version = "v1"
-secret_env = "MODELHUB_GEMINI_AK"
-weight = 1
+url = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl"
+ak = "replace-with-gemini-flash-a-ak"
+weight = 200
+status = "active"
+
+[[models.upstreams]]
+id = "gemini_flash_b"
+version = "v1"
+url = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl"
+ak = "replace-with-gemini-flash-b-ak"
+weight = 200
+status = "active"
+
+[[models.upstreams]]
+id = "gemini_flash_c"
+version = "v1"
+url = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl"
+ak = "replace-with-gemini-flash-c-ak"
+weight = 200
 status = "active"

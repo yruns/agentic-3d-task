@@ -221,8 +221,8 @@ The maintained service now lives in `src/codex_adapter/` and uses the root
 project's `adapter` extra and `uv.lock`. The old standalone
 `codex_modelhub_adapter/` launch commands are retired. See the
 [adapter operations guide](codex_agent/adapter.md) for explicit model registration,
-server-side credential references, state initialization, and durable session/AK
-bindings. Use the existing Linux `agentic3d` environment; do not create another
+per-model URL/AK/weight upstream pools, private file-based AKs, state
+initialization, and durable session/upstream bindings. Use the existing Linux `agentic3d` environment; do not create another
 venv or modify the vision model stack for this gateway.
 
 GPT stays native Responses end to end. Gemini uses a separate Chat codec with

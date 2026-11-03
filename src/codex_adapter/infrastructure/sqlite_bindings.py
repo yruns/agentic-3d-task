@@ -10,7 +10,7 @@ from collections.abc import Callable
 from codex_adapter.domain.errors import AdapterError
 from codex_adapter.domain.json_codec import encode_json
 from codex_adapter.domain.models import RegisteredModel
-from codex_adapter.domain.routing import choose_credential
+from codex_adapter.domain.routing import choose_upstream
 from codex_adapter.domain.state import Binding, BoundRoute, StateSettings
 
 from .sqlite_records import (
@@ -105,32 +105,32 @@ class SQLiteBindings:
         if binding.principal != principal or binding.session_id != session_id:
             raise corrupt_state()
         self._check_expiry(binding)
-        if (
-            binding.model_id,
-            binding.protocol,
-            binding.codec_version,
-            binding.endpoint,
-        ) != (model.id, model.protocol, model.codec_version, model.endpoint):
+        if (binding.model_id, binding.protocol, binding.codec_version) != (
+            model.id,
+            model.protocol,
+            model.codec_version,
+        ):
             raise state_conflict()
-        credential = next(
+        upstream = next(
             (
-                key
-                for key in model.credentials
-                if (key.id, key.version)
+                item
+                for item in model.upstreams
+                if (item.id, item.version)
                 == (binding.credential_id, binding.credential_version)
             ),
             None,
         )
         if (
-            credential is None
-            or credential.status == "revoked"
+            upstream is None
+            or upstream.status == "revoked"
+            or upstream.url != binding.endpoint
             or not hmac.compare_digest(
                 binding.credential_fingerprint,
-                credential_fingerprint(credential.secret),
+                credential_fingerprint(upstream.secret),
             )
         ):
             raise state_conflict()
-        return BoundRoute(binding, model, credential)
+        return BoundRoute(binding, model, upstream)
 
     def _lookup(
         self, connection: sqlite3.Connection, principal: str, session_id: str
@@ -163,7 +163,7 @@ class SQLiteBindings:
                 "State session capacity has been reached",
                 status_code=429,
             )
-        credential = choose_credential(model, draw=self.draw)
+        upstream = choose_upstream(model, draw=self.draw)
         created = self.now()
         binding = Binding(
             self.crypto.binding_id(principal, session_id),
@@ -172,16 +172,16 @@ class SQLiteBindings:
             model.id,
             model.protocol,
             model.codec_version,
-            model.endpoint,
-            credential.id,
-            credential.version,
-            credential_fingerprint(credential.secret),
+            upstream.url,
+            upstream.id,
+            upstream.version,
+            credential_fingerprint(upstream.secret),
             self.crypto.active_key_id,
             created,
             created + self.settings.session_ttl_seconds,
         )
         self._insert(connection, binding)
-        return BoundRoute(binding, model, credential)
+        return BoundRoute(binding, model, upstream)
 
     def _insert(self, connection: sqlite3.Connection, binding: Binding) -> None:
         head = self.crypto.encrypt(

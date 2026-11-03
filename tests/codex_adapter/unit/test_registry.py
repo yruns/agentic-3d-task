@@ -7,19 +7,20 @@ import pytest
 
 from codex_adapter.domain.errors import AdapterError
 from codex_adapter.domain.models import (
-    Credential,
     ModelCapabilities,
     RegisteredModel,
     Registry,
+    Upstream,
 )
-from codex_adapter.domain.routing import choose_credential
+from codex_adapter.domain.routing import choose_upstream
 
 
 def model(*, weights: tuple[int, ...] = (3, 1)) -> RegisteredModel:
-    credentials = tuple(
-        Credential(
+    upstreams = tuple(
+        Upstream(
             id=f"key-{index}",
             version="v1",
+            url="https://upstream.example/responses",
             secret=f"test-secret-{index}",
             weight=weight,
         )
@@ -28,8 +29,7 @@ def model(*, weights: tuple[int, ...] = (3, 1)) -> RegisteredModel:
     return RegisteredModel(
         id="gpt-test",
         protocol="responses",
-        endpoint="https://upstream.example/responses",
-        credentials=credentials,
+        upstreams=upstreams,
         capabilities=ModelCapabilities(),
     )
 
@@ -48,21 +48,20 @@ def _draw_slot(slot: int, total: int) -> int:
 
 def test_weighted_slots_match_configured_weights() -> None:
     selected = tuple(
-        choose_credential(model(), draw=partial(_draw_slot, slot)).id
-        for slot in range(4)
+        choose_upstream(model(), draw=partial(_draw_slot, slot)).id for slot in range(4)
     )
     assert selected == ("key-0", "key-0", "key-0", "key-1")
 
 
 def test_zero_weight_never_receives_new_sessions() -> None:
-    assert choose_credential(model(weights=(0, 1)), draw=lambda total: 0).id == "key-1"
+    assert choose_upstream(model(weights=(0, 1)), draw=lambda total: 0).id == "key-1"
 
 
 def test_draining_credential_is_not_selected() -> None:
     original = model()
-    draining = replace(original.credentials[0], status="draining")
-    selected = choose_credential(
-        replace(original, credentials=(draining, original.credentials[1])),
+    draining = replace(original.upstreams[0], status="draining")
+    selected = choose_upstream(
+        replace(original, upstreams=(draining, original.upstreams[1])),
         draw=lambda total: 0,
     )
     assert selected.id == "key-1"
@@ -79,7 +78,7 @@ def test_gpt_cannot_use_a_chat_codec() -> None:
 
 
 def test_credentials_are_immutable_and_redacted() -> None:
-    credential = model().credentials[0]
+    credential = model().upstreams[0]
     assert credential.secret not in repr(credential)
     with pytest.raises(FrozenInstanceError):
         credential.weight = 2  # type: ignore[misc]
@@ -88,4 +87,4 @@ def test_credentials_are_immutable_and_redacted() -> None:
 @pytest.mark.parametrize("weights", [(-1, 1), (0, 0)])
 def test_invalid_weights_fail(weights: tuple[int, ...]) -> None:
     with pytest.raises(AdapterError):
-        choose_credential(model(weights=weights), draw=lambda total: 0)
+        choose_upstream(model(weights=weights), draw=lambda total: 0)

@@ -44,13 +44,28 @@ def test_invalid_utf8_request_identity_never_leaks_a_raw_encoding_error(
         )
 
 
+@pytest.mark.parametrize("clock_value", [-1.0, float("nan"), float("inf")])
+def test_nonfinite_or_negative_clock_fails_closed(
+    tmp_path: Path, clock_value: float
+) -> None:
+    instance = SQLiteStateStore(state_settings(tmp_path), clock=lambda: clock_value)
+    try:
+        instance.initialize()
+        with pytest.raises(AdapterError) as raised:
+            instance.bind("session", registered_model())
+        assert raised.value.code == "invalid_clock"
+        assert raised.value.status_code == 500
+    finally:
+        instance.close()
+
+
 def test_invalid_utf8_credential_secret_fails_without_echoing_the_secret(
     store: SQLiteStateStore,
 ) -> None:
     model = registered_model()
-    invalid = replace(model.credentials[0], secret="private-ak-\ud800")
+    invalid = replace(model.upstreams[0], secret="private-ak-\ud800")
     with pytest.raises(AdapterError) as raised:
-        store.bind("session", replace(model, credentials=(invalid,)))
+        store.bind("session", replace(model, upstreams=(invalid,)))
     assert "private-ak" not in str(raised.value)
 
 

@@ -11,10 +11,10 @@ from fastapi.testclient import TestClient
 from codex_adapter.config import AdapterSettings, ServerSettings
 from codex_adapter.domain.json_codec import JsonObject
 from codex_adapter.domain.models import (
-    Credential,
     ModelCapabilities,
     RegisteredModel,
     Registry,
+    Upstream,
 )
 from codex_adapter.domain.state import StateKey, StateSettings
 from codex_adapter.interfaces.app import create_app
@@ -46,8 +46,11 @@ def settings(tmp_path: Path) -> AdapterSettings:
     model = RegisteredModel(
         "gemini-test",
         "gemini_chat",
-        "https://upstream.example/chat",
-        (Credential("test-key", "v1", "fake-http-test-key"),),
+        (
+            Upstream(
+                "test-key", "v1", "https://upstream.example/chat", "fake-http-test-key"
+            ),
+        ),
         capabilities,
     )
     return AdapterSettings(

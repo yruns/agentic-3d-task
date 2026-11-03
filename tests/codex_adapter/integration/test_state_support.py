@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from codex_adapter.domain.models import Credential, ModelCapabilities, RegisteredModel
+from codex_adapter.domain.models import ModelCapabilities, RegisteredModel, Upstream
 from codex_adapter.domain.state import (
     Completion,
     RequestLease,
@@ -27,10 +27,21 @@ def registered_model() -> RegisteredModel:
     return RegisteredModel(
         "gemini-test",
         "gemini_chat",
-        "https://upstream.example/chat/completions",
         (
-            Credential("credential-a", "v1", "test-ak-first", 3),
-            Credential("credential-b", "v1", "test-ak-second", 1),
+            Upstream(
+                "credential-a",
+                "v1",
+                "https://upstream.example/chat/completions",
+                "test-ak-first",
+                3,
+            ),
+            Upstream(
+                "credential-b",
+                "v1",
+                "https://upstream.example/chat/completions",
+                "test-ak-second",
+                1,
+            ),
         ),
         ModelCapabilities(),
     )

@@ -1,16 +1,18 @@
-"""Immutable model registry, capabilities, and secret-bearing credentials."""
+"""Immutable model registry, capabilities, and secret-bearing upstreams."""
 
 from __future__ import annotations
 
+import ipaddress
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Literal
+from urllib.parse import urlsplit
 
 from .errors import AdapterError
 
 ProtocolName = Literal["responses", "gemini_chat"]
-CredentialStatus = Literal["active", "draining", "revoked"]
+UpstreamStatus = Literal["active", "draining", "revoked"]
 # Retained for callers of the original constant; per-protocol versions live below.
 CODEC_VERSION = "1"
 _CODEC_VERSIONS: Mapping[ProtocolName, str] = MappingProxyType(
@@ -22,15 +24,61 @@ def _positive_integer(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
+def _is_loopback(hostname: str) -> bool:
+    if hostname == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        return False
+
+
+def validate_upstream_url(url: str) -> str:
+    """Require a secret-free HTTPS URL or an HTTP URL to a loopback address."""
+    message = "Upstream URL must be HTTPS or loopback HTTP without credentials, query or fragment"
+    if (
+        not isinstance(url, str)
+        or not url
+        or any(
+            char.isspace() or ord(char) < 32 or ord(char) == 127 or char == "\\"
+            for char in url
+        )
+    ):
+        raise ValueError(message)
+    try:
+        url.encode("utf-8")
+        parsed = urlsplit(url)
+        hostname = parsed.hostname
+        _ = parsed.port
+    except (ValueError, UnicodeError):
+        pass
+    else:
+        if (
+            hostname
+            and (
+                parsed.scheme == "https"
+                or (parsed.scheme == "http" and _is_loopback(hostname))
+            )
+            and "@" not in parsed.netloc
+            # Preserve old bindings with empty delimiters, but reject actual
+            # query/fragment data and never normalize the stored URL identity.
+            and not parsed.query
+            and not parsed.fragment
+        ):
+            return url
+    raise ValueError(message) from None
+
+
 @dataclass(frozen=True)
-class Credential:
-    """A server-owned credential; repr deliberately excludes its value."""
+class Upstream:
+    """One server-owned URL and AK; neither is exposed by repr."""
 
     id: str
     version: str
+    url: str = field(repr=False)
     secret: str = field(repr=False)
     weight: int = 1
-    status: CredentialStatus = "active"
+    status: UpstreamStatus = "active"
 
     def __post_init__(self) -> None:
         if not all(
@@ -38,18 +86,26 @@ class Credential:
             for value in (self.id, self.version, self.secret)
         ):
             raise AdapterError(
-                "invalid_config", "Credential id, version and secret must be nonempty"
+                "invalid_config", "Upstream id, version and secret must be nonempty"
             )
+        try:
+            validate_upstream_url(self.url)
+        except ValueError:
+            invalid_url = True
+        else:
+            invalid_url = False
+        if invalid_url:
+            raise AdapterError("invalid_config", "Invalid upstream URL") from None
         if (
             not isinstance(self.weight, int)
             or isinstance(self.weight, bool)
             or self.weight < 0
         ):
             raise AdapterError(
-                "invalid_config", "Credential weight must be a nonnegative integer"
+                "invalid_config", "Upstream weight must be a nonnegative integer"
             )
         if self.status not in ("active", "draining", "revoked"):
-            raise AdapterError("invalid_config", "Invalid credential status")
+            raise AdapterError("invalid_config", "Invalid upstream status")
 
 
 @dataclass(frozen=True)
@@ -116,8 +172,7 @@ class RegisteredModel:
 
     id: str
     protocol: ProtocolName
-    endpoint: str = field(repr=False)
-    credentials: tuple[Credential, ...]
+    upstreams: tuple[Upstream, ...]
     capabilities: ModelCapabilities
 
     def __post_init__(self) -> None:
@@ -132,21 +187,19 @@ class RegisteredModel:
             raise AdapterError("invalid_config", "Unsupported provider protocol")
         if self.id.lower().startswith("gpt-") and self.protocol != "responses":
             raise AdapterError("invalid_config", "GPT models require native Responses")
-        if not isinstance(self.endpoint, str) or not self.endpoint.strip():
-            raise AdapterError("invalid_config", "Model endpoint must be nonempty")
         if (
-            not isinstance(self.credentials, tuple)
-            or not self.credentials
-            or not all(isinstance(key, Credential) for key in self.credentials)
+            not isinstance(self.upstreams, tuple)
+            or not self.upstreams
+            or not all(isinstance(upstream, Upstream) for upstream in self.upstreams)
         ):
             raise AdapterError(
-                "invalid_config", "A registered model requires immutable credentials"
+                "invalid_config", "A registered model requires immutable upstreams"
             )
         if not isinstance(self.capabilities, ModelCapabilities):
             raise AdapterError("invalid_config", "Model capabilities are required")
-        identities = tuple((key.id, key.version) for key in self.credentials)
+        identities = tuple((item.id, item.version) for item in self.upstreams)
         if len(set(identities)) != len(identities):
-            raise AdapterError("invalid_config", "Duplicate credential identity")
+            raise AdapterError("invalid_config", "Duplicate upstream identity")
 
     @property
     def codec_version(self) -> str:

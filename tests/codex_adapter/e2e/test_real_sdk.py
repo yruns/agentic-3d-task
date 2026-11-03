@@ -21,10 +21,10 @@ from starlette.responses import Response
 
 from codex_adapter.config import AdapterSettings, ServerSettings
 from codex_adapter.domain.models import (
-    Credential,
     ModelCapabilities,
     RegisteredModel,
     Registry,
+    Upstream,
 )
 from codex_adapter.domain.state import StateKey, StateSettings
 from codex_adapter.interfaces.app import create_app
@@ -166,8 +166,7 @@ def adapter_settings(tmp_path: Path) -> AdapterSettings:
     model = RegisteredModel(
         "gemini-sdk-test",
         "gemini_chat",
-        "https://fake-upstream.example/chat",
-        (Credential("one", "v1", "fake-sdk-key"),),
+        (Upstream("one", "v1", "https://fake-upstream.example/chat", "fake-sdk-key"),),
         ModelCapabilities(
             reasoning_efforts=(), default_reasoning_effort=None, reasoning_summary=False
         ),

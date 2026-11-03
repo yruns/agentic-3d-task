@@ -12,12 +12,12 @@ from codex_adapter.domain import models as model_module
 from codex_adapter.domain.errors import AdapterError
 from codex_adapter.domain.json_codec import decode_object, encode_json
 from codex_adapter.domain.models import (
-    Credential,
     ModelCapabilities,
     RegisteredModel,
     Registry,
+    Upstream,
 )
-from codex_adapter.domain.routing import choose_credential
+from codex_adapter.domain.routing import choose_upstream
 from codex_adapter.domain.state import (
     Binding,
     BoundRoute,
@@ -36,8 +36,14 @@ def sample_model() -> RegisteredModel:
     return RegisteredModel(
         id="gpt-test",
         protocol="responses",
-        endpoint="https://example.invalid/responses",
-        credentials=(Credential(id="key", version="1", secret="test-secret"),),
+        upstreams=(
+            Upstream(
+                id="key",
+                version="1",
+                url="https://example.invalid/responses",
+                secret="test-secret",
+            ),
+        ),
         capabilities=ModelCapabilities(),
     )
 
@@ -83,13 +89,19 @@ def sample_turn() -> SavedTurn:
 @pytest.mark.parametrize("weight", [True, -1, 1.5, "1", None, float("nan")])
 def test_credential_weight_must_be_a_nonnegative_integer(weight: Any) -> None:
     with pytest.raises(AdapterError, match="nonnegative integer"):
-        Credential(id="key", version="1", secret="test-secret", weight=weight)
+        Upstream(
+            id="key",
+            version="1",
+            url="https://example.invalid/responses",
+            secret="test-secret",
+            weight=weight,
+        )
 
 
 @pytest.mark.parametrize("slot", [True, -1, 1, 0.5, "0", None])
 def test_selector_must_return_an_in_range_integer(slot: Any) -> None:
     with pytest.raises(AdapterError, match="invalid slot"):
-        choose_credential(sample_model(), draw=lambda total: slot)
+        choose_upstream(sample_model(), draw=lambda total: slot)
 
 
 def test_unknown_model_message_does_not_echo_client_input() -> None:
@@ -132,7 +144,7 @@ def test_capabilities_can_disable_reasoning_efforts() -> None:
 def test_registry_rejects_mutable_nested_collections() -> None:
     model = sample_model()
     with pytest.raises(AdapterError):
-        replace(model, credentials=list(model.credentials))  # type: ignore[arg-type]  # Deliberately mutable boundary input.
+        replace(model, upstreams=list(model.upstreams))  # type: ignore[arg-type]  # Deliberately mutable boundary input.
     with pytest.raises(AdapterError):
         Registry(models=[model])  # type: ignore[arg-type]
 
@@ -203,7 +215,13 @@ def test_state_and_codec_records_reject_mutable_collections() -> None:
 
 def test_secret_and_payload_fields_are_hidden_from_nested_repr() -> None:
     marker = "sensitive-marker"
-    model = replace(sample_model(), endpoint=f"https://example.invalid/?token={marker}")
+    original = sample_model()
+    model = replace(
+        original,
+        upstreams=(
+            replace(original.upstreams[0], url=f"https://example.invalid/{marker}"),
+        ),
+    )
     binding = sample_binding()
     turn = sample_turn()
     tool = ToolName(upstream_name=marker, name=marker, namespace=marker)
@@ -230,7 +248,7 @@ def test_secret_and_payload_fields_are_hidden_from_nested_repr() -> None:
         StateKey(id="key", secret=marker.encode().ljust(32, b"x")),
         model,
         binding,
-        BoundRoute(binding=binding, model=model, credential=model.credentials[0]),
+        BoundRoute(binding=binding, model=model, upstream=model.upstreams[0]),
         turn,
         tool,
         prepared,

@@ -1,4 +1,4 @@
-"""Validated configuration references and centralized environment loading."""
+"""Validated per-model upstream pools with direct, non-disclosing AK fields."""
 
 from __future__ import annotations
 
@@ -9,16 +9,23 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    ValidationError,
+    field_validator,
+)
 
 from codex_adapter.domain.errors import AdapterError
 from codex_adapter.domain.models import (
-    Credential,
     ModelCapabilities,
     RegisteredModel,
     Registry,
+    Upstream,
+    validate_upstream_url,
 )
 from codex_adapter.domain.state import StateKey, StateSettings
 
@@ -28,6 +35,7 @@ except ModuleNotFoundError:  # pragma: no cover - Python 3.10.
     import tomli as tomllib
 
 _DEFAULT_STATE_TTL = 86400
+_CONFIG_SCHEMA_VERSION = 2
 
 
 class _Document(BaseModel):
@@ -36,15 +44,31 @@ class _Document(BaseModel):
     )
 
 
-class _SecretReference(_Document):
+class _StateKeyReference(_Document):
     id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_.-]+$")
     secret_env: str = Field(min_length=1, pattern=r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
-class _CredentialDocument(_SecretReference):
+class _UpstreamDocument(_Document):
+    id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_.-]+$")
     version: str = Field(min_length=1, max_length=64)
+    url: str = Field(repr=False)
+    ak: SecretStr = Field(repr=False)
     weight: int = Field(default=1, ge=0, le=1000000)
     status: Literal["active", "draining", "revoked"] = "active"
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, url: str) -> str:
+        return validate_upstream_url(url)
+
+    @field_validator("ak")
+    @classmethod
+    def validate_ak(cls, ak: SecretStr) -> SecretStr:
+        value = ak.get_secret_value()
+        if not value.strip() or any(char in value for char in "\r\n\x00"):
+            raise ValueError("AK must be a nonempty single-line string")
+        return ak
 
 
 class _CapabilitiesDocument(_Document):
@@ -65,35 +89,14 @@ class _ModelDocument(_Document):
         min_length=1, max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]*$"
     )
     protocol: Literal["responses", "gemini_chat"]
-    endpoint: str
-    credentials: list[_CredentialDocument] = Field(min_length=1)
+    upstreams: list[_UpstreamDocument] = Field(min_length=1)
     capabilities: _CapabilitiesDocument | None = None
-
-    @field_validator("endpoint")
-    @classmethod
-    def validate_endpoint(cls, endpoint: str) -> str:
-        parsed = urlsplit(endpoint)
-        local = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
-        if parsed.scheme != "https" and not (parsed.scheme == "http" and local):
-            raise ValueError("Endpoint requires HTTPS or loopback HTTP")
-        if (
-            not parsed.hostname
-            or parsed.username
-            or parsed.password
-            or parsed.query
-            or parsed.fragment
-        ):
-            raise ValueError(
-                "Endpoint must not include credentials, queries or fragments"
-            )
-        _ = parsed.port
-        return endpoint
 
 
 class _StateDocument(_Document):
     database: str = Field(min_length=1)
     active_key_id: str = Field(min_length=1)
-    keys: list[_SecretReference] = Field(min_length=1)
+    keys: list[_StateKeyReference] = Field(min_length=1)
     session_ttl_seconds: int = Field(default=_DEFAULT_STATE_TTL, gt=0)
     max_sessions: int = Field(default=10000, gt=0)
     max_turns: int = Field(default=256, gt=0)
@@ -115,7 +118,7 @@ class ServerSettings(_Document):
 
 
 class _SettingsDocument(_Document):
-    schema_version: Literal[1]
+    schema_version: Literal[2]
     state: _StateDocument
     server: ServerSettings = Field(default_factory=ServerSettings)
     models: list[_ModelDocument] = Field(min_length=1)
@@ -132,6 +135,7 @@ class AdapterSettings:
 
 
 def _read_secret(name: str, environ: Mapping[str, str]) -> str:
+    """Resolve only state/auth references, never an upstream model AK."""
     value = environ.get(name, "")
     if not value.strip() or any(char in value for char in "\r\n\x00"):
         raise AdapterError(
@@ -198,42 +202,59 @@ def _load_capabilities(document: _ModelDocument) -> ModelCapabilities:
     )
 
 
-def _load_model(
-    document: _ModelDocument, environ: Mapping[str, str]
-) -> RegisteredModel:
-    credentials = tuple(
-        Credential(
+def _load_model(document: _ModelDocument) -> RegisteredModel:
+    upstreams = tuple(
+        Upstream(
             id=item.id,
             version=item.version,
-            secret=_read_secret(item.secret_env, environ),
+            url=item.url,
+            secret=item.ak.get_secret_value(),
             weight=item.weight,
             status=item.status,
         )
-        for item in document.credentials
+        for item in document.upstreams
     )
     return RegisteredModel(
         id=document.id,
         protocol=document.protocol,
-        endpoint=document.endpoint,
-        credentials=credentials,
+        upstreams=upstreams,
         capabilities=_load_capabilities(document),
     )
+
+
+def _read_document(path: Path) -> _SettingsDocument:
+    try:
+        with path.open("rb") as source:
+            raw = tomllib.load(source)
+    except (OSError, ValueError):
+        raise AdapterError(
+            "invalid_config",
+            "Adapter configuration is missing or invalid",
+            status_code=503,
+        ) from None
+    version = raw.get("schema_version")
+    if type(version) is not int or version != _CONFIG_SCHEMA_VERSION:
+        raise AdapterError(
+            "invalid_config",
+            "schema_version must be 2; migrate model endpoint/credentials to models.upstreams with url and direct ak",
+            status_code=503,
+        )
+    try:
+        return _SettingsDocument.model_validate(raw)
+    except ValidationError:
+        raise AdapterError(
+            "invalid_config",
+            "Adapter configuration is invalid; check upstream URL, direct AK and field constraints",
+            status_code=503,
+        ) from None
 
 
 def load_settings(
     path: Path, *, environ: Mapping[str, str] | None = None
 ) -> AdapterSettings:
-    """Load explicit TOML once; reject unknown fields without echoing secrets."""
+    """Load explicit TOML once; upstream AKs never read or fall back to environment."""
     environment = os.environ if environ is None else environ
-    try:
-        with path.open("rb") as source:
-            document = _SettingsDocument.model_validate(tomllib.load(source))
-    except (OSError, ValueError, ValidationError):
-        raise AdapterError(
-            "invalid_config",
-            "Adapter configuration is missing or invalid; check schema and field constraints",
-            status_code=503,
-        ) from None
+    document = _read_document(path)
     auth = (
         _read_secret(document.server.auth_env, environment)
         if document.server.auth_env
@@ -246,9 +267,7 @@ def load_settings(
             status_code=503,
         )
     return AdapterSettings(
-        registry=Registry(
-            tuple(_load_model(model, environment) for model in document.models)
-        ),
+        registry=Registry(tuple(_load_model(model) for model in document.models)),
         state=_load_state(document.state, path.resolve().parent, environment),
         server=document.server,
         auth_token=auth,

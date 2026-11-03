@@ -6,35 +6,35 @@ import secrets
 from collections.abc import Callable
 
 from .errors import AdapterError
-from .models import Credential, RegisteredModel
+from .models import RegisteredModel, Upstream
 
 
-def choose_credential(
+def choose_upstream(
     model: RegisteredModel, *, draw: Callable[[int], int] = secrets.randbelow
-) -> Credential:
-    """Choose a new-session credential using integer weights; never rebalance."""
+) -> Upstream:
+    """Choose one new-session upstream using integer weights; never rebalance."""
     candidates = tuple(
-        key for key in model.credentials if key.status == "active" and key.weight > 0
+        item for item in model.upstreams if item.status == "active" and item.weight > 0
     )
-    total = sum(key.weight for key in candidates)
+    total = sum(item.weight for item in candidates)
     if total <= 0:
         raise AdapterError(
             "model_unavailable",
-            "Model has no credentials accepting new sessions",
+            "Model has no upstreams accepting new sessions",
             status_code=503,
         )
     slot = draw(total)
     if not isinstance(slot, int) or isinstance(slot, bool) or not 0 <= slot < total:
         raise AdapterError(
             "invalid_selection",
-            "Credential selector returned an invalid slot",
+            "Upstream selector returned an invalid slot",
             status_code=500,
         )
     cumulative = 0
-    for key in candidates:
-        cumulative += key.weight
+    for item in candidates:
+        cumulative += item.weight
         if slot < cumulative:
-            return key
+            return item
     raise AdapterError(
-        "invalid_selection", "Credential selection failed", status_code=500
+        "invalid_selection", "Upstream selection failed", status_code=500
     )

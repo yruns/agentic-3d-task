@@ -7,6 +7,7 @@ import json
 import logging
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextvars import ContextVar
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -130,7 +131,21 @@ class HTTPTransport:
     def _build_request(
         self, route: BoundRoute, payload: bytes, request_id: str, compact: bool
     ) -> httpx.Request:
-        endpoint = route.binding.endpoint.rstrip("/") + ("/compact" if compact else "")
+        binding, upstream = route.binding, route.upstream
+        if (binding.credential_id, binding.credential_version, binding.endpoint) != (
+            upstream.id,
+            upstream.version,
+            upstream.url,
+        ) or upstream not in route.model.upstreams:
+            raise AdapterError(
+                "state_conflict",
+                "Request does not match the durable session state",
+                status_code=409,
+            )
+        endpoint = binding.endpoint
+        if compact:
+            parts = urlsplit(endpoint)
+            endpoint = parts._replace(path=parts.path.rstrip("/") + "/compact").geturl()
         headers = {
             "content-type": "application/json",
             "accept-encoding": "identity",
@@ -146,7 +161,7 @@ class HTTPTransport:
         return self.client.build_request(
             "POST",
             endpoint,
-            params={"ak": route.credential.secret},
+            params={"ak": route.upstream.secret},
             content=payload,
             headers=headers,
             timeout=timeout,

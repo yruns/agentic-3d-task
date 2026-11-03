@@ -174,15 +174,17 @@ extra and lock file. It supports native GPT Responses and a dedicated Gemini
 Chat codec with authenticated, encrypted persistent state. Codex still sees a
 Responses provider and executes the tools itself.
 
-Models must be registered exactly. New sessions select an AK by that model's
-credential weights, then retain the durable binding across turns and restarts.
+Models must be registered exactly. Each model contains multiple upstreams, each
+with its own URL, direct AK, and weight. New sessions select one complete
+upstream, then retain that URL/AK binding across turns and restarts.
 Unknown models fail without fallback; rate limits never trigger account
 failover. Stable affinity and intact history preserve cache eligibility, not a
 guarantee that the upstream will report a cache hit.
 
-Copy `configs/codex_adapter.example.toml` to the ignored private configuration and
-inject the referenced secrets securely. Run installation and service commands
-inside tmux, using the existing environment.
+Copy `configs/codex_adapter.example.toml` to the ignored private configuration,
+fill each upstream's `ak` directly, and protect the file with owner-only
+permissions. Upstream AKs are not read from environment variables. Run
+installation and service commands inside tmux, using the existing environment.
 
 ```bash
 python -m codex_adapter check --config configs/codex_adapter.toml
@@ -199,7 +201,7 @@ python -m codex_adapter serve --config configs/codex_adapter.toml
 For a fresh Codex home:
 
 ```bash
-scripts/codex_agent/bootstrap_codex_home.sh --model gpt-6-luna
+scripts/codex_agent/bootstrap_codex_home.sh --model gpt-5.4-2026-03-05
 ```
 
 See the [adapter operations and capability guide](docs/codex_agent/adapter.md)

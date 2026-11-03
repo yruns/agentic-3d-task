@@ -18,9 +18,8 @@ def operator_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv(
         "TEST_OPERATOR_STATE_KEY", base64.urlsafe_b64encode(b"k" * 32).decode()
     )
-    monkeypatch.setenv("TEST_OPERATOR_MODEL_KEY", "fake-operator-key")
     path = tmp_path / "adapter.toml"
-    path.write_text("""schema_version = 1
+    path.write_text("""schema_version = 2
 [state]
 database = "state.sqlite"
 active_key_id = "v1"
@@ -30,11 +29,11 @@ secret_env = "TEST_OPERATOR_STATE_KEY"
 [[models]]
 id = "gpt-test"
 protocol = "responses"
-endpoint = "https://upstream.example/responses"
-[[models.credentials]]
+[[models.upstreams]]
 id = "one"
 version = "v1"
-secret_env = "TEST_OPERATOR_MODEL_KEY"
+url = "https://upstream.example/responses"
+ak = "fake-operator-key"
 weight = 1
 """)
     return path

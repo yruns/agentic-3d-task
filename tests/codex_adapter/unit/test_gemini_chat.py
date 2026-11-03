@@ -22,7 +22,7 @@ from codex_adapter.domain.json_codec import (
     decode_object,
     encode_json,
 )
-from codex_adapter.domain.models import Credential, ModelCapabilities, RegisteredModel
+from codex_adapter.domain.models import ModelCapabilities, RegisteredModel, Upstream
 from codex_adapter.domain.state import Binding, Completion, RequestLease, SavedTurn
 
 MODEL_ID = "gemini-test"
@@ -34,8 +34,14 @@ CAPABILITIES = ModelCapabilities(
 MODEL = RegisteredModel(
     id=MODEL_ID,
     protocol="gemini_chat",
-    endpoint="https://example.invalid/chat",
-    credentials=(Credential(id="fake", version="1", secret="test-placeholder"),),
+    upstreams=(
+        Upstream(
+            id="fake",
+            version="1",
+            url="https://example.invalid/chat",
+            secret="test-placeholder",
+        ),
+    ),
     capabilities=CAPABILITIES,
 )
 BINDING = Binding(
@@ -45,7 +51,7 @@ BINDING = Binding(
     model_id=MODEL_ID,
     protocol="gemini_chat",
     codec_version=MODEL.codec_version,
-    endpoint=MODEL.endpoint,
+    endpoint=MODEL.upstreams[0].url,
     credential_id="fake",
     credential_version="1",
     credential_fingerprint="fake-fingerprint",

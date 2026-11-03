@@ -5,6 +5,7 @@ import gzip
 import json
 import logging
 import time
+from dataclasses import replace
 from traceback import format_exception
 
 import httpx
@@ -12,17 +13,18 @@ import pytest
 
 from codex_adapter.config import ServerSettings
 from codex_adapter.domain.errors import AdapterError
-from codex_adapter.domain.models import Credential, ModelCapabilities, RegisteredModel
+from codex_adapter.domain.models import ModelCapabilities, RegisteredModel, Upstream
 from codex_adapter.domain.state import Binding, BoundRoute
 from codex_adapter.infrastructure.http_transport import HTTPTransport
 
 
 def route() -> BoundRoute:
-    credential = Credential("test-key", "v1", "test-never-log-this", 1)
+    credential = Upstream(
+        "test-key", "v1", "https://upstream.example/responses", "test-never-log-this", 1
+    )
     model = RegisteredModel(
         "gpt-test",
         "responses",
-        "https://upstream.example/responses",
         (credential,),
         ModelCapabilities(),
     )
@@ -33,7 +35,7 @@ def route() -> BoundRoute:
         model.id,
         model.protocol,
         model.codec_version,
-        model.endpoint,
+        credential.url,
         credential.id,
         credential.version,
         "fingerprint",
@@ -42,6 +44,31 @@ def route() -> BoundRoute:
         9999999999.0,
     )
     return BoundRoute(binding, model, credential)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("suffix", ["?", "#"])
+async def test_compact_uses_path_before_legacy_empty_delimiters(suffix: str) -> None:
+    original = route()
+    upstream = replace(original.upstream, url=original.upstream.url + suffix)
+    candidate = replace(
+        original,
+        upstream=upstream,
+        model=replace(original.model, upstreams=(upstream,)),
+        binding=replace(original.binding, endpoint=upstream.url),
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/responses/compact"
+        assert request.url.params["ak"] == upstream.secret
+        return httpx.Response(200, json={"output": []})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        transport = HTTPTransport(client, ServerSettings())
+        response = await transport.open(
+            candidate, b"{}", request_id="legacy-compact", compact=True
+        )
+        assert await transport.read(response) == b'{"output":[]}'
 
 
 @pytest.mark.asyncio
@@ -63,7 +90,7 @@ async def test_native_bytes_and_opaque_fields_are_not_reencoded() -> None:
         upstream = await transport.open(route(), payload, request_id="request-1")
         assert await transport.read(upstream) == response_bytes
     assert seen[0].content == payload
-    assert seen[0].url.params["ak"] == route().credential.secret
+    assert seen[0].url.params["ak"] == route().upstream.secret
     assert (
         json.loads(seen[0].headers["extra"])["session_id"] == route().binding.session_id
     )

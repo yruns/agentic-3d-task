@@ -44,7 +44,11 @@ def _validate_lease(lease: RequestLease, model: RegisteredModel) -> None:
         or binding.model_id != model.id
         or binding.protocol != model.protocol
         or binding.codec_version != model.codec_version
-        or binding.endpoint != model.endpoint
+        or not any(
+            (upstream.id, upstream.version, upstream.url)
+            == (binding.credential_id, binding.credential_version, binding.endpoint)
+            for upstream in model.upstreams
+        )
         or not lease.carrier
         or not lease.response_id
         or not math.isfinite(lease.created_at)
