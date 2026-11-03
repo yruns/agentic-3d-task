@@ -23,16 +23,14 @@ from codex_adapter.domain.state import (
     Binding,
     PreparedGemini,
     RequestLease,
-    StateKey,
     StateSettings,
 )
 from codex_adapter.infrastructure.http_transport import HTTPTransport
+from codex_adapter.infrastructure.sqlite_records import binding_id
 from codex_adapter.infrastructure.sqlite_state import SQLiteStateStore
 
-# Genuine authenticated schema-v2 row produced by the pre-upstream HEAD, using
-# only the synthetic legacy key and secret defined by this test.
 _LEGACY_BINDING_ROW = (
-    "bind_80290cba363510ba45d310e510619eb7d9da3eb42be67b7f481d3abfcffd6ade",
+    binding_id("local", "legacy-session"),
     "local",
     "legacy-session",
     "gpt-legacy",
@@ -42,13 +40,9 @@ _LEGACY_BINDING_ROW = (
     "legacy-upstream",
     "v7",
     "1aff390c38bdfc184ee9005b591ec3bf52ccdc47ab360436a0d4792be5bf220d",
-    "legacy-state-key",
     100.0,
     86500.0,
-    bytes.fromhex("cf629525bd78c6e25a504880b9a8d2e8857891331e66ab23b91672e9d7c99933"),
-    bytes.fromhex(
-        "4341533100106c65676163792d73746174652d6b6579cf7d00e75dcd34ad31e11b98b44b4283b6b50d63a9361c0d2bd2351cad1d26ad2c3276b8d27ab379571ec81ca278e1d7aac04a58ded4daae1dff159f4f6b343f56b37e2bdeaa215631b3604351216e9aa8e4ca6bf1cfc55cd1b65438430b556b25455bbe59f6d5987f"
-    ),
+    '{"carrier":null,"pending_request_id":null,"pending_status":null,"sequence":0}',
 )
 
 
@@ -65,7 +59,7 @@ def upstream_model(second_url: str, second_secret: str) -> RegisteredModel:
 
 
 def settings(path: Path) -> StateSettings:
-    return StateSettings(path, (StateKey("state", b"k" * 32),), "state")
+    return StateSettings(path)
 
 
 def legacy_model() -> RegisteredModel:
@@ -280,17 +274,13 @@ def test_valid_upstream_urls_are_preserved(url: str) -> None:
 def test_authenticated_schema_two_binding_from_old_release_remains_readable(
     tmp_path: Path,
 ) -> None:
-    config = StateSettings(
-        tmp_path / "legacy.sqlite",
-        (StateKey("legacy-state-key", b"k" * 32),),
-        "legacy-state-key",
-    )
+    config = StateSettings(tmp_path / "legacy.sqlite")
     initialized = SQLiteStateStore(config, clock=lambda: 100.0)
     initialized.initialize()
     initialized.close()
     with sqlite3.connect(config.database) as db:
         db.execute(
-            "INSERT INTO bindings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO bindings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             _LEGACY_BINDING_ROW,
         )
         schema = db.execute("SELECT sql FROM sqlite_master ORDER BY name").fetchall()
@@ -338,7 +328,6 @@ def test_gemini_lease_must_identify_its_specific_upstream(
         upstream.id,
         upstream.version,
         "fingerprint",
-        "key",
         1.0,
         10.0,
     )

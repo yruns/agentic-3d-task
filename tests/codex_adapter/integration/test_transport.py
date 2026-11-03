@@ -39,7 +39,6 @@ def route() -> BoundRoute:
         credential.id,
         credential.version,
         "fingerprint",
-        "v1",
         1.0,
         9999999999.0,
     )

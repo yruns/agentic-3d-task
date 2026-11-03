@@ -48,19 +48,17 @@ Copy `configs/codex_adapter.example.toml` to the ignored
 each with its own `url`, direct `ak`, and `weight`. Real AKs go only in this
 ignored private TOML; the tracked example contains placeholders. Protect the file
 with owner-only permissions. There is no model-AK environment lookup, `ak_env`,
-`secret_env`, implicit `.env` loading or legacy key fallback. State encryption and
-optional adapter authentication remain separate from upstream AK configuration.
+`secret_env`, implicit `.env` loading or legacy key fallback. Optional local
+adapter authentication remains separate from upstream AK configuration.
 
 The sample registers `gpt-5.4-2026-03-05` and `gemini-3.8-flash`. The model string sent by
 Codex must exactly match a registered ID. It is not rewritten to a hidden alias.
 A request for any other model returns `model_not_registered` before an upstream
 call.
 
-State keys are base64-encoded 32-byte random values. Generate them once using a
-trusted secret manager or secure local procedure; retain them across service
-restarts. Do not print keys into shared logs or commit generated values. The
-state directory, database, journal, and backups are sensitive even though
-message payloads are encrypted.
+The state directory, database, journal, and backups store plaintext conversation
+turns and responses locally (while upstream AKs are hashed and never written to
+SQLite); protect the state directory with local owner-only permissions.
 
 Validate configuration without contacting a model:
 
@@ -167,8 +165,13 @@ The codec saves the complete native assistant message, including message-level,
 function-call and multimodal-part signatures and unknown native extensions.
 Codex sees a versioned authenticated state reference in a reasoning item's
 `encrypted_content`; it is not an OpenAI-generated encrypted reasoning block.
-The next request restores the original native message, validates its projection
-and ordered state chain, and does not duplicate the visible assistant items.
+Every model response, including tool continuations within one SDK turn, gets its
+own state reference. On the next request, the adapter loads all saved turns in
+sequence and restores every original native assistant message and its signatures,
+not only the message named by the latest reference. It validates each projection
+and the complete ordered prefix, skipping the visible assistant items so they
+are not duplicated. The reference alone cannot recover native messages without
+the matching SQLite state.
 
 The protected prefix includes instructions, system/user history, tool definitions
 and previous tool results, not only carrier references. Current-round generation
@@ -191,14 +194,16 @@ must be checked separately from ordinary user image input. The pinned SDK's
 native tools require `parallel_tools=true`; declaring it false fails preflight
 rather than silently changing the requested parallel semantics.
 
-The sample intentionally leaves Gemini `structured_output` and `images` false:
-archived probes do not verify the complete strict-schema/task-image pipeline.
-Enable them only for an endpoint whose semantics you have verified. Declaring a
-capability is configuration, not evidence that an upstream implements it.
-Current task runners always request structured output, so their Gemini preflight
-fails until that capability is explicitly configured. Reasoning effort must be a
-declared supported value or explicitly use the provider default; the adapter does
-not silently swallow an unsupported `medium` request.
+The supplied Gemini profile explicitly enables `structured_output=true` and
+`images=true`, allowing the codec to translate strict-schema requests and image
+inputs. Models without explicit capability declarations retain conservative
+defaults. Declaring a capability is configuration, not evidence that the real
+upstream accepts the complete strict-schema/task-image pipeline; local mock and
+SDK tests do not replace that acceptance check. Current task runners always
+request structured output, so a Gemini profile that disables it still fails
+preflight. Reasoning effort must be a declared supported value or explicitly use
+the provider default; the adapter does not silently swallow an unsupported
+`medium` request.
 
 Gemini automatic compact and implicit summaries must remain disabled in the
 pinned Codex SDK/core integration. Compact requests return an unsupported error.
@@ -212,15 +217,14 @@ as compatible. Re-run the local SDK contract suite when upgrading.
 Configuration uses schema version 2; public health/capability documents still
 use their existing version-1 contract. The persistent database retains internal
 schema version 2 and carriers use
-`codex_adapter.state.v2`. Pre-release prototype databases/carriers are explicitly
-rejected, not automatically migrated or replaced. The complete carrier claims
-are AEAD-sealed, so clients cannot decode internal routes or credential identities.
+`codex_adapter.turn.v1.<binding_id>.<sequence>`. Pre-release prototype
+databases/carriers are explicitly rejected, not automatically migrated or
+replaced.
 
-Original native messages and delivery data are encrypted at rest with the
-configured state key ring; encryption/MAC purposes are separated. Keep old state
-keys while their encrypted records remain. Losing a required key, corrupting the
-database, or removing required state fails closed rather than creating a new
-empty session silently.
+Original native messages and delivery data are stored as validated plaintext
+UTF-8 JSON in SQLite (no runtime encryption/decryption overhead), while upstream
+AKs are never persisted. Corrupting the database or removing required turn rows
+fails closed rather than creating a new empty session silently.
 
 For Gemini, the service reserves the request, validates history, obtains the
 complete upstream result, and commits state and the stable Responses result

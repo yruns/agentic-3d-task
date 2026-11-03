@@ -5,8 +5,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-from .sqlite_records import row_int, row_text
-from .state_crypto import corrupt_state
+from .sqlite_records import corrupt_state, row_int, row_text
 
 SCHEMA_VERSION = 2
 SCHEMA = (
@@ -14,10 +13,6 @@ SCHEMA = (
         singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
         schema_version INTEGER NOT NULL,
         database_id TEXT NOT NULL
-    )""",
-    """CREATE TABLE key_proofs (
-        key_id TEXT PRIMARY KEY,
-        proof BLOB NOT NULL
     )""",
     """CREATE TABLE bindings (
         id TEXT PRIMARY KEY,
@@ -30,18 +25,16 @@ SCHEMA = (
         credential_id TEXT NOT NULL,
         credential_version TEXT NOT NULL,
         credential_fingerprint TEXT NOT NULL,
-        key_id TEXT NOT NULL REFERENCES key_proofs(key_id),
         created_at REAL NOT NULL,
         expires_at REAL NOT NULL,
-        binding_mac BLOB NOT NULL,
-        head_state BLOB NOT NULL,
+        head_state TEXT NOT NULL,
         UNIQUE (principal, session_id)
     )""",
     """CREATE TABLE turns (
         binding_id TEXT NOT NULL REFERENCES bindings(id),
         sequence INTEGER NOT NULL CHECK (sequence > 0),
         carrier TEXT NOT NULL UNIQUE,
-        payload BLOB NOT NULL,
+        payload TEXT NOT NULL,
         PRIMARY KEY (binding_id, sequence)
     )""",
     """CREATE TABLE requests (
@@ -49,7 +42,7 @@ SCHEMA = (
         binding_id TEXT NOT NULL REFERENCES bindings(id),
         request_hash TEXT NOT NULL,
         status TEXT NOT NULL CHECK (status IN ('inflight', 'committed', 'rejected', 'indeterminate')),
-        payload BLOB NOT NULL,
+        payload TEXT NOT NULL,
         UNIQUE (binding_id, request_hash)
     )""",
     """CREATE INDEX requests_status ON requests (status, binding_id)""",

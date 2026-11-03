@@ -16,16 +16,10 @@ connect_timeout_seconds = 15.0
 
 [state]
 database = "../.codex-adapter/state.sqlite"
-active_key_id = "state-v1"
 session_ttl_seconds = 86400
 max_sessions = 10000
 max_turns = 256
 max_state_bytes = 33554432
-
-# State encryption is separate from model AKs; retain this key across restarts.
-[[state.keys]]
-id = "state-v1"
-secret_env = "CODEX_ADAPTER_STATE_KEY_V1"
 
 [[models]]
 id = "gpt-5.4-2026-03-05"
@@ -60,10 +54,10 @@ status = "active"
 id = "gemini-3.8-flash"
 protocol = "gemini_chat"
 
-# Declare schema/images only after validating this particular upstream contract.
+# Enable schema/images for this Gemini profile; verify upstream acceptance separately.
 [models.capabilities]
-structured_output = false
-images = false
+structured_output = true
+images = true
 function_tools = true
 namespace_tools = true
 parallel_tools = true

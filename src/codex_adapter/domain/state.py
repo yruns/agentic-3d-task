@@ -8,8 +8,6 @@ from pathlib import Path
 from .errors import AdapterError
 from .models import RegisteredModel, Upstream
 
-_STATE_KEY_BYTES = 32
-
 
 def _positive_integer(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value > 0
@@ -24,43 +22,14 @@ def _optional_bytes(value: object) -> bool:
 
 
 @dataclass(frozen=True)
-class StateKey:
-    id: str
-    secret: bytes = field(repr=False)
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.id, str) or not self.id.strip():
-            raise AdapterError("invalid_config", "State key id must be nonempty")
-        if not isinstance(self.secret, bytes) or len(self.secret) != _STATE_KEY_BYTES:
-            raise AdapterError(
-                "invalid_config", "State key must contain exactly 32 bytes"
-            )
-
-
-@dataclass(frozen=True)
 class StateSettings:
     database: Path
-    keys: tuple[StateKey, ...]
-    active_key_id: str
     session_ttl_seconds: int = 86400
     max_sessions: int = 10000
     max_turns: int = 256
     max_state_bytes: int = 33554432
 
     def __post_init__(self) -> None:
-        if (
-            not isinstance(self.keys, tuple)
-            or not self.keys
-            or not all(isinstance(key, StateKey) for key in self.keys)
-        ):
-            raise AdapterError(
-                "invalid_config", "State keys must be a nonempty immutable tuple"
-            )
-        ids = tuple(key.id for key in self.keys)
-        if len(set(ids)) != len(ids):
-            raise AdapterError("invalid_config", "State key ids must be unique")
-        if self.active_key_id not in ids:
-            raise AdapterError("invalid_config", "Active state key must be configured")
         limits = (
             self.session_ttl_seconds,
             self.max_sessions,
@@ -85,7 +54,6 @@ class Binding:
     credential_id: str = field(repr=False)
     credential_version: str = field(repr=False)
     credential_fingerprint: str = field(repr=False)
-    key_id: str = field(repr=False)
     created_at: float
     expires_at: float
 

@@ -1,4 +1,4 @@
-"""Single-worker durable StateStore with encrypted evidence and exact replay."""
+"""Single-worker durable StateStore with plaintext JSON evidence and exact replay."""
 
 from __future__ import annotations
 
@@ -21,20 +21,10 @@ from .sqlite_bindings import SQLiteBindings, state_conflict
 from .sqlite_database import SQLiteDatabase
 from .sqlite_journal import SQLiteJournal
 from .sqlite_turns import SQLiteTurns
-from .state_crypto import StateCrypto
 
 
 class SQLiteStateStore:
-    """Explicit lifecycle; one owning process, serialized threads, no blind retries.
-
-    Session identities include expiry tombstones in the hard session cap. Byte
-    capacity is per binding and includes encrypted turn/journal payloads and
-    durable idempotency aliases. Ambiguous requests require operator resolution;
-    the journal does not promise exactly-once upstream execution. Authenticated
-    lookups and pending heads detect the covered row edits/deletions, not a
-    coordinated deletion or rollback of all SQLite evidence. There is no external
-    trusted monotonic anchor; protect the database files and their backups.
-    """
+    """Explicit lifecycle; one owning process, serialized threads, no blind retries."""
 
     def __init__(
         self,
@@ -44,11 +34,10 @@ class SQLiteStateStore:
         draw: Callable[[int], int] = secrets.randbelow,
     ) -> None:
         self.settings = settings
-        crypto = StateCrypto(settings)
-        self._database = SQLiteDatabase(settings, crypto)
-        self._bindings = SQLiteBindings(settings, crypto, clock, draw)
-        self._turns = SQLiteTurns(settings, crypto, self._bindings)
-        self._journal = SQLiteJournal(settings, crypto, self._bindings, self._turns)
+        self._database = SQLiteDatabase(settings)
+        self._bindings = SQLiteBindings(settings, clock, draw)
+        self._turns = SQLiteTurns(settings, self._bindings)
+        self._journal = SQLiteJournal(settings, self._bindings, self._turns)
 
     def initialize(self) -> None:
         """Explicitly create new storage; existing files are never overwritten."""
@@ -78,7 +67,7 @@ class SQLiteStateStore:
             return self._bindings.bind(connection, session_id, model, principal)
 
     def turns(self, binding: Binding) -> tuple[SavedTurn, ...]:
-        """Decrypt contiguous authenticated history, never synthesize missing turns."""
+        """Load contiguous turn history, never synthesize missing turns."""
         with self._database.transaction() as connection:
             persisted = self._bindings.validate(connection, binding)
             return self._turns.load(connection, persisted)

@@ -20,20 +20,21 @@ from codex_adapter.domain.state import (
 
 from .sqlite_bindings import (
     SQLiteBindings,
-    record_context,
     state_conflict,
     validate_identity,
 )
 from .sqlite_records import (
     Head,
     JournalRecord,
+    corrupt_state,
     decode_journal,
     encode_journal,
-    row_bytes,
+    format_carrier,
+    row_payload,
     row_text,
+    verify_carrier,
 )
 from .sqlite_turns import SQLiteTurns
-from .state_crypto import StateCrypto, corrupt_state
 
 
 @dataclass(frozen=True)
@@ -83,17 +84,15 @@ def request_identity(
 
 
 class SQLiteJournal:
-    """Encrypted reservations and exact response replay inside SQLite transactions."""
+    """Plaintext reservations and exact response replay inside SQLite transactions."""
 
     def __init__(
         self,
         settings: StateSettings,
-        crypto: StateCrypto,
         bindings: SQLiteBindings,
         turns: SQLiteTurns,
     ) -> None:
         self.settings = settings
-        self.crypto = crypto
         self.bindings = bindings
         self.turns = turns
 
@@ -106,8 +105,9 @@ class SQLiteJournal:
         idem: str | None,
     ) -> RequestLease | Replay:
         identity = request_identity(binding, digest, previous, idem)
-        self.turns.load(connection, binding)
-        pending = self._pending(connection, binding)
+        head = self.bindings.head(connection, binding)
+        self.turns.verify_head(connection, binding, head)
+        pending = self._pending(connection, binding, head=head)
         record = self._existing(connection, binding, identity)
         if record is not None and record.status == "committed":
             if record.replay is None:
@@ -121,7 +121,7 @@ class SQLiteJournal:
                 "Session has an unfinished or indeterminate request",
                 status_code=409,
             )
-        return self._reserve_lease(connection, binding, identity, record)
+        return self._reserve_lease(connection, binding, identity, record, head)
 
     def _existing(
         self,
@@ -161,8 +161,8 @@ class SQLiteJournal:
         binding: Binding,
         identity: RequestIdentity,
         record: JournalRecord | None,
+        head: Head,
     ) -> RequestLease:
-        head = self.bindings.head(connection, binding)
         if head.carrier != identity.previous_carrier:
             raise state_conflict()
         if head.sequence >= self.settings.max_turns:
@@ -185,10 +185,15 @@ class SQLiteJournal:
         return lease
 
     def _pending(
-        self, connection: sqlite3.Connection, binding: Binding
+        self,
+        connection: sqlite3.Connection,
+        binding: Binding,
+        *,
+        head: Head | None = None,
     ) -> JournalRecord | None:
-        """Cross-check the authenticated head against at most two indexed rows."""
-        head = self.bindings.head(connection, binding)
+        """Cross-check the head against at most two indexed rows."""
+        if head is None:
+            head = self.bindings.head(connection, binding)
         rows = connection.execute(
             "SELECT * FROM requests WHERE binding_id = ? AND status IN (?, ?) LIMIT 2",
             (binding.id, "inflight", "indeterminate"),
@@ -217,7 +222,7 @@ class SQLiteJournal:
             "req_" + uuid.uuid4().hex,
             identity.digest,
             identity.idempotency_key,
-            self.crypto.carrier(binding, sequence, identity.previous_carrier),
+            format_carrier(binding.id, sequence),
             "resp_" + uuid.uuid4().hex,
             sequence,
             identity.previous_carrier,
@@ -248,11 +253,7 @@ class SQLiteJournal:
     def _decode(self, row: sqlite3.Row, binding: Binding) -> JournalRecord:
         request_id = row_text(row, "request_id")
         try:
-            plaintext = self.crypto.decrypt(
-                row_bytes(row, "payload"),
-                context=record_context(binding, "journal", request_id),
-            )
-            record = decode_journal(plaintext, binding)
+            record = decode_journal(row_payload(row, "payload"), binding)
             lease = record.lease
             if (
                 lease.request_id != request_id
@@ -262,24 +263,14 @@ class SQLiteJournal:
                 != request_hash(binding, lease.request_digest, lease.previous_carrier)
             ):
                 raise corrupt_state()
-            self.crypto.verify_carrier(
-                lease.carrier,
-                binding,
-                sequence=lease.sequence,
-                previous_carrier=lease.previous_carrier,
-            )
+            verify_carrier(lease.carrier, binding, sequence=lease.sequence)
             return record
-        except AdapterError as error:
-            if error.code == "state_key_missing":
-                raise
+        except AdapterError:
             raise corrupt_state() from None
 
     def _save(self, connection: sqlite3.Connection, record: JournalRecord) -> None:
         lease = record.lease
-        encrypted = self.crypto.encrypt(
-            encode_journal(record),
-            context=record_context(lease.binding, "journal", lease.request_id),
-        )
+        payload = encode_journal(record)
         connection.execute(
             """INSERT INTO requests (request_id, binding_id, request_hash, status, payload)
                VALUES (?, ?, ?, ?, ?)
@@ -291,7 +282,7 @@ class SQLiteJournal:
                     lease.binding, lease.request_digest, lease.previous_carrier
                 ),
                 record.status,
-                encrypted,
+                payload,
             ),
         )
 
@@ -311,7 +302,6 @@ class SQLiteJournal:
     ) -> None:
         record = self._require_inflight(connection, lease)
         self._validate_completion(completion)
-        self.turns.load(connection, lease.binding)
         self.turns.append(connection, lease, completion.turn)
         replay = Replay(completion.response, completion.raw_usage)
         self._save(connection, replace(record, status="committed", replay=replay))

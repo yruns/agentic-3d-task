@@ -6,13 +6,12 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from test_state_support import completion, digest, registered_model, state_settings
+from test_state_support import digest, registered_model, state_settings
 from test_state_support import store as store
 
 from codex_adapter.application.ports import StateStore
 from codex_adapter.domain.errors import AdapterError
 from codex_adapter.domain.models import Upstream, UpstreamStatus
-from codex_adapter.domain.state import StateKey
 from codex_adapter.infrastructure.sqlite_state import SQLiteStateStore
 
 
@@ -277,59 +276,6 @@ def test_max_sessions_is_a_hard_cap_without_silent_eviction(tmp_path: Path) -> N
             instance.bind("second", registered_model())
         assert raised.value.status_code == 429
         assert instance.bind("first", registered_model()).binding == original
-    finally:
-        instance.close()
-
-
-def test_missing_or_replaced_state_key_cannot_open_existing_database(
-    store: SQLiteStateStore, tmp_path: Path
-) -> None:
-    store.bind("session", registered_model())
-    store.close()
-    original = state_settings(tmp_path)
-    for keys, active in (
-        ((StateKey("replacement", b"r" * 32),), "replacement"),
-        ((StateKey("key-1", b"x" * 32),), "key-1"),
-    ):
-        instance = SQLiteStateStore(replace(original, keys=keys, active_key_id=active))
-        try:
-            with pytest.raises(AdapterError) as raised:
-                instance.ready()
-            assert raised.value.status_code == 503
-        finally:
-            instance.close()
-
-
-def test_old_key_remains_readable_while_new_state_uses_rotated_key(
-    store: SQLiteStateStore, tmp_path: Path
-) -> None:
-    route = store.bind("session", registered_model())
-    lease = store.reserve(route.binding, digest("first"), previous_carrier=None)
-    assert not isinstance(lease, tuple)
-    from codex_adapter.domain.state import RequestLease
-
-    assert isinstance(lease, RequestLease)
-    first = completion(lease)
-    store.commit(lease, first)
-    store.close()
-    original = state_settings(tmp_path)
-    rotated = replace(
-        original,
-        keys=(*original.keys, StateKey("key-2", b"n" * 32)),
-        active_key_id="key-2",
-    )
-    instance = SQLiteStateStore(rotated, clock=lambda: 110.0)
-    try:
-        instance.ready()
-        assert instance.turns(route.binding) == (first.turn,)
-        new_route = instance.bind("new-session", registered_model())
-        assert new_route.binding.key_id == "key-2"
-        second = instance.reserve(
-            route.binding, digest("second"), previous_carrier=lease.carrier
-        )
-        assert isinstance(second, RequestLease)
-        instance.commit(second, completion(second))
-        assert len(instance.turns(route.binding)) == 2
     finally:
         instance.close()
 

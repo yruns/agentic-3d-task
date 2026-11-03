@@ -11,14 +11,9 @@ from contextlib import contextmanager
 from threading import Event, RLock
 
 from codex_adapter.domain.errors import AdapterError
-from codex_adapter.domain.json_codec import encode_json
 from codex_adapter.domain.state import StateSettings
 
-from .sqlite_records import row_bytes, row_text
 from .sqlite_schema import create_schema, verify_schema
-from .state_crypto import StateCrypto
-
-_KEY_PROOF = b"codex_adapter.state.v1.verified-master-key"
 
 
 def unavailable_state() -> AdapterError:
@@ -30,9 +25,8 @@ def unavailable_state() -> AdapterError:
 class SQLiteDatabase:
     """One connection and advisory ownership lock per worker; threads serialize IO."""
 
-    def __init__(self, settings: StateSettings, crypto: StateCrypto) -> None:
+    def __init__(self, settings: StateSettings) -> None:
         self.settings = settings
-        self.crypto = crypto
         self._connection: sqlite3.Connection | None = None
         self._file_descriptor: int | None = None
         self._lock = RLock()
@@ -49,14 +43,13 @@ class SQLiteDatabase:
             self._open(create=True)
             try:
                 with self.transaction() as connection:
-                    database_id = create_schema(connection)
-                    self._register_active_key(connection, database_id)
+                    create_schema(connection)
             except BaseException:
                 self.close()
                 raise
 
     def ready(self) -> bool:
-        """Verify schema/key proofs without creating a DB; return whether reopened."""
+        """Verify schema on open without creating a DB; return whether reopened."""
         with self._lock:
             reopened = self._connection is None
             if not reopened and self._closing.is_set():
@@ -64,14 +57,12 @@ class SQLiteDatabase:
             if reopened:
                 self._closing.clear()
                 self._open(create=False)
-            try:
-                with self.transaction() as connection:
-                    database_id = verify_schema(connection)
-                    self._verify_keys(connection, database_id)
-                    self._register_active_key(connection, database_id)
-            except BaseException:
-                self.close()
-                raise
+                try:
+                    with self.transaction() as connection:
+                        verify_schema(connection)
+                except BaseException:
+                    self.close()
+                    raise
             return reopened
 
     def _open(self, *, create: bool) -> None:
@@ -142,59 +133,6 @@ class SQLiteDatabase:
         finally:
             os.close(descriptor)
 
-    def _proof_context(self, database_id: str, key_id: str) -> bytes:
-        return encode_json(
-            {"record": "key-proof", "database": database_id, "key": key_id}
-        )
-
-    def _verify_keys(self, connection: sqlite3.Connection, database_id: str) -> None:
-        rows = connection.execute("SELECT key_id, proof FROM key_proofs").fetchall()
-        if not rows:
-            raise AdapterError(
-                "state_key_missing",
-                "State key verification metadata is missing",
-                status_code=503,
-            )
-        for row in rows:
-            key_id = row_text(row, "key_id")
-            try:
-                plaintext = self.crypto.decrypt(
-                    row_bytes(row, "proof"),
-                    context=self._proof_context(database_id, key_id),
-                )
-            except AdapterError as error:
-                if error.code == "state_key_missing":
-                    raise
-                raise AdapterError(
-                    "state_key_mismatch",
-                    "State master key verification failed",
-                    status_code=503,
-                ) from None
-            if plaintext != _KEY_PROOF:
-                raise AdapterError(
-                    "state_key_mismatch",
-                    "State master key verification failed",
-                    status_code=503,
-                )
-
-    def _register_active_key(
-        self, connection: sqlite3.Connection, database_id: str
-    ) -> None:
-        key_id = self.crypto.active_key_id
-        if (
-            connection.execute(
-                "SELECT key_id FROM key_proofs WHERE key_id = ?", (key_id,)
-            ).fetchone()
-            is not None
-        ):
-            return
-        proof = self.crypto.encrypt(
-            _KEY_PROOF, context=self._proof_context(database_id, key_id)
-        )
-        connection.execute(
-            "INSERT INTO key_proofs (key_id, proof) VALUES (?, ?)", (key_id, proof)
-        )
-
     @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:
         """Serialize the entire operation and sanitize all SQLite error boundaries."""
@@ -214,11 +152,7 @@ class SQLiteDatabase:
                 raise
 
     def close(self) -> None:
-        """Gate queued work, drain active SQL, then release connection/ownership.
-
-        Once this returns, no SQL remains active. Previously queued transaction
-        calls can still wake, but fail the closing gate without touching SQLite.
-        """
+        """Gate queued work, drain active SQL, then release connection/ownership."""
         self._closing.set()
         with self._lock:
             connection, descriptor = self._connection, self._file_descriptor

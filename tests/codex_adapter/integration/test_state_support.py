@@ -11,16 +11,13 @@ from codex_adapter.domain.state import (
     Completion,
     RequestLease,
     SavedTurn,
-    StateKey,
     StateSettings,
 )
 from codex_adapter.infrastructure.sqlite_state import SQLiteStateStore
 
 
 def state_settings(directory: Path) -> StateSettings:
-    return StateSettings(
-        directory / "state.sqlite", (StateKey("key-1", b"k" * 32),), "key-1"
-    )
+    return StateSettings(directory / "state.sqlite")
 
 
 def registered_model() -> RegisteredModel:

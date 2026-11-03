@@ -26,7 +26,7 @@ from codex_adapter.domain.models import (
     Registry,
     Upstream,
 )
-from codex_adapter.domain.state import StateKey, StateSettings
+from codex_adapter.domain.state import StateSettings
 from codex_adapter.interfaces.app import create_app
 
 _SCHEMA: JsonObject = {
@@ -173,7 +173,7 @@ def adapter_settings(tmp_path: Path) -> AdapterSettings:
     )
     return AdapterSettings(
         Registry((model,)),
-        StateSettings(tmp_path / "state.sqlite", (StateKey("v1", b"k" * 32),), "v1"),
+        StateSettings(tmp_path / "state.sqlite"),
         ServerSettings(upstream_timeout_seconds=10.0),
     )
 

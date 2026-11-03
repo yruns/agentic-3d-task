@@ -26,7 +26,6 @@ from codex_adapter.domain.state import (
     Replay,
     RequestLease,
     SavedTurn,
-    StateKey,
     StateSettings,
     ToolName,
 )
@@ -49,11 +48,7 @@ def sample_model() -> RegisteredModel:
 
 
 def sample_settings() -> StateSettings:
-    return StateSettings(
-        database=Path("state.db"),
-        keys=(StateKey(id="key", secret=b"x" * 32),),
-        active_key_id="key",
-    )
+    return StateSettings(database=Path("state.db"))
 
 
 def sample_binding() -> Binding:
@@ -68,7 +63,6 @@ def sample_binding() -> Binding:
         credential_id="sensitive-marker",
         credential_version="sensitive-marker",
         credential_fingerprint="sensitive-marker",
-        key_id="sensitive-marker",
         created_at=1.0,
         expires_at=2.0,
     )
@@ -165,29 +159,8 @@ def test_each_protocol_uses_its_own_codec_version(
 
 
 @pytest.mark.parametrize(
-    "id_value,secret",
-    [
-        ("", b"x" * 32),
-        (" ", b"x" * 32),
-        ("key", b""),
-        ("key", b"x" * 16),
-        ("key", b"x" * 33),
-        ("key", "not-bytes"),
-        ("key", bytearray(b"x" * 32)),
-    ],
-)
-def test_invalid_state_key_fails(id_value: Any, secret: Any) -> None:
-    with pytest.raises(AdapterError):
-        StateKey(id=id_value, secret=secret)
-
-
-@pytest.mark.parametrize(
     "changes",
     [
-        {"keys": ()},
-        {"keys": (StateKey(id="key", secret=b"x" * 32),) * 2},
-        {"keys": [StateKey(id="key", secret=b"x" * 32)]},
-        {"active_key_id": "missing"},
         {"session_ttl_seconds": 0},
         {"session_ttl_seconds": -1},
         {"session_ttl_seconds": True},
@@ -245,7 +218,6 @@ def test_secret_and_payload_fields_are_hidden_from_nested_repr() -> None:
         previous_carrier=marker,
     )
     records = (
-        StateKey(id="key", secret=marker.encode().ljust(32, b"x")),
         model,
         binding,
         BoundRoute(binding=binding, model=model, upstream=model.upstreams[0]),

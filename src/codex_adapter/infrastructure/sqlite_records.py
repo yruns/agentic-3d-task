@@ -1,9 +1,8 @@
-"""Typed, validated serialization at the untrusted SQLite/JSON boundary."""
+"""Typed, validated plaintext JSON serialization at the SQLite boundary."""
 
 from __future__ import annotations
 
-import base64
-import binascii
+import hashlib
 import math
 import sqlite3
 from dataclasses import dataclass
@@ -13,9 +12,57 @@ from codex_adapter.domain.errors import AdapterError
 from codex_adapter.domain.json_codec import JsonObject, decode_object, encode_json
 from codex_adapter.domain.state import Binding, Replay, RequestLease, SavedTurn
 
-from .state_crypto import corrupt_state
-
 JournalStatus = Literal["inflight", "committed", "rejected", "indeterminate"]
+_CARRIER_PREFIX = "codex_adapter.turn.v1."
+
+
+def corrupt_state() -> AdapterError:
+    """Return a safe failure without echoing SQL or private evidence."""
+    return AdapterError(
+        "state_corrupt",
+        "Stored adapter state failed integrity validation",
+        status_code=500,
+    )
+
+
+def credential_fingerprint(secret: str) -> str:
+    """Persist a one-way credential identity, not its raw secret."""
+    try:
+        encoded = secret.encode("utf-8")
+    except UnicodeError:
+        raise AdapterError(
+            "invalid_config", "Credential secret must be valid UTF-8"
+        ) from None
+    return hashlib.sha256(b"codex_adapter.credential.v1\x00" + encoded).hexdigest()
+
+
+def binding_id(principal: str, session_id: str) -> str:
+    """Deterministic lookup identity derived from principal and session_id."""
+    identity = encode_json({"principal": principal, "session_id": session_id})
+    return "bind_" + hashlib.sha256(identity).hexdigest()
+
+
+def format_carrier(binding_identifier: str, sequence: int) -> str:
+    """Build a plaintext turn reference for local session continuity."""
+    if isinstance(sequence, bool) or not isinstance(sequence, int) or sequence < 1:
+        raise corrupt_state()
+    return f"{_CARRIER_PREFIX}{binding_identifier}.{sequence}"
+
+
+def verify_carrier(carrier: str, binding: Binding, *, sequence: int) -> None:
+    """Verify that the turn carrier matches this binding and sequence."""
+    if (
+        isinstance(sequence, bool)
+        or not isinstance(sequence, int)
+        or sequence < 1
+        or not isinstance(carrier, str)
+        or carrier != format_carrier(binding.id, sequence)
+    ):
+        raise AdapterError(
+            "state_conflict",
+            "Adapter state reference does not match this session",
+            status_code=409,
+        )
 
 
 @dataclass(frozen=True)
@@ -40,11 +87,16 @@ def row_text(row: sqlite3.Row, field: str) -> str:
     return value
 
 
-def row_bytes(row: sqlite3.Row, field: str) -> bytes:
+def row_payload(row: sqlite3.Row, field: str) -> bytes:
     value: object = row[field]
-    if not isinstance(value, bytes):
-        raise corrupt_state()
-    return value
+    if isinstance(value, str) and value:
+        try:
+            return value.encode("utf-8")
+        except UnicodeError:
+            raise corrupt_state() from None
+    if isinstance(value, bytes) and value:
+        return value
+    raise corrupt_state()
 
 
 def row_number(row: sqlite3.Row, field: str) -> float:
@@ -111,22 +163,25 @@ def object_field(value: JsonObject, field: str) -> JsonObject:
     return result
 
 
-def binary(value: bytes) -> str:
+def utf8_text(value: bytes) -> str:
     if not isinstance(value, bytes):
         raise corrupt_state()
-    return base64.b64encode(value).decode("ascii")
-
-
-def unbinary(value: object) -> bytes:
-    if not isinstance(value, str):
-        raise corrupt_state()
     try:
-        return base64.b64decode(value.encode("ascii"), validate=True)
-    except (ValueError, UnicodeError, binascii.Error):
+        return value.decode("utf-8")
+    except UnicodeError:
         raise corrupt_state() from None
 
 
-def encode_head(head: Head) -> bytes:
+def utf8_bytes(value: object) -> bytes:
+    if not isinstance(value, str):
+        raise corrupt_state()
+    try:
+        return value.encode("utf-8")
+    except UnicodeError:
+        raise corrupt_state() from None
+
+
+def encode_head(head: Head) -> str:
     return encode_json(
         {
             "sequence": head.sequence,
@@ -134,7 +189,7 @@ def encode_head(head: Head) -> bytes:
             "pending_request_id": head.pending_request_id,
             "pending_status": head.pending_status,
         }
-    )
+    ).decode("utf-8")
 
 
 def decode_head(payload: bytes) -> Head:
@@ -159,19 +214,19 @@ def decode_head(payload: bytes) -> Head:
     return head
 
 
-def encode_turn(turn: SavedTurn) -> bytes:
+def encode_turn(turn: SavedTurn) -> str:
     validate_turn(turn)
     return encode_json(
         {
             "carrier": turn.carrier,
-            "native_message": binary(turn.native_message),
-            "projections": [binary(item) for item in turn.projections],
+            "native_message": utf8_text(turn.native_message),
+            "projections": [utf8_text(item) for item in turn.projections],
             "call_ids": [[native, projected] for native, projected in turn.call_ids],
             "prefix_count": turn.prefix_count,
             "prefix_digest": turn.prefix_digest,
             "options_digest": turn.options_digest,
         }
-    )
+    ).decode("utf-8")
 
 
 def validate_turn(turn: SavedTurn) -> None:
@@ -210,8 +265,8 @@ def decode_turn(payload: bytes) -> SavedTurn:
         raise corrupt_state()
     turn = SavedTurn(
         text(value, "carrier"),
-        unbinary(value.get("native_message")),
-        tuple(unbinary(item) for item in projections),
+        utf8_bytes(value.get("native_message")),
+        tuple(utf8_bytes(item) for item in projections),
         tuple(_decode_call(item) for item in calls),
         integer(value, "prefix_count"),
         text(value, "prefix_digest"),
@@ -262,7 +317,7 @@ def _decode_lease(value: JsonObject, binding: Binding) -> RequestLease:
     return lease
 
 
-def encode_journal(record: JournalRecord) -> bytes:
+def encode_journal(record: JournalRecord) -> str:
     replay = record.replay
     return encode_json(
         {
@@ -272,14 +327,16 @@ def encode_journal(record: JournalRecord) -> bytes:
                 None
                 if replay is None
                 else {
-                    "response": binary(replay.response),
+                    "response": utf8_text(replay.response),
                     "raw_usage": (
-                        None if replay.raw_usage is None else binary(replay.raw_usage)
+                        None
+                        if replay.raw_usage is None
+                        else utf8_text(replay.raw_usage)
                     ),
                 }
             ),
         }
-    )
+    ).decode("utf-8")
 
 
 def decode_journal(payload: bytes, binding: Binding) -> JournalRecord:
@@ -297,7 +354,7 @@ def decode_journal(payload: bytes, binding: Binding) -> JournalRecord:
         raise corrupt_state()
     raw_usage = replay_value.get("raw_usage")
     replay = Replay(
-        unbinary(replay_value.get("response")),
-        None if raw_usage is None else unbinary(raw_usage),
+        utf8_bytes(replay_value.get("response")),
+        None if raw_usage is None else utf8_bytes(raw_usage),
     )
     return JournalRecord(lease, "committed", replay)

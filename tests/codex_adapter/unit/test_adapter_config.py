@@ -208,10 +208,29 @@ def test_public_listen_requires_adapter_authentication(
 
 def test_shipped_gemini_profile_enables_images_and_structured_output() -> None:
     path = Path(__file__).resolve().parents[3] / "configs/codex_adapter.example.toml"
-    settings = load_settings(path, environ={"CODEX_ADAPTER_STATE_KEY_V1": base64.urlsafe_b64encode(b"k" * 32).decode()})
+    settings = load_settings(path, environ={})
     capability = settings.registry.get("gemini-3.8-flash").capabilities
     assert capability.images is True
     assert capability.structured_output is True
+
+
+def test_state_config_does_not_require_state_keys(tmp_path: Path) -> None:
+    minimal = """
+schema_version = 2
+[state]
+database = "state/adapter.sqlite"
+[[models]]
+id = "gpt-test"
+protocol = "responses"
+[[models.upstreams]]
+id = "primary"
+version = "v1"
+url = "https://upstream.example/responses"
+ak = "fake-direct-file-ak"
+weight = 3
+"""
+    settings = load_settings(config_file(tmp_path, minimal), environ={})
+    assert settings.state.database == tmp_path / "state/adapter.sqlite"
 
 
 def test_gemini_defaults_do_not_claim_unverified_capabilities(

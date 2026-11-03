@@ -55,7 +55,6 @@ BINDING = Binding(
     credential_id="fake",
     credential_version="1",
     credential_fingerprint="fake-fingerprint",
-    key_id="test-key",
     created_at=1700000000.0,
     expires_at=1800000000.0,
 )

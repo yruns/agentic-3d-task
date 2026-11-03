@@ -9,7 +9,7 @@ from test_state_support import completion, digest, registered_model, state_setti
 from test_state_support import store as store
 
 from codex_adapter.domain.errors import AdapterError
-from codex_adapter.domain.state import Replay, RequestLease, StateKey
+from codex_adapter.domain.state import Replay, RequestLease
 from codex_adapter.infrastructure.sqlite_state import SQLiteStateStore
 
 
@@ -131,19 +131,6 @@ def test_tombstones_continue_to_count_against_the_hard_session_cap(
         assert raised.value.status_code == 429
     finally:
         restarted.close()
-
-
-def test_invalid_state_key_identifier_is_a_safe_configuration_error(
-    tmp_path: Path,
-) -> None:
-    settings = replace(
-        state_settings(tmp_path),
-        keys=(StateKey("private-\ud800-key", b"x" * 32),),
-        active_key_id="private-\ud800-key",
-    )
-    with pytest.raises(AdapterError) as raised:
-        SQLiteStateStore(settings)
-    assert raised.value.code == "invalid_config"
 
 
 def test_empty_native_tool_id_and_opaque_native_fields_round_trip(

@@ -28,7 +28,6 @@ from codex_adapter.domain.state import (
     Replay,
     RequestLease,
     SavedTurn,
-    StateKey,
     StateSettings,
 )
 
@@ -54,7 +53,6 @@ def binding() -> Binding:
         "key",
         "v1",
         "fingerprint",
-        "key",
         1.0,
         9999999999.0,
     )
@@ -74,7 +72,7 @@ def completion(raw_usage: bytes | None = None) -> Completion:
 def config() -> AdapterSettings:
     return AdapterSettings(
         Registry((model(),)),
-        StateSettings(Path("/unused"), (StateKey("key", b"x" * 32),), "key"),
+        StateSettings(Path("/unused")),
         ServerSettings(),
     )
 

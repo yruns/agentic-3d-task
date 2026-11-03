@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import binascii
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -27,7 +25,7 @@ from codex_adapter.domain.models import (
     Upstream,
     validate_upstream_url,
 )
-from codex_adapter.domain.state import StateKey, StateSettings
+from codex_adapter.domain.state import StateSettings
 
 try:
     import tomllib
@@ -95,8 +93,8 @@ class _ModelDocument(_Document):
 
 class _StateDocument(_Document):
     database: str = Field(min_length=1)
-    active_key_id: str = Field(min_length=1)
-    keys: list[_StateKeyReference] = Field(min_length=1)
+    active_key_id: str | None = Field(default=None, min_length=1)
+    keys: list[_StateKeyReference] = Field(default_factory=list)
     session_ttl_seconds: int = Field(default=_DEFAULT_STATE_TTL, gt=0)
     max_sessions: int = Field(default=10000, gt=0)
     max_turns: int = Field(default=256, gt=0)
@@ -135,7 +133,7 @@ class AdapterSettings:
 
 
 def _read_secret(name: str, environ: Mapping[str, str]) -> str:
-    """Resolve only state/auth references, never an upstream model AK."""
+    """Resolve only local adapter auth references, never an upstream model AK."""
     value = environ.get(name, "")
     if not value.strip() or any(char in value for char in "\r\n\x00"):
         raise AdapterError(
@@ -146,32 +144,10 @@ def _read_secret(name: str, environ: Mapping[str, str]) -> str:
     return value
 
 
-def _load_state(
-    document: _StateDocument, root: Path, environ: Mapping[str, str]
-) -> StateSettings:
-    try:
-        keys = tuple(
-            StateKey(
-                reference.id,
-                base64.b64decode(
-                    _read_secret(reference.secret_env, environ),
-                    altchars=b"-_",
-                    validate=True,
-                ),
-            )
-            for reference in document.keys
-        )
-    except (ValueError, binascii.Error):
-        raise AdapterError(
-            "invalid_config",
-            "State keys must be base64-encoded 32-byte values",
-            status_code=503,
-        ) from None
+def _load_state(document: _StateDocument, root: Path) -> StateSettings:
     database = Path(document.database).expanduser()
     return StateSettings(
         database=database if database.is_absolute() else root / database,
-        keys=keys,
-        active_key_id=document.active_key_id,
         session_ttl_seconds=document.session_ttl_seconds,
         max_sessions=document.max_sessions,
         max_turns=document.max_turns,
@@ -268,7 +244,7 @@ def load_settings(
         )
     return AdapterSettings(
         registry=Registry(tuple(_load_model(model) for model in document.models)),
-        state=_load_state(document.state, path.resolve().parent, environment),
+        state=_load_state(document.state, path.resolve().parent),
         server=document.server,
         auth_token=auth,
     )

@@ -1,7 +1,6 @@
 """Malformed persisted evidence is never treated as recoverable empty state."""
 
 import sqlite3
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -21,22 +20,14 @@ def committed_turn(store: SQLiteStateStore, session: str = "session") -> Request
     return lease
 
 
-def test_native_message_projection_response_and_raw_usage_are_encrypted_at_rest(
+def test_turns_and_requests_persist_plaintext_json_without_upstream_ak(
     store: SQLiteStateStore, tmp_path: Path
 ) -> None:
-    lease = committed_turn(store)
-    result = completion(lease)
+    committed_turn(store)
     store.close()
     content = state_settings(tmp_path).database.read_bytes()
-    for secret in (
-        result.turn.native_message,
-        result.turn.projections[0],
-        result.response,
-        result.raw_usage,
-        b"test-ak-first",
-    ):
-        assert secret is not None
-        assert secret not in content
+    assert b"test-ak-first" not in content
+    assert b"private-answer" in content
 
 
 def test_missing_turn_segment_fails_instead_of_restoring_partial_history(
@@ -114,20 +105,6 @@ def test_ciphertext_cannot_be_swapped_between_sessions(
     assert len(store.turns(first.binding)) == 1
 
 
-def test_binding_metadata_tampering_is_not_trusted(
-    store: SQLiteStateStore, tmp_path: Path
-) -> None:
-    binding = store.bind("session", registered_model()).binding
-    with sqlite3.connect(state_settings(tmp_path).database) as database:
-        database.execute(
-            "UPDATE bindings SET endpoint = ? WHERE id = ?",
-            ("https://malicious.example", binding.id),
-        )
-    with pytest.raises(AdapterError) as raised:
-        store.bind("session", registered_model())
-    assert raised.value.code == "state_corrupt"
-
-
 def test_corrupt_head_is_not_silently_reset(
     store: SQLiteStateStore, tmp_path: Path
 ) -> None:
@@ -140,26 +117,6 @@ def test_corrupt_head_is_not_silently_reset(
     with pytest.raises(AdapterError) as raised:
         store.turns(lease.binding)
     assert raised.value.code == "state_corrupt"
-
-
-def test_deleted_old_state_key_is_rejected_after_key_rotation(
-    store: SQLiteStateStore, tmp_path: Path
-) -> None:
-    lease = committed_turn(store)
-    store.close()
-    original = state_settings(tmp_path)
-    replacement = replace(
-        original, keys=(type(original.keys[0])("new", b"n" * 32),), active_key_id="new"
-    )
-    instance = SQLiteStateStore(replacement, clock=lambda: 110.0)
-    try:
-        with pytest.raises(AdapterError) as raised:
-            instance.ready()
-        assert raised.value.status_code == 503
-        assert instance is not store
-        assert lease.binding.key_id == "key-1"
-    finally:
-        instance.close()
 
 
 def test_sqlite_failures_do_not_expose_sql_or_payloads(

@@ -1,7 +1,6 @@
 """Precise local-state tampering regressions; not a rollback-proof database claim."""
 
 import sqlite3
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -9,7 +8,7 @@ from test_state_support import digest, registered_model, state_settings
 from test_state_support import store as store
 
 from codex_adapter.domain.errors import AdapterError
-from codex_adapter.domain.state import RequestLease, StateKey
+from codex_adapter.domain.state import RequestLease
 from codex_adapter.infrastructure.sqlite_state import SQLiteStateStore
 
 
@@ -29,33 +28,6 @@ def test_mutated_session_lookup_cannot_silently_create_a_new_binding(
     assert raised.value.code == "state_corrupt"
     with sqlite3.connect(state_settings(tmp_path).database) as connection:
         assert connection.execute("SELECT COUNT(*) FROM bindings").fetchone() == (1,)
-
-
-def test_session_lookup_authentication_survives_active_key_rotation(
-    store: SQLiteStateStore, tmp_path: Path
-) -> None:
-    original = store.bind("original-session", registered_model()).binding
-    store.close()
-    settings = state_settings(tmp_path)
-    rotated = replace(
-        settings,
-        keys=(*settings.keys, StateKey("rotated", b"r" * 32)),
-        active_key_id="rotated",
-    )
-    reopened = SQLiteStateStore(rotated, clock=lambda: 110.0)
-    try:
-        reopened.ready()
-        assert reopened.bind("original-session", registered_model()).binding == original
-        with sqlite3.connect(settings.database) as connection:
-            connection.execute(
-                "UPDATE bindings SET session_id = ? WHERE id = ?",
-                ("tampered", original.id),
-            )
-        with pytest.raises(AdapterError) as raised:
-            reopened.bind("original-session", registered_model())
-        assert raised.value.code == "state_corrupt"
-    finally:
-        reopened.close()
 
 
 def test_legacy_schema_is_rejected_without_automatic_reinitialization(

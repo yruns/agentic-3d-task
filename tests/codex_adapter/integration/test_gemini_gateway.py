@@ -16,7 +16,7 @@ from codex_adapter.domain.models import (
     Registry,
     Upstream,
 )
-from codex_adapter.domain.state import StateKey, StateSettings
+from codex_adapter.domain.state import StateSettings
 from codex_adapter.interfaces.app import create_app
 
 HEADERS = {"X-Codex-Session-ID": "session-gemini-http-123"}
@@ -55,7 +55,7 @@ def settings(tmp_path: Path) -> AdapterSettings:
     )
     return AdapterSettings(
         Registry((model,)),
-        StateSettings(tmp_path / "state.sqlite", (StateKey("v1", b"k" * 32),), "v1"),
+        StateSettings(tmp_path / "state.sqlite"),
         ServerSettings(),
     )
 
@@ -167,7 +167,8 @@ def test_tool_signatures_replay_and_restart_remain_on_one_key(tmp_path: Path) ->
     assert {
         json.loads(request.headers["extra"])["session_id"] for request in requests
     } == {HEADERS["X-Codex-Session-ID"]}
-    assert b"tool-opaque-test-signature" not in configured.state.database.read_bytes()
+    assert b"fake-http-test-key" not in configured.state.database.read_bytes()
+    assert b"tool-opaque-test-signature" in configured.state.database.read_bytes()
 
 
 def test_same_idempotency_key_with_different_payload_fails_without_new_generation(

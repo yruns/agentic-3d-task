@@ -35,7 +35,7 @@ def test_reserve_includes_all_response_identity_before_upstream_execution(
     lease = reserve(store)
     assert lease.request_id
     assert lease.response_id.startswith("resp_")
-    assert lease.carrier.startswith("codex_adapter.state.v2.")
+    assert lease.carrier.startswith("codex_adapter.turn.v1.")
     assert lease.sequence == 1
     assert lease.previous_carrier is None
     assert lease.created_at == 100.0
