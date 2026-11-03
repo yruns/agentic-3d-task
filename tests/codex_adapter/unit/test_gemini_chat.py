@@ -740,3 +740,81 @@ def test_incomplete_tool_call_is_never_turned_into_completed_response() -> None:
             lease(),
             MODEL,
         )
+
+
+def test_tool_image_outputs_attach_as_following_user_message_and_replay_cleanly() -> (
+    None
+):
+    initial: list[JsonObject] = [{"role": "user", "content": "view and lookup"}]
+    prepared_1 = prepare_request(request(initial, parallel_tool_calls=True), MODEL, ())
+    calls = (
+        tool_call("lookup", "img-call"),
+        tool_call("lookup", "text-call"),
+    )
+    completion_1 = convert_response(
+        native_result(native_message(*calls), "tool_calls"),
+        prepared_1,
+        lease(1),
+        MODEL,
+    )
+    turn_1_items: list[JsonObject] = [
+        *initial,
+        *output(completion_1),
+        {
+            "type": "function_call_output",
+            "call_id": "img-call",
+            "output": [
+                {"type": "input_image", "image_url": "data:image/png;base64,YQ=="}
+            ],
+        },
+        {
+            "type": "function_call_output",
+            "call_id": "text-call",
+            "output": "lookup-receipt",
+        },
+    ]
+    prepared_2 = prepare_request(
+        request(turn_1_items, parallel_tool_calls=True),
+        MODEL,
+        (completion_1.turn,),
+    )
+    messages_2 = object_list(decode_object(prepared_2.payload)["messages"])
+    assert messages_2[-3:] == [
+        {
+            "role": "tool",
+            "tool_call_id": "img-call",
+            "content": "Image attached in the following user message.",
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "text-call",
+            "content": "lookup-receipt",
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "data:image/png;base64,YQ=="},
+                }
+            ],
+        },
+    ]
+    completion_2 = convert_response(
+        native_result(native_message(text="done")),
+        prepared_2,
+        lease(2),
+        MODEL,
+    )
+    turn_2_items: list[JsonObject] = [
+        *turn_1_items,
+        *output(completion_2),
+        {"role": "user", "content": "followup"},
+    ]
+    prepared_3 = prepare_request(
+        request(turn_2_items, parallel_tool_calls=True),
+        MODEL,
+        (completion_1.turn, completion_2.turn),
+    )
+    messages_3 = object_list(decode_object(prepared_3.payload)["messages"])
+    assert messages_3[-1] == {"role": "user", "content": "followup"}

@@ -188,11 +188,13 @@ custom grammar tools or reasoning options are rejected, never quietly dropped.
 A strict JSON Schema request is not replaced by a prompt saying “return JSON”.
 
 Image-capable configurations also preserve Codex `view_image` results as
-multimodal content in the correlated Chat tool message; they are not dropped or
-invented as user prose. Upstream acceptance of that tool-result representation
-must be checked separately from ordinary user image input. The pinned SDK's
-native tools require `parallel_tools=true`; declaring it false fails preflight
-rather than silently changing the requested parallel semantics.
+multimodal `image_url` content: because ModelHub Gemini Chat serializes
+`role="tool"` content as plain text inside `functionResponse`, the codec emits a
+deterministic text receipt in the correlated `role="tool"` message and attaches
+the image parts in a following `role="user"` message once the turn's tool
+results are collected. The pinned SDK's native tools require
+`parallel_tools=true`; declaring it false fails preflight rather than silently
+changing the requested parallel semantics.
 
 The supplied Gemini profile explicitly enables `structured_output=true` and
 `images=true`, allowing the codec to translate strict-schema requests and image

@@ -22,6 +22,8 @@ from .gemini_common import (
 )
 from .gemini_content import message_content
 
+_TOOL_IMAGE_PLACEHOLDER = "Image attached in the following user message."
+
 
 @dataclass(frozen=True)
 class _Context:
@@ -38,6 +40,7 @@ class _Cursor:
     index: int = 0
     restored: int = 0
     pending: tuple[tuple[str, str], ...] = ()
+    deferred_images: tuple[JsonValue, ...] = ()
 
 
 def _items(body: JsonObject) -> tuple[JsonObject, ...]:
@@ -171,6 +174,26 @@ def _optional_item_fields(item: JsonObject) -> None:
         raise unsupported("input.status")
 
 
+def _split_tool_content(
+    content: JsonValue,
+) -> tuple[str, tuple[JsonValue, ...]]:
+    if isinstance(content, str):
+        return content, ()
+    if not isinstance(content, list):
+        raise invalid("tool output content")
+    texts: list[str] = []
+    images: list[JsonValue] = []
+    for part in content:
+        if isinstance(part, dict) and part.get("type") == "text":
+            text = part.get("text")
+            if isinstance(text, str) and text:
+                texts.append(text)
+        else:
+            images.append(part)
+    tool_text = "\n".join(texts) if texts else _TOOL_IMAGE_PLACEHOLDER
+    return tool_text, tuple(images)
+
+
 def _tool_output(context: _Context, cursor: _Cursor, item: JsonObject) -> _Cursor:
     reject_extra(
         item, {"type", "call_id", "output", "id", "status"}, "tool output field"
@@ -180,24 +203,40 @@ def _tool_output(context: _Context, cursor: _Cursor, item: JsonObject) -> _Curso
     matches = tuple(pair for pair in cursor.pending if pair[0] == call_id)
     if len(matches) != 1:
         raise conflict()
-    # Codex view_image returns image parts inside the function result. Preserve
-    # them in the correlated Chat tool message rather than silently dropping or
-    # inventing user text. This requires the model's declared image capability.
+    # Codex view_image returns image parts inside the function result. ModelHub
+    # Gemini Chat treats role="tool" content as plain text inside functionResponse
+    # (turning base64 images into hundreds of thousands of text tokens), whereas
+    # role="user" image_url parts are parsed as native multimodal images. Emit a
+    # text receipt in the tool message and attach the image parts in a following
+    # user message once all pending tool results for the turn are collected.
     content = message_content(
         item.get("output"), context.capabilities, allow_images=True
     )
+    tool_text, images = _split_tool_content(content)
     message: JsonObject = {
         "role": "tool",
         "tool_call_id": matches[0][1],
-        "content": content,
+        "content": tool_text,
     }
+    messages = (*cursor.messages, encode_json(message))
+    objects = (*cursor.objects, message)
+    deferred = (*cursor.deferred_images, *images)
     remaining = tuple(pair for pair in cursor.pending if pair[0] != call_id)
+    if not remaining and deferred:
+        user_image_msg: JsonObject = {
+            "role": "user",
+            "content": list(deferred),
+        }
+        messages = (*messages, encode_json(user_image_msg))
+        objects = (*objects, user_image_msg)
+        deferred = ()
     return _Cursor(
-        (*cursor.messages, encode_json(message)),
-        (*cursor.objects, message),
+        messages,
+        objects,
         cursor.index + 1,
         cursor.restored,
         remaining,
+        deferred,
     )
 
 
