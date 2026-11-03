@@ -208,4 +208,4 @@ def _rescale_intrinsic(
     scaled[1, 1] *= scale_y
     scaled[0, 2] *= scale_x
     scaled[1, 2] *= scale_y
-    return scaled  # type: ignore[no-any-return]
+    return scaled

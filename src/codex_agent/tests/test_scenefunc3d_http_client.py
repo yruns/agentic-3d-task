@@ -229,7 +229,12 @@ def test_post_json_invalid_json_is_recoverable() -> None:
         server.server_close()
 
 
-def test_post_json_connection_failure_is_recoverable_and_sanitized() -> None:
+def test_post_json_connection_failure_is_recoverable_and_sanitized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # This test targets a closed localhost port, never a machine-level proxy.
+    monkeypatch.setenv("no_proxy", "*")
+    monkeypatch.setenv("NO_PROXY", "*")
     server = _start_server(_InvalidJsonHandler)
     server_port = server.server_port
     server.shutdown()

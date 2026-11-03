@@ -127,7 +127,7 @@ def _filter_triangles(
     tris = mesh.triangles
     tri_visible = visible[tris[:, 0]] & visible[tris[:, 1]] & visible[tris[:, 2]]
     facing_down = mesh.triangle_normals()[:, 2] < config.ceiling_normal_threshold
-    kept = tris[tri_visible & ~facing_down]
+    kept: NDArray[np.int64] = tris[tri_visible & ~facing_down]
     if kept.shape[0] == 0:
         kept = tris[tri_visible]
     if kept.shape[0] == 0:

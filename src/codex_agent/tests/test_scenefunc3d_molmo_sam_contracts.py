@@ -1479,7 +1479,7 @@ def test_cli_sam_crop_candidate_lifts_against_full_frame_depth(
 
     scene_dir, _image_path = _write_cli_scene_with_real_image(tmp_path)
     _write_binary_scene_mesh(
-        scene_dir / "conceptgraph" / "mesh.ply",
+        scene_dir / "raw" / "mesh.ply",
         points=((10.0, 20.0, 1.0),),
     )
     output_root = tmp_path / "out"
@@ -1803,7 +1803,7 @@ def test_cli_lift_mask_writes_deterministic_artifacts(
 
     scene_dir, _ = _write_cli_scene_with_real_image(tmp_path)
     _write_binary_scene_mesh(
-        scene_dir / "conceptgraph" / "mesh.ply",
+        scene_dir / "raw" / "mesh.ply",
         points=((10.0, 0.0, 0.0), (1.0, 0.0, 2.0)),
     )
     mask_path = tmp_path / "mask.npz"
@@ -1862,7 +1862,7 @@ def test_cli_lift_mask_resolves_frame_geometry_when_paths_are_omitted(
 
     scene_dir, _ = _write_cli_scene_with_real_image(tmp_path)
     _write_binary_scene_mesh(
-        scene_dir / "conceptgraph" / "mesh.ply",
+        scene_dir / "raw" / "mesh.ply",
         points=((10.0, 0.0, 0.0), (1.0, 0.0, 2.0)),
     )
     mask_path = tmp_path / "mask.npz"

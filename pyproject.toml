@@ -58,7 +58,7 @@ clip = [
     "open-clip-torch>=2.20.0",
 ]
 codex = [
-    "openai-codex>=0.1.0b2",
+    "openai-codex>=0.163.0",
 ]
 
 [project.urls]

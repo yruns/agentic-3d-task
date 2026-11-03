@@ -94,7 +94,7 @@ def test_build_arg_parser_requires_local_model_path() -> None:
 
 def test_module_import_does_not_import_heavy_dependencies() -> None:
     module_name = "codex_agent.scenefunc3d.servers.molmo_point_server"
-    preserved_modules = {
+    preserved_modules: dict[str, ModuleType] = {
         dependency_name: sys.modules.pop(dependency_name)
         for dependency_name in ("PIL", "torch", "transformers")
         if dependency_name in sys.modules

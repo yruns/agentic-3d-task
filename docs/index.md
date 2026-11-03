@@ -6,6 +6,10 @@ files directly while people browse the rendered MkDocs Material site.
 
 ## Reading Route
 
+- [Linux agentic3d Environment](agentic3d_environment.md): shared model/source
+  storage, Conda activation, native model services, and verification records.
+- [Local Dataset Locations](dataset_locations.md): canonical NR3D/OpenEQA/ScanNet
+  paths on this machine and the verified NR3D centralized-copy record.
 - [Python Code Agent Quality Guide](python_code_agent_quality_guide.md): coding,
   testing, typing, and review standards for Python changes in this repository.
 - [Codex Agent](codex_agent/index.md): engineering notes, design records, and

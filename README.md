@@ -85,9 +85,11 @@ uv pip install -e ".[dev,vision,clip]"
 uv pip install -e ".[dev,vision,codex]"
 ```
 
-On Linux, use the `conceptgraph` conda environment described in `CLAUDE.md`.
-Do not recreate a project `.venv` on Linux unless the environment instructions
-change.
+On Linux, use the `agentic3d` conda environment and the shared models/sources
+under `/home/ysh/Models/agentic3d`. See
+[`docs/agentic3d_environment.md`](docs/agentic3d_environment.md) for activation,
+asset links, pinned versions, and native model-service commands. The older
+`conceptgraph` environment is preserved. Do not recreate a project `.venv` on Linux.
 
 ## Quick Start: Keyframe Retrieval
 
@@ -272,6 +274,10 @@ If a required command cannot run in the current environment, report that
 explicitly with the remaining risk.
 
 ## Data Notes
+
+On the current Linux host, use the shared `/home/ysh/Datasets` root instead of
+another project's checkout. See [Local Dataset Locations](docs/dataset_locations.md)
+for canonical NR3D/OpenEQA/ScanNet paths and the checksum-verified NR3D copy.
 
 Large benchmark assets are local-only and gitignored. Paths such as
 `data/open-eqa-v0.json`, `data/OpenEQA/scannet/`, and

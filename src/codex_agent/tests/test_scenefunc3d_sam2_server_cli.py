@@ -318,6 +318,53 @@ def test_official_runner_rejects_non_cuda_device_before_heavy_imports(
         )
 
 
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+def test_sam_mask_validation_accepts_exact_binary_floats(dtype: DTypeLike) -> None:
+    from codex_agent.scenefunc3d.servers import sam2_mask_server
+
+    raw_masks = np.array([[[0, 1, 0], [1, 1, 0]]], dtype=dtype)
+    masks = sam2_mask_server._validate_mask_batch(
+        raw_masks, image_height=2, image_width=3
+    )
+
+    assert masks.dtype == np.bool_
+    np.testing.assert_array_equal(masks, raw_masks.astype(np.bool_))
+
+
+@pytest.mark.parametrize("value", [0.1, float("nan"), float("inf"), -1.0])
+def test_sam_mask_validation_rejects_nonbinary_floats(value: float) -> None:
+    from codex_agent.scenefunc3d.servers import sam2_mask_server
+
+    raw_masks = np.array([[[0.0, value]]], dtype=np.float32)
+    with pytest.raises(RuntimeError, match="binary"):
+        sam2_mask_server._validate_mask_batch(raw_masks, image_height=1, image_width=2)
+
+
+def test_official_config_uses_hydra_package_relative_name(tmp_path: Path) -> None:
+    from codex_agent.scenefunc3d.servers import sam2_mask_server
+
+    package_root = tmp_path / "shared sam2 package"
+    config_path = package_root / "configs" / "sam2.1" / "sam2.1_hiera_l.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text("model: fake\n", encoding="utf-8")
+    build_module = _FakeSam2BuildModule(package_root=package_root)
+
+    assert sam2_mask_server._official_sam2_config_name(config_path, build_module) == (
+        "configs/sam2.1/sam2.1_hiera_l.yaml"
+    )
+
+
+def test_official_config_rejects_yaml_outside_installed_package(tmp_path: Path) -> None:
+    from codex_agent.scenefunc3d.servers import sam2_mask_server
+
+    config_path = tmp_path / "outside.yaml"
+    config_path.write_text("model: fake\n", encoding="utf-8")
+    build_module = _FakeSam2BuildModule(package_root=tmp_path / "sam2")
+
+    with pytest.raises(RuntimeError, match="inside the installed sam2 package"):
+        sam2_mask_server._official_sam2_config_name(config_path, build_module)
+
+
 def test_official_runner_writes_valid_candidate_masks_with_fake_runtime(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -331,7 +378,7 @@ def test_official_runner_writes_valid_candidate_masks_with_fake_runtime(
     checkpoint_path.write_bytes(b"checkpoint")
     config_path.write_text("model: fake\n", encoding="utf-8")
     image_path.write_bytes(b"image")
-    fake_build_module = _FakeSam2BuildModule()
+    fake_build_module = _FakeSam2BuildModule(package_root=tmp_path)
     fake_predictor_module = _FakePredictorModule()
     fake_torch_module = _FakeTorchModule()
     fake_image_module = _FakeImageModule()
@@ -371,7 +418,7 @@ def test_official_runner_writes_valid_candidate_masks_with_fake_runtime(
     )
     candidates = runner.masks(request)
 
-    assert fake_build_module.config_path == str(config_path.resolve())
+    assert fake_build_module.config_path == config_path.name
     assert fake_build_module.checkpoint_path == str(checkpoint_path.resolve())
     assert fake_build_module.device == "cuda:0"
     assert fake_predictor_module.predictor.model == "fake-sam2-model"
@@ -419,7 +466,7 @@ def test_official_runner_rejects_staging_dir_outside_root(
     checkpoint_path.write_bytes(b"checkpoint")
     config_path.write_text("model: fake\n", encoding="utf-8")
     image_path.write_bytes(b"image")
-    _install_fake_runtime(monkeypatch, sam2_mask_server)
+    _install_fake_runtime(monkeypatch, sam2_mask_server, package_root=tmp_path)
     runner = sam2_mask_server.OfficialSam2Runner(
         model_name="SAM2.1-Hiera-L",
         checkpoint_path=checkpoint_path,
@@ -451,6 +498,7 @@ def test_official_runner_rejects_non_binary_predictor_masks(
     _install_fake_runtime(
         monkeypatch,
         sam2_mask_server,
+        package_root=tmp_path,
         predictor_module=_FloatMaskPredictorModule(),
     )
     runner = sam2_mask_server.OfficialSam2Runner(
@@ -482,7 +530,7 @@ def test_official_runner_maps_missing_pillow_to_image_load_error(
     checkpoint_path.write_bytes(b"checkpoint")
     config_path.write_text("model: fake\n", encoding="utf-8")
     image_path.write_bytes(b"image")
-    _install_fake_runtime(monkeypatch, sam2_mask_server)
+    _install_fake_runtime(monkeypatch, sam2_mask_server, package_root=tmp_path)
     runner = sam2_mask_server.OfficialSam2Runner(
         model_name="SAM2.1-Hiera-L",
         checkpoint_path=checkpoint_path,
@@ -524,6 +572,7 @@ def test_official_runner_rejects_unparseable_predictor_scores(
     _install_fake_runtime(
         monkeypatch,
         sam2_mask_server,
+        package_root=tmp_path,
         predictor_module=_BadScorePredictorModule(),
     )
     runner = sam2_mask_server.OfficialSam2Runner(
@@ -1078,9 +1127,10 @@ def _install_fake_runtime(
     monkeypatch: pytest.MonkeyPatch,
     sam2_mask_server: ModuleType,
     *,
+    package_root: Path,
     predictor_module: ModuleType | None = None,
 ) -> None:
-    fake_build_module = _FakeSam2BuildModule()
+    fake_build_module = _FakeSam2BuildModule(package_root=package_root)
     fake_predictor_module = (
         predictor_module if predictor_module is not None else _FakePredictorModule()
     )
@@ -1135,8 +1185,9 @@ class _FakeInferenceMode:
 
 
 class _FakeSam2BuildModule(ModuleType):
-    def __init__(self) -> None:
+    def __init__(self, *, package_root: Path) -> None:
         super().__init__("sam2.build_sam")
+        self.__file__ = str(package_root / "build_sam.py")
         self.config_path = ""
         self.checkpoint_path = ""
         self.device = ""
