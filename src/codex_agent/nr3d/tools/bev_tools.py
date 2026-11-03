@@ -12,6 +12,8 @@ dispatcher only when the tool runs.
 
 from __future__ import annotations
 
+import os
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -146,7 +148,14 @@ def _render_highlighted_bev(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     # Keep the written overlay within the view_image token budget.
     rendered, _ = downscale_for_view(image)
-    cv2.imwrite(str(out_path), rendered)
+    tmp_path = out_path.with_name(
+        f".{out_path.stem}.{os.getpid()}.{threading.get_ident()}{out_path.suffix}"
+    )
+    try:
+        cv2.imwrite(str(tmp_path), rendered)
+        tmp_path.replace(out_path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def _project_to_bev(
