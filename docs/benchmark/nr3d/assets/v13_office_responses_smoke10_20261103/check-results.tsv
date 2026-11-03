@@ -1,0 +1,8 @@
+check	exit_code
+pytest_src	0
+pytest_adapter	0
+ruff	0
+black	0
+mypy	0
+mkdocs	0
+whitespace	0

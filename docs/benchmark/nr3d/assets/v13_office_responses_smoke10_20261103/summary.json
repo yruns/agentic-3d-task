@@ -1,0 +1,560 @@
+{
+  "n": 10,
+  "mean_iou": 0.8000000000000002,
+  "Acc@0.25": 0.8,
+  "Acc@0.50": 0.8,
+  "cache_hit_rate": 0.6,
+  "mean_cache_ratio": 0.4571539051289114,
+  "per_sample": [
+    {
+      "sample_id": "scannet/scene0221_00::47::4274",
+      "status": "completed",
+      "iou": 1.0000000000000002,
+      "predicted_bbox_9dof": [
+        1.276357413849174,
+        -0.21356860330149685,
+        0.3718996935136818,
+        0.8883926640631647,
+        0.964294271194012,
+        0.4163573346697672,
+        -0.6420405957998376,
+        0.3169962896447147,
+        -0.21219680582888958
+      ],
+      "gt_bbox_9dof": [
+        1.276357413849174,
+        -0.21356860330149685,
+        0.3718996935136818,
+        0.8883926640631647,
+        0.964294271194012,
+        0.4163573346697672,
+        -0.6420405957998376,
+        0.3169962896447147,
+        -0.21219680582888958
+      ],
+      "selected_object_id": 47,
+      "confidence": 0.77,
+      "query": "The correct table is square and close to the door.",
+      "summary": "Proposal 47 is the best match: it is the more square-shaped table in the pool and it sits closest to a door, specifically near the interior door on the right side of the room. The other table candidate (#6) is also somewhat square but is much farther from any door in the BEV layout.",
+      "reasoning_summary": "**Clarifying reference indices**\n\nI'm figuring out what cited_frame_indices I need for the selected proposal. I think I'll focus on visible frames, including those where the table is visible, particularly frames 50-65 for #47, and frame 65 for door #26. But for door #13, I'm seeing that it doesn't overlap with #47. It looks like it’s visible from frames 0-4 and 78-80, making it clear I should cite frame 65 for the interior door #26.\n\n**Considering image inspection**\n\nI’m starting to think that perhaps the table visibility issue is due to different viewpoints, but the Bird's Eye View (BEV) should suffice. I wonder if there’s some uncertainty around whether \"square\" refers to #47 or #6. My confidence is moderate here. I might need to use the view_image tool since I'm allowed to inspect a local image. It could be best to safely inspect the image first using the available commentary channel. I’ll do a brief preamble and then proceed with view_image.",
+      "error": null,
+      "turn_duration_ms": 42704,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 12032,
+          "input_tokens": 21512,
+          "output_tokens": 454,
+          "reasoning_output_tokens": 296,
+          "total_tokens": 21966
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 12032,
+          "input_tokens": 41621,
+          "output_tokens": 1134,
+          "reasoning_output_tokens": 916,
+          "total_tokens": 42755
+        }
+      },
+      "input_tokens": 21512,
+      "cached_input_tokens": 12032
+    },
+    {
+      "sample_id": "scannet/scene0699_00::26::40486",
+      "status": "completed",
+      "iou": 1.0000000000000007,
+      "predicted_bbox_9dof": [
+        -1.6878678870675095,
+        0.5844339598106638,
+        0.5486636261309488,
+        0.5685781808376498,
+        0.741417387630952,
+        0.2015892219089538,
+        -0.2931229457085481,
+        0.03618452326335331,
+        0.07163950294001363
+      ],
+      "gt_bbox_9dof": [
+        -1.6878678870675095,
+        0.5844339598106638,
+        0.5486636261309488,
+        0.5685781808376498,
+        0.741417387630952,
+        0.2015892219089538,
+        -0.2931229457085481,
+        0.03618452326335331,
+        0.07163950294001363
+      ],
+      "selected_object_id": 26,
+      "confidence": 0.83,
+      "query": "the pillow on the side near the kitchen table.",
+      "summary": "Selected pillow #26 because it is the pillow positioned on the side of the bed closest to the room’s only table (#6, the dining/kitchen table). In the BEV and proposal centers, #26 at (-1.688, 0.584) is substantially closer to table #6 at (-1.529, -1.463) than pillow #25 at (-1.647, 1.209), making #26 the best match for 'the pillow on the side near the kitchen table.'",
+      "reasoning_summary": "**Considering table positioning**\n\nI'm acknowledging that I should mention the side near the table, particularly the lower or south pillow. This detail seems important for clarity. I’m not sure if it might help the overall explanation or understanding of the scenario, but it feels like a good addition. My confidence level is at 0.8, which seems moderately high, so I think this mention could enhance the context. Let's go with it!",
+      "error": null,
+      "turn_duration_ms": 18064,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 18701,
+          "output_tokens": 454,
+          "reasoning_output_tokens": 258,
+          "total_tokens": 19155
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 18701,
+          "output_tokens": 454,
+          "reasoning_output_tokens": 258,
+          "total_tokens": 19155
+        }
+      },
+      "input_tokens": 18701,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0500_00::25::13471",
+      "status": "completed",
+      "iou": 0.0,
+      "predicted_bbox_9dof": [
+        1.983384043984704,
+        3.205627124925151,
+        0.7947604328918715,
+        0.282490323625744,
+        1.3819917510017898,
+        1.0193127291729311,
+        0.2841792200323029,
+        -0.7438862315106729,
+        -0.020292665111343727
+      ],
+      "gt_bbox_9dof": [
+        3.0576402194700236,
+        0.2987050315763163,
+        0.9255174280835327,
+        0.3683202514994599,
+        1.72793404109979,
+        1.1049024159064926,
+        0.14857913221486466,
+        -0.16446630668086204,
+        -0.0323559361671197
+      ],
+      "selected_object_id": 26,
+      "confidence": 0.74,
+      "query": "The middle rectangular window on the wall left of the chalkboard.",
+      "summary": "The target is most likely proposal 26, the middle window in the three similar rectangular windows along the wall to the left of the chalkboard; proposal 23 appears larger and stylistically different, likely a separate adjacent window rather than part of the middle trio.",
+      "reasoning_summary": "**Identifying window layout**\n\nI’m observing several windows on the side wall and need to choose the middle window among them. I’ll identify windows by their positions: #23 is a large, tall window near the chalkboard, while #25, #26, and #27 form a line on the same wall with decreasing x-coordinates as y increases. They all have dark frames and likely follow the sequence from near the chalkboard to the far end. I need to focus on the middle rectangular window among these. Let’s take a closer look at their geometry.",
+      "error": null,
+      "turn_duration_ms": 42031,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 21699,
+          "output_tokens": 1151,
+          "reasoning_output_tokens": 1014,
+          "total_tokens": 22850
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 12032,
+          "input_tokens": 42388,
+          "output_tokens": 1342,
+          "reasoning_output_tokens": 1145,
+          "total_tokens": 43730
+        }
+      },
+      "input_tokens": 21699,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0426_00::22::9868",
+      "status": "completed",
+      "iou": 0.9999999999999989,
+      "predicted_bbox_9dof": [
+        -1.0546764716956003,
+        1.8030265012476492,
+        1.2116364015140515,
+        0.9671332658361264,
+        0.3720549825736238,
+        0.5645367762525686,
+        0.03536239467826126,
+        -0.29971000555877425,
+        -0.11299902465848773
+      ],
+      "gt_bbox_9dof": [
+        -1.0546764716956003,
+        1.8030265012476492,
+        1.2116364015140515,
+        0.9671332658361264,
+        0.3720549825736238,
+        0.5645367762525686,
+        0.03536239467826126,
+        -0.29971000555877425,
+        -0.11299902465848773
+      ],
+      "selected_object_id": 22,
+      "confidence": 0.93,
+      "query": "the dark colored pillow in the corner.",
+      "summary": "Proposal 22 best matches: it is a dark-colored bed pillow (dark green/brown) positioned at the head of the bed near the room corner, whereas the other pillows are either white (#0) or bright magenta (#23) and less consistent with 'dark colored pillow in the corner.'",
+      "reasoning_summary": "**Evaluating image requirements**\n\nI need to respond based on one JSON object that matches a specific schema. It seems I’m using an attached local image and may consider commentating with view_image, since the Codex Agent SDK is mentioned. From the data, I should identify the dark colored pillow in the corner. Given the proposals, proposal 22 appears to be the only dark colored pillow, while the others are not dark or in the corner. So, I think I'd pick proposal ID 22!\n\n**Analyzing the image details**\n\nThe BEV image indicates that there's indeed a dark pillow in the top-left corner of the bed, likely proposal #22. This dark pillow is at the junction of the top and left walls. I’m seeing distinct positions for each proposal: #22 is near the corner, #23 is along the top wall, and #0 is lower right on the bed. I need to cite visible frames from the proposal, like [102,106]. I’m uncertain whether \"corner\" refers to the bed corner or the room corner, and dark colored might ambiguously include other pillows, but #22 fits best, with a confidence of around 0.92.",
+      "error": null,
+      "turn_duration_ms": 21156,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 19129,
+          "output_tokens": 512,
+          "reasoning_output_tokens": 355,
+          "total_tokens": 19641
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 19129,
+          "output_tokens": 512,
+          "reasoning_output_tokens": 355,
+          "total_tokens": 19641
+        }
+      },
+      "input_tokens": 19129,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0653_00::18::29686",
+      "status": "completed",
+      "iou": 1.0000000000000016,
+      "predicted_bbox_9dof": [
+        1.2779823504390495,
+        -1.785190972356897,
+        0.6064830745612118,
+        0.9157345581553811,
+        1.7230606218736617,
+        0.6031593137770631,
+        0.2583615554455869,
+        -0.3059598898525737,
+        -0.6365117904590288
+      ],
+      "gt_bbox_9dof": [
+        1.2779823504390495,
+        -1.785190972356897,
+        0.6064830745612118,
+        0.9157345581553811,
+        1.7230606218736617,
+        0.6031593137770631,
+        0.2583615554455869,
+        -0.3059598898525737,
+        -0.6365117904590288
+      ],
+      "selected_object_id": 18,
+      "confidence": 0.9,
+      "query": "The desk on the right side of the room closest to the whiteboard",
+      "summary": "The best match is desk #18, the adjustable-height desk on the right side of the room. It sits directly beside the wall-mounted whiteboard (#21), making it the most plausible desk described as being closest to the whiteboard on the room’s right side.",
+      "reasoning_summary": "**Analyzing whiteboard placement**\n\nI see that the category primarily focuses on a specific whiteboard type, number #21, while also considering natural language as a broader reference. The closest match seems to be a wall-mounted version, and I can identify its location in the room with nearby desks. I’m thinking about citing the overlapping frame indices for visibility, specifically 83-85. It's a good idea to clarify any uncertainties regarding the terms \"right side of room\" and \"whiteboard.\" My confidence level may need to reflect the ambiguity, possibly around 0.87.",
+      "error": null,
+      "turn_duration_ms": 29546,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 20480,
+          "input_tokens": 21479,
+          "output_tokens": 639,
+          "reasoning_output_tokens": 480,
+          "total_tokens": 22118
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 32512,
+          "input_tokens": 41895,
+          "output_tokens": 825,
+          "reasoning_output_tokens": 606,
+          "total_tokens": 42720
+        }
+      },
+      "input_tokens": 21479,
+      "cached_input_tokens": 20480
+    },
+    {
+      "sample_id": "scannet/scene0462_00::6::40854",
+      "status": "completed",
+      "iou": 0.9999999999999993,
+      "predicted_bbox_9dof": [
+        -0.7810083750970087,
+        2.0373667052853937,
+        1.0657106872774413,
+        1.6265634807847704,
+        0.1748025952583964,
+        2.2559133602090418,
+        0.2473137898765568,
+        0.0020741506464252435,
+        0.298099211655823
+      ],
+      "gt_bbox_9dof": [
+        -0.7810083750970087,
+        2.0373667052853937,
+        1.0657106872774413,
+        1.6265634807847704,
+        0.1748025952583964,
+        2.2559133602090418,
+        0.2473137898765568,
+        0.0020741506464252435,
+        0.298099211655823
+      ],
+      "selected_object_id": 6,
+      "confidence": 0.92,
+      "query": "CHoose the door next to the big grey box, NOT the one with the cardboard box iront of it.",
+      "summary": "The target is door #6: it is the door away from the cardboard boxes, while door #16 is the one with cardboard boxes directly in front of it. In the scene layout, #6 is the other door and sits next to a large gray rectangular object/appliance, matching the description better than #16.",
+      "reasoning_summary": "**Identifying the grey box**\n\nI need to identify this \"big grey box,\" which might be a copier or a mini fridge. I have two doors to consider: #6 and #16. Since #16 is near a cardboard box, I'll focus on #6. It's possible that the big grey box is near door #6 or by some mailboxes. I should cite frame indices from the visible frames of the chosen door to support my decision. So, I'll include relevant frame indices for door #6 and exclude those for door #16.\n\n**Summarizing choices**\n\nI need to confirm that door #6 is the one adjacent to the large gray appliance, while door #16 has boxes in front. My confidence in this is moderate since I don't have files to back it up. I’ll stick to a concise summary, noting that the \"big grey box\" could refer to a mini fridge or copier, but the spatial exclusion still clearly points to door #6. I need to represent this strictly in JSON format.",
+      "error": null,
+      "turn_duration_ms": 25014,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 16256,
+          "input_tokens": 17130,
+          "output_tokens": 520,
+          "reasoning_output_tokens": 359,
+          "total_tokens": 17650
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 28288,
+          "input_tokens": 33310,
+          "output_tokens": 723,
+          "reasoning_output_tokens": 502,
+          "total_tokens": 34033
+        }
+      },
+      "input_tokens": 17130,
+      "cached_input_tokens": 16256
+    },
+    {
+      "sample_id": "scannet/scene0207_00::20::12189",
+      "status": "completed",
+      "iou": 1.0000000000000002,
+      "predicted_bbox_9dof": [
+        1.346034816136264,
+        -0.05806368029707981,
+        1.0756142805235775,
+        2.3824667035575358,
+        0.5574400473349135,
+        2.532041007384681,
+        0.013475138667798037,
+        0.08029448141189155,
+        0.6263888168718177
+      ],
+      "gt_bbox_9dof": [
+        1.346034816136264,
+        -0.05806368029707981,
+        1.0756142805235775,
+        2.3824667035575358,
+        0.5574400473349135,
+        2.532041007384681,
+        0.013475138667798037,
+        0.08029448141189155,
+        0.6263888168718177
+      ],
+      "selected_object_id": 20,
+      "confidence": 0.91,
+      "query": "The closet doors across from the bed.",
+      "summary": "The target is the closet doors opposite the bed. Proposal 20 is explicitly a closet door assembly, located directly across from the bed area in the bedroom, and its size suggests it covers the full closet opening rather than a regular single room door.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 13799,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 12032,
+          "input_tokens": 22708,
+          "output_tokens": 351,
+          "reasoning_output_tokens": 210,
+          "total_tokens": 23059
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 12032,
+          "input_tokens": 22708,
+          "output_tokens": 351,
+          "reasoning_output_tokens": 210,
+          "total_tokens": 23059
+        }
+      },
+      "input_tokens": 22708,
+      "cached_input_tokens": 12032
+    },
+    {
+      "sample_id": "scannet/scene0246_00::5::12312",
+      "status": "completed",
+      "iou": 1.0000000000000009,
+      "predicted_bbox_9dof": [
+        0.3713909572583747,
+        1.5393317670423552,
+        0.8809271576189344,
+        0.24633049956097752,
+        0.19750823076279406,
+        0.47956562109336753,
+        -0.19268265996472836,
+        0.017069608572960693,
+        0.1174449299322882
+      ],
+      "gt_bbox_9dof": [
+        0.3713909572583747,
+        1.5393317670423552,
+        0.8809271576189344,
+        0.24633049956097752,
+        0.19750823076279406,
+        0.47956562109336753,
+        -0.19268265996472836,
+        0.017069608572960693,
+        0.1174449299322882
+      ],
+      "selected_object_id": 5,
+      "confidence": 0.95,
+      "query": "The lamp on the square bedside table.",
+      "summary": "Proposal 5 is the best match: it is a table lamp positioned directly above and on top of proposal 18, the nightstand/bedside table next to the bed. The bedside table footprint is roughly square, and the other lamp proposal (4) is a floor lamp, not a lamp on a bedside table.",
+      "reasoning_summary": "**Deciding on lamps**\n\nI need to choose between lamp #5 and possibly object #21, which might be misidentified as a lamp. The description for lamp #5 indicates it's a table lamp on a square bedside table, probably nightstand #18. The measurements show it's centered above the nightstand accurately. On the other hand, object #21, while also labeled as a table lamp, has a lower center and seems to be misplaced in the bathroom area. I’ll need to choose and cite relevant frames to make my proposal clear.\n\n**Assessing confidence in lamp identification**\n\nI'm feeling pretty confident, maybe around 0.95, about the identification of the lamp. I should note that there might be a second lamp (#4), but it's a floor lamp and not on the bedside table, which is important to clarify. Also, I need to mention that while the nightstand has a footprint, there isn't an explicit square descriptor. I must ensure that everything is formatted strictly in JSON only.",
+      "error": null,
+      "turn_duration_ms": 26045,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 19200,
+          "input_tokens": 20169,
+          "output_tokens": 428,
+          "reasoning_output_tokens": 267,
+          "total_tokens": 20597
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 31232,
+          "input_tokens": 39393,
+          "output_tokens": 640,
+          "reasoning_output_tokens": 419,
+          "total_tokens": 40033
+        }
+      },
+      "input_tokens": 20169,
+      "cached_input_tokens": 19200
+    },
+    {
+      "sample_id": "scannet/scene0591_00::14::19171",
+      "status": "completed",
+      "iou": 0.0,
+      "predicted_bbox_9dof": [
+        1.45073711782828,
+        0.47002314938871237,
+        0.5354375381953111,
+        0.14462199201667797,
+        0.5338694598867197,
+        0.4983975286992136,
+        0.08466214418749435,
+        -0.21521380650632382,
+        0.5173481451720228
+      ],
+      "gt_bbox_9dof": [
+        1.2736725103070348,
+        1.0769463028845534,
+        0.46925049351880804,
+        0.4633250827157877,
+        0.475542426152273,
+        0.13402089734168815,
+        -0.2140619976514429,
+        0.3750217012322543,
+        -0.052533273399637995
+      ],
+      "selected_object_id": 16,
+      "confidence": 0.63,
+      "query": "The darker pillow, it is laying against the armrest.",
+      "summary": "The target is most likely pillow #16: it matches the darker of the two couch pillows in the BEV and appears positioned at one end of the couch, leaning against the side/armrest area rather than lying flat on the seat.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 28738,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 17716,
+          "output_tokens": 1105,
+          "reasoning_output_tokens": 935,
+          "total_tokens": 18821
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 17716,
+          "output_tokens": 1105,
+          "reasoning_output_tokens": 935,
+          "total_tokens": 18821
+        }
+      },
+      "input_tokens": 17716,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0608_00::9::17679",
+      "status": "completed",
+      "iou": 0.9999999999999994,
+      "predicted_bbox_9dof": [
+        0.0483527315090236,
+        1.4890508521078227,
+        0.17563481704144582,
+        0.46504263012693564,
+        0.40424487790967767,
+        0.4948748221512247,
+        0.2825337340296767,
+        -0.805995027311405,
+        -0.33596542216692554
+      ],
+      "gt_bbox_9dof": [
+        0.0483527315090236,
+        1.4890508521078227,
+        0.17563481704144582,
+        0.46504263012693564,
+        0.40424487790967767,
+        0.4948748221512247,
+        0.2825337340296767,
+        -0.805995027311405,
+        -0.33596542216692554
+      ],
+      "selected_object_id": 9,
+      "confidence": 0.82,
+      "query": "Looking for a black ottoman, it's right in front of the love seat sofa with the green pillow",
+      "summary": "Proposal 9 is the best match for the black ottoman in front of the loveseat sofa with the green pillow. The green pillow is proposal 27 on couch 26, and ottoman 9 is the ottoman positioned most plausibly in front of that sofa; ottoman 8 appears more off to the side/back of the seating group.",
+      "reasoning_summary": "**Determining spatial relations**\n\nI need to focus on providing a JSON object that matches the specified schema. First, I have to infer the proposal ID from the metadata and extract key details from the provided image. I can consider using the view_image tool for commentary, but my final output must remain a JSON format.\n\nIt seems that the black ottoman I'm selecting should be right in front of the loveseat sofa with the green pillow. I think couch #26 is the dark gray/black three-seater with the green pillow, while the ottoman is likely #8 or #9. Now I need to determine which ottoman is actually in front of couch #26. I’ll analyze their coordinates to infer the correct positional relationship.\n\n**Analyzing furniture layout**\n\nI need to pinpoint the exact location of coffee table #2 relative to couch #26, which is confirmed to be dark-colored with a green pillow. The center coordinates for couch #26 suggest that it’s positioned above the coffee table, which is located at (0.253,0.441). The ottomans likely intersect this spatial reasoning—ottoman #9 is slightly ahead to the left of couch #26, while ottoman #8 is positioned higher and left. Since the geometry indicates the couch is rotated, I should consider its orientation to clarify which ottoman is directly in front.\n\n**Analyzing object axis orientation**\n\nI'm trying to figure out the world axes after rotation and considering an oriented bounding box with dimensions in local x, y, and z. I assume local x is shorter and local y is longer. When rotating, I calculate how this affects the positioning. I've noticed that the couch should align with the room, but I need to determine which side faces the table. The dot products indicate the table's position relative to the couch, suggesting a mismatch in dimensions. Maybe I need to rethink which axis is which!\n\n**Adjusting object alignment**\n\nLet’s consider swapping the dimensions: if the longer side of 2.335 is along local x at an angle of -35°, and the depth of 1.176 is along local y at 55°. The table's placement shows a strong negative alignment along local y, indicating that it could face southwest. Analyzing two ottomans, #9 appears to be in front, while #8 is positioned to the side. I’m curious if #9 is actually in front of couch #26, as the notes might be confusing the furniture types due to appearance!",
+      "error": null,
+      "turn_duration_ms": 37023,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 12032,
+          "input_tokens": 19161,
+          "output_tokens": 1619,
+          "reasoning_output_tokens": 1426,
+          "total_tokens": 20780
+        },
+        "model_context_window": 258400,
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 12032,
+          "input_tokens": 19161,
+          "output_tokens": 1619,
+          "reasoning_output_tokens": 1426,
+          "total_tokens": 20780
+        }
+      },
+      "input_tokens": 19161,
+      "cached_input_tokens": 12032
+    }
+  ]
+}

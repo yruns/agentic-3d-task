@@ -27,6 +27,17 @@ Process archive for NR3D evaluations in `agentic-3d-task`. Mirrors the
 | [v10_skill10_minprompt_20260701](v10_skill10_minprompt_20260701.md) | 2026-07-01 | Codex agent VG diagnostic | Explicit `SkillInput` mode with minimal prompt, first 10 strat600 samples, workers=10 — **COMPLETE 10/10** | **8/10 correct**, matching v8/v9 first10 wrong set; no loop signals; cache 1.000/0.973. |
 | [v11_skill600_minprompt_20260701](v11_skill600_minprompt_20260701.md) | 2026-07-01 | Codex agent VG diagnostic | Explicit `SkillInput` mode with minimal prompt, full strat600, workers=40 — **COMPLETE 600/600** | **Acc@0.25 = 84.50% (507/600)**, matching v8 Overall; View-Dep 79.15%; cache 0.992/0.943; no adapter/encrypted-state errors. |
 | [v12_skill10_keep_home_20260701](v12_skill10_keep_home_20260701.md) | 2026-07-01 | Codex agent VG diagnostic | Explicit Skill mode first-10 rerun with `CODEX_AGENT_KEEP_RUN_HOME=1` — **COMPLETE 10/10** | **8/10 correct**; 10 per-turn Codex homes preserved under `.codex-home/runs/<id>` for trace inspection. |
+| [v13_office_responses_smoke10_20261103](v13_office_responses_smoke10_20261103.md) | 2026-11-03 | Office API connectivity diagnostic | Frozen smoke10, catalog + BEV, **tools off**, GPT-5.4, SDK/CLI 0.163.0, office unified Responses | **10/10 completed, 8/10 correct, Acc@0.25/0.50 = 80.00%**. Not comparable to strat600. Preserves request-path and completed compact-probe observations. |
+
+## Latest office-network connectivity diagnostic
+
+[v13 office Responses smoke10](v13_office_responses_smoke10_20261103.md)
+(2026-11-03): **10/10 completed, 8/10 correct, Acc@0.25 = Acc@0.50 = 80.00%**.
+Frozen transferred smoke10, catalog + BEV **without extra tools**, SDK/CLI 0.163.0,
+GPT-5.4 through the office `unified/v1/responses` route. The adapter inherits the
+user's existing transparent transport via `zsh -ic`; no manual proxy override.
+This is not a strat600/leaderboard comparison. Results, probes, and ten original
+compressed SDK rollouts are archived beside the version record.
 
 ## Codex agent VG — per-tier accuracy (canonical strat600)
 

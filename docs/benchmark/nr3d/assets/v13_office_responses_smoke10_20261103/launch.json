@@ -1,0 +1,23 @@
+{
+  "run_id": "v13_office_responses_smoke10_20261103",
+  "branch": "feat/nr3d-office-responses-smoke-20261103",
+  "head_commit_at_launch": "8ef0f7d1eca536857ac355a9b75490c091bd5461",
+  "runtime_code_commit": "8ef0f7d1eca536857ac355a9b75490c091bd5461",
+  "worktree_drift": false,
+  "started_at_unix": 1793697036.8916745,
+  "sample_ids": "/home/ysh/Datasets/nr3d/processed_v1/folds/strat10_smoke_sample_ids.json",
+  "sample_ids_sha256": "8525d9a82151638061a1589b3a29c97e2182e5474134a162dfcf229842f1b0bc",
+  "fold_n": 10,
+  "tools_enabled": false,
+  "workers": 2,
+  "model": "gpt-5.4-2026-03-05",
+  "reasoning_effort": "medium",
+  "reasoning_summary": "auto",
+  "upstream_env": "office",
+  "responses_path": "/api/modelhub/online/unified/v1/responses",
+  "sdk_version": "0.163.0",
+  "cli_version": "0.163.0",
+  "transport_setup": "user ~/.zshrc inherited by adapter; no manual proxy override",
+  "comparison_scope": "Frozen diagnostic smoke10, not decision-grade strat600",
+  "compact_endpoint_probe_http": 404
+}

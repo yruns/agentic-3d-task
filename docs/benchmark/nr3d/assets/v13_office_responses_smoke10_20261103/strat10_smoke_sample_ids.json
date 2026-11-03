@@ -1,0 +1,82 @@
+[
+  {
+    "sample_id": "scannet/scene0221_00::47::4274",
+    "scene_id": "scene0221_00",
+    "target_id": 47,
+    "category": "table",
+    "is_easy": true,
+    "is_view_dep": false
+  },
+  {
+    "sample_id": "scannet/scene0699_00::26::40486",
+    "scene_id": "scene0699_00",
+    "target_id": 26,
+    "category": "pillow",
+    "is_easy": true,
+    "is_view_dep": false
+  },
+  {
+    "sample_id": "scannet/scene0500_00::25::13471",
+    "scene_id": "scene0500_00",
+    "target_id": 25,
+    "category": "window",
+    "is_easy": false,
+    "is_view_dep": true
+  },
+  {
+    "sample_id": "scannet/scene0426_00::22::9868",
+    "scene_id": "scene0426_00",
+    "target_id": 22,
+    "category": "pillow",
+    "is_easy": false,
+    "is_view_dep": false
+  },
+  {
+    "sample_id": "scannet/scene0653_00::18::29686",
+    "scene_id": "scene0653_00",
+    "target_id": 18,
+    "category": "desk",
+    "is_easy": false,
+    "is_view_dep": true
+  },
+  {
+    "sample_id": "scannet/scene0462_00::6::40854",
+    "scene_id": "scene0462_00",
+    "target_id": 6,
+    "category": "door",
+    "is_easy": true,
+    "is_view_dep": true
+  },
+  {
+    "sample_id": "scannet/scene0207_00::20::12189",
+    "scene_id": "scene0207_00",
+    "target_id": 20,
+    "category": "door",
+    "is_easy": false,
+    "is_view_dep": true
+  },
+  {
+    "sample_id": "scannet/scene0246_00::5::12312",
+    "scene_id": "scene0246_00",
+    "target_id": 5,
+    "category": "lamp",
+    "is_easy": true,
+    "is_view_dep": false
+  },
+  {
+    "sample_id": "scannet/scene0591_00::14::19171",
+    "scene_id": "scene0591_00",
+    "target_id": 14,
+    "category": "pillow",
+    "is_easy": true,
+    "is_view_dep": false
+  },
+  {
+    "sample_id": "scannet/scene0608_00::9::17679",
+    "scene_id": "scene0608_00",
+    "target_id": 9,
+    "category": "ottoman",
+    "is_easy": true,
+    "is_view_dep": true
+  }
+]

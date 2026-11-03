@@ -23,5 +23,12 @@ When adding a new evaluation record:
    be preserved with the result.
 4. Update `mkdocs.yml` so the new record appears in the web navigation.
 
-For OpenEQA, per-run data is also ingested into `openeqa/runs.sqlite` when the
-run produces durable sample/tool-call records.
+Per-run data is ingested into the benchmark's local SQLite database:
+`openeqa/runs.sqlite` via `scripts/ingest_openeqa_run.py`, and `nr3d/runs.sqlite`
+via `scripts/ingest_nr3d_run.py`. Keep durable summaries/traces alongside the
+version records so the ignored databases can be rebuilt.
+
+Latest local API validation:
+[v13 office Responses NR3D smoke10](nr3d/v13_office_responses_smoke10_20261103.md)
+— 10/10 completed, 8/10 correct, catalog + BEV without extra NR3D tools;
+a connectivity diagnostic, not a strat600 leaderboard result.
