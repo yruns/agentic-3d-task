@@ -127,12 +127,17 @@ NR3D runs ask the Codex agent to select one proposal id from a prepared scene
 proposal pool. Ground-truth target ids, categories, and boxes are not included
 in the prompt.
 
+On the configured Linux host, use the imported `processed_v1` canonical pilot
+(see [dataset locations](docs/dataset_locations.md) for prerequisites and full folds).
+Run evaluations in tmux after recording the clean code revision.
+
 ```bash
+source scripts/datasets/processed_v1.sh
 python -m codex_agent.cli.run_nr3d \
-  --sample-ids /path/to/nr3d_sample_ids.json \
-  --data-root /path/to/data/nr3d/scannet \
+  --sample-ids "$NR3D_PILOT_SAMPLE_IDS" \
+  --data-root "$NR3D_DATA_ROOT" \
+  --pack-name "$NR3D_PACK_NAME" \
   --output-dir tmp/nr3d_run \
-  --limit 10 \
   --workers 1 \
   --tools \
   --reasoning-summary auto
@@ -149,11 +154,12 @@ agent must fetch all visual evidence through scene tools such as
 `keyframe_selector`, `view_frame`, `view_crop`, `view_bev`, and `list_objects`.
 
 ```bash
+source scripts/datasets/processed_v1.sh
 python -m codex_agent.cli.run_openeqa \
-  --questions /path/to/data/open-eqa-v0.json \
-  --data-root /path/to/data/OpenEQA/scannet \
+  --questions "$OPENEQA_QUESTIONS" \
+  --data-root "$OPENEQA_DATA_ROOT" \
+  --question-ids "$OPENEQA_PILOT_QUESTION_IDS" \
   --output-dir tmp/openeqa_run \
-  --limit 10 \
   --workers 1
 ```
 
@@ -277,12 +283,14 @@ explicitly with the remaining risk.
 
 On the current Linux host, use the shared `/home/ysh/Datasets` root instead of
 another project's checkout. See [Local Dataset Locations](docs/dataset_locations.md)
-for canonical NR3D/OpenEQA/ScanNet paths and the checksum-verified NR3D copy.
+for current `nr3d/processed_v1` and `open-eqa/processed_v1` packages, full/pilot
+folds, and original NR3D/OpenEQA/ScanNet data. Use
+`source scripts/datasets/processed_v1.sh` before the examples above; the generic
+CLIs still require explicit data/fold arguments.
 
-Large benchmark assets are local-only and gitignored. Paths such as
-`data/open-eqa-v0.json`, `data/OpenEQA/scannet/`, and
-`data/nr3d/scannet/` are expected to be prepared separately and will not appear
-after a fresh clone.
+Large benchmark assets are local-only and not bundled. A fresh clone has no
+`data/` directory; do not silently use old project-relative data paths or mix
+original annotations with a different processed package's sample IDs.
 
 Prepared scenes may contain provenance paths from the machine that generated
 them. Treat those paths as metadata, not as runnable local paths.

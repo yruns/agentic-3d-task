@@ -35,14 +35,19 @@ scripts/link_agentic3d_assets.sh
 
 ## Data on this machine
 
-Verified on this Linux host on **2026-11-02**; check existence before reuse on
+Verified on this Linux host on **2026-11-03**; check existence before reuse on
 another machine. `/home/ysh/Datasets` points to `/data1/ysh/Datasets`.
-Use this shared root, not another project's checkout. NR3D was independently
-copied here and checksum-verified; old copies are retained only for compatibility.
-See [dataset locations](docs/dataset_locations.md) for layout and copy records.
+Use the imported **processed_v1** packages for current evaluations, not the older
+raw/processed copies below. `source scripts/datasets/processed_v1.sh` exports
+validated paths for explicit CLI arguments (it does not start an evaluation).
+See [dataset locations](docs/dataset_locations.md) for commands and verification.
 
 | Data | Local path |
 |---|---|
+| NR3D current data-root + proposal packs | `/home/ysh/Datasets/nr3d/processed_v1/scannet/` |
+| NR3D current full/pilot IDs | `/home/ysh/Datasets/nr3d/processed_v1/folds/` (`full_test_sample_ids.json`: 8584; `strat600_sample_ids.json`: 600) |
+| OpenEQA current data-root | `/home/ysh/Datasets/open-eqa/processed_v1/scannet/` |
+| OpenEQA current questions / pilot IDs | `/home/ysh/Datasets/open-eqa/processed_v1/open-eqa-v0.json` / `folds/` (1079 ScanNet Qs; pilot300) |
 | NR3D original annotations/splits | `/home/ysh/Datasets/nr3d/raw/` (`nr3d.csv`, `train_scans.txt`, `test_scans.txt`) |
 | NR3D extracted frames + ConceptGraph | `/home/ysh/Datasets/nr3d/scannet/<scene>/` (`raw/` contains RGB/depth/poses) |
 | NR3D instance/segmentation metadata | `/home/ysh/Datasets/nr3d/scannet_aux/` |
@@ -53,10 +58,13 @@ See [dataset locations](docs/dataset_locations.md) for layout and copy records.
 
 The current checkout has **no `data/` directory**. Uppercase `OpenEQA` holds
 prepared outputs; lowercase `open-eqa` holds the official dataset checkout.
-The NR3D tree above currently lacks `pack_nr3d_v9_catalog_first`; do not treat
-available raw scenes/older packs as a ready current evaluation pack. No
-`SceneFuncVal-CG` dataset was found in these checked dataset roots; do not reuse
-other-machine NAS paths from archived SceneFunc3D records without verification.
+The **old** `nr3d/scannet` lacks `pack_nr3d_v9_catalog_first`; the imported
+`nr3d/processed_v1/scannet` includes it. The 8584 full fold is not the historical
+7805-sample filtered fold. OpenEQA has 926 nonfinite poses across 13 clips;
+see the dataset guide before pose-dependent tools (source data was not patched).
+After import, the data disk has only ~40 GB free; check capacity before new
+outputs/caches. No `SceneFuncVal-CG` package was found in these roots; do not
+reuse other-machine NAS paths without verification.
 
 ## Runtime prerequisites
 
