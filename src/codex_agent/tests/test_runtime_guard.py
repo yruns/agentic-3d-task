@@ -261,6 +261,7 @@ def _runtime(
     agent_config = CodexAgentConfig(
         project_root=tmp_path,
         codex_home=codex_home,
+        model_provider="modelhub_adapter",
         restrict_skills_to_project=False,
         enable_prefix_cache=False,
         **config_kwargs,

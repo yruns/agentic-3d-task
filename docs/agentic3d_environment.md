@@ -215,6 +215,21 @@ config name. It rejects unrelated external YAML rather than silently substitutin
 another model configuration. Exact floating-point 0/1 masks returned by official
 SAM2 are accepted; soft logits, nonbinary values, NaN, and infinity remain errors.
 
+## Active Codex adapter
+
+The maintained service now lives in `src/codex_adapter/` and uses the root
+project's `adapter` extra and `uv.lock`. The old standalone
+`codex_modelhub_adapter/` launch commands are retired. See the
+[adapter operations guide](codex_agent/adapter.md) for explicit model registration,
+server-side credential references, state initialization, and durable session/AK
+bindings. Use the existing Linux `agentic3d` environment; do not create another
+venv or modify the vision model stack for this gateway.
+
+GPT stays native Responses end to end. Gemini uses a separate Chat codec with
+buffered Responses SSE and explicit capability checks; compact is unsupported.
+A successful local readiness or SDK startup check is not upstream authentication,
+strict-schema acceptance, or evidence of a prefix-cache hit.
+
 ## Validation and boundaries
 
 Validation uses generated local images, not a benchmark fold:

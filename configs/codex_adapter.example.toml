@@ -1,0 +1,70 @@
+# Copy to codex_adapter.toml (ignored); inject secrets in the service environment.
+# No wildcard matching, implicit model aliases, or fallback credential pools.
+schema_version = 1
+
+[server]
+host = "127.0.0.1"
+port = 8787
+# Required for non-loopback listeners; contains the adapter token, not a ModelHub AK.
+# auth_env = "CODEX_ADAPTER_TOKEN"
+max_request_bytes = 33554432
+max_response_bytes = 67108864
+max_concurrent_requests = 32
+requests_per_minute = 600
+upstream_timeout_seconds = 300.0
+connect_timeout_seconds = 15.0
+
+[state]
+database = "../.codex-adapter/state.sqlite"
+active_key_id = "state-v1"
+session_ttl_seconds = 86400
+max_sessions = 10000
+max_turns = 256
+max_state_bytes = 33554432
+
+[[state.keys]]
+id = "state-v1"
+secret_env = "CODEX_ADAPTER_STATE_KEY_V1"
+
+[[models]]
+id = "gpt-6-luna"
+protocol = "responses"
+endpoint = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/unified/v1/responses"
+
+[[models.credentials]]
+id = "gpt-primary"
+version = "v1"
+secret_env = "MODELHUB_GPT_AK"
+weight = 3
+status = "active"
+
+[[models.credentials]]
+id = "gpt-secondary"
+version = "v1"
+secret_env = "MODELHUB_GPT_SECONDARY_AK"
+weight = 1
+status = "active"
+
+[[models]]
+id = "gemini-3.8-flash"
+protocol = "gemini_chat"
+endpoint = "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl"
+
+# Conservative defaults: enable only after verifying the particular upstream.
+# Setting a flag declares a capability; it does not prove ModelHub supports it.
+[models.capabilities]
+structured_output = false
+images = false
+function_tools = true
+namespace_tools = true
+parallel_tools = true
+reasoning_summary = false
+reasoning_efforts = []
+default_max_output_tokens = 8192
+
+[[models.credentials]]
+id = "gemini-primary"
+version = "v1"
+secret_env = "MODELHUB_GEMINI_AK"
+weight = 1
+status = "active"

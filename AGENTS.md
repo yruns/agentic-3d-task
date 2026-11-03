@@ -9,7 +9,9 @@ relative symlink to `AGENTS.md`; edit this file only.
   retrieval. Entry: `KeyframeSelector` in `keyframe_selector.py`.
 - `src/codex_agent/`: Codex SDK runtime, NR3D/OpenEQA/SceneFunc3D tasks, tools,
   evaluation, and `cli/run_*.py` entry points.
-- `codex_modelhub_adapter/`: local proxy to remote LLMs, not local LLM inference.
+- `src/codex_adapter/`: explicitly registered Responses gateway with GPT native
+  forwarding, Gemini Chat codec, and durable session/AK bindings. Not local LLM
+  inference. The old `codex_modelhub_adapter/` implementation is retired.
 - Trust current source and `pyproject.toml` over archived module names and paths.
 
 ## Environment and assets
@@ -98,10 +100,12 @@ ruff check src/
 black --check src/
 mypy src/
 pytest src/ -q
-(cd codex_modelhub_adapter && python -m pytest tests/ -q)
+pytest tests/codex_adapter/ --cov=codex_adapter --cov-branch --cov-fail-under=80
 ```
 
-- `pytest src/` does not include adapter tests. For docs-only changes, validate
+- `pytest src/` does not include `tests/codex_adapter/`; run both suites. The
+  active adapter setup is documented in `docs/codex_agent/adapter.md`. Do not
+  use archived benchmark launchers as the current service entrypoint. For docs-only changes, validate
   links/content; run `mkdocs build` when changing the documentation site.
   Keep `docs/` indexes and `mkdocs.yml` navigation aligned when adding pages.
 - Report changes, actual verification results, and anything not tested.

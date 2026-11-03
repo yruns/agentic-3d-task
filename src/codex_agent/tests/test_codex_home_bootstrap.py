@@ -31,13 +31,41 @@ def test_bootstrap_codex_home_writes_safe_config(tmp_path: Path) -> None:
     lowered_config = config_text.lower()
 
     assert 'model = "gpt-5.4-2026-03-05"' in config_text
-    assert 'model_provider = "modelhub_adapter"' in config_text
+    assert 'model_provider = "codex_adapter"' in config_text
     assert 'base_url = "http://127.0.0.1:8787/v1"' in config_text
     assert f'[projects."{repo_root}"]' in config_text
     assert "replace" not in lowered_config
     assert "ak" not in lowered_config
     assert "token" not in lowered_config
     assert "secret" not in lowered_config
+    parsed = tomllib.loads(config_text)
+    provider = parsed["model_providers"]["codex_adapter"]
+    assert provider["request_max_retries"] == 0
+    assert provider["stream_max_retries"] == 0
+    assert provider["supports_websockets"] is False
+    assert provider["requires_openai_auth"] is False
+    assert provider["env_http_headers"] == {
+        "X-Codex-Session-ID": "CODEX_ADAPTER_SESSION_ID",
+        "Authorization": "CODEX_ADAPTER_AUTHORIZATION",
+    }
+
+
+def test_bootstrap_refuses_existing_config_without_force(tmp_path: Path) -> None:
+    script = (
+        Path(__file__).resolve().parents[3]
+        / "scripts/codex_agent/bootstrap_codex_home.sh"
+    )
+    home = tmp_path / "home"
+    home.mkdir()
+    original = 'model = "keep-my-config"\n'
+    (home / "config.toml").write_text(original, encoding="utf-8")
+    command = ["bash", str(script), "--codex-home", str(home)]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "--force" in result.stderr
+    assert (home / "config.toml").read_text(encoding="utf-8") == original
+    subprocess.run([*command, "--force"], check=True)
+    assert 'model_provider = "codex_adapter"' in (home / "config.toml").read_text()
 
 
 def test_bootstrap_codex_home_escapes_toml_strings(tmp_path: Path) -> None:
@@ -70,5 +98,5 @@ def test_bootstrap_codex_home_escapes_toml_strings(tmp_path: Path) -> None:
     parsed = tomllib.loads(config_path.read_text(encoding="utf-8"))
 
     assert parsed["model"] == model_name
-    assert parsed["model_providers"]["modelhub_adapter"]["base_url"] == adapter_url
+    assert parsed["model_providers"]["codex_adapter"]["base_url"] == adapter_url
     assert parsed["projects"][str(repo_root)]["trust_level"] == "trusted"

@@ -55,7 +55,7 @@ src/
     ├── cli/                  # python -m codex_agent.cli.run_*
     └── tests/
 
-codex_modelhub_adapter/       # Project-local Codex SDK -> internal ModelHub adapter
+src/codex_adapter/           # Stateful Codex Responses gateway and provider codecs
 configs/llm.example.toml      # Placeholder LLM config; real configs are gitignored
 docs/                         # Markdown source for the MkDocs Material site
 docs/benchmark/               # Durable NR3D / OpenEQA run records and assets
@@ -167,41 +167,47 @@ Add `--no-judge` when you only want predictions and do not want to call the
 LLM-as-judge. With judging enabled, the runner writes checkpoints,
 `summary.json`, and `predictions.json`.
 
-## Codex ModelHub Adapter
+## Codex Multi-Protocol Adapter
 
-The `codex_agent` runtime uses the Codex Agent SDK. In this repository, Codex
-is normally pointed at the project-local adapter under
-`codex_modelhub_adapter/`, which exposes OpenAI-compatible endpoints:
+The active gateway is `src/codex_adapter/`, using the root project's `adapter`
+extra and lock file. It supports native GPT Responses and a dedicated Gemini
+Chat codec with authenticated, encrypted persistent state. Codex still sees a
+Responses provider and executes the tools itself.
 
-```text
-POST /v1/responses
-POST /v1/responses/compact
-GET  /health
-```
+Models must be registered exactly. New sessions select an AK by that model's
+credential weights, then retain the durable binding across turns and restarts.
+Unknown models fail without fallback; rate limits never trigger account
+failover. Stable affinity and intact history preserve cache eligibility, not a
+guarantee that the upstream will report a cache hit.
 
-Start the adapter in a separate terminal when running Codex-based benchmarks:
-
-```bash
-cd codex_modelhub_adapter
-uv sync --python 3.12
-set -a
-source .env
-set +a
-uv run uvicorn adapter.app:app --host 127.0.0.1 --port 8787
-```
-
-Initialize the project-local Codex home once per checkout:
+Copy `configs/codex_adapter.example.toml` to the ignored private configuration and
+inject the referenced secrets securely. Run installation and service commands
+inside tmux, using the existing environment.
 
 ```bash
-scripts/codex_agent/bootstrap_codex_home.sh
+python -m codex_adapter check --config configs/codex_adapter.toml
 ```
 
-This writes `.codex-home/config.toml` with the local adapter provider only. It
-does not write ModelHub credentials; real credentials stay in the adapter's
-gitignored `.env` or upstream TOML file.
+```bash
+python -m codex_adapter init-state --config configs/codex_adapter.toml
+```
 
-Real ModelHub AKs and upstream pools are private and gitignored. Keep them out
-of docs, logs, commits, and benchmark records.
+```bash
+python -m codex_adapter serve --config configs/codex_adapter.toml
+```
+
+For a fresh Codex home:
+
+```bash
+scripts/codex_agent/bootstrap_codex_home.sh --model gpt-6-luna
+```
+
+See the [adapter operations and capability guide](docs/codex_agent/adapter.md)
+for installation, model registration, authentication, state recovery, Gemini's
+buffered SSE and unsupported compact, and local verification. Gemini schema/image
+capability declarations require upstream verification before task use. The old
+`codex_modelhub_adapter/` implementation is retired; archived benchmark commands
+are not current launch instructions. Never commit or log AKs or opaque state.
 
 ## Benchmarks
 

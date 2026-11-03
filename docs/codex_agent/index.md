@@ -4,6 +4,13 @@ This chapter collects engineering notes for the Codex Agent runtime and its
 tool-using NR3D/OpenEQA/SceneFunc3D workflows. These are design and investigation records,
 not generated API documentation.
 
+## Current Operations
+
+- [Multi-Protocol Adapter](adapter.md): active `codex_adapter` setup, explicit
+  registration, durable session/AK bindings, state preservation and capability
+  limits. The investigation notes below preserve older experiments rather than
+  replacing the current operational guide.
+
 ## Core Notes
 
 - [Codex–Gemini State Replay and Cache](../benchmark/adapter/v3_codex_gemini_cache_20261103.md):

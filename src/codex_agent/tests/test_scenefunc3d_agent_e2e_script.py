@@ -174,7 +174,7 @@ def test_benchmark_python_smoke_uses_portable_defaults() -> None:
     assert "DATASET_ROOT" in script_text
 
 
-def test_agent_e2e_script_preflight_stops_before_gpu_sidecars(
+def test_archived_agent_e2e_rejects_retired_adapter_before_gpu_sidecars(
     tmp_path: Path,
 ) -> None:
     _skip_without_adapter_runtime()
@@ -205,13 +205,14 @@ def test_agent_e2e_script_preflight_stops_before_gpu_sidecars(
 
     assert completed.returncode == 1
     assert "started adapter:" in completed.stdout
-    assert "has no private upstream credential configured" in completed.stdout
+    # The archived launcher is retained unchanged, but its retired service is gone.
+    assert "adapter exited before health" in completed.stdout
     assert "started molmo_server" not in completed.stdout
     assert "started sam_server" not in completed.stdout
     assert not _port_is_open(port)
 
 
-def test_agent_e2e_script_linux_defaults_to_project_local_adapter(
+def test_archived_linux_adapter_entrypoint_stops_before_sidecars(
     tmp_path: Path,
 ) -> None:
     _skip_without_adapter_runtime()
@@ -243,8 +244,9 @@ def test_agent_e2e_script_linux_defaults_to_project_local_adapter(
 
     assert completed.returncode == 1
     assert "started adapter:" in completed.stdout
-    assert "https://aidp-i18ntt-sg.byteintl.net/api/modelhub/online" in completed.stdout
-    assert "has no private upstream credential configured" in completed.stdout
+    assert not (Path.cwd() / "codex_modelhub_adapter" / "adapter" / "app.py").exists()
+    # The archived launcher is retained unchanged, but its retired service is gone.
+    assert "adapter exited before health" in completed.stdout
     assert "started molmo_server" not in completed.stdout
     assert "started sam_server" not in completed.stdout
     assert not _port_is_open(port)
