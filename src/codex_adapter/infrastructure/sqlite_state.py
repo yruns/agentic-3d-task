@@ -63,12 +63,18 @@ class SQLiteStateStore:
         """Atomically choose once, or verify the exact persisted route reference."""
         if not isinstance(model, RegisteredModel):
             raise state_conflict()
+        with self._database.read_transaction() as connection:
+            existing = self._bindings.lookup_existing(
+                connection, session_id, model, principal
+            )
+        if existing is not None:
+            return existing
         with self._database.transaction() as connection:
             return self._bindings.bind(connection, session_id, model, principal)
 
     def turns(self, binding: Binding) -> tuple[SavedTurn, ...]:
         """Load contiguous turn history, never synthesize missing turns."""
-        with self._database.transaction() as connection:
+        with self._database.read_transaction() as connection:
             persisted = self._bindings.validate(connection, binding)
             return self._turns.load(connection, persisted)
 

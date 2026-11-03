@@ -75,6 +75,20 @@ class SQLiteBindings:
             )
         return float(value)
 
+    def lookup_existing(
+        self,
+        connection: sqlite3.Connection,
+        session_id: str,
+        model: RegisteredModel,
+        principal: str,
+    ) -> BoundRoute | None:
+        validate_identity(session_id, field="session_id")
+        validate_identity(principal, field="principal")
+        row = self._lookup(connection, principal, session_id)
+        if row is None:
+            return None
+        return self._verify_bound_row(row, session_id, model, principal)
+
     def bind(
         self,
         connection: sqlite3.Connection,
@@ -82,11 +96,18 @@ class SQLiteBindings:
         model: RegisteredModel,
         principal: str,
     ) -> BoundRoute:
-        validate_identity(session_id, field="session_id")
-        validate_identity(principal, field="principal")
-        row = self._lookup(connection, principal, session_id)
-        if row is None:
-            return self._create(connection, session_id, model, principal)
+        existing = self.lookup_existing(connection, session_id, model, principal)
+        if existing is not None:
+            return existing
+        return self._create(connection, session_id, model, principal)
+
+    def _verify_bound_row(
+        self,
+        row: sqlite3.Row,
+        session_id: str,
+        model: RegisteredModel,
+        principal: str,
+    ) -> BoundRoute:
         binding = self._decode_binding(row)
         if binding.principal != principal or binding.session_id != session_id:
             raise corrupt_state()

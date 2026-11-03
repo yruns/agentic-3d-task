@@ -1,4 +1,4 @@
-"""Explicit SQLite lifecycle, process ownership, and serialized transactions."""
+"""Explicit SQLite lifecycle, process ownership, and concurrent WAL read/write."""
 
 from __future__ import annotations
 
@@ -8,12 +8,14 @@ import sqlite3
 import stat
 from collections.abc import Iterator
 from contextlib import contextmanager
-from threading import Event, RLock
+from threading import Condition, Event, RLock
 
 from codex_adapter.domain.errors import AdapterError
 from codex_adapter.domain.state import StateSettings
 
 from .sqlite_schema import create_schema, verify_schema
+
+_MAX_IDLE_READERS = 8
 
 
 def unavailable_state() -> AdapterError:
@@ -22,8 +24,22 @@ def unavailable_state() -> AdapterError:
     )
 
 
+def _configure_connection(connection: sqlite3.Connection, *, query_only: bool) -> None:
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA busy_timeout = 5000")
+    connection.execute("PRAGMA foreign_keys = ON")
+    if not query_only:
+        connection.execute("PRAGMA journal_mode = WAL")
+    connection.execute("PRAGMA synchronous = NORMAL")
+    connection.execute("PRAGMA temp_store = MEMORY")
+    connection.execute("PRAGMA mmap_size = 268435456")
+    connection.execute("PRAGMA cache_size = -65536")
+    if query_only:
+        connection.execute("PRAGMA query_only = ON")
+
+
 class SQLiteDatabase:
-    """One connection and advisory ownership lock per worker; threads serialize IO."""
+    """One writer and pooled concurrent WAL readers per worker process."""
 
     def __init__(self, settings: StateSettings) -> None:
         self.settings = settings
@@ -31,6 +47,9 @@ class SQLiteDatabase:
         self._file_descriptor: int | None = None
         self._lock = RLock()
         self._closing = Event()
+        self._reader_cond = Condition(RLock())
+        self._idle_readers: list[sqlite3.Connection] = []
+        self._active_readers = 0
 
     def initialize(self) -> None:
         """Create a new database explicitly, never replace any existing file."""
@@ -76,17 +95,67 @@ class SQLiteDatabase:
                 check_same_thread=False,
                 timeout=5.0,
             )
-            connection.row_factory = sqlite3.Row
+            _configure_connection(connection, query_only=False)
             self._connection = connection
             self._file_descriptor = descriptor
-            connection.execute("PRAGMA busy_timeout = 5000")
-            connection.execute("PRAGMA foreign_keys = ON")
-            connection.execute("PRAGMA synchronous = FULL")
-            connection.execute("PRAGMA journal_mode = WAL")
         except sqlite3.Error:
             self._file_descriptor = descriptor
             self.close()
             raise unavailable_state() from None
+
+    def _open_reader(self) -> sqlite3.Connection:
+        uri = self.settings.database.absolute().as_uri() + "?mode=rw"
+        try:
+            connection = sqlite3.connect(
+                uri,
+                uri=True,
+                isolation_level=None,
+                check_same_thread=False,
+                timeout=5.0,
+            )
+            _configure_connection(connection, query_only=True)
+            return connection
+        except sqlite3.Error:
+            raise unavailable_state() from None
+
+    def _acquire_read_connection(self) -> sqlite3.Connection:
+        with self._reader_cond:
+            if self._connection is None or self._closing.is_set():
+                raise unavailable_state()
+            self._active_readers += 1
+            if self._idle_readers:
+                return self._idle_readers.pop()
+        try:
+            return self._open_reader()
+        except BaseException:
+            with self._reader_cond:
+                self._active_readers -= 1
+                if self._active_readers == 0:
+                    self._reader_cond.notify_all()
+            raise
+
+    def _release_read_connection(
+        self, connection: sqlite3.Connection, *, discard: bool
+    ) -> None:
+        to_close: sqlite3.Connection | None = None
+        with self._reader_cond:
+            if (
+                discard
+                or self._closing.is_set()
+                or self._connection is None
+                or len(self._idle_readers) >= _MAX_IDLE_READERS
+            ):
+                to_close = connection
+            else:
+                self._idle_readers.append(connection)
+            self._active_readers -= 1
+            if self._active_readers == 0:
+                self._reader_cond.notify_all()
+        if to_close is not None:
+            try:
+                to_close.close()
+            except sqlite3.Error:
+                pass
 
     def _acquire_file(self, *, create: bool) -> int:
         descriptor = self._acquire_owner_lock()
@@ -134,8 +203,33 @@ class SQLiteDatabase:
             os.close(descriptor)
 
     @contextmanager
+    def read_transaction(self) -> Iterator[sqlite3.Connection]:
+        """Run a concurrent WAL read snapshot without blocking writers or other readers."""
+        connection = self._acquire_read_connection()
+        discard = False
+        try:
+            connection.execute("BEGIN DEFERRED")
+            yield connection
+            connection.rollback()
+        except sqlite3.Error:
+            discard = True
+            try:
+                connection.rollback()
+            except sqlite3.Error:
+                pass
+            raise unavailable_state() from None
+        except BaseException:
+            try:
+                connection.rollback()
+            except sqlite3.Error:
+                discard = True
+            raise
+        finally:
+            self._release_read_connection(connection, discard=discard)
+
+    @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:
-        """Serialize the entire operation and sanitize all SQLite error boundaries."""
+        """Serialize write operations and sanitize all SQLite error boundaries."""
         with self._lock:
             connection = self._connection
             if connection is None or self._closing.is_set():
@@ -152,8 +246,18 @@ class SQLiteDatabase:
                 raise
 
     def close(self) -> None:
-        """Gate queued work, drain active SQL, then release connection/ownership."""
+        """Gate queued work, drain active SQL readers/writers, then release ownership."""
         self._closing.set()
+        with self._reader_cond:
+            while self._active_readers > 0:
+                self._reader_cond.wait()
+            idle_readers = list(self._idle_readers)
+            self._idle_readers.clear()
+        for reader in idle_readers:
+            try:
+                reader.close()
+            except sqlite3.Error:
+                pass
         with self._lock:
             connection, descriptor = self._connection, self._file_descriptor
             self._connection = None

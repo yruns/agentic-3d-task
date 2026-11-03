@@ -6,7 +6,7 @@ from codex_adapter.domain.json_codec import JsonObject, encode_json
 from codex_adapter.domain.models import RegisteredModel
 from codex_adapter.domain.state import PreparedGemini, SavedTurn
 
-from .gemini_common import json_digest, saved_object, snapshot
+from .gemini_common import json_digest, snapshot
 from .gemini_options import translate_options
 from .gemini_replay import last_carrier as _last_carrier
 from .gemini_replay import reconstruct_messages
@@ -30,10 +30,12 @@ def prepare_request(
     # Tool definitions determine name reconstruction; generation controls and output
     # schema apply to the new turn, not to the committed native message prefix.
     options_digest = json_digest({"model": model.id, "tools": options.get("tools", [])})
-    messages = reconstruct_messages(checked, turns, options_digest, model.capabilities)
+    messages, message_objects = reconstruct_messages(
+        checked, turns, options_digest, model.capabilities
+    )
     payload: JsonObject = {
         **options,
-        "messages": [saved_object(message) for message in messages],
+        "messages": message_objects,
     }
     return PreparedGemini(
         payload=encode_json(payload),

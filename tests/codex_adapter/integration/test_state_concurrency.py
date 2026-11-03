@@ -7,10 +7,11 @@ from pathlib import Path
 from threading import Event
 
 import pytest
-from test_state_support import digest, registered_model, state_settings
+from test_state_support import completion, digest, registered_model, state_settings
 from test_state_support import store as store
 
 from codex_adapter.domain.errors import AdapterError
+from codex_adapter.domain.state import RequestLease
 from codex_adapter.infrastructure.sqlite_state import SQLiteStateStore
 
 
@@ -109,3 +110,52 @@ def test_abrupt_process_death_releases_ownership_and_quarantines_inflight(
         assert raised.value.status_code == 409
     finally:
         reopened.close()
+
+
+def test_wal_readers_do_not_block_on_active_writer_transaction(
+    tmp_path: Path,
+) -> None:
+    writer_entered, writer_release = Event(), Event()
+    block_writer = False
+
+    def draw(total: int) -> int:
+        if block_writer:
+            writer_entered.set()
+            assert writer_release.wait(5.0)
+        return 0
+
+    instance = SQLiteStateStore(
+        state_settings(tmp_path), clock=lambda: 100.0, draw=draw
+    )
+    instance.initialize()
+    try:
+        existing = instance.bind("existing-session", registered_model()).binding
+        lease = instance.reserve(existing, digest("first"), previous_carrier=None)
+        assert isinstance(lease, RequestLease)
+        expected = completion(lease)
+        instance.commit(lease, expected)
+
+        block_writer = True
+        with ThreadPoolExecutor(max_workers=10) as pool:
+            writer_future = pool.submit(
+                instance.bind, "slow-writer-session", registered_model()
+            )
+            assert writer_entered.wait(5.0)
+            try:
+                read_binds = [
+                    pool.submit(instance.bind, "existing-session", registered_model())
+                    for _ in range(4)
+                ]
+                read_turns = [pool.submit(instance.turns, existing) for _ in range(4)]
+                for bind_future in read_binds:
+                    assert bind_future.result(timeout=2.0).binding == existing
+                for turn_future in read_turns:
+                    assert turn_future.result(timeout=2.0) == (expected.turn,)
+            finally:
+                writer_release.set()
+            assert (
+                writer_future.result(timeout=5.0).binding.session_id
+                == "slow-writer-session"
+            )
+    finally:
+        instance.close()

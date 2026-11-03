@@ -63,18 +63,18 @@ class Gateway:
         self.settings = settings
         self.store = store
         self.transport = transport
-        self._store_tasks: frozenset[asyncio.Task[object]] = frozenset()
+        self._store_tasks: set[asyncio.Task[object]] = set()
 
     async def _store_call(
         self, function: Callable[..., _T], *args: object, **kwargs: object
     ) -> _T:
         task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
-        self._store_tasks = self._store_tasks.union((task,))
+        self._store_tasks.add(task)
         task.add_done_callback(self._store_finished)
         return await asyncio.shield(task)
 
     def _store_finished(self, task: asyncio.Task[object]) -> None:
-        self._store_tasks = self._store_tasks.difference((task,))
+        self._store_tasks.discard(task)
         if not task.cancelled():
             task.exception()
 
@@ -83,12 +83,10 @@ class Gateway:
         deadline = asyncio.get_running_loop().time() + timeout
         while self._store_tasks:
             remaining = max(0.0, deadline - asyncio.get_running_loop().time())
-            _, pending = await asyncio.wait(self._store_tasks, timeout=remaining)
+            _, pending = await asyncio.wait(tuple(self._store_tasks), timeout=remaining)
             if pending:
                 return False
-            self._store_tasks = frozenset(
-                task for task in self._store_tasks if not task.done()
-            )
+            self._store_tasks = {task for task in self._store_tasks if not task.done()}
         return True
 
     async def forward(self, request: GatewayRequest) -> BufferedReply | NativeReply:

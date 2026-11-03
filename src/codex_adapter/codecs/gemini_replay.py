@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
-from codex_adapter.domain.json_codec import JsonObject, encode_json
+from codex_adapter.domain.json_codec import JsonObject, JsonValue, encode_json
 from codex_adapter.domain.models import ModelCapabilities
 from codex_adapter.domain.state import SavedTurn
 
@@ -33,6 +34,7 @@ class _Context:
 @dataclass(frozen=True)
 class _Cursor:
     messages: tuple[bytes, ...]
+    objects: tuple[JsonValue, ...] = ()
     index: int = 0
     restored: int = 0
     pending: tuple[tuple[str, str], ...] = ()
@@ -107,6 +109,27 @@ def _saved_calls(turn: SavedTurn, native: JsonObject) -> tuple[tuple[str, str], 
     return pairs
 
 
+@lru_cache(maxsize=4096)
+def _validated_turn_data(
+    native_message: bytes,
+    projections: tuple[bytes, ...],
+    call_ids: tuple[tuple[str, str], ...],
+) -> tuple[JsonObject, tuple[tuple[str, str], ...]]:
+    native = saved_object(native_message)
+    if native.get("role") != "assistant" or encode_json(native) != native_message:
+        raise conflict()
+    turn = SavedTurn(
+        carrier="cached",
+        native_message=native_message,
+        projections=projections,
+        call_ids=call_ids,
+        prefix_count=0,
+        prefix_digest="cached",
+        options_digest="cached",
+    )
+    return native, _saved_calls(turn, native)
+
+
 def _restore(context: _Context, cursor: _Cursor) -> _Cursor:
     if cursor.pending or cursor.restored >= len(context.turns):
         raise conflict()
@@ -117,9 +140,9 @@ def _restore(context: _Context, cursor: _Cursor) -> _Cursor:
         or turn.options_digest != context.options_digest
     ):
         raise conflict()
-    native = saved_object(turn.native_message)
-    if native.get("role") != "assistant" or encode_json(native) != turn.native_message:
-        raise conflict()
+    native, saved_calls = _validated_turn_data(
+        turn.native_message, turn.projections, turn.call_ids
+    )
     messages = (*cursor.messages, turn.native_message)
     if (
         len(messages) != turn.prefix_count
@@ -133,7 +156,11 @@ def _restore(context: _Context, cursor: _Cursor) -> _Cursor:
     if tuple(encode_json(item) for item in actual) != turn.projections:
         raise conflict()
     return _Cursor(
-        messages, first + len(actual), cursor.restored + 1, _saved_calls(turn, native)
+        messages,
+        (*cursor.objects, native),
+        first + len(actual),
+        cursor.restored + 1,
+        saved_calls,
     )
 
 
@@ -167,6 +194,7 @@ def _tool_output(context: _Context, cursor: _Cursor, item: JsonObject) -> _Curso
     remaining = tuple(pair for pair in cursor.pending if pair[0] != call_id)
     return _Cursor(
         (*cursor.messages, encode_json(message)),
+        (*cursor.objects, message),
         cursor.index + 1,
         cursor.restored,
         remaining,
@@ -191,7 +219,10 @@ def _normal_message(context: _Context, cursor: _Cursor, item: JsonObject) -> _Cu
         "content": content,
     }
     return _Cursor(
-        (*cursor.messages, encode_json(message)), cursor.index + 1, cursor.restored
+        (*cursor.messages, encode_json(message)),
+        (*cursor.objects, message),
+        cursor.index + 1,
+        cursor.restored,
     )
 
 
@@ -200,16 +231,19 @@ def reconstruct_messages(
     turns: tuple[SavedTurn, ...],
     options_digest: str,
     capabilities: ModelCapabilities,
-) -> tuple[bytes, ...]:
+) -> tuple[tuple[bytes, ...], list[JsonValue]]:
     """Require the entire ordered chain, exact projections, and committed prefixes."""
     instructions = body.get("instructions")
     messages: tuple[bytes, ...] = ()
+    objects: tuple[JsonValue, ...] = ()
     if instructions is not None:
         text = string_value(instructions, "instructions", empty=True)
         if text:
-            messages = (encode_json({"role": "system", "content": text}),)
+            system_msg: JsonObject = {"role": "system", "content": text}
+            messages = (encode_json(system_msg),)
+            objects = (system_msg,)
     context = _Context(_items(body), turns, options_digest, capabilities)
-    cursor = _Cursor(messages)
+    cursor = _Cursor(messages, objects)
     while cursor.index < len(context.items):
         item = context.items[cursor.index]
         kind = item.get("type", "message")
@@ -223,4 +257,4 @@ def reconstruct_messages(
         raise conflict()
     if not cursor.messages:
         raise invalid("input")
-    return cursor.messages
+    return cursor.messages, list(cursor.objects)

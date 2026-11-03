@@ -108,12 +108,17 @@ class SQLiteJournal:
         head = self.bindings.head(connection, binding)
         self.turns.verify_head(connection, binding, head)
         pending = self._pending(connection, binding, head=head)
-        record = self._existing(connection, binding, identity)
+        existing = self._existing(connection, binding, identity)
+        record = existing[0] if existing is not None else None
+        old_bytes = existing[1] if existing is not None else 0
         if record is not None and record.status == "committed":
             if record.replay is None:
                 raise corrupt_state()
-            if self._alias(connection, binding, identity, record.lease.request_id):
-                self.turns.check_budget(connection, binding)
+            alias_bytes = self._alias(
+                connection, binding, identity, record.lease.request_id
+            )
+            if alias_bytes > 0:
+                self.turns.check_budget(connection, binding, delta_bytes=alias_bytes)
             return record.replay
         if pending is not None:
             raise AdapterError(
@@ -121,14 +126,16 @@ class SQLiteJournal:
                 "Session has an unfinished or indeterminate request",
                 status_code=409,
             )
-        return self._reserve_lease(connection, binding, identity, record, head)
+        return self._reserve_lease(
+            connection, binding, identity, record, head, old_bytes=old_bytes
+        )
 
     def _existing(
         self,
         connection: sqlite3.Connection,
         binding: Binding,
         identity: RequestIdentity,
-    ) -> JournalRecord | None:
+    ) -> tuple[JournalRecord, int] | None:
         alias = connection.execute(
             "SELECT request_id FROM idempotency_keys WHERE binding_id = ? AND key_hash = ?",
             (binding.id, identity.key_hash),
@@ -147,13 +154,13 @@ class SQLiteJournal:
                 raise corrupt_state()
         if row is None:
             return None
-        record = self._decode(row, binding)
+        record, payload_bytes = self._decode_with_size(row, binding)
         if (
             record.lease.request_digest != identity.digest
             or record.lease.previous_carrier != identity.previous_carrier
         ):
             raise state_conflict()
-        return record
+        return record, payload_bytes
 
     def _reserve_lease(
         self,
@@ -162,6 +169,8 @@ class SQLiteJournal:
         identity: RequestIdentity,
         record: JournalRecord | None,
         head: Head,
+        *,
+        old_bytes: int,
     ) -> RequestLease:
         if head.carrier != identity.previous_carrier:
             raise state_conflict()
@@ -172,8 +181,8 @@ class SQLiteJournal:
         lease = (
             self._new_lease(binding, identity, head) if record is None else record.lease
         )
-        self._save(connection, JournalRecord(lease, "inflight"))
-        self._alias(connection, binding, identity, lease.request_id)
+        new_bytes = self._save(connection, JournalRecord(lease, "inflight"))
+        alias_bytes = self._alias(connection, binding, identity, lease.request_id)
         self.bindings.advance(
             connection,
             binding,
@@ -181,7 +190,9 @@ class SQLiteJournal:
                 head, pending_request_id=lease.request_id, pending_status="inflight"
             ),
         )
-        self.turns.check_budget(connection, binding)
+        self.turns.check_budget(
+            connection, binding, delta_bytes=(new_bytes - old_bytes) + alias_bytes
+        )
         return lease
 
     def _pending(
@@ -190,7 +201,7 @@ class SQLiteJournal:
         binding: Binding,
         *,
         head: Head | None = None,
-    ) -> JournalRecord | None:
+    ) -> tuple[JournalRecord, int] | None:
         """Cross-check the head against at most two indexed rows."""
         if head is None:
             head = self.bindings.head(connection, binding)
@@ -204,14 +215,14 @@ class SQLiteJournal:
             return None
         if len(rows) != 1 or row_text(rows[0], "request_id") != head.pending_request_id:
             raise corrupt_state()
-        record = self._decode(rows[0], binding)
+        record, payload_bytes = self._decode_with_size(rows[0], binding)
         if (
             record.status != head.pending_status
             or record.lease.sequence != head.sequence + 1
             or record.lease.previous_carrier != head.carrier
         ):
             raise corrupt_state()
-        return record
+        return record, payload_bytes
 
     def _new_lease(
         self, binding: Binding, identity: RequestIdentity, head: Head
@@ -235,7 +246,7 @@ class SQLiteJournal:
         binding: Binding,
         identity: RequestIdentity,
         request_id: str,
-    ) -> bool:
+    ) -> int:
         row = connection.execute(
             "SELECT request_id FROM idempotency_keys WHERE binding_id = ? AND key_hash = ?",
             (binding.id, identity.key_hash),
@@ -243,17 +254,20 @@ class SQLiteJournal:
         if row is not None:
             if row_text(row, "request_id") != request_id:
                 raise state_conflict()
-            return False
+            return 0
         connection.execute(
             "INSERT INTO idempotency_keys (binding_id, key_hash, request_id) VALUES (?, ?, ?)",
             (binding.id, identity.key_hash, request_id),
         )
-        return True
+        return len(identity.key_hash) + len(request_id)
 
-    def _decode(self, row: sqlite3.Row, binding: Binding) -> JournalRecord:
+    def _decode_with_size(
+        self, row: sqlite3.Row, binding: Binding
+    ) -> tuple[JournalRecord, int]:
         request_id = row_text(row, "request_id")
         try:
-            record = decode_journal(row_payload(row, "payload"), binding)
+            payload = row_payload(row, "payload")
+            record = decode_journal(payload, binding)
             lease = record.lease
             if (
                 lease.request_id != request_id
@@ -264,11 +278,11 @@ class SQLiteJournal:
             ):
                 raise corrupt_state()
             verify_carrier(lease.carrier, binding, sequence=lease.sequence)
-            return record
+            return record, len(payload)
         except AdapterError:
             raise corrupt_state() from None
 
-    def _save(self, connection: sqlite3.Connection, record: JournalRecord) -> None:
+    def _save(self, connection: sqlite3.Connection, record: JournalRecord) -> int:
         lease = record.lease
         payload = encode_journal(record)
         connection.execute(
@@ -285,14 +299,19 @@ class SQLiteJournal:
                 payload,
             ),
         )
+        return len(payload.encode("utf-8"))
 
     def _require_inflight(
         self, connection: sqlite3.Connection, lease: RequestLease
-    ) -> JournalRecord:
-        record = self._pending(connection, lease.binding)
-        if record is None or record.status != "inflight" or record.lease != lease:
+    ) -> tuple[JournalRecord, int]:
+        pending = self._pending(connection, lease.binding)
+        if (
+            pending is None
+            or pending[0].status != "inflight"
+            or pending[0].lease != lease
+        ):
             raise state_conflict()
-        return record
+        return pending
 
     def commit(
         self,
@@ -300,12 +319,18 @@ class SQLiteJournal:
         lease: RequestLease,
         completion: Completion,
     ) -> None:
-        record = self._require_inflight(connection, lease)
+        record, old_req_bytes = self._require_inflight(connection, lease)
         self._validate_completion(completion)
-        self.turns.append(connection, lease, completion.turn)
+        turn_bytes = self.turns.append(connection, lease, completion.turn)
         replay = Replay(completion.response, completion.raw_usage)
-        self._save(connection, replace(record, status="committed", replay=replay))
-        self.turns.check_budget(connection, lease.binding)
+        new_req_bytes = self._save(
+            connection, replace(record, status="committed", replay=replay)
+        )
+        self.turns.check_budget(
+            connection,
+            lease.binding,
+            delta_bytes=turn_bytes + (new_req_bytes - old_req_bytes),
+        )
 
     def _validate_completion(self, completion: Completion) -> None:
         if (
@@ -328,9 +353,9 @@ class SQLiteJournal:
         lease: RequestLease,
         status: Literal["rejected", "indeterminate"],
     ) -> None:
-        record = self._require_inflight(connection, lease)
+        record, old_req_bytes = self._require_inflight(connection, lease)
         head = self.bindings.head(connection, lease.binding)
-        self._save(connection, replace(record, status=status))
+        new_req_bytes = self._save(connection, replace(record, status=status))
         pending_id = None if status == "rejected" else lease.request_id
         pending_status: Literal["indeterminate"] | None = (
             None if status == "rejected" else "indeterminate"
@@ -340,6 +365,8 @@ class SQLiteJournal:
             lease.binding,
             replace(head, pending_request_id=pending_id, pending_status=pending_status),
         )
+        if new_req_bytes != old_req_bytes:
+            self.turns.invalidate_budget(lease.binding.id)
 
     def recover(self, connection: sqlite3.Connection) -> None:
         """Recover indexed inflight records; missing pending rows fail on reserve."""
@@ -350,5 +377,5 @@ class SQLiteJournal:
             binding = self.bindings.load(
                 connection, row_text(row, "binding_id"), check_expiry=False
             )
-            record = self._decode(row, binding)
+            record, _ = self._decode_with_size(row, binding)
             self.transition(connection, record.lease, "indeterminate")

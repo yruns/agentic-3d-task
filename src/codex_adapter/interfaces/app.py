@@ -12,6 +12,7 @@ from typing import cast
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+from starlette.background import BackgroundTask
 
 from codex_adapter import __version__
 from codex_adapter.application.catalog import describe_model
@@ -43,8 +44,8 @@ class _PendingRequests:
 
     def __init__(self, transport: HTTPTransport) -> None:
         self.transport = transport
-        self._operations: frozenset[asyncio.Task[_Reply]] = frozenset()
-        self._cleanup: frozenset[asyncio.Task[None]] = frozenset()
+        self._operations: set[asyncio.Task[_Reply]] = set()
+        self._cleanup: set[asyncio.Task[None]] = set()
         self._closing = False
 
     def start(self, gateway: Gateway, request: GatewayRequest) -> asyncio.Task[_Reply]:
@@ -53,12 +54,12 @@ class _PendingRequests:
                 "adapter_stopping", "Adapter is shutting down", status_code=503
             )
         task = asyncio.create_task(gateway.forward(request))
-        self._operations = self._operations.union((task,))
+        self._operations.add(task)
         task.add_done_callback(self._operation_done)
         return task
 
     def _operation_done(self, task: asyncio.Task[_Reply]) -> None:
-        self._operations = self._operations.difference((task,))
+        self._operations.discard(task)
         if not task.cancelled():
             task.exception()
 
@@ -68,7 +69,7 @@ class _PendingRequests:
         if cancel:
             task.cancel()
         cleanup = asyncio.create_task(self._dispose(task))
-        self._cleanup = self._cleanup.union((cleanup,))
+        self._cleanup.add(cleanup)
         cleanup.add_done_callback(lambda done: self._cleanup_done(done, admission))
 
     async def _dispose(self, task: asyncio.Task[_Reply]) -> None:
@@ -82,7 +83,7 @@ class _PendingRequests:
             logger.warning("Abandoned adapter request failed or could not be closed")
 
     def _cleanup_done(self, task: asyncio.Task[None], admission: Admission) -> None:
-        self._cleanup = self._cleanup.difference((task,))
+        self._cleanup.discard(task)
         admission.release()
         if not task.cancelled() and task.exception() is not None:
             logger.error("Abandoned request cleanup failed")
@@ -92,7 +93,7 @@ class _PendingRequests:
         if await self._drain(timeout):
             return
         logger.warning("Adapter requests exceeded the shutdown drain deadline")
-        for task in self._operations.union(self._cleanup):
+        for task in tuple(self._operations | self._cleanup):
             task.cancel()
         if not await self._drain(_STATE_DRAIN_SECONDS):
             logger.error("Some adapter requests did not stop after cancellation")
@@ -102,7 +103,7 @@ class _PendingRequests:
         while self._operations or self._cleanup:
             remaining = max(0.0, deadline - asyncio.get_running_loop().time())
             done, _ = await asyncio.wait(
-                self._operations.union(self._cleanup),
+                tuple(self._operations | self._cleanup),
                 timeout=remaining,
                 return_when=asyncio.FIRST_COMPLETED,
             )
@@ -310,6 +311,18 @@ def _status(reply: _Reply) -> int:
     )
 
 
+def _one_shot_release(admission: Admission) -> Callable[[], None]:
+    released = False
+
+    def release() -> None:
+        nonlocal released
+        if not released:
+            released = True
+            admission.release()
+
+    return release
+
+
 async def _build_response(
     request: Request,
     reply: _Reply,
@@ -320,10 +333,12 @@ async def _build_response(
         transport = cast(HTTPTransport, request.app.state.transport)
         headers = transport.response_headers(reply.response)
         if stream and reply.response.status_code < 300:
+            release = _one_shot_release(admission)
             return StreamingResponse(
-                _native_stream(transport, reply.response, admission),
+                _native_stream(transport, reply.response, release),
                 status_code=reply.response.status_code,
                 headers=headers,
+                background=BackgroundTask(release),
             )
         return Response(
             await transport.read(reply.response),
@@ -334,10 +349,12 @@ async def _build_response(
     if stream and reply.status_code < 300:
         from codex_adapter.codecs.gemini_chat import response_events
 
+        release = _one_shot_release(admission)
         return StreamingResponse(
-            _buffered_events(response_events(reply.body), admission),
+            _buffered_events(response_events(reply.body), release),
             media_type="text/event-stream",
             headers=headers,
+            background=BackgroundTask(release),
         )
     return Response(
         reply.body,
@@ -348,21 +365,23 @@ async def _build_response(
 
 
 async def _native_stream(
-    transport: HTTPTransport, response: httpx.Response, admission: Admission
+    transport: HTTPTransport,
+    response: httpx.Response,
+    release: Callable[[], None],
 ) -> AsyncIterator[bytes]:
     try:
         async with aclosing(transport.chunks(response)) as chunks:
             async for chunk in chunks:
                 yield chunk
     finally:
-        admission.release()
+        release()
 
 
 async def _buffered_events(
-    events: tuple[bytes, ...], admission: Admission
+    events: tuple[bytes, ...], release: Callable[[], None]
 ) -> AsyncIterator[bytes]:
     try:
         for event in events:
             yield event
     finally:
-        admission.release()
+        release()
