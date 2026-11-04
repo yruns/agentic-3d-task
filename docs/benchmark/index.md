@@ -40,6 +40,15 @@ accounting control supports a 3,315-token historical reasoning/state cache lower
 bound. Failed and zero-cache runs remain archived. Production adapter source is
 unchanged; GPT remains native Responses-only.
 
+Latest canonical pilot evaluations (2026-11-04, code `0635b65`):
+- [NR3D v14 `strat600` (`gpt-5.4` vs `gemini-3.8-flash`)](nr3d/v14_strat600_gpt54_vs_gemini38flash_20261104.md)
+  — `gemini-3.8-flash` reaches **91.50% Acc@0.25 (549/600)** and **89.57% View-Dep**;
+  `gpt-5.4-2026-03-05` reaches **84.83% (509/600)** and **80.09% View-Dep**.
+- [OpenEQA v5 `pilot300` (`gpt-5.4` vs `gemini-3.8-flash`)](openeqa/v5_pilot300_gpt54_vs_gemini38flash_20261104.md)
+  — `gemini-3.8-flash` reaches **MNAS = 78.92 (300/300)**; `gpt-5.4-2026-03-05`
+  reaches **MNAS = 69.25 (300/300)** (+4.33 over v4 on the matched 300-question
+  fold).
+
 Latest local API validation:
 [v13 office Responses NR3D smoke10](nr3d/v13_office_responses_smoke10_20261103.md)
 — 10/10 completed, 8/10 correct, catalog + BEV without extra NR3D tools;

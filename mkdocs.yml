@@ -81,6 +81,7 @@ nav:
           - v11 Skill600 Minimal Prompt: benchmark/nr3d/v11_skill600_minprompt_20260701.md
           - v12 Skill10 Keep Run Home: benchmark/nr3d/v12_skill10_keep_home_20260701.md
           - v13 Office Responses Smoke10: benchmark/nr3d/v13_office_responses_smoke10_20261103.md
+          - v14 Strat600 GPT-5.4 vs Gemini-3.8-Flash: benchmark/nr3d/v14_strat600_gpt54_vs_gemini38flash_20261104.md
       - OpenEQA:
           - Timeline: benchmark/openeqa/README.md
           - v1 SDK Migration Smoke: benchmark/openeqa/v1_codex_sdk_migration_smoke10_20260611.md
@@ -88,6 +89,7 @@ nav:
           - v3 Tools Full1079: benchmark/openeqa/v3_tools_full1079_20260612.md
           - v4 No Frames Full1079: benchmark/openeqa/v4_noframes_full1079_20260612.md
           - v4 Failure Trace Analysis: benchmark/openeqa/v4_failure_trace_analysis_20260612.md
+          - v5 Pilot300 GPT-5.4 vs Gemini-3.8-Flash: benchmark/openeqa/v5_pilot300_gpt54_vs_gemini38flash_20261104.md
       - SceneFunc Molmo SAM3D:
           - Timeline: benchmark/scenefunc_molmo_sam3d/README.md
           - Leaderboard vs SceneFun3D baselines: benchmark/scenefunc_molmo_sam3d/leaderboard.md
