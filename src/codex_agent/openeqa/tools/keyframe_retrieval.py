@@ -186,7 +186,6 @@ def _run_selector(
     try:
         kwargs: dict[str, Any] = {
             "k": k,
-            "viewpoint_aware": True,
             "use_visual_context": use_bev,
         }
         if target_grids:

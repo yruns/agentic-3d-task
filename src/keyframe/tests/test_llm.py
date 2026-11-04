@@ -41,6 +41,18 @@ def test_config_loads_and_weights(tmp_path: Path) -> None:
     assert len(primary.weighted_keys()) == 4  # weights 1 + 3
 
 
+def test_weighted_keys_interleaves_multi_key_pool(tmp_path: Path) -> None:
+    path = tmp_path / "interleaved.toml"
+    path.write_text(
+        'default_model = "m"\n[models."m"]\napi_version="v"\nendpoint="https://e"\n'
+        'keys=[\n  {api_key="k0", weight=200},\n  {api_key="k1", weight=200},\n  {api_key="k2", weight=200},\n]\n'
+    )
+    cfg = LLMConfig.from_toml(path).get_model("m")
+    pool = cfg.weighted_keys()
+    assert len(pool) == 600
+    assert [k.api_key for k in pool[:6]] == ["k0", "k1", "k2", "k0", "k1", "k2"]
+
+
 def test_config_rejects_unknown_default(tmp_path: Path) -> None:
     path = tmp_path / "bad.toml"
     path.write_text(

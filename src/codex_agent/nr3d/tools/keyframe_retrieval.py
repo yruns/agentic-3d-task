@@ -87,7 +87,7 @@ def _run_selector(conceptgraph_dir: Path, query: str, k: int) -> Any:
         from keyframe.keyframe_selector import KeyframeSelector
 
         selector = KeyframeSelector.from_scene_path(conceptgraph_dir, dataset="nr3d")
-        return selector.select_keyframes_v2(query, k=k, viewpoint_aware=True)
+        return selector.select_keyframes_v2(query, k=k)
     except ToolInputError:
         raise
     except Exception as exc:  # re-raised as a recoverable tool error for the agent

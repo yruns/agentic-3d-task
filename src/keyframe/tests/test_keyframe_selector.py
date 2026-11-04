@@ -87,6 +87,53 @@ def test_select_keyframes_v2_grid_grounded_when_target_unknown(
     assert 2 in result.metadata.frame_mappings[0].visible_object_ids
 
 
+def test_select_keyframes_v2_unknown_anchor_with_grid_executes_direct(
+    build_scene: Callable[[], Path],
+) -> None:
+    # When an anchor is UNKNOW (e.g. "window" not in scene) but has grid_cells,
+    # DIRECT hypothesis is NOT skipped and evaluates using a virtual grid anchor!
+    scene = build_scene()
+    base_selector = KeyframeSelector.from_scene_path(scene, stride=1)
+    sofa_cell = list(base_selector.object_to_grids[0][0])
+
+    payload = json.dumps(
+        {
+            "format_version": "hypothesis_output_v1",
+            "parse_mode": "single",
+            "hypotheses": [
+                {
+                    "kind": "direct",
+                    "rank": 1,
+                    "grounding_query": {
+                        "raw_query": "the pillow near the window",
+                        "expect_unique": True,
+                        "root": {
+                            "categories": ["#1 pillows"],
+                            "spatial_constraints": [
+                                {
+                                    "relation": "near",
+                                    "anchors": [
+                                        {
+                                            "categories": ["window"],
+                                            "grid_cells": [sofa_cell],
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                    },
+                }
+            ],
+        }
+    )
+    selector = KeyframeSelector.from_scene_path(
+        scene, stride=1, llm_client=make_fake_llm(payload)
+    )
+    result = selector.select_keyframes_v2("the pillow near the window", k=2)
+    assert result.metadata.status == GroundingStatus.DIRECT_GROUNDED
+    assert [o.obj_id for o in result.target_objects] == [1]
+
+
 def test_select_keyframes_v2_no_match(build_scene: Callable[[], Path]) -> None:
     # A target category absent from the scene sanitizes to UNKNOW -> no evidence.
     lamp_payload = json.dumps(

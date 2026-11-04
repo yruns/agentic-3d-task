@@ -30,10 +30,23 @@ PILLOW_ON_SOFA = json.dumps(
                     "expect_unique": True,
                     "root": {
                         "categories": ["pillow"],
+                        "candidate_object_ids": [1],
+                        "grid_cells": [[1, 0]],
                         "spatial_constraints": [
-                            {"relation": "on", "anchors": [{"categories": ["sofa"]}]}
+                            {
+                                "relation": "on",
+                                "anchors": [
+                                    {
+                                        "categories": ["sofa"],
+                                        "candidate_object_ids": [0],
+                                        "grid_cells": [[1, 0]],
+                                    }
+                                ],
+                            }
                         ],
                     },
+                    "target_grids": [[1, 0]],
+                    "anchor_grids": [[1, 0]],
                 },
                 "lexical_hints": ["pillow", "sofa"],
             }

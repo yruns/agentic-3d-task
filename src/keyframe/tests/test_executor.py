@@ -13,6 +13,7 @@ from keyframe.models import (
     SpatialConstraint,
 )
 from keyframe.query_executor import QueryExecutor
+from keyframe.spatial.grid import SceneGridSpec
 
 
 def _bbox(center: tuple[float, float, float], half: float) -> np.ndarray:
@@ -99,3 +100,64 @@ def test_no_match_returns_empty() -> None:
     )
     result = QueryExecutor(_scene()).execute(query)
     assert result.is_empty
+
+
+def test_grid_and_object_id_priors_break_ties() -> None:
+    scene = _scene()
+    spec = SceneGridSpec.from_scene_geometry(scene)
+    far_pillow_cell = spec.world_to_cell(6.0, 6.0, clamp=True)
+    assert far_pillow_cell is not None
+
+    # Without spatial constraints, pillow #1 (at 0,0) and pillow #3 (at 6,6) both match "pillow".
+    # Specifying target_grids=[far_pillow_cell] prioritizes pillow #3!
+    query_grid = GroundingQuery(
+        raw_query="the pillow in the corner",
+        expect_unique=True,
+        root=QueryNode(categories=["pillow"], node_id="root"),
+        target_grids=[far_pillow_cell],
+    )
+    res_grid = QueryExecutor(scene, grid_spec=spec).execute(query_grid)
+    assert res_grid.best_object is not None
+    assert res_grid.best_object.obj_id == 3
+
+    # Specifying candidate_object_ids=[3] also prioritizes pillow #3
+    query_id = GroundingQuery(
+        raw_query="pillow #3",
+        expect_unique=True,
+        root=QueryNode(categories=["pillow"], candidate_object_ids=[3], node_id="root"),
+    )
+    res_id = QueryExecutor(scene, grid_spec=spec).execute(query_id)
+    assert res_id.best_object is not None
+    assert res_id.best_object.obj_id == 3
+
+
+def test_virtual_grid_anchor_evaluates_unknown_anchor_geometry() -> None:
+    scene = _scene()
+    spec = SceneGridSpec.from_scene_geometry(scene)
+    origin_cell = spec.world_to_cell(0.0, 0.0, clamp=True)
+    assert origin_cell is not None
+
+    # Anchor category is UNKNOW (e.g. "fireplace" not in scene), but VLM localized it to origin_cell.
+    # Pillow #1 is at (0, 0) near origin_cell; Pillow #3 is far away at (6, 6).
+    query = GroundingQuery(
+        raw_query="the pillow near the fireplace",
+        expect_unique=True,
+        root=QueryNode(
+            categories=["pillow"],
+            node_id="root",
+            spatial_constraints=[
+                SpatialConstraint(
+                    relation="near",
+                    anchors=[
+                        QueryNode(
+                            categories=["UNKNOW"],
+                            grid_cells=[origin_cell],
+                            node_id="root_sc0_a0",
+                        )
+                    ],
+                )
+            ],
+        ),
+    )
+    result = QueryExecutor(scene, grid_spec=spec).execute(query)
+    assert [o.obj_id for o in result.matched_objects] == [1]

@@ -40,7 +40,11 @@ accounting control supports a 3,315-token historical reasoning/state cache lower
 bound. Failed and zero-cache runs remain archived. Production adapter source is
 unchanged; GPT remains native Responses-only.
 
-Latest canonical pilot evaluations (2026-11-04, code `0635b65`):
+Latest canonical pilot evaluations (2026-11-04):
+- [NR3D Stage-1 Keyframe Coverage v2 (`baseline` vs `current` on `strat600`)](nr3d/v2_keyframe_grid_upgrade_coverage_strat600_20261104.md)
+  — `hit@3` improves from **79.17% (475/600)** to **89.50% (537/600) (+10.33 pp)**,
+  `hit@1` from **65.67% to 77.00% (+11.33 pp)**, **Hard `hit@3`** from **74.84% to 89.03% (+14.19 pp)**,
+  **View-Dep `hit@3`** from **81.99% to 91.47% (+9.48 pp)**, and empty `no_evidence` returns drop from **40 to 0**.
 - [NR3D v14 `strat600` (`gpt-5.4` vs `gemini-3.8-flash`)](nr3d/v14_strat600_gpt54_vs_gemini38flash_20261104.md)
   — `gemini-3.8-flash` reaches **91.50% Acc@0.25 (549/600)** and **89.57% View-Dep**;
   `gpt-5.4-2026-03-05` reaches **84.83% (509/600)** and **80.09% View-Dep**.

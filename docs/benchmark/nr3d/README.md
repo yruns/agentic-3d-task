@@ -13,6 +13,7 @@ Process archive for NR3D evaluations in `agentic-3d-task`. Mirrors the
 | Version | Date | Track | Scope | Headline |
 |---|---|---|---|---|
 | [v1_keyframe_targetid_coverage_strat600_20260608](v1_keyframe_targetid_coverage_strat600_20260608.md) | 2026-06-08 | Stage-1 coverage | `select_keyframes_v2` target-id frame coverage, strat600, k=3, vp=True, CLIP off | **hit@3 = 80.17 %** (agentic); 78.00 % (3DVLM control); migration faithful (90.5 % outcome agreement) |
+| [v2_keyframe_grid_upgrade_coverage_strat600_20261104](v2_keyframe_grid_upgrade_coverage_strat600_20261104.md) | 2026-11-04 | Stage-1 coverage | Paired baseline (`4f4b29c`) vs upgraded (1.2m BEV grid layout, `#id` & `grid_cells` schema, soft priors, virtual grid anchors, `grid_grounded` fallback) on `strat600`, `gemini-3.8-flash`, `k=3`, `workers=64` | **`hit@3`: 79.17% → 89.50% (+10.33 pp, +62 net samples)**; **`hit@1`: 65.67% → 77.00% (+11.33 pp)**; **Hard `hit@3`: 74.84% → 89.03% (+14.19 pp)**; **View-Dep `hit@3`: 81.99% → 91.47% (+9.48 pp)**; `no_evidence` empty frames **40 → 0** |
 | [v1_codex_runtime_grounding_smoke_20260608](v1_codex_runtime_grounding_smoke_20260608.md) | 2026-06-08 | Codex agent VG | `CodexAgentRuntime` migration smoke, 10-case (first 10 of strat600), catalog-first prompt-only, gpt-5.4 multi-AK from `configs/llm.toml` | **mean IoU 0.70→0.80, Acc@0.50 = 0.70→0.80**, 10/10 end-to-end, 0 errors (2 runs) |
 | [v1_codex_runtime_grounding_strat600_20260608](v1_codex_runtime_grounding_strat600_20260608.md) | 2026-06-08 | Codex agent VG | `CodexAgentRuntime` full **canonical strat600** (600), catalog-first prompt-only, gpt-5.4 multi-AK from `configs/llm.toml`, 50 workers | **Acc@0.25 = 63.83%** (Easy 73.1 / Hard 55.2 / V-Dep 51.7 / V-Indep 70.4); 600/600 clean, 0 infra errors, 15.8 min |
 | [v2_codex_tools_grounding_strat600_20260609](v2_codex_tools_grounding_strat600_20260609.md) | 2026-06-09 | Codex agent VG | `CodexAgentRuntime` + 9 in-turn evidence tools + `view_image`, strat600, gpt-5.4, 40 workers — **PARTIAL 169/600 (halted: throughput collapse)** | **Acc@0.25 = 63.31%** on 169 (Easy 70.6 / Hard 56.0 / V-Dep 50.0 / V-Indep 71.0) — **flat vs v1 prompt-only floor.** Trace analysis: spatial/co-visible tools *are* used (V-Dep 19/22), but **91% of slow-tail shell calls are `SKILL.md` re-reads** (median 58×/case) — a re-read loop `project_doc_max_bytes=0` didn't stop. Fix v3: inline skill into prompt + strip ambient skills + turn hard-cap |
@@ -109,9 +110,11 @@ from the agent-level ReferIt3D classification accuracy.
 
 ## Comparison snapshot (strat600, k=3, vp=True)
 
-| Selector | CLIP | hit@3 |
-|---|---|---:|
-| agentic `keyframe` (this repo) | off | **80.17** |
-| 3DVLM `query_scene` control | off | 78.00 |
-| 3DVLM `query_scene` v16 (documented) | on | 71.17 |
-| 3DVLM `query_scene` v11 (documented, no-vp) | on | 62.17 |
+| Selector | CLIP | hit@1 | hit@3 | empty |
+|---|---|---:|---:|---:|
+| **agentic `keyframe` v2 (grid + schema upgrade, 2026-11-04)** | off | **77.00** | **89.50** | **0** |
+| agentic `keyframe` legacy rerun (`4f4b29c`, 2026-11-04) | off | 65.67 | 79.17 | 40 |
+| agentic `keyframe` v1 (2026-06-08) | off | 64.33 | 80.17 | 28 |
+| 3DVLM `query_scene` control | off | 63.50 | 78.00 | 29 |
+| 3DVLM `query_scene` v16 (documented) | on | — | 71.17 | 81 |
+| 3DVLM `query_scene` v11 (documented, no-vp) | on | — | 62.17 | — |

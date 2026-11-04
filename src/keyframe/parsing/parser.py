@@ -2,9 +2,9 @@
 
 Converts a query such as "the pillow on the sofa nearest the door" into a
 :class:`~keyframe.models.hypotheses.HypothesisOutputV1`. The LLM is prompted
-with the full schema and few-shot examples plus the scene's category list, and
-returns a JSON object that is validated into the typed model. Category
-correctness is enforced downstream by ``KeyframeSelector._sanitize_categories``.
+with the full schema, few-shot examples, the scene's category list, and the
+structured ``SCENE GRID LAYOUT`` (plus optional BEV image), returning a JSON
+object that is healed and validated into the typed model.
 """
 
 from __future__ import annotations
@@ -12,10 +12,11 @@ from __future__ import annotations
 import base64
 import json
 import re
+import time
 from collections.abc import MutableMapping, Sequence
 from io import BytesIO
 from pathlib import Path
-from typing import Literal, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast
 
 from langchain_core.messages import HumanMessage
 from langchain_openai import AzureChatOpenAI
@@ -25,6 +26,9 @@ from keyframe.llm.client import LLMClient
 from keyframe.models.hypotheses import HypothesisOutputV1, QueryNode
 from keyframe.parsing.structures import get_few_shot_examples, get_system_prompt
 
+_FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
+_TRAILING_COMMA_RE = re.compile(r",\s*([}\]])")
+
 
 class _TextContentBlock(TypedDict):
     type: Literal["text"]
@@ -33,7 +37,7 @@ class _TextContentBlock(TypedDict):
 
 class _ImageUrlPayload(TypedDict):
     url: str
-    detail: Literal["low"]
+    detail: Literal["low", "high", "auto"]
 
 
 class _ImageContentBlock(TypedDict):
@@ -42,6 +46,70 @@ class _ImageContentBlock(TypedDict):
 
 
 _MessageContentBlock = _TextContentBlock | _ImageContentBlock
+
+
+def _extract_balanced_json(text: str) -> str:
+    """Extract the first balanced ``{...}`` or ``[...]`` block from ``text``."""
+    start = -1
+    open_char = ""
+    close_char = ""
+    for idx, ch in enumerate(text):
+        if ch == "{":
+            start = idx
+            open_char, close_char = "{", "}"
+            break
+        if ch == "[":
+            start = idx
+            open_char, close_char = "[", "]"
+            break
+    if start < 0:
+        return text.strip()
+
+    depth = 0
+    in_string = False
+    escaped = False
+    for idx in range(start, len(text)):
+        ch = text[idx]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == open_char:
+            depth += 1
+        elif ch == close_char:
+            depth -= 1
+            if depth == 0:
+                return text[start : idx + 1]
+    return text[start:].strip()
+
+
+def _parse_raw_json(response_text: str) -> dict[str, Any]:
+    """Extract and parse a JSON object or list from an LLM text response."""
+    fence_match = _FENCE_RE.search(response_text)
+    candidate = (
+        fence_match.group(1).strip()
+        if fence_match is not None
+        else _extract_balanced_json(response_text)
+    )
+    cleaned = _TRAILING_COMMA_RE.sub(r"\1", candidate)
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Fallback: try balanced extraction even if fence matched non-JSON
+        fallback = _TRAILING_COMMA_RE.sub(r"\1", _extract_balanced_json(response_text))
+        parsed = json.loads(fallback)
+
+    if isinstance(parsed, list):
+        return {"hypotheses": parsed}
+    if isinstance(parsed, dict):
+        return parsed
+    raise TypeError("parsed JSON response is not an object or list")
 
 
 class QueryParser:
@@ -73,7 +141,8 @@ class QueryParser:
         scene_images: Sequence[str | Path] = (),
     ) -> HypothesisOutputV1:
         """Parse a query, rotating across the model's key pool on failure."""
-        attempts = max(2, self._client.key_count(self._model))
+        key_count = self._client.key_count(self._model)
+        attempts = max(2, key_count * 2 if key_count > 1 else 2)
         last_error: Exception | None = None
         for attempt in range(attempts):
             chat_model = self._client.get_chat_model(
@@ -92,6 +161,13 @@ class QueryParser:
                 logger.warning(
                     f"[QueryParser] attempt {attempt + 1}/{attempts} failed: {error}"
                 )
+                if key_count > 1 and attempt + 1 < attempts:
+                    delay = (
+                        min(6.0, 1.5 * (attempt + 1))
+                        if "429" in str(error)
+                        else min(2.0, 0.4 * (attempt + 1))
+                    )
+                    time.sleep(delay)
         raise ValueError(
             f"Failed to parse query {query!r} after {attempts} attempts: {last_error}"
         )
@@ -120,7 +196,7 @@ class QueryParser:
                     "type": "image_url",
                     "image_url": {
                         "url": self._image_to_data_url(image_path),
-                        "detail": "low",
+                        "detail": "high",
                     },
                 }
             )
@@ -130,12 +206,8 @@ class QueryParser:
     def _parse_json_response(
         self, response_text: str, query: str
     ) -> HypothesisOutputV1:
-        match = re.search(r"```(?:json)?\s*([\s\S]*?)```", response_text)
-        json_str = match.group(1).strip() if match else response_text.strip()
-        data = json.loads(json_str)
-        if not isinstance(data, dict):
-            raise TypeError("parsed JSON response is not an object")
-        return self._finalize_json(cast(MutableMapping[str, object], data), query)
+        data = _parse_raw_json(response_text)
+        return self._finalize_json(data, query)
 
     @staticmethod
     def _finalize_json(
@@ -143,11 +215,31 @@ class QueryParser:
     ) -> HypothesisOutputV1:
         """Fill defaults the LLM may omit, then validate into the typed model."""
         data.setdefault("format_version", "hypothesis_output_v1")
+        if "hypotheses" not in data:
+            if "grounding_query" in data:
+                data["hypotheses"] = [
+                    {
+                        "kind": data.get("kind", "direct"),
+                        "rank": 1,
+                        "grounding_query": data["grounding_query"],
+                    }
+                ]
+            elif "root" in data:
+                data["hypotheses"] = [
+                    {
+                        "kind": "direct",
+                        "rank": 1,
+                        "grounding_query": dict(data),
+                    }
+                ]
+
         hypotheses = data.get("hypotheses")
         if isinstance(hypotheses, list):
-            for hypothesis in hypotheses:
+            for idx, hypothesis in enumerate(hypotheses, start=1):
                 if not isinstance(hypothesis, MutableMapping):
                     continue
+                hypothesis.setdefault("kind", "direct" if idx == 1 else "proxy")
+                hypothesis.setdefault("rank", idx)
                 grounding = hypothesis.get("grounding_query")
                 if isinstance(grounding, MutableMapping) and not grounding.get(
                     "raw_query"
@@ -176,7 +268,7 @@ class QueryParser:
         )
 
     @staticmethod
-    def _image_to_data_url(image_path: str | Path, max_size: int = 800) -> str:
+    def _image_to_data_url(image_path: str | Path, max_size: int = 1280) -> str:
         """Encode an image as a base64 data URL for multimodal input."""
         try:
             from PIL import Image
@@ -193,7 +285,7 @@ class QueryParser:
                 (int(width * ratio), int(height * ratio)), Image.Resampling.LANCZOS
             )
         buffer = BytesIO()
-        image.save(buffer, format="JPEG", quality=85)
+        image.save(buffer, format="JPEG", quality=90)
         encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
         return f"data:image/jpeg;base64,{encoded}"
 

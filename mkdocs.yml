@@ -66,6 +66,7 @@ nav:
       - NR3D:
           - Timeline: benchmark/nr3d/README.md
           - v1 Keyframe Target ID Coverage: benchmark/nr3d/v1_keyframe_targetid_coverage_strat600_20260608.md
+          - v2 Keyframe Grid Upgrade Coverage: benchmark/nr3d/v2_keyframe_grid_upgrade_coverage_strat600_20261104.md
           - v1 Runtime Grounding Smoke: benchmark/nr3d/v1_codex_runtime_grounding_smoke_20260608.md
           - v1 Runtime Grounding Strat600: benchmark/nr3d/v1_codex_runtime_grounding_strat600_20260608.md
           - v2 Tools Grounding Strat600: benchmark/nr3d/v2_codex_tools_grounding_strat600_20260609.md
