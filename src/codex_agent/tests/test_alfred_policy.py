@@ -12,21 +12,148 @@ from codex_agent.alfred.odometry import ActionOdometry, camera_intrinsics
 from codex_agent.alfred.policy import AlfredDecision, AlfredPolicyTask
 
 
-def test_interaction_cannot_repeat_or_use_navigation_target() -> None:
-    decision = {
-        "kind": "act",
-        "action": "PickupObject",
-        "object_id": 2,
-        "cell": None,
-        "repeat": 2,
-        "rationale": "pick up",
+def _decision(command: dict[str, object]) -> AlfredDecision:
+    return AlfredDecision.model_validate(
+        {"command": command, "rationale": "Use observed evidence", "memory_note": ""}
+    )
+
+
+@pytest.mark.parametrize(
+    "command,expected",
+    [
+        (
+            {"kind": "motion", "action": "MoveAhead", "repeat": 3},
+            ("act", "MoveAhead", None, None, 3),
+        ),
+        (
+            {
+                "kind": "interact",
+                "action": "PickupObject",
+                "target": {"type": "object", "object_id": 2},
+            },
+            ("act", "PickupObject", 2, None, 1),
+        ),
+        (
+            {"kind": "navigate", "target": {"type": "object", "object_id": 22}},
+            ("navigate", None, 22, None, 1),
+        ),
+        (
+            {"kind": "navigate", "target": {"type": "cell", "cell": [5, -5]}},
+            ("navigate", None, None, [5, -5], 1),
+        ),
+        (
+            {"kind": "retrieve", "target": {"type": "object", "object_id": 3}},
+            ("retrieve", None, 3, None, 1),
+        ),
+        (
+            {"kind": "retrieve", "target": {"type": "cell", "cell": [1, 2]}},
+            ("retrieve", None, None, [1, 2], 1),
+        ),
+        ({"kind": "stop"}, ("stop", None, None, None, 1)),
+    ],
+)
+def test_commands_preserve_executor_interface(
+    command: dict[str, object], expected: tuple[object, ...]
+) -> None:
+    decision = _decision(command)
+    assert (
+        decision.kind,
+        decision.action,
+        decision.object_id,
+        decision.cell,
+        decision.repeat,
+    ) == expected
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        {
+            "kind": "interact",
+            "action": "PickupObject",
+            "target": {"type": "object", "object_id": 2},
+            "repeat": 2,
+        },
+        {
+            "kind": "motion",
+            "action": "MoveAhead",
+            "target": {"type": "object", "object_id": 2},
+            "repeat": 1,
+        },
+        {
+            "kind": "interact",
+            "action": "MoveAhead",
+            "target": {"type": "object", "object_id": 2},
+        },
+        {
+            "kind": "interact",
+            "action": "PickupObject",
+            "target": {"type": "cell", "cell": [1, 2]},
+        },
+        {
+            "kind": "navigate",
+            "target": {"type": "object", "object_id": 22, "cell": [5, -5]},
+        },
+        {
+            "kind": "navigate",
+            "target": {"type": "cell", "object_id": 22, "cell": [5, -5]},
+        },
+        {"kind": "navigate", "target": None},
+        {"kind": "stop", "target": {"type": "object", "object_id": 22}},
+    ],
+)
+def test_schema_commands_reject_ambiguous_or_inapplicable_fields(
+    command: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        _decision(command)
+
+
+def test_real_dual_target_navigation_failure_is_not_silently_reinterpreted() -> None:
+    failed_response = {
+        "kind": "navigate",
+        "action": None,
+        "object_id": 22,
+        "cell": [5, -5],
+        "repeat": 1,
+        "rationale": "Approach the target",
         "memory_note": "",
     }
-    with pytest.raises(ValidationError, match="repeat=1"):
-        AlfredDecision.model_validate(decision)
-    decision.update(action="MoveAhead", repeat=1)
-    with pytest.raises(ValidationError, match="object_id=null"):
-        AlfredDecision.model_validate(decision)
+    with pytest.raises(ValidationError):
+        AlfredDecision.model_validate(failed_response)
+
+
+def test_wire_schema_encodes_mutual_exclusion_without_hidden_cross_field_rules() -> (
+    None
+):
+    schema = AlfredDecision.model_json_schema()
+    assert schema["type"] == "object"
+    assert set(schema["required"]) == {"command", "rationale", "memory_note"}
+    assert "anyOf" in schema["properties"]["command"]
+    definitions = schema["$defs"]
+    assert "cell" not in definitions["ObjectTarget"]["properties"]
+    assert "object_id" not in definitions["CellTarget"]["properties"]
+    for model in definitions.values():
+        assert model["additionalProperties"] is False
+        assert set(model["required"]) == set(model["properties"])
+    encoded = json.dumps(schema)
+    for unsupported in ("prefixItems", "discriminator", "oneOf", "if", "then"):
+        assert f'"{unsupported}":' not in encoded
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        {"type": "object", "object_id": True},
+        {"type": "cell", "cell": [1.5, 2]},
+        {"type": "cell", "cell": [1, 2, 3]},
+    ],
+)
+def test_targets_reject_coercion_and_invalid_dimensions(
+    target: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        _decision({"kind": "navigate", "target": target})
 
 
 def test_policy_uses_only_language_and_supplied_observations(tmp_path: Path) -> None:
@@ -42,11 +169,7 @@ def test_policy_uses_only_language_and_supplied_observations(tmp_path: Path) -> 
     assert task.is_valid_response(
         json.dumps(
             {
-                "kind": "stop",
-                "action": None,
-                "object_id": None,
-                "cell": None,
-                "repeat": 1,
+                "command": {"kind": "stop"},
                 "rationale": "done",
                 "memory_note": "",
             }

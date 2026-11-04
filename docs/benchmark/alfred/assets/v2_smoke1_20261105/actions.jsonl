@@ -1,0 +1,10 @@
+{"index": 1, "action": "RotateLeft", "object_id": null, "source_frame": 0, "result_frame": 1, "success": true, "error": ""}
+{"index": 2, "action": "RotateLeft", "object_id": null, "source_frame": 1, "result_frame": 2, "success": true, "error": ""}
+{"index": 3, "action": "RotateLeft", "object_id": null, "source_frame": 2, "result_frame": 3, "success": true, "error": ""}
+{"index": 4, "action": "RotateLeft", "object_id": null, "source_frame": 3, "result_frame": 4, "success": true, "error": ""}
+{"index": 5, "action": "RotateLeft", "object_id": null, "source_frame": 4, "result_frame": 5, "success": true, "error": ""}
+{"index": 6, "action": "RotateLeft", "object_id": null, "source_frame": 5, "result_frame": 6, "success": true, "error": ""}
+{"index": 7, "action": "MoveAhead", "object_id": null, "source_frame": 6, "result_frame": 7, "success": true, "error": ""}
+{"index": 8, "action": "RotateRight", "object_id": null, "source_frame": 7, "result_frame": 8, "success": true, "error": ""}
+{"index": 9, "action": "RotateRight", "object_id": null, "source_frame": 8, "result_frame": 9, "success": true, "error": ""}
+{"index": 10, "action": "RotateRight", "object_id": null, "source_frame": 9, "result_frame": 10, "success": true, "error": ""}

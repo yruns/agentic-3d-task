@@ -145,17 +145,12 @@ class FakeRuntime:
         )
 
 
-def _decision(**updates: object) -> AlfredDecision:
+def _decision(command: dict[str, object] | None = None) -> AlfredDecision:
     return AlfredDecision.model_validate(
         {
-            "kind": "stop",
-            "action": None,
-            "object_id": None,
-            "cell": None,
-            "repeat": 1,
+            "command": command if command is not None else {"kind": "stop"},
             "rationale": "Synthetic service-boundary test",
             "memory_note": "Keep this note",
-            **updates,
         }
     )
 
@@ -193,7 +188,10 @@ def test_repeated_actions_integrate_every_intermediate_observation(
 ) -> None:
     executor = _executor(
         tmp_path,
-        [_decision(kind="act", action="MoveAhead", repeat=3), _decision()],
+        [
+            _decision({"kind": "motion", "action": "MoveAhead", "repeat": 3}),
+            _decision(),
+        ],
     )
     outcome = _run(executor)
     assert outcome.actions == 3
@@ -211,8 +209,14 @@ def test_interaction_uses_reobserved_mask_after_movement(tmp_path: Path) -> None
     executor = _executor(
         tmp_path,
         [
-            _decision(kind="act", action="MoveAhead"),
-            _decision(kind="act", action="PickupObject", object_id=0),
+            _decision({"kind": "motion", "action": "MoveAhead", "repeat": 1}),
+            _decision(
+                {
+                    "kind": "interact",
+                    "action": "PickupObject",
+                    "target": {"type": "object", "object_id": 0},
+                }
+            ),
             _decision(),
         ],
     )
@@ -241,8 +245,14 @@ def test_historical_target_without_current_mask_cannot_be_interacted_with(
     executor = _executor(
         tmp_path,
         [
-            _decision(kind="act", action="MoveAhead"),
-            _decision(kind="act", action="PickupObject", object_id=0),
+            _decision({"kind": "motion", "action": "MoveAhead", "repeat": 1}),
+            _decision(
+                {
+                    "kind": "interact",
+                    "action": "PickupObject",
+                    "target": {"type": "object", "object_id": 0},
+                }
+            ),
             _decision(),
         ],
         visible_frames={0},
@@ -275,7 +285,7 @@ def test_stop_uses_no_simulator_action_and_actor_never_reads_terminal_truth(
 def test_action_budget_interrupts_repeat_before_extra_step(tmp_path: Path) -> None:
     executor = _executor(
         tmp_path,
-        [_decision(kind="act", action="MoveAhead", repeat=8)],
+        [_decision({"kind": "motion", "action": "MoveAhead", "repeat": 8})],
         config=ExecutionConfig(max_actions=2),
     )
     outcome = _run(executor)
@@ -289,7 +299,7 @@ def test_failure_budget_stops_repetition_and_preserves_failed_observation(
 ) -> None:
     executor = _executor(
         tmp_path,
-        [_decision(kind="act", action="MoveAhead", repeat=8)],
+        [_decision({"kind": "motion", "action": "MoveAhead", "repeat": 8})],
         config=ExecutionConfig(max_failures=1),
         successes=[False],
     )
@@ -306,7 +316,7 @@ def test_failed_westward_move_marks_attempted_cell_without_float_drift(
 ) -> None:
     executor = _executor(
         tmp_path,
-        [_decision(kind="act", action="MoveAhead")],
+        [_decision({"kind": "motion", "action": "MoveAhead", "repeat": 1})],
         config=ExecutionConfig(max_failures=1),
         successes=[False],
         yaw_degrees=270.0,
@@ -320,7 +330,7 @@ def test_action_budget_reached_on_last_decision_reports_action_limit(
 ) -> None:
     executor = _executor(
         tmp_path,
-        [_decision(kind="act", action="MoveAhead", repeat=8)],
+        [_decision({"kind": "motion", "action": "MoveAhead", "repeat": 8})],
         config=ExecutionConfig(max_actions=1, max_decisions=1),
     )
     outcome = _run(executor)
@@ -331,10 +341,17 @@ def test_action_budget_reached_on_last_decision_reports_action_limit(
 def test_retrieval_uses_only_seen_frames_and_does_not_move(tmp_path: Path) -> None:
     executor = _executor(
         tmp_path,
-        [_decision(kind="retrieve", object_id=0), _decision()],
+        [
+            _decision({"kind": "motion", "action": "MoveAhead", "repeat": 1}),
+            _decision(
+                {"kind": "retrieve", "target": {"type": "object", "object_id": 0}}
+            ),
+            _decision(),
+        ],
     )
     outcome = _run(executor)
-    assert outcome.actions == 0
+    assert outcome.actions == 1
+    assert len(executor.memory.frames) == 2
     assert isinstance(executor.runtime, FakeRuntime)
     task = executor.runtime.tasks[-1]
     assert task.context["retrieved_frame_ids"] == [0]
@@ -342,12 +359,71 @@ def test_retrieval_uses_only_seen_frames_and_does_not_move(tmp_path: Path) -> No
     assert task.image_paths[-1] == executor.memory.frames[0].rgb_path
 
 
+def test_retrieval_does_not_duplicate_the_current_rgb_attachment(
+    tmp_path: Path,
+) -> None:
+    executor = _executor(
+        tmp_path,
+        [
+            _decision(
+                {"kind": "retrieve", "target": {"type": "object", "object_id": 0}}
+            ),
+            _decision(),
+        ],
+    )
+    outcome = _run(executor)
+    assert outcome.actions == 0
+    assert isinstance(executor.runtime, FakeRuntime)
+    task = executor.runtime.tasks[-1]
+    assert task.context["retrieved_frame_ids"] == []
+    assert "No additional historical views" in str(task.context["feedback"])
+    assert len(task.image_paths) == 2
+
+
+def test_repeated_retrieval_waits_for_new_observations_without_forcing_actions(
+    tmp_path: Path,
+) -> None:
+    move: dict[str, object] = {"kind": "motion", "action": "MoveAhead", "repeat": 1}
+    retrieve: dict[str, object] = {
+        "kind": "retrieve",
+        "target": {"type": "object", "object_id": 0},
+    }
+    executor = _executor(
+        tmp_path,
+        [
+            _decision(move),
+            _decision(retrieve),
+            _decision(retrieve),
+            _decision(move),
+            _decision(retrieve),
+            _decision(),
+        ],
+    )
+    outcome = _run(executor)
+    assert outcome.actions == 2
+    assert isinstance(executor.environment, FakeEnvironment)
+    assert executor.environment.calls == [("MoveAhead", None), ("MoveAhead", None)]
+    assert isinstance(executor.runtime, FakeRuntime)
+    tasks = executor.runtime.tasks
+    assert tasks[2].context["retrieved_frame_ids"] == [0]
+    assert tasks[3].context["retrieved_frame_ids"] == []
+    assert len(tasks[3].image_paths) == 2
+    assert "obtain a new observation" in str(tasks[3].context["feedback"])
+    assert tasks[5].context["retrieved_frame_ids"] == [1]
+    assert tasks[5].image_paths[-1] == executor.memory.frames[1].rgb_path
+
+
 def test_unknown_retrieval_target_is_feedback_and_does_not_make_up_evidence(
     tmp_path: Path,
 ) -> None:
     executor = _executor(
         tmp_path,
-        [_decision(kind="retrieve", object_id=999), _decision()],
+        [
+            _decision(
+                {"kind": "retrieve", "target": {"type": "object", "object_id": 999}}
+            ),
+            _decision(),
+        ],
     )
     outcome = _run(executor)
     assert outcome.actions == 0

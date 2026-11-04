@@ -171,6 +171,29 @@ def test_retrieval_retains_distinct_requested_regions(tmp_path: Path) -> None:
     assert memory.retrieve_frames(cells=((999, 999),)) == ()
 
 
+def test_retrieval_excludes_delivered_views_but_new_observations_remain_eligible(
+    tmp_path: Path,
+) -> None:
+    memory = IncrementalSceneMemory(tmp_path / "memory")
+    for frame_id in range(3):
+        memory.integrate(_observation(tmp_path, frame_id))
+    selected = memory.retrieve_frames(object_ids=(0,), exclude_frame_ids=(0, 2))
+    assert [frame.frame_id for frame in selected] == [1]
+    assert memory.retrieve_frames(object_ids=(0,), exclude_frame_ids=(0, 1, 2)) == ()
+    memory.integrate(_observation(tmp_path, 3))
+    selected = memory.retrieve_frames(object_ids=(0,), exclude_frame_ids=(0, 1, 2))
+    assert [frame.frame_id for frame in selected] == [3]
+
+
+@pytest.mark.parametrize("excluded", [(-1,), (True,), (1.5,)])
+def test_retrieval_exclusion_rejects_invalid_frame_ids(
+    tmp_path: Path, excluded: tuple[object, ...]
+) -> None:
+    memory = IncrementalSceneMemory(tmp_path / "memory")
+    with pytest.raises(ValueError, match="exclude_frame_ids"):
+        memory.retrieve_frames(exclude_frame_ids=excluded)  # type: ignore[arg-type]
+
+
 def test_memory_rejects_repeated_or_out_of_order_frame_ids(tmp_path: Path) -> None:
     memory = IncrementalSceneMemory(tmp_path / "memory")
     memory.integrate(_observation(tmp_path, 2))

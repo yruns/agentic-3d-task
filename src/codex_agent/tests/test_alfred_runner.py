@@ -141,14 +141,16 @@ class _FakeRuntime:
     def execute(self, task: CodexTask[OutcomeT]) -> CodexTaskResult[OutcomeT]:
         self.calls += 1
         action = self.calls % 2 == 1
-        decision = AlfredDecision(
-            kind="act" if action else "stop",
-            action="MoveAhead" if action else None,
-            object_id=None,
-            cell=None,
-            repeat=2 if action else 1,
-            rationale="test external policy",
-            memory_note="",
+        decision = AlfredDecision.model_validate(
+            {
+                "command": (
+                    {"kind": "motion", "action": "MoveAhead", "repeat": 2}
+                    if action
+                    else {"kind": "stop"}
+                ),
+                "rationale": "test external policy",
+                "memory_note": "",
+            }
         )
         return CodexTaskResult(
             task_name=task.task_name,

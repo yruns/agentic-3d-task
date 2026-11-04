@@ -59,6 +59,12 @@ mechanisms require validation under predicted depth, missed detections, object
 motion, and repeated views; infrastructure smoke checks do not establish their
 task-level effectiveness.
 
+Actor retrieval excludes the attached current frame and historical frames
+already returned in the episode. Exhausted evidence produces an explicit
+request to obtain a new observation, without substituting an automatic action.
+The decision schema uses nested command alternatives and a single object or
+grid target, so contradictory target fields cannot be generated together.
+
 Perception imports the published [FILM architectures](https://github.com/soyeonm/FILM)
 from the external checkout, rather than vendoring their implementation. It uses
 the released ALFRED-trained object/receptacle Mask R-CNN models and two depth
@@ -161,6 +167,14 @@ chosen output directory, including `run.json`, `summary.json`, per-episode
 geometry and BEV, and the separate official terminal snapshot. The runner
 automatically archives completed and failed attempts into
 `docs/benchmark/alfred/runs.sqlite`.
+
+Independent processes can partition the same frozen fold with `--num-shards 4`
+and `--shard-index 0`, `1`, `2`, or `3`, each using a distinct run ID and output
+directory. Selection is exactly `manifest[index::num_shards]`, producing
+13/13/12/12 entries without duplication. An optional `--limit` is applied after
+sharding. Aggregate only completed shards with identical executed-code, fold,
+model, perception and action budgets; verify all 50 episode IDs occur once.
+Each process owns its own predictor and simulator lifecycle.
 
 ## Related implementation references
 

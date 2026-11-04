@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from codex_agent.errors import CodexResponseError
 from codex_agent.json_extraction import extract_json_object
@@ -16,12 +16,14 @@ from codex_agent.models import CodexTurnRequest
 from .actor_runtime import AlfredPolicyRuntime as AlfredPolicyRuntime
 from .dataset import AlfredInstruction
 
-PrimitiveAction = Literal[
+MotionAction = Literal[
     "MoveAhead",
     "RotateLeft",
     "RotateRight",
     "LookUp",
     "LookDown",
+]
+InteractionAction = Literal[
     "PickupObject",
     "PutObject",
     "OpenObject",
@@ -30,45 +32,123 @@ PrimitiveAction = Literal[
     "ToggleObjectOff",
     "SliceObject",
 ]
+PrimitiveAction = MotionAction | InteractionAction
 NAVIGATION_ACTIONS = frozenset(
     {"MoveAhead", "RotateLeft", "RotateRight", "LookUp", "LookDown"}
 )
 
 
-class AlfredDecision(BaseModel):
-    """One bounded action, map-navigation request, evidence query, or stop."""
+class _DecisionModel(BaseModel):
+    """Forbid additional fields and coercion at every policy-command boundary."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
-    kind: Literal["act", "navigate", "retrieve", "stop"]
-    action: PrimitiveAction | None
-    object_id: int | None = Field(ge=0)
-    cell: list[int] | None = Field(min_length=2, max_length=2)
+
+class ObjectTarget(_DecisionModel):
+    """Reference exactly one observed memory instance."""
+
+    type: Literal["object"]
+    object_id: int = Field(ge=0)
+
+
+class CellTarget(_DecisionModel):
+    """Reference exactly one stable world-grid cell."""
+
+    type: Literal["cell"]
+    cell: list[int] = Field(min_length=2, max_length=2)
+
+
+class MotionCommand(_DecisionModel):
+    """Execute a bounded sequence of one navigation primitive."""
+
+    kind: Literal["motion"]
+    action: MotionAction
     repeat: int = Field(ge=1, le=8)
+
+
+class InteractionCommand(_DecisionModel):
+    """Interact once using the target instance's current image mask."""
+
+    kind: Literal["interact"]
+    action: InteractionAction
+    target: ObjectTarget
+
+
+class NavigateCommand(_DecisionModel):
+    """Approach an object or a grid cell through currently observed free space."""
+
+    kind: Literal["navigate"]
+    target: ObjectTarget | CellTarget
+
+
+class RetrieveCommand(_DecisionModel):
+    """Retrieve historical observations for exactly one object or grid cell."""
+
+    kind: Literal["retrieve"]
+    target: ObjectTarget | CellTarget
+
+
+class StopCommand(_DecisionModel):
+    """End actor execution without issuing a simulator action."""
+
+    kind: Literal["stop"]
+
+
+class AlfredDecision(_DecisionModel):
+    """A command whose valid combinations are expressed in its wire JSON schema.
+
+    Nested unions keep the schema root an object and expose all action/target
+    constraints to structured generation. The executor properties preserve its
+    existing dispatch interface without accepting or prioritizing contradictory
+    fields from the previous flat response format.
+    """
+
+    command: (
+        MotionCommand
+        | InteractionCommand
+        | NavigateCommand
+        | RetrieveCommand
+        | StopCommand
+    )
     rationale: str = Field(min_length=1, max_length=1600)
     memory_note: str = Field(max_length=2400)
 
-    @model_validator(mode="after")
-    def validate_request(self) -> AlfredDecision:
-        if self.kind == "act":
-            if self.action is None or self.cell is not None:
-                raise ValueError("act requires action and cell=null")
-            if self.action in NAVIGATION_ACTIONS:
-                if self.object_id is not None:
-                    raise ValueError("navigation primitives require object_id=null")
-            elif self.object_id is None or self.repeat != 1:
-                raise ValueError("interaction requires object_id and repeat=1")
-        else:
-            if self.action is not None or self.repeat != 1:
-                raise ValueError("non-act decisions require action=null and repeat=1")
-            if self.kind in {"navigate", "retrieve"}:
-                if (self.object_id is None) == (self.cell is None):
-                    raise ValueError(
-                        "navigate/retrieve requires exactly one object_id or cell"
-                    )
-            elif self.object_id is not None or self.cell is not None:
-                raise ValueError("stop requires object_id=null and cell=null")
-        return self
+    @property
+    def kind(self) -> Literal["act", "navigate", "retrieve", "stop"]:
+        """Return the executor's dispatch family."""
+        if isinstance(self.command, (MotionCommand, InteractionCommand)):
+            return "act"
+        return self.command.kind
+
+    @property
+    def action(self) -> PrimitiveAction | None:
+        """Return a simulator primitive only for motion/interaction commands."""
+        if isinstance(self.command, (MotionCommand, InteractionCommand)):
+            return self.command.action
+        return None
+
+    @property
+    def object_id(self) -> int | None:
+        """Return the selected instance, if the command has an object target."""
+        if isinstance(
+            self.command, (InteractionCommand, NavigateCommand, RetrieveCommand)
+        ):
+            if isinstance(self.command.target, ObjectTarget):
+                return self.command.target.object_id
+        return None
+
+    @property
+    def cell(self) -> list[int] | None:
+        """Return a copy of the selected grid cell, if present."""
+        if isinstance(self.command, (NavigateCommand, RetrieveCommand)):
+            if isinstance(self.command.target, CellTarget):
+                return list(self.command.target.cell)
+        return None
+
+    @property
+    def repeat(self) -> int:
+        """Only motion commands can request repeated primitives."""
+        return self.command.repeat if isinstance(self.command, MotionCommand) else 1
 
 
 _PLAYBOOK = """You control an embodied ALFRED agent. Use only the supplied language,
@@ -80,6 +160,10 @@ views (with frame identifiers). Historical images cannot supply a current mask.
 MoveAhead moves 0.25 m. RotateLeft/Right turn 90 degrees. LookUp/Down adjust pitch
 15 degrees. Positive camera horizon looks down. Repeat allows up to 8 navigation
 primitives; execution stops early on failure and updates memory at EVERY step.
+Choose exactly one command: motion (action, repeat), interact (action, object
+target), navigate (one target), retrieve (one target), or stop. A target is either
+{type:"object",object_id:N} or {type:"cell",cell:[x,y]}, never both. Only motion
+has repeat; interaction executes once. Do not include unused or null fields.
 For interactions use object_id from the CURRENT visible detections. A predicted
 mask from this exact pose is supplied to the official interaction interface.
 PutObject targets the destination receptacle, not the held item. Pick up a knife
@@ -92,6 +176,8 @@ object's vicinity. It does not ensure interaction readiness; inspect the returne
 RGB and adjust position/pitch. If no observed route exists, explore with short
 primitive moves. Retrieve asks for complementary past evidence for an object or
 grid cell, without moving. Do not repeatedly retrieve the same evidence.
+After a full scan from one position, prefer navigating to an observed free
+approach or moving to obtain a new view over another identical scan or retrieval.
 Stop when visual/action evidence indicates all requested state changes are done.
 You cannot inspect the hidden scorer. Never infer success from your intention.
 memory_note carries your concise plan, completed steps and remaining uncertainty

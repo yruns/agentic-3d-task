@@ -109,6 +109,7 @@ class EpisodeExecutor:
         self._recent_actions: list[dict[str, object]] = []
         self._retrieved: tuple[Path, ...] = ()
         self._retrieved_ids: list[int] = []
+        self._delivered_history_ids: set[int] = set()
         self._current: SimulatorObservation | None = None
         self._predicted: PerceptionObservation | None = None
 
@@ -256,6 +257,7 @@ class EpisodeExecutor:
             (decision.cell[0], decision.cell[1]) if decision.cell is not None else None
         )
         if decision.kind == "retrieve":
+            assert self._current is not None
             if (
                 decision.object_id is not None
                 and decision.object_id not in self.memory.objects
@@ -268,11 +270,17 @@ class EpisodeExecutor:
                 object_ids=() if decision.object_id is None else (decision.object_id,),
                 cells=() if cell is None else (cell,),
                 limit=self.config.retrieved_images,
+                exclude_frame_ids=tuple(
+                    self._delivered_history_ids | {self._current.frame_id}
+                ),
             )
             self._retrieved = tuple(frame.rgb_path for frame in frames)
             self._retrieved_ids = [frame.frame_id for frame in frames]
+            self._delivered_history_ids.update(self._retrieved_ids)
             self._feedback = (
                 f"Retrieved observed frames {self._retrieved_ids}; no action performed."
+                if frames
+                else "No additional historical views; obtain a new observation by moving/adjusting camera."
             )
             return
         if decision.kind == "navigate":

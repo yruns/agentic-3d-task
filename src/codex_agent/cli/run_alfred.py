@@ -108,7 +108,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--limit",
         type=_positive_int,
-        help="Run only this prefix of the frozen fold; labeled diagnostic.",
+        help="Run only this prefix of the selected frozen-fold shard; labeled diagnostic.",
+    )
+    parser.add_argument(
+        "--shard-index",
+        type=int,
+        default=0,
+        help="Zero-based deterministic shard index; requires 0 <= index < num-shards.",
+    )
+    parser.add_argument(
+        "--num-shards",
+        type=_positive_int,
+        default=1,
+        help="Select frozen manifest[index::num-shards] before applying --limit.",
     )
     parser.add_argument(
         "--preflight-only",
@@ -175,6 +187,8 @@ def main(argv: list[str] | None = None) -> int:
             *(sys.argv[1:] if argv is None else argv),
         ),
         limit=args.limit,
+        shard_index=args.shard_index,
+        num_shards=args.num_shards,
     )
     if args.preflight_only:
         print(json.dumps(preflight_run(config), ensure_ascii=False, indent=2))

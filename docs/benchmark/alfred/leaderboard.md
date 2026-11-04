@@ -10,3 +10,9 @@ success-rate estimate inferred from infrastructure checks.
 Future rows must report seen and unseen separately and use the frozen fold,
 matching language inputs, perception models, action interface and budgets.
 See the [protocol and metric definitions](README.md).
+
+## Diagnostic attempts
+
+The [first frozen-prefix rollout](v2_smoke1_20261105.md) ended with a decision
+contract error after 10 successful simulator actions. It has 0/1 scored coverage
+and is excluded from task-success metrics; its failure and logs remain archived.

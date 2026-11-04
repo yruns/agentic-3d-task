@@ -335,15 +335,24 @@ class IncrementalSceneMemory:
         cells: Sequence[GridCell] = (),
         limit: int = 3,
         include_stale: bool = False,
+        exclude_frame_ids: Sequence[int] = (),
     ) -> tuple[FrameRecord, ...]:
         """Greedily cover requested instances/regions with complementary views.
 
         Unknown regions legitimately return no frames. Unknown object IDs are
         rejected. By default a changed object's pre-action observations do not
         count as current evidence; include_stale explicitly retrieves history.
+        Exclusions let an episode avoid returning previously delivered images
+        while leaving later observations eligible for progressive retrieval.
         """
         if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
             raise ValueError(f"limit must be a positive int, got {limit!r}")
+        for frame_id in exclude_frame_ids:
+            if type(frame_id) is not int or frame_id < 0:
+                raise ValueError(
+                    "exclude_frame_ids must contain nonnegative integers, "
+                    f"got {frame_id!r}"
+                )
         requested_objects = set(object_ids)
         requested_cells = set(cells)
         candidates: set[int] = set()
@@ -355,6 +364,7 @@ class IncrementalSceneMemory:
             candidates.update(self.grid_to_views.get(cell, set()))
         if not requested_objects and not requested_cells:
             candidates.update(self.frames)
+        candidates.difference_update(exclude_frame_ids)
         coverage: dict[int, set[tuple[str, object]]] = {}
         for frame_id in candidates:
             frame = self.frames[frame_id]

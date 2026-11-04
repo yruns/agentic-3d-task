@@ -50,6 +50,8 @@ class AlfredRunConfig:
     execution: ExecutionConfig
     command: tuple[str, ...]
     limit: int | None = None
+    shard_index: int = 0
+    num_shards: int = 1
 
     def __post_init__(self) -> None:
         for name in (
@@ -67,6 +69,15 @@ class AlfredRunConfig:
             )
         if self.limit is not None and (type(self.limit) is not int or self.limit < 1):
             raise ValueError("limit must be a positive integer or None")
+        if type(self.num_shards) is not int or self.num_shards < 1:
+            raise ValueError("num_shards must be a positive integer")
+        if (
+            type(self.shard_index) is not int
+            or not 0 <= self.shard_index < self.num_shards
+        ):
+            raise ValueError(
+                f"shard_index={self.shard_index!r} must be an integer in [0, {self.num_shards})"
+            )
         if not self.command or not all(self.command):
             raise ValueError("command must record the executed argument vector")
 
@@ -88,13 +99,17 @@ class AlfredRunSummary(BaseModel):
 
 def preflight_run(config: AlfredRunConfig) -> dict[str, object]:
     """Validate inputs/provider readiness without workers or benchmark execution."""
-    episodes = _selected_episodes(config)
+    manifest = load_manifest(config.fold_path, config.data_root, config.splits_path)
+    episodes = _selected_episodes(config, manifest)
     if not (config.simulator.alfred_root / "env/thor_env.py").is_file():
         raise FileNotFoundError("official ALFRED env/thor_env.py is missing")
     preflight_codex_runtime(config.runtime)
     return {
         "status": "preflight_only",
         "selected": len(episodes),
+        "full_fold_size": len(manifest),
+        "shard_index": config.shard_index,
+        "num_shards": config.num_shards,
         "by_split": {
             split: sum(episode.split == split for episode in episodes)
             for split in VALIDATION_SPLITS
@@ -113,12 +128,13 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
     The predictor persists across episodes; each simulator owns a separate Unity
     lifecycle. Authoritative scoring occurs only after the actor has stopped.
     """
-    episodes = _selected_episodes(config)
+    manifest = load_manifest(config.fold_path, config.data_root, config.splits_path)
+    episodes = _selected_episodes(config, manifest)
     code = code_provenance(config.source_root)
     _require_unused_run_id(config.database_path, config.run_id)
     if config.output_dir.exists():
         raise FileExistsError(f"output_dir already exists: {config.output_dir}")
-    metadata = _run_metadata(config, episodes, code)
+    metadata = _run_metadata(config, episodes, code, full_fold_size=len(manifest))
     preflight_codex_runtime(config.runtime)
     config.output_dir.mkdir(parents=True, exist_ok=False)
     actor_dir = config.output_dir / "actor"
@@ -277,14 +293,20 @@ def summarize_attempts(
     )
 
 
-def _selected_episodes(config: AlfredRunConfig) -> tuple[AlfredEpisode, ...]:
-    episodes = load_manifest(config.fold_path, config.data_root, config.splits_path)
+def _selected_episodes(
+    config: AlfredRunConfig, manifest: tuple[AlfredEpisode, ...]
+) -> tuple[AlfredEpisode, ...]:
+    """Take a stable strided shard, then apply an optional diagnostic prefix."""
+    if len({episode.episode_id for episode in manifest}) != len(manifest):
+        raise ValueError("frozen fold contains duplicate episode IDs")
+    episodes = manifest[config.shard_index :: config.num_shards]
     if config.limit is not None:
         episodes = episodes[: config.limit]
     if not episodes:
-        raise ValueError("frozen fold selected no ALFRED episodes")
-    if len({episode.episode_id for episode in episodes}) != len(episodes):
-        raise ValueError("frozen fold contains duplicate episode IDs")
+        raise ValueError(
+            f"frozen fold selected no ALFRED episodes for shard_index={config.shard_index}, "
+            f"num_shards={config.num_shards}, full_fold_size={len(manifest)}"
+        )
     return episodes
 
 
@@ -325,7 +347,11 @@ def external_source_provenance(path: Path) -> dict[str, object]:
 
 
 def _run_metadata(
-    config: AlfredRunConfig, episodes: Sequence[AlfredEpisode], code: dict[str, object]
+    config: AlfredRunConfig,
+    episodes: Sequence[AlfredEpisode],
+    code: dict[str, object],
+    *,
+    full_fold_size: int,
 ) -> dict[str, object]:
     odometry = ActionOdometry()
     return {
@@ -337,6 +363,9 @@ def _run_metadata(
         "output_dir": str(config.output_dir),
         "fold_path": str(config.fold_path),
         "fold_sha256": file_sha256(config.fold_path),
+        "full_fold_size": full_fold_size,
+        "shard_index": config.shard_index,
+        "num_shards": config.num_shards,
         "splits_path": str(config.splits_path),
         "splits_sha256": file_sha256(config.splits_path),
         "limit": config.limit,

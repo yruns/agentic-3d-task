@@ -71,6 +71,7 @@ every episode attempt without overwriting old run IDs.
 
 | Record | Date | Scope | Result |
 |---|---|---|---|
+| [v2 first rollout](v2_smoke1_20261105.md) | 2026-11-05 | Frozen-fold prefix1; predicted perception and LLM actions | Decision-contract error after 10 actions; 0/1 scored |
 | [v1 setup](v1_setup_20261105.md) | 2026-11-05 | Simulator lifecycle, camera calibration, predicted perception, pilot protocol | Infrastructure checks passed; 0 scored episodes |
 
 See the [local leaderboard](leaderboard.md). Before launching evaluation,

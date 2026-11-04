@@ -1,0 +1,645 @@
+[
+  {
+    "decision_index": 1,
+    "decision": {
+      "kind": "act",
+      "action": "RotateLeft",
+      "object_id": null,
+      "cell": null,
+      "repeat": 1,
+      "rationale": "Neither target object is currently visible. A left rotation should reveal more of the room beyond the wall-dominated view and may expose the bed surface or nearby furniture where a pillow or lamp is likely located.",
+      "memory_note": "Goal: hold a purple pillow and turn on a lamp. Initial view only shows bed area objects (bed/book/laptop/teddy bear/safe), no pillow or lamp visible. Rotate left to inspect more of the bedroom and search for pillow/lamp; likely need to pick up pillow first, then locate lamp and toggle it on while holding pillow."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ab-01c0-7013-8a7b-da8aed346451",
+      "status": "completed",
+      "duration_ms": 6656,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 3907,
+          "output_tokens": 218,
+          "reasoning_output_tokens": 67,
+          "total_tokens": 4125
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 3907,
+          "output_tokens": 218,
+          "reasoning_output_tokens": 67,
+          "total_tokens": 4125
+        }
+      },
+      "input_tokens": 3907,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/12845c809056440e80eff93492d42ff9",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ab-01c0-7013-8a7b-da8aed346451",
+          "status": "completed",
+          "duration_ms": 6656,
+          "has_final_response": true,
+          "adapter_session_id": "f1bd5130-b8c0-49a3-986c-d10145f78ddc"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":\"RotateLeft\",\"cell\":null,\"kind\":\"act\",\"memory_note\":\"Goal: hold a purple pillow and turn on a lamp. Initial view only shows bed area objects (bed/book/laptop/teddy bear/safe), no pillow or lamp visible. Rotate left to inspect more of the bedroom and search for pillow/lamp; likely need to pick up pillow first, then locate lamp and toggle it on while holding pillow.\",\"object_id\":null,\"rationale\":\"Neither target object is currently visible. A left rotation should reveal more of the room beyond the wall-dominated view and may expose the bed surface or nearby furniture where a pillow or lamp is likely located.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 2,
+    "decision": {
+      "kind": "act",
+      "action": "RotateLeft",
+      "object_id": null,
+      "cell": null,
+      "repeat": 1,
+      "rationale": "No target object is currently visible, so interaction is not possible. Rotating left is a low-risk way to inspect the remaining unseen portion of the room and potentially reveal either the pillow or the lamp.",
+      "memory_note": "Goal: hold a purple pillow and turn on a lamp. After one left turn, current view shows desk/side table/shelf/plant area with no visible pillow or lamp. Continue scanning left around the room before moving; pillow may be on bed/sofa and lamp on another wall or table."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ab-2405-7362-8cdd-b76781a02697",
+      "status": "completed",
+      "duration_ms": 9452,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 5585,
+          "output_tokens": 201,
+          "reasoning_output_tokens": 59,
+          "total_tokens": 5786
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 5585,
+          "output_tokens": 201,
+          "reasoning_output_tokens": 59,
+          "total_tokens": 5786
+        }
+      },
+      "input_tokens": 5585,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/d081bf95a38740cc88c01e5e678ea966",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ab-2405-7362-8cdd-b76781a02697",
+          "status": "completed",
+          "duration_ms": 9452,
+          "has_final_response": true,
+          "adapter_session_id": "5fa50c41-4078-458d-b97d-4523774a72a8"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":\"RotateLeft\",\"cell\":null,\"kind\":\"act\",\"memory_note\":\"Goal: hold a purple pillow and turn on a lamp. After one left turn, current view shows desk/side table/shelf/plant area with no visible pillow or lamp. Continue scanning left around the room before moving; pillow may be on bed/sofa and lamp on another wall or table.\",\"object_id\":null,\"rationale\":\"No target object is currently visible, so interaction is not possible. Rotating left is a low-risk way to inspect the remaining unseen portion of the room and potentially reveal either the pillow or the lamp.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 3,
+    "decision": {
+      "kind": "act",
+      "action": "RotateLeft",
+      "object_id": null,
+      "cell": null,
+      "repeat": 1,
+      "rationale": "The lamp is already located and visible, but the required pillow is not visible in the current frame. Rotating left is a low-cost way to continue the visual search before moving, especially since the bed area is partly in view and pillows are commonly nearby.",
+      "memory_note": "Goal: hold a purple pillow and turn on a lamp. Lamp is now visible on the side table (DeskLamp 18), but no pillow is visible yet. Continue scanning left from this spot to search for the pillow, likely around the bed or other room surfaces; once found, pick it up and return/adjust to toggle the lamp on while holding it."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ab-5097-7de3-8b01-1852d58ade24",
+      "status": "completed",
+      "duration_ms": 7061,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 6490,
+          "output_tokens": 284,
+          "reasoning_output_tokens": 119,
+          "total_tokens": 6774
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 6490,
+          "output_tokens": 284,
+          "reasoning_output_tokens": 119,
+          "total_tokens": 6774
+        }
+      },
+      "input_tokens": 6490,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/2f31b545926b4204ba7ac42b12c30163",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ab-5097-7de3-8b01-1852d58ade24",
+          "status": "completed",
+          "duration_ms": 7061,
+          "has_final_response": true,
+          "adapter_session_id": "4bd6cff2-0815-40b6-8b7e-7383de2ecb29"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":\"RotateLeft\",\"cell\":null,\"kind\":\"act\",\"memory_note\":\"Goal: hold a purple pillow and turn on a lamp. Lamp is now visible on the side table (DeskLamp 18), but no pillow is visible yet. Continue scanning left from this spot to search for the pillow, likely around the bed or other room surfaces; once found, pick it up and return/adjust to toggle the lamp on while holding it.\",\"object_id\":null,\"rationale\":\"The lamp is already located and visible, but the required pillow is not visible in the current frame. Rotating left is a low-cost way to continue the visual search before moving, especially since the bed area is partly in view and pillows are commonly nearby.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 4,
+    "decision": {
+      "kind": "act",
+      "action": "RotateLeft",
+      "object_id": null,
+      "cell": null,
+      "repeat": 1,
+      "rationale": "No target object is currently visible for interaction. A further left rotation is the safest exploration step to continue the visual sweep from this location and search for the pillow.",
+      "memory_note": "Goal: hold a purple pillow and turn on a lamp. After three left turns, current view is just close cabinets/wall; no pillow visible and lamp not currently in view. Continue rotating left to finish the scan and re-expose the room/bed area where a pillow is more likely to appear. Once pillow is found, pick it up, then return to DeskLamp 18 and toggle it on while holding the pillow."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ab-72fd-77b0-a452-0929ca71b2ec",
+      "status": "completed",
+      "duration_ms": 6900,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 6863,
+          "output_tokens": 253,
+          "reasoning_output_tokens": 94,
+          "total_tokens": 7116
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 6863,
+          "output_tokens": 253,
+          "reasoning_output_tokens": 94,
+          "total_tokens": 7116
+        }
+      },
+      "input_tokens": 6863,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/2e66e78b0cb748218e771350ddb681b6",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ab-72fd-77b0-a452-0929ca71b2ec",
+          "status": "completed",
+          "duration_ms": 6900,
+          "has_final_response": true,
+          "adapter_session_id": "2fbaf440-21b9-4641-ad3b-f808107b1f86"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":\"RotateLeft\",\"cell\":null,\"kind\":\"act\",\"memory_note\":\"Goal: hold a purple pillow and turn on a lamp. After three left turns, current view is just close cabinets/wall; no pillow visible and lamp not currently in view. Continue rotating left to finish the scan and re-expose the room/bed area where a pillow is more likely to appear. Once pillow is found, pick it up, then return to DeskLamp 18 and toggle it on while holding the pillow.\",\"object_id\":null,\"rationale\":\"No target object is currently visible for interaction. A further left rotation is the safest exploration step to continue the visual sweep from this location and search for the pillow.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 5,
+    "decision": {
+      "kind": "retrieve",
+      "action": null,
+      "object_id": 22,
+      "cell": null,
+      "repeat": 1,
+      "rationale": "Retrieve the past view around the previously observed bed near the desk lamp. Pillows are commonly on beds, and this may reveal a purple pillow location without moving.",
+      "memory_note": "Goal: hold a purple pillow and turn on a lamp. I completed a 360-ish scan; current view shows only a partial bed edge and wall, with no visible pillow or lamp. Need complementary evidence from the previously seen bed/lamp area to localize a pillow before navigating or interacting."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ab-9543-7ab0-a771-e7cac134f6fc",
+      "status": "completed",
+      "duration_ms": 9271,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 6934,
+          "output_tokens": 385,
+          "reasoning_output_tokens": 254,
+          "total_tokens": 7319
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 6934,
+          "output_tokens": 385,
+          "reasoning_output_tokens": 254,
+          "total_tokens": 7319
+        }
+      },
+      "input_tokens": 6934,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/0d8c5b69f1e8454a94e643ff2a3d39ae",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ab-9543-7ab0-a771-e7cac134f6fc",
+          "status": "completed",
+          "duration_ms": 9271,
+          "has_final_response": true,
+          "adapter_session_id": "862ca3d8-dd35-4dbc-8fb0-0857b79667ad"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":null,\"cell\":null,\"kind\":\"retrieve\",\"memory_note\":\"Goal: hold a purple pillow and turn on a lamp. I completed a 360-ish scan; current view shows only a partial bed edge and wall, with no visible pillow or lamp. Need complementary evidence from the previously seen bed/lamp area to localize a pillow before navigating or interacting.\",\"object_id\":22,\"rationale\":\"Retrieve the past view around the previously observed bed near the desk lamp. Pillows are commonly on beds, and this may reveal a purple pillow location without moving.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 6,
+    "decision": {
+      "kind": "act",
+      "action": "RotateLeft",
+      "object_id": null,
+      "cell": null,
+      "repeat": 2,
+      "rationale": "Frame 2 contains the known desk lamp and a fuller view of the bed, which are both relevant to the goal. Returning to that orientation is the best next step before attempting navigation or interaction, since no pillow is currently visible.",
+      "memory_note": "Goal: hold a purple pillow and turn on a lamp. Retrieved frame 2 shows the relevant bed/lamp area, while current pose only sees the bed edge. Rotate left twice to face that area again, then inspect for a purple pillow on/near the bed and the desk lamp for later toggle-on while holding the pillow."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ab-bbbc-7140-bb6a-2ff3b365324b",
+      "status": "completed",
+      "duration_ms": 9005,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7054,
+          "output_tokens": 373,
+          "reasoning_output_tokens": 220,
+          "total_tokens": 7427
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7054,
+          "output_tokens": 373,
+          "reasoning_output_tokens": 220,
+          "total_tokens": 7427
+        }
+      },
+      "input_tokens": 7054,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/1217a6200976424dad9feea92a9164ce",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ab-bbbc-7140-bb6a-2ff3b365324b",
+          "status": "completed",
+          "duration_ms": 9005,
+          "has_final_response": true,
+          "adapter_session_id": "557c3760-0f08-4b3a-ae52-a2a2a7ba7870"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":\"RotateLeft\",\"cell\":null,\"kind\":\"act\",\"memory_note\":\"Goal: hold a purple pillow and turn on a lamp. Retrieved frame 2 shows the relevant bed/lamp area, while current pose only sees the bed edge. Rotate left twice to face that area again, then inspect for a purple pillow on/near the bed and the desk lamp for later toggle-on while holding the pillow.\",\"object_id\":null,\"rationale\":\"Frame 2 contains the known desk lamp and a fuller view of the bed, which are both relevant to the goal. Returning to that orientation is the best next step before attempting navigation or interaction, since no pillow is currently visible.\",\"repeat\":2}"
+  },
+  {
+    "decision_index": 7,
+    "decision": {
+      "kind": "retrieve",
+      "action": null,
+      "object_id": null,
+      "cell": [
+        5,
+        -3
+      ],
+      "repeat": 1,
+      "rationale": "The lamp is already visible, but we still need the pillow. Since no pillow is currently detected and interaction requires a current visible mask, the safest next step is to query past evidence for the bed vicinity rather than blindly interact or move.",
+      "memory_note": "Goal: hold a purple pillow and turn on the lamp. Current view shows the lamp and bed, but no pillow is detected from this pose. Retrieve complementary past evidence for the bed area (cell [5,-3]) to check whether a pillow was seen on or near the bed and guide the next repositioning step."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ab-e981-7280-ada1-9195e2872c94",
+      "status": "completed",
+      "duration_ms": 7423,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7060,
+          "output_tokens": 298,
+          "reasoning_output_tokens": 143,
+          "total_tokens": 7358
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7060,
+          "output_tokens": 298,
+          "reasoning_output_tokens": 143,
+          "total_tokens": 7358
+        }
+      },
+      "input_tokens": 7060,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/815fbc7b45b94ef88b797ef338f53075",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ab-e981-7280-ada1-9195e2872c94",
+          "status": "completed",
+          "duration_ms": 7423,
+          "has_final_response": true,
+          "adapter_session_id": "d367ef5c-0456-45c7-aa61-38c5e08f6f2b"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":null,\"cell\":[5,-3],\"kind\":\"retrieve\",\"memory_note\":\"Goal: hold a purple pillow and turn on the lamp. Current view shows the lamp and bed, but no pillow is detected from this pose. Retrieve complementary past evidence for the bed area (cell [5,-3]) to check whether a pillow was seen on or near the bed and guide the next repositioning step.\",\"object_id\":null,\"rationale\":\"The lamp is already visible, but we still need the pillow. Since no pillow is currently detected and interaction requires a current visible mask, the safest next step is to query past evidence for the bed vicinity rather than blindly interact or move.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 8,
+    "decision": {
+      "kind": "navigate",
+      "action": null,
+      "object_id": null,
+      "cell": [
+        6,
+        -4
+      ],
+      "repeat": 1,
+      "rationale": "The lamp is already located and likely reachable later, but the required pillow is not visible from the current viewpoint. A better inspection angle near the bed/laptop side should reveal any pillow on the bed or adjacent floor.",
+      "memory_note": "Goal: end holding a purple pillow with the lamp on. Lamp is currently visible on the left side table, but no pillow is visible from current pose or retrieved frames 2/6. Next: navigate to the bed\u2019s right/front side near cell [6,-4] to inspect the bed surface and floor for a pillow, then pick it up before returning attention to the lamp."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ac-0889-7a71-b18d-bcddd16fca8b",
+      "status": "completed",
+      "duration_ms": 9648,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7389,
+          "output_tokens": 294,
+          "reasoning_output_tokens": 132,
+          "total_tokens": 7683
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7389,
+          "output_tokens": 294,
+          "reasoning_output_tokens": 132,
+          "total_tokens": 7683
+        }
+      },
+      "input_tokens": 7389,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/c0adcda9f5cc4f23974310ec27963710",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ac-0889-7a71-b18d-bcddd16fca8b",
+          "status": "completed",
+          "duration_ms": 9648,
+          "has_final_response": true,
+          "adapter_session_id": "b8aa39e0-67a9-41a1-950d-57c1f36afbb0"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":null,\"cell\":[6,-4],\"kind\":\"navigate\",\"memory_note\":\"Goal: end holding a purple pillow with the lamp on. Lamp is currently visible on the left side table, but no pillow is visible from current pose or retrieved frames 2/6. Next: navigate to the bed\u2019s right/front side near cell [6,-4] to inspect the bed surface and floor for a pillow, then pick it up before returning attention to the lamp.\",\"object_id\":null,\"rationale\":\"The lamp is already located and likely reachable later, but the required pillow is not visible from the current viewpoint. A better inspection angle near the bed/laptop side should reveal any pillow on the bed or adjacent floor.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 9,
+    "decision": {
+      "kind": "act",
+      "action": "MoveAhead",
+      "object_id": null,
+      "cell": null,
+      "repeat": 1,
+      "rationale": "There is open visible floor ahead and the current view already contains the likely search area (bed and nearby floor). A short forward exploration step is better than another failed route request and may reveal the pillow from a closer pose.",
+      "memory_note": "Goal: finish holding a purple pillow with the lamp on. Lamp is visible now on side table (object 18), but no pillow is currently detected. Navigation to the bed vicinity had no observed route, so explore locally by moving forward into the open floor between the table/safe/bed to get a closer view of the bed surface and nearby floor for a purple pillow; if found, pick it up, then return to the lamp and toggle it on while holding the pillow."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ac-3034-7b03-a51a-e149c6de8549",
+      "status": "completed",
+      "duration_ms": 11860,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7041,
+          "output_tokens": 406,
+          "reasoning_output_tokens": 225,
+          "total_tokens": 7447
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7041,
+          "output_tokens": 406,
+          "reasoning_output_tokens": 225,
+          "total_tokens": 7447
+        }
+      },
+      "input_tokens": 7041,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/1f8fd76f57f041569dd90155a776624e",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ac-3034-7b03-a51a-e149c6de8549",
+          "status": "completed",
+          "duration_ms": 11860,
+          "has_final_response": true,
+          "adapter_session_id": "701f3f35-d2a8-4111-b3e7-1d6b7d6f86bf"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":\"MoveAhead\",\"cell\":null,\"kind\":\"act\",\"memory_note\":\"Goal: finish holding a purple pillow with the lamp on. Lamp is visible now on side table (object 18), but no pillow is currently detected. Navigation to the bed vicinity had no observed route, so explore locally by moving forward into the open floor between the table/safe/bed to get a closer view of the bed surface and nearby floor for a purple pillow; if found, pick it up, then return to the lamp and toggle it on while holding the pillow.\",\"object_id\":null,\"rationale\":\"There is open visible floor ahead and the current view already contains the likely search area (bed and nearby floor). A short forward exploration step is better than another failed route request and may reveal the pillow from a closer pose.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 10,
+    "decision": {
+      "kind": "act",
+      "action": "RotateRight",
+      "object_id": null,
+      "cell": null,
+      "repeat": 1,
+      "rationale": "The lamp is already located and visible, but the target pillow is still missing. Rotating right should bring more of the bed area into view, where pillows are commonly found, without leaving the current vicinity.",
+      "memory_note": "Goal: hold a purple pillow and turn on the lamp. Lamp (18) is visible on the side table, but no pillow is detected yet. Current view only shows part of the bed; rotate right to center more of the bed surface/floor area and search for the purple pillow before interacting with the lamp."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ac-662e-76d1-b068-dce3e5ff2a90",
+      "status": "completed",
+      "duration_ms": 8221,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7157,
+          "output_tokens": 376,
+          "reasoning_output_tokens": 231,
+          "total_tokens": 7533
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7157,
+          "output_tokens": 376,
+          "reasoning_output_tokens": 231,
+          "total_tokens": 7533
+        }
+      },
+      "input_tokens": 7157,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/28506bdc5ba54e63a92539f5c8cb0614",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ac-662e-76d1-b068-dce3e5ff2a90",
+          "status": "completed",
+          "duration_ms": 8221,
+          "has_final_response": true,
+          "adapter_session_id": "34db50f7-b122-4eef-8ece-a5f065a53016"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":\"RotateRight\",\"cell\":null,\"kind\":\"act\",\"memory_note\":\"Goal: hold a purple pillow and turn on the lamp. Lamp (18) is visible on the side table, but no pillow is detected yet. Current view only shows part of the bed; rotate right to center more of the bed surface/floor area and search for the purple pillow before interacting with the lamp.\",\"object_id\":null,\"rationale\":\"The lamp is already located and visible, but the target pillow is still missing. Rotating right should bring more of the bed area into view, where pillows are commonly found, without leaving the current vicinity.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 11,
+    "decision": {
+      "kind": "act",
+      "action": "RotateRight",
+      "object_id": null,
+      "cell": null,
+      "repeat": 1,
+      "rationale": "The purple pillow is not visible now, and the bed\u2014our best search area\u2014is mostly out of frame on the left. Rotating right should bring more of the bed and adjacent furniture into view to search for the pillow before attempting to pick it up and then turn on the lamp.",
+      "memory_note": "Goal: hold a purple pillow and turn on a lamp. No pillow is currently detected; current view is centered on desk/shelf, with only a thin edge of the bed visible at left. Continue rotating right to inspect more of the bed surface and nearby side-table area where a pillow/lamp may appear again."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ac-8e93-71e1-b031-686ee65cafaf",
+      "status": "completed",
+      "duration_ms": 8802,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7305,
+          "output_tokens": 250,
+          "reasoning_output_tokens": 88,
+          "total_tokens": 7555
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7305,
+          "output_tokens": 250,
+          "reasoning_output_tokens": 88,
+          "total_tokens": 7555
+        }
+      },
+      "input_tokens": 7305,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/9f3d0a1872984f12960f274850c1b8e8",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ac-8e93-71e1-b031-686ee65cafaf",
+          "status": "completed",
+          "duration_ms": 8802,
+          "has_final_response": true,
+          "adapter_session_id": "33ef8da9-f84b-4fd9-a85b-0a63221b43b3"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":\"RotateRight\",\"cell\":null,\"kind\":\"act\",\"memory_note\":\"Goal: hold a purple pillow and turn on a lamp. No pillow is currently detected; current view is centered on desk/shelf, with only a thin edge of the bed visible at left. Continue rotating right to inspect more of the bed surface and nearby side-table area where a pillow/lamp may appear again.\",\"object_id\":null,\"rationale\":\"The purple pillow is not visible now, and the bed\u2014our best search area\u2014is mostly out of frame on the left. Rotating right should bring more of the bed and adjacent furniture into view to search for the pillow before attempting to pick it up and then turn on the lamp.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 12,
+    "decision": {
+      "kind": "act",
+      "action": "RotateRight",
+      "object_id": null,
+      "cell": null,
+      "repeat": 1,
+      "rationale": "A further right rotation is the best low-cost inspection step from this pose because the current frame is occluded by wall and shows only a thin edge of the bed area where a pillow may be. We need a better view before navigating or interacting.",
+      "memory_note": "Still searching for the purple pillow and lamp. Current view is mostly wall with only a narrow left slice of the bed/safe; no pillow or lamp visible, and nothing is currently interactable for the goal. Continue rotating right to bring more of the bed and nearby side-table/lamp area into view."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ac-b861-7431-84ab-d5e27d97cd54",
+      "status": "completed",
+      "duration_ms": 8668,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7354,
+          "output_tokens": 306,
+          "reasoning_output_tokens": 155,
+          "total_tokens": 7660
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7354,
+          "output_tokens": 306,
+          "reasoning_output_tokens": 155,
+          "total_tokens": 7660
+        }
+      },
+      "input_tokens": 7354,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/5dbb00b9d10a41169646ef0157be48b1",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ac-b861-7431-84ab-d5e27d97cd54",
+          "status": "completed",
+          "duration_ms": 8668,
+          "has_final_response": true,
+          "adapter_session_id": "ca0578f3-ddff-4448-baef-868d90069d21"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":\"RotateRight\",\"cell\":null,\"kind\":\"act\",\"memory_note\":\"Still searching for the purple pillow and lamp. Current view is mostly wall with only a narrow left slice of the bed/safe; no pillow or lamp visible, and nothing is currently interactable for the goal. Continue rotating right to bring more of the bed and nearby side-table/lamp area into view.\",\"object_id\":null,\"rationale\":\"A further right rotation is the best low-cost inspection step from this pose because the current frame is occluded by wall and shows only a thin edge of the bed area where a pillow may be. We need a better view before navigating or interacting.\",\"repeat\":1}"
+  },
+  {
+    "decision_index": 13,
+    "decision": {
+      "kind": "retrieve",
+      "action": null,
+      "object_id": 22,
+      "cell": null,
+      "repeat": 1,
+      "rationale": "A past-view query is the best next step because the current frame shows only cabinets and cannot confirm any pillow. The pillow is most likely on/near a bed, and object 22 is a recently observed bed with available historical frames. This may reveal the purple pillow\u2019s location without moving.",
+      "memory_note": "Goal: carry a purple pillow while turning on a lamp. Current view is only cabinets, so no usable interaction. We have a known DeskLamp at object 18 near cells [3..4,1], but no pillow has been identified yet. Retrieve complementary past evidence for the more recent bed area (object 22) to check whether a purple pillow was visible there and to guide next navigation."
+    },
+    "metadata": {
+      "turn_id": "01a1a7ac-e19d-7c33-a57f-76896d16f103",
+      "status": "completed",
+      "duration_ms": 12345,
+      "usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7510,
+          "output_tokens": 478,
+          "reasoning_output_tokens": 300,
+          "total_tokens": 7988
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 7510,
+          "output_tokens": 478,
+          "reasoning_output_tokens": 300,
+          "total_tokens": 7988
+        }
+      },
+      "input_tokens": 7510,
+      "cached_input_tokens": 0,
+      "reasoning_summary": null,
+      "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/3e51d23670e04bfeb0cffffde431d4c5",
+      "attempts": [
+        {
+          "turn_id": "01a1a7ac-e19d-7c33-a57f-76896d16f103",
+          "status": "completed",
+          "duration_ms": 12345,
+          "has_final_response": true,
+          "adapter_session_id": "721a470f-d055-4537-92a6-783ab4f18b3e"
+        }
+      ]
+    },
+    "raw_response": "{\"action\":null,\"cell\":null,\"kind\":\"retrieve\",\"memory_note\":\"Goal: carry a purple pillow while turning on a lamp. Current view is only cabinets, so no usable interaction. We have a known DeskLamp at object 18 near cells [3..4,1], but no pillow has been identified yet. Retrieve complementary past evidence for the more recent bed area (object 22) to check whether a purple pillow was visible there and to guide next navigation.\",\"object_id\":22,\"rationale\":\"A past-view query is the best next step because the current frame shows only cabinets and cannot confirm any pillow. The pillow is most likely on/near a bed, and object 22 is a recently observed bed with available historical frames. This may reveal the purple pillow\u2019s location without moving.\",\"repeat\":1}"
+  }
+]
