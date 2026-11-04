@@ -48,6 +48,14 @@ Latest canonical pilot evaluations (2026-11-04):
 - [NR3D v14 `strat600` (`gpt-5.4` vs `gemini-3.8-flash`)](nr3d/v14_strat600_gpt54_vs_gemini38flash_20261104.md)
   — `gemini-3.8-flash` reaches **91.50% Acc@0.25 (549/600)** and **89.57% View-Dep**;
   `gpt-5.4-2026-03-05` reaches **84.83% (509/600)** and **80.09% View-Dep**.
+- [OpenEQA v6 `pilot300` Map-First & Tool Suite Overhaul (`gemini-3.8-flash`)](openeqa/v6_mapfirst_tools_overhaul_pilot300_20261104.md)
+  — `gemini-3.8-flash` reaches **MNAS = 83.08 (300/300)** (**+4.16** over v5
+  `gemini-3.8-flash`, **+13.83** over v5 `gpt-5.4`, **+18.16** over v4 on the
+  matched 300-question fold), while cutting median turn latency **4.0× (`165.1 s → 41.0 s`)**.
+- [OpenEQA v6 `pilot300` Map-First & Tool Suite Overhaul (`gemini-3.8-flash`)](openeqa/v6_mapfirst_tools_overhaul_pilot300_20261104.md)
+  — `gemini-3.8-flash` reaches **MNAS = 83.08 (300/300)** (**+4.16** over v5
+  `gemini-3.8-flash`, **+13.83** over v5 `gpt-5.4`, **+18.16** over v4 on the
+  matched 300-question fold), while cutting median turn latency **4.0× (`165.1 s → 41.0 s`)**.
 - [OpenEQA v5 `pilot300` (`gpt-5.4` vs `gemini-3.8-flash`)](openeqa/v5_pilot300_gpt54_vs_gemini38flash_20261104.md)
   — `gemini-3.8-flash` reaches **MNAS = 78.92 (300/300)**; `gpt-5.4-2026-03-05`
   reaches **MNAS = 69.25 (300/300)** (+4.33 over v4 on the matched 300-question

@@ -91,6 +91,8 @@ nav:
           - v4 No Frames Full1079: benchmark/openeqa/v4_noframes_full1079_20260612.md
           - v4 Failure Trace Analysis: benchmark/openeqa/v4_failure_trace_analysis_20260612.md
           - v5 Pilot300 GPT-5.4 vs Gemini-3.8-Flash: benchmark/openeqa/v5_pilot300_gpt54_vs_gemini38flash_20261104.md
+          - v6 Map-First Tools Overhaul Pilot300: benchmark/openeqa/v6_mapfirst_tools_overhaul_pilot300_20261104.md
+          - v6 Map-First Tools Overhaul Pilot300: benchmark/openeqa/v6_mapfirst_tools_overhaul_pilot300_20261104.md
       - SceneFunc Molmo SAM3D:
           - Timeline: benchmark/scenefunc_molmo_sam3d/README.md
           - Leaderboard vs SceneFun3D baselines: benchmark/scenefunc_molmo_sam3d/leaderboard.md
