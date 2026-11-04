@@ -31,6 +31,7 @@ Process archive for NR3D evaluations in `agentic-3d-task`. Mirrors the
 | [v13_office_responses_smoke10_20261103](v13_office_responses_smoke10_20261103.md) | 2026-11-03 | Office API connectivity diagnostic | Frozen smoke10, catalog + BEV, **tools off**, GPT-5.4, SDK/CLI 0.163.0, office unified Responses | **10/10 completed, 8/10 correct, Acc@0.25/0.50 = 80.00%**. Not comparable to strat600. Preserves request-path and completed compact-probe observations. |
 | [v14_strat600_gpt54_vs_gemini38flash_20261104](v14_strat600_gpt54_vs_gemini38flash_20261104.md) | 2026-11-04 | Codex agent VG | Full **canonical strat600** (600), `--tools`, side-by-side **`gpt-5.4-2026-03-05`** (`/v1/responses`) vs **`gemini-3.8-flash`** (`gemini_chat` + multimodal tool-output fix `f680dec`), code `0635b65` — **COMPLETE 600/600 on both** | **`gemini-3.8-flash`: Acc@0.25 = 91.50% (549/600)** (Easy 93.45% / Hard 89.68% / **V-Dep 89.57%** / V-Indep 92.54%); **`gpt-5.4`: Acc@0.25 = 84.83% (509/600)** (Easy 88.28% / Hard 81.61% / **V-Dep 80.09%** / V-Indep 87.40%). New `strat600` SOTA with Gemini (+5.50 pp over v7); GPT-5.4 matches v8/v11. |
 | [v15_flip41_tools_upgrade_20261104](v15_flip41_tools_upgrade_20261104.md) | 2026-11-04 | Codex agent VG diagnostic | **NR3D tool suite & prompt upgrade (`caebb4a` + `898b3fa`) on `flip41` (41 hard/unstable cases)**, `gemini-3.8-flash`, `--tools`: balanced/diverse `select_by_proposal` (offline `strat600` miss rate `46.5% → 0.3%`), 3D virtual-observer viewpoint projection + `between/in_front_of/behind` in `spatial_tools`, unoccluded `crops_sheet_path` + batch `contact_sheet` in `mark_frame_with_bbox`, explicit `color/loc/nearby` + multi-instance category disambiguation — **COMPLETE 41/41** | **`Acc@0.25 = 85.37% (35/41)`** (**+34.15 pp** vs `v8 repeat` `51.22%`, **+24.39 pp** vs `v7` `60.98%`). **View-Dep: `86.96% (20/23)`** (+39.13 pp vs `v8 repeat`); **Hard: `82.14% (23/28)`** (+32.14 pp); `0` target-absent refusals. |
+| [v16_strat600_tools_upgrade_20261104](v16_strat600_tools_upgrade_20261104.md) | 2026-11-04 | Codex agent VG | Full **canonical strat600** (600) with **v15 tool suite & prompt disambiguation upgrade** (`caebb4a` + `898b3fa`, launched at `8aa55a9`), `gemini-3.8-flash`, `--tools`, `workers=24` — **COMPLETE 600/600 (`0` refusals)** | **`Acc@0.25 = 92.50% (555/600)`** (**+1.00 pp** over `v14 gemini-3.8-flash`, **+6.50 pp** over `v7 gpt-5.4`, **+7.67 pp** over `v14 gpt-5.4`). **Easy: `94.14% (273/290)`**; **Hard: `90.97% (282/310)`** (+1.29 pp, first >90%); **View-Dep: `90.05% (190/211)`** (+0.48 pp, first >90%); **View-Indep: `93.83% (365/389)`** (+1.29 pp). |
 
 ## Latest office-network connectivity diagnostic
 
@@ -55,13 +56,13 @@ fail closed. Columns below are ordered as floor -> tools -> effort -> path ->
 adapter checkpoints. (v2 looped, ran only 169/600 at the v1 floor; v3 ≈ v4
 Overall — see timeline.)
 
-| Slice | n | v1 (floor) | v4 (tools) | v6 (+effort, chat) | v5 (+/responses) | v7 (passthrough) | v8 (fail-closed) | v11 Skill | **v14 `gpt-5.4`** | **v14 `gemini-3.8-flash`** |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| **Overall** | 600 | 63.83% | 78.33% | 80.33% | 85.33% | 86.00% | 84.50% | 84.50% | **84.83%** | **91.50%** |
-| Easy | 290 | 73.10% | 82.76% | 84.48% | 89.31% | 90.34% | 88.62% | 89.31% | **88.28%** | **93.45%** |
-| Hard | 310 | 55.16% | 74.19% | 76.45% | 81.61% | 81.94% | 80.65% | 80.00% | **81.61%** | **89.68%** |
-| **View-Dep** | 211 | 51.66% | 68.25% | 72.51% | 81.04% | 82.46% | 77.25% | 79.15% | **80.09%** | **89.57%** |
-| View-Indep | 389 | 70.44% | 83.80% | 84.58% | 87.66% | 87.92% | 88.43% | 87.40% | **87.40%** | **92.54%** |
+| Slice | n | v1 (floor) | v4 (tools) | v6 (+effort, chat) | v5 (+/responses) | v7 (passthrough) | v8 (fail-closed) | v11 Skill | v14 `gpt-5.4` | v14 `gemini-3.8-flash` | **v16 `gemini-3.8-flash` (+v15 tools)** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Overall** | 600 | 63.83% | 78.33% | 80.33% | 85.33% | 86.00% | 84.50% | 84.50% | 84.83% | 91.50% | **92.50%** |
+| Easy | 290 | 73.10% | 82.76% | 84.48% | 89.31% | 90.34% | 88.62% | 89.31% | 88.28% | 93.45% | **94.14%** |
+| Hard | 310 | 55.16% | 74.19% | 76.45% | 81.61% | 81.94% | 80.65% | 80.00% | 81.61% | 89.68% | **90.97%** |
+| **View-Dep** | 211 | 51.66% | 68.25% | 72.51% | 81.04% | 82.46% | 77.25% | 79.15% | 80.09% | 89.57% | **90.05%** |
+| View-Indep | 389 | 70.44% | 83.80% | 84.58% | 87.66% | 87.92% | 88.43% | 87.40% | 87.40% | 92.54% | **93.83%** |
 
 Five checkpoints/levers, each isolated on this fold:
 
@@ -97,7 +98,8 @@ Full runs: [v3](v3_codex_tools_loopfix_strat600_20260609.md) ·
 [v7](v7_responses_passthrough_strat600_20260630.md) ·
 [v8](v8_failclosed_encrypted_state_strat600_20260701.md) ·
 [v11](v11_skill600_minprompt_20260701.md) ·
-[v14](v14_strat600_gpt54_vs_gemini38flash_20261104.md).
+[v14](v14_strat600_gpt54_vs_gemini38flash_20261104.md) ·
+[v16](v16_strat600_tools_upgrade_20261104.md).
 
 ## Metric
 
