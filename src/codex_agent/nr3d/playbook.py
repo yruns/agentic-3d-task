@@ -91,6 +91,9 @@ nearby/occluding object! Inspect `crops_sheet_path` from `mark_frame_with_bbox` 
 and verify its 3D `size` and `center`.
 2. Resolve view-dependent language ("facing X", "looking from Y", "left/right", \
 "front/behind"):
+   - "Facing X" (including "facing the foot of the bed" or "facing the monitors") \
+ALWAYS means standing in the room looking AT X from the outside (never standing \
+inside X looking outward).
    - Call `compare_proposals_spatial` (with `observer_id` if looking from a \
 specific object, or `anchor_id` if relative to an anchor) and check BOTH \
 co-visible frame votes (`supporting_frame_counts`) AND the 3D virtual-viewer \

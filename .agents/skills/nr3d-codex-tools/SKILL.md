@@ -90,11 +90,14 @@ Use only these NR3D tools plus `view_image`:
 ## Workflow
 
 1. Parse the query into target category, attributes, anchors, and relation.
-2. Shortlist candidates from the catalog. Remember that 3D `category` and
-   `size/center` are authoritative whereas offline `enriched/note` text can be
-   polluted by foreground occluders.
+2. Shortlist candidates from the catalog. Every NR3D target belongs to a
+   category with `>= 2` instances in the pool (1-instance categories are
+   anchors/context only). Remember that 3D `category` and `size/center` are
+   authoritative whereas offline `enriched/note` text can be polluted by
+   foreground occluders.
 3. Resolve spatial language with `compare_proposals_spatial` or
-   `compare_candidates_to_anchors`, and fetch co-visible/balanced frames with
+   `compare_candidates_to_anchors` ("facing X" means standing in the room
+   looking AT X from the outside), and fetch co-visible/balanced frames with
    `select_by_proposal`.
 4. Confirm the winner with `mark_frame_with_bbox` + `view_image` (and inspect
    `crops_sheet_path` for fine appearance/color).

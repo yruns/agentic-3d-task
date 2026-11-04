@@ -167,7 +167,12 @@ class Nr3dGroundingTask:
     def _build_prompt(self) -> str:
         pool = self.scene.proposal_pool
         category_lines = [
-            f"- {category}: {ids}" for category, ids in pool.ids_by_category().items()
+            (
+                f"- {category} ({len(ids)} instances): {ids}"
+                if len(ids) >= 2
+                else f"- {category} (1 instance — context/anchor only): {ids}"
+            )
+            for category, ids in pool.ids_by_category().items()
         ]
         proposal_lines = [
             self._format_proposal(proposal)
@@ -195,7 +200,10 @@ class Nr3dGroundingTask:
 
     def _rules(self) -> list[str]:
         rules = [
-            "- Pick exactly one proposal id from the provided proposal pool.",
+            "- Pick exactly one proposal id from the provided proposal pool. "
+            "By NR3D benchmark construction, the target ALWAYS belongs to a "
+            "category with >= 2 instances in the pool (categories with only 1 "
+            "instance are context/anchors only, never the target).",
             "- Use -1 only if the described target is genuinely absent from the "
             "pool. In NR3D benchmark samples the target is virtually always "
             "present in the pool — NEVER return -1 merely because an offline "
