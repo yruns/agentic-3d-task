@@ -210,11 +210,24 @@ def _object_centroid(obj: RawObject) -> NDArray[np.float64] | None:
     return None
 
 
+class _NumpyCompatUnpickler(pickle.Unpickler):
+    """Map NumPy 2.x ``numpy._core.*`` module paths onto NumPy 1.x ``numpy.core.*``."""
+
+    def find_class(self, module: str, name: str) -> object:
+        if module == "numpy._core" or module.startswith("numpy._core."):
+            try:
+                return super().find_class(module, name)
+            except ModuleNotFoundError:
+                mapped = module.replace("numpy._core", "numpy.core", 1)
+                return super().find_class(mapped, name)
+        return super().find_class(module, name)
+
+
 def _load_pickle_gz(path: Path) -> dict[str, object]:
     if not path.exists():
         raise FileNotFoundError(f"Missing ConceptGraph pickle: {path}")
     with gzip.open(path, "rb") as handle:
-        payload = pickle.load(handle)
+        payload = _NumpyCompatUnpickler(handle).load()
     if not isinstance(payload, dict):
         raise ValueError(f"{path} must contain a dict payload")
     return payload

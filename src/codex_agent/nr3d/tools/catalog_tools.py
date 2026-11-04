@@ -75,14 +75,23 @@ class ListSceneProposalsResult:
     def to_payload(self) -> dict[str, Any]:
         rows: list[dict[str, Any]] = []
         for proposal in self.proposals:
+            sx, sy, sz = proposal.bbox_3d_9dof[3:6]
             row: dict[str, Any] = {
                 "proposal_id": proposal.proposal_id,
                 "category": proposal.category,
                 "position_3d": [round(v, 4) for v in proposal.position_3d],
+                "size_3d": [round(sx, 4), round(sy, 4), round(sz, 4)],
                 "frame_count": len(proposal.frame_views),
             }
             if proposal.enriched_category is not None:
                 row["enriched_category"] = proposal.enriched_category
+            if proposal.enrichment is not None:
+                if proposal.enrichment.color:
+                    row["color"] = proposal.enrichment.color
+                if proposal.enrichment.location:
+                    row["location"] = proposal.enrichment.location
+                if proposal.enrichment.nearby_objects:
+                    row["nearby_objects"] = list(proposal.enrichment.nearby_objects)
             if proposal.compact_note is not None:
                 row["compact_note"] = proposal.compact_note
             rows.append(row)

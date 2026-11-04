@@ -1,0 +1,79 @@
+{
+  "fold": "v9_3_strat600",
+  "n": 600,
+  "head": "8aa55a9",
+  "code_commits": [
+    "caebb4a",
+    "898b3fa"
+  ],
+  "model": "gemini-3.8-flash",
+  "metric": "oriented_3d_iou@0.25",
+  "slices": {
+    "Overall": {
+      "n": 600,
+      "correct": 555,
+      "acc": 0.925
+    },
+    "Easy": {
+      "n": 290,
+      "correct": 273,
+      "acc": 0.9413793103448276
+    },
+    "Hard": {
+      "n": 310,
+      "correct": 282,
+      "acc": 0.9096774193548387
+    },
+    "View-Dep": {
+      "n": 211,
+      "correct": 190,
+      "acc": 0.9004739336492891
+    },
+    "View-Indep": {
+      "n": 389,
+      "correct": 365,
+      "acc": 0.9383033419023136
+    },
+    "Easy+View-Indep": {
+      "n": 198,
+      "correct": 187,
+      "acc": 0.9444444444444444
+    },
+    "Easy+View-Dep": {
+      "n": 92,
+      "correct": 86,
+      "acc": 0.9347826086956522
+    },
+    "Hard+View-Indep": {
+      "n": 191,
+      "correct": 178,
+      "acc": 0.9319371727748691
+    },
+    "Hard+View-Dep": {
+      "n": 119,
+      "correct": 104,
+      "acc": 0.8739495798319328
+    },
+    "flip41_subset": {
+      "n": 41,
+      "correct": 34,
+      "acc": 0.8292682926829268
+    }
+  },
+  "mean_iou": 0.9253384562474894,
+  "cache_hit_rate": 0.3233333333333333,
+  "mean_cache_ratio": 0.2432273628913949,
+  "status": {
+    "completed": 600
+  },
+  "selected_object_id_neg1": 0,
+  "with_reasoning_summary": 0,
+  "reasoning_summary_rate": 0.0,
+  "latency_s": {
+    "median": 81.891,
+    "mean": 126.004,
+    "p90": 263.21,
+    "max": 892.477
+  },
+  "top_errors": []
+}

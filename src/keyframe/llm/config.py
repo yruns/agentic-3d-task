@@ -55,11 +55,21 @@ class LLMModelConfig(BaseModel):
         return key.endpoint or self.endpoint
 
     def weighted_keys(self) -> list[LLMKeyConfig]:
-        """Keys expanded by weight, e.g. weights [1, 3] -> [k0, k1, k1, k1]."""
-        expanded: list[LLMKeyConfig] = []
-        for key in self.keys:
-            expanded.extend([key] * key.weight)
-        return expanded
+        """Keys interleaved by smooth weighted round-robin according to ``weight``."""
+        n = len(self.keys)
+        if n <= 1:
+            return list(self.keys) * (self.keys[0].weight if self.keys else 0)
+        weights = [k.weight for k in self.keys]
+        total = sum(weights)
+        current = [0] * n
+        interleaved: list[LLMKeyConfig] = []
+        for _ in range(total):
+            for i in range(n):
+                current[i] += weights[i]
+            best_idx = max(range(n), key=lambda i: current[i])
+            current[best_idx] -= total
+            interleaved.append(self.keys[best_idx])
+        return interleaved
 
 
 class LLMConfig(BaseModel):

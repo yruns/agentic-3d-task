@@ -3,11 +3,13 @@
 Evaluates a :class:`~keyframe.models.hypotheses.GroundingQuery` against a set
 of scene objects, bottom-up:
 
-1. Find candidates by category (with semantic / multi-label expansion).
+1. Find candidates by category (with semantic / multi-label expansion,
+   instance ID fallback, and virtual grid anchor synthesis for unknown anchors).
 2. Filter by attributes (color).
-3. Apply spatial constraints (quick pre-filter + full geometric check),
+3. Initialize candidate scores with soft instance-ID and BEV-grid priors.
+4. Apply spatial constraints (quick pre-filter + full geometric check),
    honouring each constraint's execution policy (hard / soft / rank_only).
-4. Apply the selection constraint (superlative / ordinal / comparative).
+5. Apply the selection constraint (superlative / ordinal / comparative).
 
 Viewer-frame constraints are resolved against the camera trajectory; if no
 viewer pose can be resolved, the executor applies the declared policy with
@@ -17,7 +19,7 @@ neutral evidence rather than silently falling back to world coordinates.
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping, Sequence
 
 import numpy as np
 from loguru import logger
@@ -37,6 +39,7 @@ from keyframe.models.hypotheses import (
 from keyframe.models.results import ExecutionMode, ExecutionResult
 from keyframe.models.scene import SceneObject
 from keyframe.spatial.checker import SpatialRelationChecker
+from keyframe.spatial.grid import GridCell, SceneGridSpec
 from keyframe.spatial.quick_filters import AttributeFilter, QuickFilters
 from keyframe.spatial.viewpoint import (
     ViewerPose,
@@ -47,6 +50,12 @@ from keyframe.spatial.viewpoint import (
 
 #: Multiplier that keeps a SOFT-policy candidate alive without zeroing it out.
 SOFT_POLICY_SCORE_FLOOR: float = 1e-3
+
+#: Soft prior multipliers for VLM-predicted instance IDs and BEV grid cells.
+_PRIOR_OBJECT_ID_HIT: float = 1.35
+_PRIOR_GRID_PRIMARY_HIT: float = 1.25
+_PRIOR_GRID_SPAN_HIT: float = 1.18
+_PRIOR_GRID_ADJACENT_HIT: float = 1.08
 
 #: Category tokens that mean "no concrete category".
 UNKNOWN_CATEGORY_SENTINELS: frozenset[str] = frozenset(
@@ -88,6 +97,8 @@ class QueryExecutor:
         clip_encoder: ClipEncoder | None = None,
         use_quick_filters: bool = True,
         camera_poses: list[NDArray[np.float64]] | None = None,
+        grid_spec: SceneGridSpec | None = None,
+        object_to_grids: Mapping[int, Sequence[GridCell]] | None = None,
     ) -> None:
         self.objects = objects
         self.relation_checker = relation_checker or SpatialRelationChecker()
@@ -95,15 +106,25 @@ class QueryExecutor:
         self.clip_encoder = clip_encoder
         self.use_quick_filters = use_quick_filters
         self.camera_poses: list[NDArray[np.float64]] = list(camera_poses or [])
+        self.grid_spec: SceneGridSpec | None = grid_spec or (
+            SceneGridSpec.from_scene_geometry(objects, self.camera_poses)
+            if objects
+            else None
+        )
+        self._object_to_grids: dict[int, list[GridCell]] = {
+            int(oid): [(int(r), int(c)) for r, c in cells]
+            for oid, cells in (object_to_grids or {}).items()
+        }
 
         self._quick_filters = QuickFilters() if use_quick_filters else None
         self._attribute_filter = AttributeFilter() if use_quick_filters else None
 
         self._viewpoint_contexts: dict[str, ViewpointContext] = {}
         self._viewer_pose_cache: dict[str, ViewerPose | None] = {}
-        self._execution_mode = ExecutionMode.STRICT
+        self._execution_mode = ExecutionMode.RECALL
         self._cache: dict[str, ExecutionResult] = {}
 
+        self._by_id: dict[int, SceneObject] = {obj.obj_id: obj for obj in self.objects}
         self._category_index: dict[str, list[SceneObject]] = {}
         self._multilabel_index: dict[str, list[SceneObject]] = {}
         self._build_indices()
@@ -135,6 +156,99 @@ class QueryExecutor:
         if obj.centroid is not None:
             return np.asarray(obj.centroid, dtype=np.float64)
         return np.zeros(3, dtype=np.float64)
+
+    def _get_object_cells(self, obj: SceneObject) -> list[GridCell]:
+        if obj.obj_id in self._object_to_grids:
+            return self._object_to_grids[obj.obj_id]
+        if self.grid_spec is None:
+            return []
+        centroid = self._get_centroid(obj)
+        centroid_xy = (float(centroid[0]), float(centroid[1]))
+        if obj.bbox_np is not None:
+            arr = np.asarray(obj.bbox_np, dtype=np.float64)
+            if arr.ndim == 2 and arr.shape[0] >= 2 and arr.shape[1] >= 2:
+                cells = self.grid_spec.cells_for_footprint(
+                    float(arr[:, 0].min()),
+                    float(arr[:, 1].min()),
+                    float(arr[:, 0].max()),
+                    float(arr[:, 1].max()),
+                    centroid_xy=centroid_xy,
+                )
+                self._object_to_grids[obj.obj_id] = cells
+                return cells
+        cell = self.grid_spec.world_to_cell(centroid_xy[0], centroid_xy[1], clamp=True)
+        cells = [cell] if cell is not None else []
+        self._object_to_grids[obj.obj_id] = cells
+        return cells
+
+    def _synthesize_virtual_grid_anchors(
+        self, grid_cells: Sequence[GridCell]
+    ) -> list[SceneObject]:
+        """Build virtual 3D anchor objects from BEV grid coordinates when an anchor category is UNKNOW."""
+        if self.grid_spec is None or not grid_cells:
+            return []
+        sanitized = self.grid_spec.sanitize_cells(grid_cells)
+        if not sanitized:
+            return []
+        z_min = float(self.grid_spec.min_z)
+        z_max = float(min(self.grid_spec.max_z, z_min + 0.85))
+        if z_max <= z_min:
+            z_max = z_min + 0.8
+        z_mid = 0.5 * (z_min + z_max)
+
+        virtual_anchors: list[SceneObject] = []
+        for r, c in sanitized:
+            x0, y0, x1, y1 = self.grid_spec.cell_to_world_bounds(r, c)
+            cx = 0.5 * (x0 + x1)
+            cy = 0.5 * (y0 + y1)
+            corners = np.array(
+                [
+                    [x0, y0, z_min],
+                    [x1, y1, z_max],
+                ],
+                dtype=np.float64,
+            )
+            virtual_anchors.append(
+                SceneObject(
+                    obj_id=-(r * 1000 + c + 1),
+                    category=f"grid_{r}_{c}",
+                    centroid=np.array([cx, cy, z_mid], dtype=np.float64),
+                    bbox_np=corners,
+                )
+            )
+        return virtual_anchors
+
+    def _compute_prior_scores(
+        self, node: QueryNode, candidates: Sequence[SceneObject]
+    ) -> dict[int, float]:
+        """Compute soft instance-ID and grid-cell prior multipliers for candidate objects."""
+        id_set = set(node.candidate_object_ids)
+        target_cells = (
+            set(self.grid_spec.sanitize_cells(node.grid_cells))
+            if self.grid_spec is not None and node.grid_cells
+            else set(node.grid_cells)
+        )
+
+        scores: dict[int, float] = {}
+        for obj in candidates:
+            prior = 1.0
+            if id_set and obj.obj_id in id_set:
+                prior *= _PRIOR_OBJECT_ID_HIT
+            if target_cells and obj.obj_id >= 0:
+                obj_cells = self._get_object_cells(obj)
+                if obj_cells:
+                    if obj_cells[0] in target_cells:
+                        prior *= _PRIOR_GRID_PRIMARY_HIT
+                    elif set(obj_cells) & target_cells:
+                        prior *= _PRIOR_GRID_SPAN_HIT
+                    elif any(
+                        abs(r1 - r2) + abs(c1 - c2) == 1
+                        for (r1, c1) in obj_cells
+                        for (r2, c2) in target_cells
+                    ):
+                        prior *= _PRIOR_GRID_ADJACENT_HIT
+            scores[obj.obj_id] = prior
+        return scores
 
     # ----- neutral-evidence policy handling --------------------------------
 
@@ -191,7 +305,7 @@ class QueryExecutor:
             self._viewer_pose_cache[ctx_id] = None
             return None
 
-        anchor_result = self._execute_node(anchor_node)
+        anchor_result = self._execute_node(anchor_node, is_anchor=True)
         if not anchor_result.matched_objects:
             self._viewer_pose_cache[ctx_id] = None
             return None
@@ -215,7 +329,7 @@ class QueryExecutor:
     def execute(
         self,
         query: GroundingQuery,
-        mode: ExecutionMode | str = ExecutionMode.STRICT,
+        mode: ExecutionMode | str = ExecutionMode.RECALL,
     ) -> ExecutionResult:
         """Execute a grounding query and return the matched objects."""
         self._execution_mode = (
@@ -228,7 +342,10 @@ class QueryExecutor:
         self._viewpoint_contexts = {ctx.id: ctx for ctx in query.viewpoint_contexts}
         self._viewer_pose_cache = {}
 
-        result = self._execute_node(query.root)
+        if query.target_grids and not query.root.grid_cells:
+            query.root.grid_cells = list(query.target_grids)
+
+        result = self._execute_node(query.root, is_anchor=False)
         if query.expect_unique and len(result.matched_objects) > 1:
             best = result.best_object
             if best is not None:
@@ -241,29 +358,49 @@ class QueryExecutor:
         logger.info(f"[QueryExecutor] matched {len(result.matched_objects)} objects")
         return result
 
-    def evaluate_node(self, node: QueryNode) -> ExecutionResult:
+    def evaluate_node(
+        self, node: QueryNode, *, is_anchor: bool = False
+    ) -> ExecutionResult:
         """Evaluate a single query node using the current cache / viewpoint state."""
-        return self._execute_node(node)
+        return self._execute_node(node, is_anchor=is_anchor)
 
-    def _execute_node(self, node: QueryNode) -> ExecutionResult:
-        if node.node_id and node.node_id in self._cache:
-            return self._cache[node.node_id]
-
+    def _find_initial_candidates(
+        self, node: QueryNode, *, is_anchor: bool = False
+    ) -> list[SceneObject]:
         if node.open_ended and node.spatial_constraints:
-            candidates = list(self.objects)
-        else:
-            candidates = self._find_by_categories(node.categories)
+            return list(self.objects)
 
+        candidates = self._find_by_categories(node.categories)
+        if not candidates and node.candidate_object_ids:
+            candidates = [
+                self._by_id[oid]
+                for oid in node.candidate_object_ids
+                if oid in self._by_id
+            ]
+        if not candidates and is_anchor and node.grid_cells:
+            candidates = self._synthesize_virtual_grid_anchors(node.grid_cells)
+        return candidates
+
+    def _execute_node(
+        self, node: QueryNode, *, is_anchor: bool = False
+    ) -> ExecutionResult:
+        cache_key = (
+            f"{node.node_id}:{'a' if is_anchor else 'r'}" if node.node_id else ""
+        )
+        if cache_key and cache_key in self._cache:
+            return self._cache[cache_key]
+
+        candidates = self._find_initial_candidates(node, is_anchor=is_anchor)
         if not candidates:
             result = ExecutionResult(node_id=node.node_id, matched_objects=[])
-            if node.node_id:
-                self._cache[node.node_id] = result
+            if cache_key:
+                self._cache[cache_key] = result
             return result
 
         if node.attributes:
             candidates = self._filter_by_attributes(candidates, node.attributes)
 
-        scores = {obj.obj_id: 1.0 for obj in candidates}
+        scores = self._compute_prior_scores(node, candidates)
         soft_match_scores: dict[int, dict[str, float]] = {}
 
         for sc_index, constraint in enumerate(node.spatial_constraints):
@@ -285,14 +422,17 @@ class QueryExecutor:
                 candidates, scores, node.select_constraint
             )
 
+        # Keep matched_objects sorted by descending score for deterministic tie-breaking
+        candidates = sorted(candidates, key=lambda obj: -scores.get(obj.obj_id, 0.0))
+
         result = ExecutionResult(
             node_id=node.node_id,
             matched_objects=candidates,
             scores=scores,
             soft_match_scores=soft_match_scores,
         )
-        if node.node_id:
-            self._cache[node.node_id] = result
+        if cache_key:
+            self._cache[cache_key] = result
         return result
 
     # ----- category matching -----------------------------------------------
@@ -377,7 +517,9 @@ class QueryExecutor:
 
         anchor_objects: list[SceneObject] = []
         for anchor_node in constraint.anchors:
-            anchor_objects.extend(self._execute_node(anchor_node).matched_objects)
+            anchor_objects.extend(
+                self._execute_node(anchor_node, is_anchor=True).matched_objects
+            )
 
         if not anchor_objects:
             return self._neutral_evidence_for_policy(candidates, policy)
@@ -493,6 +635,7 @@ class QueryExecutor:
         candidate: SceneObject,
         metric: str,
         ref_objects: list[SceneObject],
+        ref_scores: dict[int, float],
         viewer_pose: ViewerPose | None,
         scores: dict[int, float],
     ) -> float:
@@ -500,6 +643,7 @@ class QueryExecutor:
         if metric == "distance" and ref_objects:
             return min(
                 float(np.linalg.norm(position - self._get_centroid(ref)))
+                / max(1.0, ref_scores.get(ref.obj_id, 1.0))
                 for ref in ref_objects
             )
         if metric == "size":
@@ -543,22 +687,33 @@ class QueryExecutor:
         if unresolved:
             return self._neutral_select_for_policy(candidates, scores, policy)
 
-        ref_objects = (
-            self._execute_node(constraint.reference).matched_objects
+        ref_result = (
+            self._execute_node(constraint.reference, is_anchor=True)
             if constraint.reference is not None
-            else []
+            else None
         )
+        ref_objects = ref_result.matched_objects if ref_result is not None else []
+        ref_scores = ref_result.scores if ref_result is not None else {}
+        if ref_objects and ref_scores:
+            max_ref_score = max(ref_scores.values(), default=1.0)
+            if max_ref_score > 1.05:
+                ref_objects = [
+                    r
+                    for r in ref_objects
+                    if ref_scores.get(r.obj_id, 1.0) >= 0.95 * max_ref_score
+                ] or ref_objects
+
         ranked = sorted(
             candidates,
             key=lambda c: self._metric_value(
-                c, metric, ref_objects, viewer_pose, scores
+                c, metric, ref_objects, ref_scores, viewer_pose, scores
             ),
             reverse=(order != "min"),
         )
 
         if policy == ExecutionPolicy.HARD:
             best = ranked[0]
-            return [best], {best.obj_id: 1.0}
+            return [best], {best.obj_id: scores.get(best.obj_id, 1.0)}
         return self._rank_scores(ranked, scores, policy)
 
     def _apply_ordinal(
@@ -579,7 +734,7 @@ class QueryExecutor:
 
         ranked = sorted(
             candidates,
-            key=lambda c: self._metric_value(c, metric, [], viewer_pose, scores),
+            key=lambda c: self._metric_value(c, metric, [], {}, viewer_pose, scores),
             reverse=(order == "desc"),
         )
         position = constraint.position
@@ -590,7 +745,7 @@ class QueryExecutor:
 
         if policy == ExecutionPolicy.HARD:
             selected = ranked[position - 1]
-            return [selected], {selected.obj_id: 1.0}
+            return [selected], {selected.obj_id: scores.get(selected.obj_id, 1.0)}
 
         total = len(ranked)
         new_scores = dict(scores) if policy == ExecutionPolicy.SOFT else {}

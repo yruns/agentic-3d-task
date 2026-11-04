@@ -27,11 +27,94 @@ operations, e.g. "the pillow on the sofa nearest the door":
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import re
+from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+_GRID_STR_RE = re.compile(r"^\s*\(?[rR]?\s*(\d+)\s*[,;:\s]\s*[cC]?\s*(\d+)\s*\)?\s*$")
+_INLINE_ID_CAT_RE = re.compile(r"^\s*#(\d+)(?:\s*[:,-]?\s*(.*))?$")
+_INT_TOKEN_RE = re.compile(r"#?(\d+)")
+
+
+def _coerce_grid_cell(item: object) -> tuple[int, int]:
+    if isinstance(item, (list, tuple)) and len(item) == 2:
+        r, c = item[0], item[1]
+        if isinstance(r, (int, float)) and isinstance(c, (int, float)):
+            return (int(r), int(c))
+    if isinstance(item, Mapping):
+        r = item.get("row", item.get("r"))
+        c = item.get("col", item.get("c"))
+        if isinstance(r, (int, float)) and isinstance(c, (int, float)):
+            return (int(r), int(c))
+    if isinstance(item, str):
+        match = _GRID_STR_RE.match(item)
+        if match is not None:
+            return (int(match.group(1)), int(match.group(2)))
+    raise ValueError(
+        f"invalid grid coordinate {item!r}; expected [row, col] or {{'row': r, 'col': c}}"
+    )
+
+
+def _coerce_grid_list(value: object) -> list[tuple[int, int]]:
+    """Normalize arbitrary LLM grid list representations into deduplicated (row, col) tuples."""
+    if value is None or value == "":
+        return []
+    if isinstance(value, (str, Mapping)):
+        items: Sequence[object] = [value]
+    elif (
+        isinstance(value, (list, tuple))
+        and len(value) == 2
+        and all(isinstance(x, (int, float)) for x in value)
+    ):
+        items = [value]
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        items = value
+    else:
+        return []
+
+    deduped: list[tuple[int, int]] = []
+    seen: set[tuple[int, int]] = set()
+    for item in items:
+        try:
+            cell = _coerce_grid_cell(item)
+        except ValueError:
+            continue
+        if cell not in seen:
+            seen.add(cell)
+            deduped.append(cell)
+    return deduped
+
+
+def _coerce_object_id_list(value: object) -> list[int]:
+    """Normalize candidate object IDs (e.g. [7, '#3', '12']) into deduplicated ints."""
+    if value is None or value == "":
+        return []
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        raw_items: Sequence[object] = [int(value)]
+    elif isinstance(value, str):
+        raw_items = [value]
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        raw_items = value
+    else:
+        return []
+
+    deduped: list[int] = []
+    seen: set[int] = set()
+    for item in raw_items:
+        oid: int | None = None
+        if isinstance(item, (int, float)) and not isinstance(item, bool):
+            oid = int(item)
+        elif isinstance(item, str):
+            match = _INT_TOKEN_RE.search(item)
+            if match is not None:
+                oid = int(match.group(1))
+        if oid is not None and oid >= 0 and oid not in seen:
+            seen.add(oid)
+            deduped.append(oid)
+    return deduped
 
 
 class ConstraintType(str, Enum):
@@ -241,9 +324,17 @@ class QueryNode(BaseModel):
     """A target/anchor node in the parsed query tree."""
 
     categories: list[str] = Field(
-        ...,
+        default_factory=lambda: ["UNKNOW"],
         min_length=1,
         description="Object categories to search for, including related synonyms.",
+    )
+    candidate_object_ids: list[int] = Field(
+        default_factory=list,
+        description="Optional candidate object #ids from SCENE GRID LAYOUT / BEV.",
+    )
+    grid_cells: list[tuple[int, int]] = Field(
+        default_factory=list,
+        description="Optional 0-indexed (row, col) grid coordinates for this node.",
     )
     attributes: list[str] = Field(
         default_factory=list,
@@ -266,6 +357,75 @@ class QueryNode(BaseModel):
         default="", description="Unique identifier for tracking during execution."
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_node_payload(cls, value: Any) -> Any:
+        if not isinstance(value, Mapping):
+            return value
+        data: dict[str, Any] = dict(value)
+
+        # Normalize candidate_object_ids aliases
+        raw_ids: list[object] = []
+        for key in (
+            "candidate_object_ids",
+            "object_ids",
+            "obj_ids",
+            "ids",
+            "object_id",
+            "obj_id",
+        ):
+            if key in data and data[key] is not None:
+                raw_ids.extend(_coerce_object_id_list(data.pop(key)))
+
+        # Normalize grid_cells aliases
+        raw_grids: list[tuple[int, int]] = []
+        for key in ("grid_cells", "grids", "target_grids", "cells"):
+            if key in data and data[key] is not None:
+                raw_grids.extend(_coerce_grid_list(data.pop(key)))
+
+        # Normalize categories and extract inline '#id category' tokens
+        raw_cats = data.get("categories", data.pop("category", None))
+        if isinstance(raw_cats, str):
+            raw_cat_list: list[object] = [raw_cats]
+        elif isinstance(raw_cats, Sequence) and not isinstance(raw_cats, (str, bytes)):
+            raw_cat_list = list(raw_cats)
+        else:
+            raw_cat_list = []
+
+        cleaned_cats: list[str] = []
+        for item in raw_cat_list:
+            if isinstance(item, (int, float)) and not isinstance(item, bool):
+                raw_ids.append(int(item))
+                continue
+            if not isinstance(item, str):
+                continue
+            stripped = item.strip()
+            if not stripped:
+                continue
+            inline_match = _INLINE_ID_CAT_RE.match(stripped)
+            if inline_match is not None:
+                raw_ids.append(int(inline_match.group(1)))
+                rest = (inline_match.group(2) or "").strip()
+                if rest and rest not in cleaned_cats:
+                    cleaned_cats.append(rest)
+            elif stripped not in cleaned_cats:
+                cleaned_cats.append(stripped)
+
+        data["categories"] = cleaned_cats or ["UNKNOW"]
+        data["candidate_object_ids"] = _coerce_object_id_list(raw_ids)
+        data["grid_cells"] = _coerce_grid_list(raw_grids)
+        return data
+
+    @field_validator("candidate_object_ids", mode="before")
+    @classmethod
+    def _validate_candidate_ids(cls, value: object) -> list[int]:
+        return _coerce_object_id_list(value)
+
+    @field_validator("grid_cells", mode="before")
+    @classmethod
+    def _validate_grid_cells(cls, value: object) -> list[tuple[int, int]]:
+        return _coerce_grid_list(value)
+
     @property
     def category(self) -> str:
         """Primary category (first in list)."""
@@ -279,7 +439,8 @@ class SpatialConstraint(BaseModel):
         ..., description=f"Spatial relation, one of: {SUPPORTED_RELATIONS_STR}"
     )
     anchors: list[QueryNode] = Field(
-        ..., description="Reference objects. Usually 1, can be 2 for 'between'."
+        default_factory=list,
+        description="Reference objects. Usually 1, can be 2 for 'between'.",
     )
     reference_frame: ReferenceFrame = Field(
         default=ReferenceFrame.WORLD,
@@ -293,6 +454,26 @@ class SpatialConstraint(BaseModel):
         default=ExecutionPolicy.HARD,
         description="How a failing constraint is handled.",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_spatial_constraint(cls, value: Any) -> Any:
+        if not isinstance(value, Mapping):
+            return value
+        data: dict[str, Any] = dict(value)
+        if "anchors" not in data or data["anchors"] is None:
+            single_anchor = data.pop("anchor", None)
+            if isinstance(single_anchor, list):
+                data["anchors"] = single_anchor
+            elif single_anchor is not None:
+                data["anchors"] = [single_anchor]
+            else:
+                data["anchors"] = []
+        elif isinstance(data["anchors"], Mapping):
+            data["anchors"] = [data["anchors"]]
+        if isinstance(data.get("relation"), str):
+            data["relation"] = data["relation"].strip().lower().replace(" ", "_")
+        return data
 
     @property
     def relation_enum(self) -> SpatialRelation | None:
@@ -312,17 +493,56 @@ class SpatialConstraint(BaseModel):
         return rel.get_filter_type() if rel is not None else None
 
 
+_METRIC_ALIASES: dict[str, str] = {
+    "dist": "distance",
+    "proximity": "distance",
+    "closeness": "distance",
+    "volume": "size",
+    "area": "size",
+    "scale": "size",
+    "z": "height",
+    "z_position": "height",
+    "elevation": "height",
+    "altitude": "height",
+    "x": "x_position",
+    "horizontal": "x_position",
+    "left_right": "x_position",
+    "y": "y_position",
+    "depth": "y_position",
+    "front_back": "y_position",
+}
+
+_ORDER_ALIASES: dict[str, str] = {
+    "nearest": "min",
+    "closest": "min",
+    "smallest": "min",
+    "lowest": "min",
+    "shortest": "min",
+    "farthest": "max",
+    "furthest": "max",
+    "largest": "max",
+    "biggest": "max",
+    "highest": "max",
+    "tallest": "max",
+    "ascending": "asc",
+    "first": "asc",
+    "descending": "desc",
+    "last": "desc",
+}
+
+
 class SelectConstraint(BaseModel):
     """A selection / ranking constraint applied to candidate matches."""
 
     constraint_type: ConstraintType = Field(
-        ..., description="superlative / comparative / ordinal."
+        default=ConstraintType.SUPERLATIVE,
+        description="superlative / comparative / ordinal.",
     )
     metric: str = Field(
-        ...,
+        default="distance",
         description="Metric: 'distance', 'size', 'height', 'x_position', 'y_position'.",
     )
-    order: str = Field(..., description="Order: 'min', 'max', 'asc', 'desc'.")
+    order: str = Field(default="min", description="Order: 'min', 'max', 'asc', 'desc'.")
     reference: QueryNode | None = Field(
         default=None,
         description="Reference object for distance comparisons.",
@@ -343,15 +563,27 @@ class SelectConstraint(BaseModel):
         description="How a failing selection is handled.",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_select_constraint(cls, value: Any) -> Any:
+        if not isinstance(value, Mapping):
+            return value
+        data: dict[str, Any] = dict(value)
+        raw_metric = str(data.get("metric") or "distance").strip().lower()
+        data["metric"] = _METRIC_ALIASES.get(raw_metric, raw_metric)
+        raw_order = str(data.get("order") or "min").strip().lower()
+        data["order"] = _ORDER_ALIASES.get(raw_order, raw_order)
+        return data
+
     @model_validator(mode="after")
     def _validate_constraint(self) -> SelectConstraint:
         if self.constraint_type == ConstraintType.ORDINAL and self.position is None:
-            raise ValueError("Ordinal constraints require 'position' to be set")
+            self.position = 1
         return self
 
 
 class GroundingQuery(BaseModel):
-    """Top-level parsed query: a target node plus optional viewpoint contexts."""
+    """Top-level parsed query: a target node plus optional viewpoint and grid contexts."""
 
     raw_query: str = Field(default="", description="Original natural language query.")
     root: QueryNode = Field(
@@ -365,6 +597,19 @@ class GroundingQuery(BaseModel):
         default_factory=list,
         description="Viewpoint contexts referenced by constraints in this query.",
     )
+    target_grids: list[tuple[int, int]] = Field(
+        default_factory=list,
+        description="0-indexed (row, col) BEV grid coordinates for the target object/region.",
+    )
+    anchor_grids: list[tuple[int, int]] = Field(
+        default_factory=list,
+        description="0-indexed (row, col) BEV grid coordinates for reference anchor objects/regions.",
+    )
+
+    @field_validator("target_grids", "anchor_grids", mode="before")
+    @classmethod
+    def _normalize_grids_field(cls, value: object) -> list[tuple[int, int]]:
+        return _coerce_grid_list(value)
 
     def get_all_categories(self) -> list[str]:
         """Every object category mentioned anywhere in the query."""
@@ -403,22 +648,66 @@ class GroundingQuery(BaseModel):
                 if node.select_constraint.reference is not None:
                     stack.append(node.select_constraint.reference)
 
+    def _collect_descendant_anchor_grids(self) -> list[tuple[int, int]]:
+        """Collect all grid_cells from anchor, reference, and viewpoint nodes."""
+        cells: list[tuple[int, int]] = []
+        stack: list[QueryNode] = []
+        for sc in self.root.spatial_constraints:
+            stack.extend(sc.anchors)
+        if (
+            self.root.select_constraint is not None
+            and self.root.select_constraint.reference is not None
+        ):
+            stack.append(self.root.select_constraint.reference)
+        for ctx in self.viewpoint_contexts:
+            for vp_anchor in (ctx.facing_anchor, ctx.origin_anchor, ctx.subject_anchor):
+                if vp_anchor is not None:
+                    stack.append(vp_anchor)
+        while stack:
+            node = stack.pop()
+            cells.extend(node.grid_cells)
+            for sc in node.spatial_constraints:
+                stack.extend(sc.anchors)
+            if (
+                node.select_constraint is not None
+                and node.select_constraint.reference is not None
+            ):
+                stack.append(node.select_constraint.reference)
+        return _coerce_grid_list(cells)
+
     @model_validator(mode="after")
-    def _validate_viewpoint_references(self) -> GroundingQuery:
-        known_ids = {context.id for context in self.viewpoint_contexts}
-        if len(known_ids) != len(self.viewpoint_contexts):
-            raise ValueError("viewpoint_contexts must have unique ids")
+    def _sync_and_heal_query(self) -> GroundingQuery:
+        # 1. Sync root.grid_cells <-> target_grids
+        merged_target = _coerce_grid_list([*self.root.grid_cells, *self.target_grids])
+        self.target_grids = merged_target
+        self.root.grid_cells = list(merged_target)
+
+        # 2. Sync descendant anchor grid_cells -> anchor_grids
+        descendant_grids = self._collect_descendant_anchor_grids()
+        self.anchor_grids = _coerce_grid_list([*self.anchor_grids, *descendant_grids])
+
+        # 3. Deduplicate viewpoint_contexts by id and heal dangling references
+        deduped_contexts: list[ViewpointContext] = []
+        known_ids: set[str] = set()
+        for context in self.viewpoint_contexts:
+            if context.id not in known_ids:
+                known_ids.add(context.id)
+                deduped_contexts.append(context)
+        self.viewpoint_contexts = deduped_contexts
 
         non_world = {ReferenceFrame.VIEWER, ReferenceFrame.OBJECT_LOCAL}
         for _node, constraint in self.iter_constraints():
             ctx_id = constraint.viewpoint_context_id
-            if ctx_id is not None and ctx_id not in known_ids:
-                raise ValueError(f"viewpoint_context_id {ctx_id!r} is not declared")
-            if constraint.reference_frame in non_world and ctx_id is None:
-                raise ValueError(
-                    f"reference_frame={constraint.reference_frame.value} "
-                    "requires a viewpoint_context_id"
-                )
+            if constraint.reference_frame in non_world:
+                if ctx_id is None or ctx_id not in known_ids:
+                    if len(self.viewpoint_contexts) == 1:
+                        constraint.viewpoint_context_id = self.viewpoint_contexts[0].id
+                    else:
+                        constraint.reference_frame = ReferenceFrame.AMBIGUOUS
+                        constraint.viewpoint_context_id = None
+                        constraint.execution_policy = ExecutionPolicy.RANK_ONLY
+            elif ctx_id is not None and ctx_id not in known_ids:
+                constraint.viewpoint_context_id = None
         return self
 
 
@@ -440,8 +729,8 @@ class ParseMode(str, Enum):
 class QueryHypothesis(BaseModel):
     """One executable hypothesis parsed from a user query."""
 
-    kind: HypothesisKind = Field(...)
-    rank: int = Field(..., ge=1, description="1-based priority rank.")
+    kind: HypothesisKind = Field(default=HypothesisKind.DIRECT)
+    rank: int = Field(default=1, ge=1, description="1-based priority rank.")
     grounding_query: GroundingQuery = Field(...)
     lexical_hints: list[str] = Field(
         default_factory=list,
@@ -453,29 +742,84 @@ class HypothesisOutputV1(BaseModel):
     """Unified query-parsing output consumed by ``KeyframeSelector``.
 
     Supports deterministic single-result parsing and multi-hypothesis parsing
-    for open-world fallback.
+    for open-world fallback, automatically normalizing ranks and parse_mode.
     """
 
     model_config = ConfigDict(frozen=False)
 
     format_version: Literal["hypothesis_output_v1"] = "hypothesis_output_v1"
-    parse_mode: ParseMode = Field(...)
+    parse_mode: ParseMode = Field(default=ParseMode.SINGLE)
     hypotheses: list[QueryHypothesis] = Field(..., min_length=1, max_length=3)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_output_payload(cls, value: Any) -> Any:
+        if isinstance(value, list):
+            value = {"hypotheses": value}
+        if not isinstance(value, Mapping):
+            return value
+        data: dict[str, Any] = dict(value)
+        data["format_version"] = "hypothesis_output_v1"
+
+        # If the LLM emitted a single GroundingQuery or QueryNode at the top level, wrap it
+        if "hypotheses" not in data:
+            if "grounding_query" in data:
+                data["hypotheses"] = [
+                    {
+                        "kind": data.get("kind", "direct"),
+                        "rank": 1,
+                        "grounding_query": data["grounding_query"],
+                    }
+                ]
+            elif "root" in data:
+                data["hypotheses"] = [
+                    {
+                        "kind": "direct",
+                        "rank": 1,
+                        "grounding_query": {
+                            "raw_query": data.get("raw_query", ""),
+                            "root": data["root"],
+                            "expect_unique": data.get("expect_unique", True),
+                            "target_grids": data.get("target_grids", []),
+                            "anchor_grids": data.get("anchor_grids", []),
+                        },
+                    }
+                ]
+
+        raw_hyps = data.get("hypotheses")
+        if isinstance(raw_hyps, list) and raw_hyps:
+            normalized_hyps: list[Any] = []
+            for idx, item in enumerate(raw_hyps[:3], start=1):
+                if isinstance(item, MutableMapping):
+                    copied = dict(item)
+                    copied.setdefault("kind", "direct" if idx == 1 else "proxy")
+                    copied.setdefault("rank", idx)
+                    normalized_hyps.append(copied)
+                else:
+                    normalized_hyps.append(item)
+            data["hypotheses"] = normalized_hyps
+        return data
+
     @model_validator(mode="after")
-    def _validate_output(self) -> HypothesisOutputV1:
-        ranks = [h.rank for h in self.hypotheses]
-        if len(ranks) != len(set(ranks)):
-            raise ValueError("Hypothesis ranks must be unique")
-        if sorted(ranks) != list(range(1, len(ranks) + 1)):
-            raise ValueError("Hypothesis ranks must be contiguous and start from 1")
-        if self.parse_mode == ParseMode.SINGLE:
-            if len(self.hypotheses) != 1:
-                raise ValueError("parse_mode='single' requires exactly one hypothesis")
-            if self.hypotheses[0].kind != HypothesisKind.DIRECT:
-                raise ValueError(
-                    "parse_mode='single' requires hypothesis kind='direct'"
-                )
+    def _validate_and_heal_output(self) -> HypothesisOutputV1:
+        # Sort by rank ascending (preserving input order on ties) and re-index 1..N
+        ordered = sorted(
+            enumerate(self.hypotheses[:3]),
+            key=lambda pair: (pair[1].rank, pair[0]),
+        )
+        healed: list[QueryHypothesis] = []
+        for new_rank, (_idx, hyp) in enumerate(ordered, start=1):
+            hyp.rank = new_rank
+            healed.append(hyp)
+        self.hypotheses = healed
+
+        if (
+            len(self.hypotheses) == 1
+            and self.hypotheses[0].kind == HypothesisKind.DIRECT
+        ):
+            self.parse_mode = ParseMode.SINGLE
+        else:
+            self.parse_mode = ParseMode.MULTI
         return self
 
     def ordered_hypotheses(self) -> list[QueryHypothesis]:

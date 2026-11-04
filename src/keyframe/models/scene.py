@@ -142,6 +142,8 @@ class SceneObject(BaseModel):
 
     # LLM enrichment (enriched_objects.json / affordance file)
     summary: str = ""
+    location: str = ""
+    color: list[str] = Field(default_factory=list)
     affordance_category: str = ""
     co_objects: list[str] = Field(default_factory=list)
 

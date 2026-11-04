@@ -45,6 +45,7 @@ from keyframe.models.results import (
     ExecutionMode,
     ExecutionResult,
     FrameMapping,
+    FrameSource,
     GroundingStatus,
     HypothesisAttempt,
     HypothesisExecution,
@@ -55,6 +56,14 @@ from keyframe.models.scene import SceneObject
 from keyframe.parsing.parser import QueryParser
 from keyframe.query_executor import QueryExecutor
 from keyframe.spatial.checker import SpatialRelationChecker
+from keyframe.spatial.grid import (
+    GridCell,
+    GridVisibilityIndex,
+    SceneGridSpec,
+    build_grid_visibility_index,
+    load_grid_visibility_index,
+    save_grid_visibility_index,
+)
 
 if TYPE_CHECKING:
     from keyframe.bev import BevBuilder, BEVMarker, SceneBEVConfig
@@ -177,10 +186,12 @@ class KeyframeSelector:
         self.object_to_views: dict[int, list[tuple[int, float]]] = {}
         self.view_to_objects: dict[int, list[tuple[int, float]]] = {}
         self.dwell_score: NDArray[np.float64] = np.array([], dtype=np.float64)
+        self._grid_index: GridVisibilityIndex | None = None
 
         self._llm_client = llm_client
         self._query_parser: QueryParser | None = None
         self._query_executor: QueryExecutor | None = None
+        self._executor_local = threading.local()
         self._relation_checker: SpatialRelationChecker | None = None
 
         self._k_intrinsic: NDArray[np.float64] | None = None
@@ -192,7 +203,22 @@ class KeyframeSelector:
         self._clip_lock = threading.Lock()
 
         self._load_scene(pcd_file)
-        self._load_or_build_visibility_index()
+        self._load_visibility_index()
+        self._load_grid_visibility_index()
+
+    @classmethod
+    def _resolve_pcd_file(cls, scene_path: Path) -> Path | None:
+        pcd_dir = scene_path / "pcd_saves"
+        for pattern in ("*ram*_post.pkl.gz", "*_post.pkl.gz", "*.pkl.gz"):
+            matches = [
+                p
+                for p in sorted(pcd_dir.glob(pattern))
+                if not p.name.endswith(".light.pkl.gz")
+            ]
+            if matches:
+                return matches[0]
+        light_matches = sorted(pcd_dir.glob("*.light.pkl.gz"))
+        return light_matches[0] if light_matches else None
 
     @classmethod
     def from_scene_path(
@@ -203,19 +229,13 @@ class KeyframeSelector:
         llm_client: LLMClient | None = None,
         model: str | None = None,
         prefer_lightweight_pcd: bool = True,
-        ensure_lightweight_pcd: bool = False,
+        ensure_lightweight_pcd: bool = True,
         dataset: str = "nr3d",
         bev_config: SceneBEVConfig | None = None,
     ) -> KeyframeSelector:
         """Create a selector for a scene directory, auto-detecting the PCD file."""
         scene_path = Path(scene_path)
-        pcd_dir = scene_path / "pcd_saves"
-        pcd_file: Path | None = None
-        for pattern in ("*ram*_post.pkl.gz", "*_post.pkl.gz", "*.pkl.gz"):
-            matches = sorted(pcd_dir.glob(pattern))
-            if matches:
-                pcd_file = matches[0]
-                break
+        pcd_file = cls._resolve_pcd_file(scene_path)
         logger.info(f"[KeyframeSelector] PCD file: {pcd_file}")
         return cls(
             scene_path,
@@ -229,9 +249,77 @@ class KeyframeSelector:
             bev_config=bev_config,
         )
 
+    @classmethod
+    def build_offline_indices(
+        cls,
+        scene_path: str | Path,
+        *,
+        pcd_file: Path | None = None,
+        stride: int = 5,
+        prefer_lightweight_pcd: bool = True,
+        ensure_lightweight_pcd: bool = True,
+        dataset: str = "nr3d",
+        overwrite_visibility: bool = False,
+        overwrite_grid: bool = False,
+    ) -> tuple[Path, Path]:
+        """Offline preprocessing entrypoint to build and persist scene indices.
+
+        Produces ``indices/visibility_index.pkl`` and
+        ``indices/grid_visibility_index.pkl`` on disk so runtime
+        :class:`KeyframeSelector` initialization never recomputes them online.
+        """
+        resolved_scene = Path(scene_path)
+        resolved_pcd = pcd_file or cls._resolve_pcd_file(resolved_scene)
+        instance = cls.__new__(cls)
+        instance.scene_path = resolved_scene
+        instance.stride = stride
+        instance.model = None
+        instance.prefer_lightweight_pcd = prefer_lightweight_pcd
+        instance.ensure_lightweight_pcd = ensure_lightweight_pcd
+        instance.dataset = dataset
+        instance._bev_config = None
+        instance._bev_builder = None
+        instance.objects = []
+        instance.object_features = None
+        instance.camera_poses = []
+        instance.camera_trajectory_path = None
+        instance.image_paths = []
+        instance.depth_paths = []
+        instance.intrinsics = _DEFAULT_INTRINSICS.copy()
+        instance.scene_categories = []
+        instance.object_to_views = {}
+        instance.view_to_objects = {}
+        instance.dwell_score = np.array([], dtype=np.float64)
+        instance._grid_index = None
+        instance._llm_client = None
+        instance._query_parser = None
+        instance._query_executor = None
+        instance._executor_local = threading.local()
+        instance._relation_checker = None
+        instance._k_intrinsic = None
+        instance._img_wh = None
+        instance._depth_cache = {}
+        instance._clip_model = None
+        instance._clip_tokenizer = None
+        instance._clip_lock = threading.Lock()
+
+        instance._load_scene(resolved_pcd, sync_stride=not overwrite_visibility)
+
+        vis_path = resolved_scene / "indices" / "visibility_index.pkl"
+        if vis_path.is_file() and not overwrite_visibility:
+            instance._load_visibility_index(vis_path)
+        else:
+            instance._build_visibility_index_offline(vis_path)
+
+        grid_path = resolved_scene / "indices" / "grid_visibility_index.pkl"
+        if not grid_path.is_file() or overwrite_grid:
+            instance.build_depth_verified_grid_index(save_cache=True)
+
+        return vis_path, grid_path
+
     # ----- scene loading ----------------------------------------------------
 
-    def _load_scene(self, pcd_file: Path | None) -> None:
+    def _load_scene(self, pcd_file: Path | None, *, sync_stride: bool = True) -> None:
         logger.info(f"[KeyframeSelector] loading scene: {self.scene_path}")
         if pcd_file is not None and pcd_file.exists():
             self.objects = load_scene_objects(
@@ -249,6 +337,8 @@ class KeyframeSelector:
                 "Run object enrichment to produce enriched_objects.json first."
             )
         self._load_enrichment(enrichment_file)
+        if sync_stride:
+            self._sync_stride_from_visibility_metadata()
 
         self._load_camera_poses()
         if len(self.camera_poses) >= 2:
@@ -304,6 +394,12 @@ class KeyframeSelector:
             obj.category = str(enrichment.get("category", obj.category))
             obj.object_tag = obj.category
             obj.summary = str(enrichment.get("description", obj.summary))
+            obj.location = str(enrichment.get("location", obj.location))
+            raw_color = enrichment.get("color", obj.color)
+            if isinstance(raw_color, list):
+                obj.color = [str(item) for item in raw_color if str(item).strip()]
+            elif isinstance(raw_color, str) and raw_color.strip():
+                obj.color = [raw_color.strip()]
             obj.affordance_category = str(
                 enrichment.get("usability", obj.affordance_category)
             )
@@ -312,6 +408,42 @@ class KeyframeSelector:
                 obj.co_objects = [str(item) for item in nearby]
             count += 1
         logger.info(f"[KeyframeSelector] enriched {count}/{len(self.objects)} objects")
+
+    def _sync_stride_from_visibility_metadata(self) -> None:
+        """Align ``self.stride`` with precomputed index metadata when present."""
+        build_info_path = self.scene_path / "indices" / "build_info.json"
+        if build_info_path.is_file():
+            try:
+                info = json.loads(build_info_path.read_text(encoding="utf-8"))
+                process_stride = info.get("process_stride")
+                if isinstance(process_stride, int) and process_stride >= 1:
+                    self.stride = process_stride
+            except Exception:
+                pass
+        index_path = self.scene_path / "indices" / "visibility_index.pkl"
+        if not index_path.is_file():
+            return
+        try:
+            with index_path.open("rb") as handle:
+                payload = pickle.load(handle)
+        except Exception:
+            return
+        if not isinstance(payload, dict):
+            return
+        metadata = payload.get("metadata")
+        if isinstance(metadata, dict):
+            indexed_stride = metadata.get("stride")
+            indexed_objects = metadata.get("num_objects")
+            if (
+                isinstance(indexed_stride, int)
+                and indexed_stride >= 1
+                and (
+                    indexed_objects is None
+                    or not self.objects
+                    or int(indexed_objects) == len(self.objects)
+                )
+            ):
+                self.stride = indexed_stride
 
     def _build_scene_categories(self) -> list[str]:
         categories: set[str] = set()
@@ -473,7 +605,10 @@ class KeyframeSelector:
         translations = np.asarray(
             [pose[:3, 3] for pose in self.camera_poses], dtype=np.float64
         )
-        steps = np.linalg.norm(np.diff(translations, axis=0), axis=1)
+        diffs = np.diff(translations, axis=0)
+        steps = np.where(
+            np.isfinite(diffs).all(axis=1), np.linalg.norm(diffs, axis=1), 0.0
+        )
         velocities = np.empty(len(self.camera_poses), dtype=np.float64)
         velocities[:-1] = steps
         velocities[-1] = steps[-1] if steps.size else 0.0
@@ -508,6 +643,18 @@ class KeyframeSelector:
             )
         return self._k_intrinsic, self._img_wh
 
+    def _get_intrinsic_or_default(self) -> tuple[NDArray[np.float64], tuple[int, int]]:
+        try:
+            return self._get_intrinsic()
+        except (FileNotFoundError, ValueError):
+            return self.intrinsics, (_VIS_IMG_WIDTH, _VIS_IMG_HEIGHT)
+
+    def _try_load_depth_for_view(self, view_id: int) -> NDArray[np.float64] | None:
+        try:
+            return self._load_depth_for_view(view_id)
+        except (FileNotFoundError, ValueError, ImportError):
+            return None
+
     def _load_depth_for_view(self, view_id: int) -> NDArray[np.float64]:
         if view_id in self._depth_cache:
             return self._depth_cache[view_id]
@@ -518,7 +665,13 @@ class KeyframeSelector:
         frame_id = self.map_view_to_frame(view_id)
         depth_path = self._resolve_raw_dir() / f"{frame_id:06d}-depth.png"
         if not depth_path.exists():
-            raise FileNotFoundError(depth_path)
+            if (
+                0 <= view_id < len(self.depth_paths)
+                and self.depth_paths[view_id].exists()
+            ):
+                depth_path = self.depth_paths[view_id]
+            else:
+                raise FileNotFoundError(depth_path)
         depth = np.asarray(Image.open(depth_path), dtype=np.float64) / 1000.0
         if depth.ndim != 2 or not np.isfinite(depth).all():
             raise ValueError(f"invalid depth image: {depth_path}")
@@ -545,41 +698,39 @@ class KeyframeSelector:
 
     # ----- visibility index -------------------------------------------------
 
-    def _load_or_build_visibility_index(self) -> None:
-        index_path = self.scene_path / "indices" / "visibility_index.pkl"
-        if index_path.exists():
-            self._load_visibility_index(index_path)
-            return
-        logger.warning(
-            f"[KeyframeSelector] visibility index not found at {index_path}; building online"
+    def _load_visibility_index(self, index_path: Path | None = None) -> None:
+        resolved_path = index_path or (
+            self.scene_path / "indices" / "visibility_index.pkl"
         )
-        self._build_visibility_index_online()
-
-    def _load_visibility_index(self, index_path: Path) -> None:
-        with index_path.open("rb") as handle:
+        if not resolved_path.is_file():
+            raise FileNotFoundError(
+                f"Visibility index not found: {resolved_path}. "
+                "Run offline index building (scripts/datasets/build_grid_indices.py) "
+                "to produce indices/visibility_index.pkl first."
+            )
+        with resolved_path.open("rb") as handle:
             data = pickle.load(handle)
-        if "object_to_views" in data:
-            self.object_to_views = {
-                int(k): list(v) for k, v in data["object_to_views"].items()
-            }
-            self.view_to_objects = {
-                int(k): list(v) for k, v in data["view_to_objects"].items()
-            }
-        else:
-            raw_index = data.get("visibility_index", {})
-            self.object_to_views = {int(k): list(v) for k, v in raw_index.items()}
-            self.view_to_objects = {}
-            for obj_id, views in self.object_to_views.items():
-                for view_id, score in views:
-                    self.view_to_objects.setdefault(view_id, []).append((obj_id, score))
-            for views in self.view_to_objects.values():
-                views.sort(key=lambda item: item[1], reverse=True)
+        if not isinstance(data, dict) or "object_to_views" not in data:
+            raise ValueError(
+                f"Invalid visibility index format in {resolved_path}; "
+                "expected 'object_to_views' and 'view_to_objects'."
+            )
+        self.object_to_views = {
+            int(k): [(int(v), float(s)) for v, s in views]
+            for k, views in data["object_to_views"].items()
+        }
+        self.view_to_objects = {
+            int(k): [(int(oid), float(s)) for oid, s in objs]
+            for k, objs in data["view_to_objects"].items()
+        }
         logger.success(
             f"[KeyframeSelector] loaded visibility index "
             f"({len(self.object_to_views)} objects, {len(self.view_to_objects)} views)"
         )
 
-    def _build_visibility_index_online(self) -> None:
+    def _build_visibility_index_offline(self, output_path: Path | None = None) -> Path:
+        """Compute and write ``indices/visibility_index.pkl`` for offline data prep."""
+        self.object_to_views = {}
         self.view_to_objects = {}
         for obj in self.objects:
             scores = (
@@ -593,10 +744,29 @@ class KeyframeSelector:
                 self.view_to_objects.setdefault(view_id, []).append((obj.obj_id, score))
         for views in self.view_to_objects.values():
             views.sort(key=lambda item: item[1], reverse=True)
+
+        target_path = output_path or (
+            self.scene_path / "indices" / "visibility_index.pkl"
+        )
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = target_path.with_name(f".{target_path.name}.tmp")
+        payload = {
+            "object_to_views": self.object_to_views,
+            "view_to_objects": self.view_to_objects,
+            "metadata": {
+                "stride": self.stride,
+                "num_objects": len(self.object_to_views),
+                "num_views": len(self.view_to_objects),
+            },
+        }
+        with tmp_path.open("wb") as handle:
+            pickle.dump(payload, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        tmp_path.replace(target_path)
         logger.success(
-            f"[KeyframeSelector] built visibility index "
+            f"[KeyframeSelector] built offline visibility index -> {target_path} "
             f"({len(self.object_to_views)} objects, {len(self.view_to_objects)} views)"
         )
+        return target_path
 
     def _compute_visibility_scores(self, obj: SceneObject) -> list[tuple[int, float]]:
         img_area = _VIS_IMG_WIDTH * _VIS_IMG_HEIGHT
@@ -627,7 +797,10 @@ class KeyframeSelector:
                             max(0.0, size_score - (0.3 if clipped else 0.0)),
                         )
             geo = 0.0
-            if not np.allclose(centroid, 0.0):
+            if (
+                not np.allclose(centroid, 0.0)
+                and np.isfinite(self.camera_poses[view_id]).all()
+            ):
                 pose = self.camera_poses[view_id]
                 cam_pos = pose[:3, 3]
                 distance = float(np.linalg.norm(centroid - cam_pos))
@@ -647,6 +820,8 @@ class KeyframeSelector:
         centroid = obj.centroid
         scores: list[tuple[int, float]] = []
         for view_id, pose in enumerate(self.camera_poses):
+            if not np.isfinite(pose).all():
+                continue
             cam_pos = pose[:3, 3]
             distance = float(np.linalg.norm(centroid - cam_pos))
             if distance > _VIS_MAX_DISTANCE:
@@ -658,11 +833,77 @@ class KeyframeSelector:
                 scores.append((view_id, combined))
         return scores
 
-    # ----- joint-coverage keyframe selection -------------------------------
+    # ----- grid visibility index (BEV grid <-> 3D region <-> views) --------
 
-    def get_joint_coverage_views(
+    @property
+    def grid_index(self) -> GridVisibilityIndex:
+        """Bidirectional ``(row, col) <-> view`` and ``(row, col) <-> object`` index."""
+        if self._grid_index is None:
+            self._load_grid_visibility_index()
+        assert self._grid_index is not None
+        return self._grid_index
+
+    @property
+    def grid_spec(self) -> SceneGridSpec:
+        """Scene 3D grid specification mapping ``(row, col)`` to world regions."""
+        return self.grid_index.grid_spec
+
+    @property
+    def grid_to_views(self) -> dict[GridCell, list[tuple[int, float]]]:
+        """Mapping from ``(row, col)`` grid cell to ranked ``(view_id, score)``."""
+        return self.grid_index.grid_to_views
+
+    @property
+    def view_to_grids(self) -> dict[int, list[tuple[GridCell, float]]]:
+        """Mapping from ``view_id`` to ranked ``((row, col), score)``."""
+        return self.grid_index.view_to_grids
+
+    @property
+    def object_to_grids(self) -> dict[int, list[GridCell]]:
+        """Mapping from ``obj_id`` to ``(row, col)`` grid cells it occupies."""
+        return self.grid_index.object_to_grids
+
+    @property
+    def grid_to_objects(self) -> dict[GridCell, list[int]]:
+        """Mapping from ``(row, col)`` grid cell to ``obj_id``s inside it."""
+        return self.grid_index.grid_to_objects
+
+    def _load_grid_visibility_index(self, index_path: Path | None = None) -> None:
+        resolved_path = index_path or (
+            self.scene_path / "indices" / "grid_visibility_index.pkl"
+        )
+        self._grid_index = load_grid_visibility_index(resolved_path)
+        logger.success(
+            f"[KeyframeSelector] loaded grid visibility index "
+            f"(shape={self._grid_index.grid_spec.shape}, "
+            f"cells={len(self._grid_index.grid_to_views)}, "
+            f"views={len(self._grid_index.view_to_grids)})"
+        )
+
+    def build_depth_verified_grid_index(
+        self, *, save_cache: bool = True
+    ) -> GridVisibilityIndex:
+        """Build (and optionally persist) the depth-verified grid visibility index."""
+        spec = SceneGridSpec.from_scene_geometry(self.objects, self.camera_poses)
+        k, img_wh = self._get_intrinsic_or_default()
+        self._grid_index = build_grid_visibility_index(
+            spec,
+            self.objects,
+            self.camera_poses,
+            k,
+            img_wh,
+            object_to_views=self.object_to_views,
+            depth_loader=self._try_load_depth_for_view,
+            stride=self.stride,
+        )
+        if save_cache:
+            index_path = self.scene_path / "indices" / "grid_visibility_index.pkl"
+            save_grid_visibility_index(self._grid_index, index_path)
+        return self._grid_index
+
+    def get_views_for_grids(
         self,
-        object_ids: list[int],
+        target_grids: Sequence[GridCell],
         max_views: int = 3,
         *,
         pose_aware: bool = False,
@@ -671,26 +912,73 @@ class KeyframeSelector:
         dwell_weight: float = 0.15,
         frustum_method: str = "l1",
     ) -> list[int]:
-        """Greedily select views maximizing joint coverage of ``object_ids``."""
-        if not object_ids:
+        """Select up to ``max_views`` views covering the requested BEV ``(row, col)`` cells."""
+        return self.get_joint_coverage_views(
+            [],
+            max_views=max_views,
+            target_grids=target_grids,
+            pose_aware=pose_aware,
+            frustum_overlap_threshold=frustum_overlap_threshold,
+            redundancy_penalty=redundancy_penalty,
+            dwell_weight=dwell_weight,
+            frustum_method=frustum_method,
+        )
+
+    # ----- joint-coverage keyframe selection -------------------------------
+
+    def get_joint_coverage_views(
+        self,
+        object_ids: list[int],
+        max_views: int = 3,
+        *,
+        target_grids: Sequence[GridCell] = (),
+        pose_aware: bool = False,
+        frustum_overlap_threshold: float = 0.7,
+        redundancy_penalty: float = 0.2,
+        dwell_weight: float = 0.15,
+        frustum_method: str = "l1",
+    ) -> list[int]:
+        """Greedily select views maximizing joint coverage of objects and/or BEV grids."""
+        valid_grids = self.grid_spec.sanitize_cells(target_grids)
+        if not object_ids and not valid_grids:
             return []
         view_scores = self._view_scores_for_objects(object_ids)
-        candidate_views = set(view_scores)
+        grid_view_scores = (
+            self.grid_index.views_for_grids(valid_grids) if valid_grids else {}
+        )
+        candidate_views = set(view_scores) | set(grid_view_scores)
         if not candidate_views:
             return []
         if pose_aware:
             self._validate_frustum_method(frustum_method)
 
         selected: list[int] = []
-        covered = dict.fromkeys(object_ids, 0.0)
+        covered_objs = dict.fromkeys(object_ids, 0.0)
+        covered_grids = dict.fromkeys(valid_grids, 0.0)
+        # When 3D objects are already grounded, object visibility drives selection
+        # while grid visibility acts as a secondary tie-breaker / regional complement.
+        grid_weight = 0.15 if object_ids else 1.0
         for _ in range(max_views):
             best_view: int | None = None
             best_gain = 0.0
             for view_id in candidate_views - set(selected):
-                base_gain = sum(
-                    max(0.0, view_scores[view_id].get(obj_id, 0.0) - covered[obj_id])
+                obj_gain = sum(
+                    max(
+                        0.0,
+                        view_scores.get(view_id, {}).get(obj_id, 0.0)
+                        - covered_objs[obj_id],
+                    )
                     for obj_id in object_ids
                 )
+                grid_gain = sum(
+                    max(
+                        0.0,
+                        grid_view_scores.get(view_id, {}).get(cell, 0.0)
+                        - covered_grids[cell],
+                    )
+                    for cell in valid_grids
+                )
+                base_gain = obj_gain + grid_weight * grid_gain
                 gain = (
                     self._pose_aware_gain(
                         base_gain,
@@ -710,8 +998,14 @@ class KeyframeSelector:
                 break
             selected.append(best_view)
             for obj_id in object_ids:
-                covered[obj_id] = max(
-                    covered[obj_id], view_scores[best_view].get(obj_id, 0.0)
+                covered_objs[obj_id] = max(
+                    covered_objs[obj_id],
+                    view_scores.get(best_view, {}).get(obj_id, 0.0),
+                )
+            for cell in valid_grids:
+                covered_grids[cell] = max(
+                    covered_grids[cell],
+                    grid_view_scores.get(best_view, {}).get(cell, 0.0),
                 )
         return selected
 
@@ -783,30 +1077,77 @@ class KeyframeSelector:
         )
 
     def pad_keyframes_to_minimum(
-        self, selected: list[int], object_ids: list[int], min_count: int = 3
+        self,
+        selected: list[int],
+        object_ids: list[int],
+        min_count: int = 3,
+        *,
+        target_grids: Sequence[GridCell] = (),
     ) -> list[int]:
-        """Pad with highest-total-visibility views until ``min_count`` reached."""
+        """Pad with highest-visibility views until ``min_count`` reached.
+
+        Prioritizes views seeing the grounded ``object_ids`` first, then views
+        covering ``target_grids``, and finally remaining scene views.
+        """
         if len(selected) >= min_count:
             return selected
         selected = list(selected)
         selected_set = set(selected)
+        valid_grids = self.grid_spec.sanitize_cells(target_grids)
 
-        candidate_views: set[int] = set()
-        for obj_id in object_ids:
-            for view_id, _ in self.object_to_views.get(obj_id, []):
-                candidate_views.add(view_id)
-        if not candidate_views:
-            candidate_views = set(self.view_to_objects)
+        # Tier 1: views observing the grounded objects
+        obj_view_scores = self._view_scores_for_objects(object_ids)
+        tier1_views = set(obj_view_scores) - selected_set
+        if tier1_views:
+            tier1_ranked = sorted(
+                tier1_views,
+                key=lambda vid: (
+                    sum(obj_view_scores.get(vid, {}).values()),
+                    sum(score for _, score in self.view_to_objects.get(vid, [])),
+                ),
+                reverse=True,
+            )
+            for vid in tier1_ranked:
+                if len(selected) >= min_count:
+                    return selected
+                selected.append(vid)
+                selected_set.add(vid)
 
-        totals = [
-            (view_id, sum(score for _, score in self.view_to_objects.get(view_id, [])))
-            for view_id in candidate_views - selected_set
-        ]
-        totals.sort(key=lambda item: item[1], reverse=True)
-        for view_id, _ in totals:
+        # Tier 2: views observing the requested grid cells
+        grid_view_scores = (
+            self.grid_index.views_for_grids(valid_grids) if valid_grids else {}
+        )
+        tier2_views = set(grid_view_scores) - selected_set
+        if tier2_views:
+            tier2_ranked = sorted(
+                tier2_views,
+                key=lambda vid: (
+                    sum(grid_view_scores.get(vid, {}).values()),
+                    sum(score for _, score in self.view_to_objects.get(vid, [])),
+                ),
+                reverse=True,
+            )
+            for vid in tier2_ranked:
+                if len(selected) >= min_count:
+                    return selected
+                selected.append(vid)
+                selected_set.add(vid)
+
+        # Tier 3: fallback to remaining scene views
+        tier3_views = (
+            set(self.view_to_objects) | set(self.view_to_grids)
+        ) - selected_set
+        tier3_ranked = sorted(
+            tier3_views,
+            key=lambda vid: sum(
+                score for _, score in self.view_to_objects.get(vid, [])
+            ),
+            reverse=True,
+        )
+        for vid in tier3_ranked:
             if len(selected) >= min_count:
                 break
-            selected.append(view_id)
+            selected.append(vid)
         return selected
 
     # ----- CLIP fallback (optional) ----------------------------------------
@@ -913,6 +1254,7 @@ class KeyframeSelector:
         output_path: Path | None = None,
         use_cache: bool = True,
         highlight_ids: frozenset[int] = frozenset(),
+        highlight_grids: frozenset[GridCell] = frozenset(),
     ) -> Path:
         """Render (or load) the top-down scene BEV used as parser visual context.
 
@@ -920,7 +1262,7 @@ class KeyframeSelector:
         the ``vision`` extra plus the mesh / trajectory / intrinsic assets). For
         ``dataset='openeqa'`` (no mesh) it draws the mesh-free schematic floor
         plan from object footprints + the camera trajectory. ``highlight_ids``
-        are drawn in the highlight color.
+        and ``highlight_grids`` are drawn in highlight colors.
 
         Args:
             output_path: Where to write the render. Defaults to
@@ -930,6 +1272,7 @@ class KeyframeSelector:
             use_cache: Reuse / write a content-addressed cache next to the
                 prepared scene.
             highlight_ids: Object ids drawn in the highlight color.
+            highlight_grids: BEV grid cells ``(row, col)`` drawn highlighted.
         """
         builder = self._get_bev_builder()
         scene_dir = self._scene_dir()
@@ -940,38 +1283,107 @@ class KeyframeSelector:
             markers=self._bev_markers(),
             output_path=out,
             highlight_ids=highlight_ids,
+            highlight_grids=highlight_grids,
+            grid_spec=self.grid_spec,
             use_cache=use_cache,
         )
 
     # ----- query parsing / execution ---------------------------------------
+
+    def _build_grid_context(self) -> str:
+        """Format the scene's ``(row, col) -> [#id category, ...]`` grid layout."""
+        spec = self.grid_spec
+        rows, cols = spec.shape
+        total_cells = max(1, rows * cols)
+        max_span_cells = max(6, int(0.35 * total_cells))
+        cell_w, cell_h = spec.cell_width, spec.cell_height
+        by_id = {obj.obj_id: obj for obj in self.objects}
+        primary_cell_by_id: dict[int, GridCell] = {
+            oid: cells[0] for oid, cells in self.object_to_grids.items() if cells
+        }
+        room_wide_ids: set[int] = {
+            oid
+            for oid, cells in self.object_to_grids.items()
+            if len(cells) > max_span_cells
+        }
+
+        lines: list[str] = [
+            f"Grid shape: {rows} rows x {cols} cols "
+            f"(cell size: {cell_w:.2f}m x {cell_h:.2f}m; "
+            f"row in 0..{rows - 1} top-to-bottom [-Y], "
+            f"col in 0..{cols - 1} left-to-right [+X])",
+            "Legend: '#id category' = object centroid in cell; "
+            "'#id category*' = large object spanning into cell",
+            "Occupied grids:",
+        ]
+        occupied_cells: set[GridCell] = set()
+        for (r, c), obj_ids in sorted(self.grid_to_objects.items()):
+            primary_items: list[str] = []
+            spanning_items: list[str] = []
+            for oid in obj_ids:
+                obj = by_id.get(oid)
+                if obj is None:
+                    continue
+                cat = obj.object_tag or obj.category or "object"
+                if primary_cell_by_id.get(oid) == (r, c):
+                    primary_items.append(f"#{oid} {cat}")
+                elif oid not in room_wide_ids:
+                    spanning_items.append(f"#{oid} {cat}*")
+            items = [*primary_items, *spanning_items][:14]
+            if items:
+                occupied_cells.add((r, c))
+                lines.append(f"  ({r}, {c}): {', '.join(items)}")
+
+        observable_empty = [
+            f"({r}, {c})"
+            for (r, c), views in sorted(self.grid_to_views.items())
+            if views and (r, c) not in occupied_cells
+        ]
+        if observable_empty:
+            lines.append(
+                "Observable empty grids (camera-covered regions without segmented objects): "
+                + ", ".join(observable_empty[:24])
+            )
+        return "\n".join(lines)
 
     def _get_query_parser(self) -> QueryParser:
         if self._query_parser is None:
             if self._llm_client is None:
                 self._llm_client = LLMClient.from_toml()
             self._query_parser = QueryParser(
-                self.scene_categories, self._llm_client, model=self.model
+                self.scene_categories,
+                self._llm_client,
+                model=self.model,
+                grid_context=self._build_grid_context(),
             )
         return self._query_parser
 
     def _get_query_executor(self) -> QueryExecutor:
-        if self._query_executor is None:
+        local = getattr(self, "_executor_local", None)
+        executor: QueryExecutor | None = (
+            getattr(local, "executor", None) if local is not None else None
+        )
+        if executor is None:
             if self._relation_checker is None:
                 self._relation_checker = SpatialRelationChecker()
-            self._query_executor = QueryExecutor(
+            executor = QueryExecutor(
                 self.objects,
                 relation_checker=self._relation_checker,
                 clip_features=self.object_features,
                 clip_encoder=self._encode_text if HAS_CLIP else None,
                 camera_poses=list(self.camera_poses),
+                grid_spec=self.grid_spec,
+                object_to_grids=self.object_to_grids,
             )
-        return self._query_executor
+            if local is not None:
+                local.executor = executor
+            self._query_executor = executor
+        return executor
 
     def parse_query_hypotheses(
         self,
         query: str,
         *,
-        apply_viewpoint_normalize: bool = False,
         use_visual_context: bool = False,
     ) -> HypothesisOutputV1:
         """Parse a query into scene-category-sanitized ranked hypotheses.
@@ -989,8 +1401,7 @@ class KeyframeSelector:
         sanitized: list[QueryHypothesis] = []
         for hypothesis in output.hypotheses:
             grounding = self._sanitize_categories(hypothesis.grounding_query)
-            if apply_viewpoint_normalize:
-                grounding = self._normalize_viewpoint_policies(grounding)
+            grounding = self._normalize_viewpoint_policies(grounding)
             sanitized.append(
                 QueryHypothesis(
                     kind=hypothesis.kind,
@@ -1006,7 +1417,7 @@ class KeyframeSelector:
     def execute_query(
         self,
         grounding_query: GroundingQuery,
-        mode: ExecutionMode = ExecutionMode.STRICT,
+        mode: ExecutionMode = ExecutionMode.RECALL,
     ) -> ExecutionResult:
         """Execute one grounding query against the scene."""
         return self._get_query_executor().execute(grounding_query, mode=mode)
@@ -1016,7 +1427,7 @@ class KeyframeSelector:
         hypothesis_output: HypothesisOutputV1,
         *,
         hidden_categories: Sequence[str] = (),
-        mode: ExecutionMode = ExecutionMode.STRICT,
+        mode: ExecutionMode = ExecutionMode.RECALL,
     ) -> HypothesisExecution:
         """Execute hypotheses by rank, returning the first grounded one."""
         hypothesis_output.validate_categories(self.scene_categories)
@@ -1073,29 +1484,6 @@ class KeyframeSelector:
 
         return sorted(result.matched_objects, key=sort_key)
 
-    def _force_legacy_world_hard(
-        self, output: HypothesisOutputV1
-    ) -> HypothesisOutputV1:
-        new_hypotheses: list[QueryHypothesis] = []
-        for hypothesis in output.hypotheses:
-            grounding = hypothesis.grounding_query.model_copy(deep=True)
-            for _node, constraint in grounding.iter_constraints():
-                constraint.reference_frame = ReferenceFrame.WORLD
-                constraint.viewpoint_context_id = None
-                constraint.execution_policy = ExecutionPolicy.HARD
-            grounding.viewpoint_contexts = []
-            new_hypotheses.append(
-                QueryHypothesis(
-                    kind=hypothesis.kind,
-                    rank=hypothesis.rank,
-                    grounding_query=grounding,
-                    lexical_hints=hypothesis.lexical_hints,
-                )
-            )
-        return HypothesisOutputV1(
-            parse_mode=output.parse_mode, hypotheses=new_hypotheses
-        )
-
     def _guard_viewpoint_traj_available(self, output: HypothesisOutputV1) -> None:
         if self.camera_poses:
             return
@@ -1103,7 +1491,7 @@ class KeyframeSelector:
             for _node, constraint in hypothesis.grounding_query.iter_constraints():
                 if constraint.reference_frame == ReferenceFrame.VIEWER:
                     raise RuntimeError(
-                        "viewpoint_aware=True requires a camera trajectory, but none "
+                        "Viewer-frame query requires a camera trajectory, but none "
                         f"of {self._trajectory_search_paths()} yielded 4x4 poses."
                     )
 
@@ -1159,8 +1547,55 @@ class KeyframeSelector:
                 constraint.execution_policy = ExecutionPolicy.RANK_ONLY
         return grounding
 
-    def _sanitize_categories(self, grounding_query: GroundingQuery) -> GroundingQuery:
+    def _match_scene_category(self, raw_category: str) -> list[str]:
+        """Resolve a raw category string against ``self.scene_categories`` with fuzzy alignment."""
+        stripped = raw_category.strip()
+        if not stripped or stripped.upper() in {"UNKNOW", "UNKNOWN", "NONE", "NULL"}:
+            return []
         scene_set = set(self.scene_categories)
+        if stripped in scene_set:
+            return [stripped]
+
+        norm = stripped.lower().replace("-", "_").replace(" ", "_")
+        # Case-insensitive / underscore match
+        exact_ci = [cat for cat in self.scene_categories if cat.lower() == norm]
+        if exact_ci:
+            return exact_ci
+
+        # Singular / plural normalization
+        singular = (
+            norm[:-3] + "y"
+            if norm.endswith("ies") and len(norm) > 4
+            else (
+                norm[:-2]
+                if norm.endswith("es") and len(norm) > 3
+                else (norm[:-1] if norm.endswith("s") and len(norm) > 2 else norm)
+            )
+        )
+        plural_matches = [
+            cat
+            for cat in self.scene_categories
+            if cat.lower() in {singular, f"{singular}s", f"{singular}es"}
+        ]
+        if plural_matches:
+            return plural_matches
+
+        # Substring token containment (e.g. "cushion" -> "sofa_seat_cushion", "office chair" -> "chair")
+        substr_matches = [
+            cat
+            for cat in self.scene_categories
+            if norm in cat.lower().split("_") or cat.lower() in norm.split("_")
+        ]
+        return substr_matches
+
+    def _sanitize_categories(self, grounding_query: GroundingQuery) -> GroundingQuery:
+        by_id = {obj.obj_id: obj for obj in self.objects}
+        by_cat: dict[str, list[int]] = {}
+        for obj in self.objects:
+            cat_name = obj.object_tag or obj.category
+            if cat_name:
+                by_cat.setdefault(cat_name, []).append(obj.obj_id)
+
         grounding = grounding_query.model_copy(deep=True)
         nodes = list(self._iter_nodes(grounding.root))
         for context in grounding.viewpoint_contexts:
@@ -1171,26 +1606,72 @@ class KeyframeSelector:
             ):
                 if anchor is not None:
                     nodes.extend(self._iter_nodes(anchor))
+
         for node in nodes:
-            cleaned: list[str] = []
+            cleaned_cats: list[str] = []
             for category in node.categories:
-                if (
-                    category in scene_set or category == "UNKNOW"
-                ) and category not in cleaned:
-                    cleaned.append(category)
-            node.categories = cleaned or ["UNKNOW"]
+                for matched in self._match_scene_category(category):
+                    if matched not in cleaned_cats:
+                        cleaned_cats.append(matched)
+
+            # Filter candidate_object_ids to existing objects in the scene
+            valid_ids = [oid for oid in node.candidate_object_ids if oid in by_id]
+            if cleaned_cats and valid_ids:
+                # Keep IDs whose category aligns with cleaned_cats; if none align, keep all valid_ids
+                cat_aligned_ids = [
+                    oid
+                    for oid in valid_ids
+                    if (by_id[oid].object_tag or by_id[oid].category) in cleaned_cats
+                ]
+                if cat_aligned_ids:
+                    valid_ids = cat_aligned_ids
+            elif not cleaned_cats and valid_ids:
+                # Infer category from valid candidate_object_ids when category was omitted or '#id' only
+                for oid in valid_ids:
+                    inferred = by_id[oid].object_tag or by_id[oid].category
+                    if (
+                        inferred
+                        and inferred in self.scene_categories
+                        and inferred not in cleaned_cats
+                    ):
+                        cleaned_cats.append(inferred)
+
+            node.candidate_object_ids = valid_ids
+            node.categories = cleaned_cats or ["UNKNOW"]
+
+            # Sanitize or auto-backfill node.grid_cells
+            if node.grid_cells:
+                node.grid_cells = self.grid_spec.sanitize_cells(node.grid_cells)
+            if not node.grid_cells:
+                if node.candidate_object_ids:
+                    node.grid_cells = self.grid_index.grids_for_objects(
+                        node.candidate_object_ids
+                    )
+                elif cleaned_cats:
+                    cat_oids = [oid for c in cleaned_cats for oid in by_cat.get(c, [])]
+                    if 1 <= len(cat_oids) <= 2:
+                        node.grid_cells = self.grid_index.grids_for_objects(cat_oids)
 
         root = grounding.root
         if (
             root.categories == ["UNKNOW"]
             and root.spatial_constraints
             and any(
-                "UNKNOW" not in anchor.categories
+                not self._is_unresolvable_anchor(anchor)
                 for sc in root.spatial_constraints
                 for anchor in sc.anchors
             )
         ):
             root.open_ended = True
+
+        grounding.target_grids = self.grid_spec.sanitize_cells(
+            [*root.grid_cells, *grounding.target_grids]
+        )
+        root.grid_cells = list(grounding.target_grids)
+        descendant_grids = grounding._collect_descendant_anchor_grids()
+        grounding.anchor_grids = self.grid_spec.sanitize_cells(
+            [*grounding.anchor_grids, *descendant_grids]
+        )
         return grounding
 
     def _validate_categories_in_scene(self, grounding_query: GroundingQuery) -> None:
@@ -1211,16 +1692,28 @@ class KeyframeSelector:
             if category in hidden:
                 raise ValueError(f"Masked category leak: {category!r}")
 
+    @staticmethod
+    def _is_unresolvable_anchor(anchor: QueryNode) -> bool:
+        """Return True only when an anchor has no known category, no candidate IDs, and no grid cells."""
+        return (
+            "UNKNOW" in anchor.categories
+            and not anchor.candidate_object_ids
+            and not anchor.grid_cells
+        )
+
     def _has_unknown_anchors(self, grounding_query: GroundingQuery) -> bool:
         for node in self._iter_nodes(grounding_query.root):
             for constraint in node.spatial_constraints:
-                if any("UNKNOW" in anchor.categories for anchor in constraint.anchors):
+                if any(
+                    self._is_unresolvable_anchor(anchor)
+                    for anchor in constraint.anchors
+                ):
                     return True
             if (
                 node.select_constraint is not None
                 and node.select_constraint.reference is not None
             ):
-                if "UNKNOW" in node.select_constraint.reference.categories:
+                if self._is_unresolvable_anchor(node.select_constraint.reference):
                     return True
         return False
 
@@ -1270,40 +1763,55 @@ class KeyframeSelector:
         hidden_categories: Sequence[str] = (),
         pose_aware: bool = False,
         frustum_method: str = "l1",
-        viewpoint_aware: bool = False,
         use_visual_context: bool = False,
+        target_grids: Sequence[GridCell] = (),
     ) -> KeyframeResult:
-        """Select ``k`` keyframes that ground and cover the query's objects."""
+        """Select ``k`` keyframes that ground and cover the query's objects and/or BEV grids."""
         logger.info(f"[KeyframeSelector] selecting {k} keyframes for {query!r}")
 
         hypothesis_output = self.parse_query_hypotheses(
             query,
-            apply_viewpoint_normalize=viewpoint_aware,
             use_visual_context=use_visual_context,
         )
-        if viewpoint_aware:
-            self._guard_viewpoint_traj_available(hypothesis_output)
-        else:
-            hypothesis_output = self._force_legacy_world_hard(hypothesis_output)
+        self._guard_viewpoint_traj_available(hypothesis_output)
 
-        execution_mode = (
-            ExecutionMode.RECALL if viewpoint_aware else ExecutionMode.STRICT
-        )
+        execution_mode = ExecutionMode.RECALL
         execution = self.execute_hypotheses(
             hypothesis_output, hidden_categories=hidden_categories, mode=execution_mode
         )
         first_hypothesis = hypothesis_output.ordered_hypotheses()[0]
+        requested_grids = self._collect_requested_grids(
+            target_grids, execution.hypothesis, hypothesis_output
+        )
 
         if execution.hypothesis is None or execution.result.is_empty:
+            if requested_grids:
+                grid_result = self._select_grid_only_keyframes(
+                    query=query,
+                    k=k,
+                    strategy=strategy,
+                    execution_mode=execution_mode,
+                    execution=execution,
+                    hypothesis_output=hypothesis_output,
+                    requested_grids=requested_grids,
+                    pose_aware=pose_aware,
+                    frustum_method=frustum_method,
+                )
+                if grid_result is not None:
+                    return grid_result
+
             return KeyframeResult(
                 query=query,
                 target_term=first_hypothesis.grounding_query.root.category,
                 anchor_term=None,
+                target_grids=requested_grids,
                 metadata=KeyframeSelectionMetadata(
                     status=execution.status,
                     strategy=strategy,
                     execution_mode=execution_mode,
                     error="No matching objects",
+                    target_grids=requested_grids,
+                    grid_shape=self.grid_spec.shape,
                     attempts=execution.attempts,
                     hypothesis_output=hypothesis_output,
                 ),
@@ -1313,22 +1821,57 @@ class KeyframeSelector:
         selected_query = execution.hypothesis.grounding_query
         anchor_objects = self._collect_anchor_objects(selected_query)
 
-        target_ids = [obj.obj_id for obj in target_objects[:_MAX_COVERAGE_TARGETS]]
+        target_ids = [
+            obj.obj_id
+            for obj in target_objects[:_MAX_COVERAGE_TARGETS]
+            if obj.obj_id >= 0
+        ]
         object_ids = list(target_ids)
-        object_ids.extend(obj.obj_id for obj in anchor_objects[:_MAX_COVERAGE_ANCHORS])
+        object_ids.extend(
+            obj.obj_id
+            for obj in anchor_objects[:_MAX_COVERAGE_ANCHORS]
+            if obj.obj_id >= 0
+        )
 
-        keyframe_indices = self.get_joint_coverage_views(
+        object_grids = self.grid_index.grids_for_objects(object_ids)
+        anchor_grids = self.grid_spec.sanitize_cells(selected_query.anchor_grids)
+        all_target_grids = self.grid_spec.sanitize_cells(
+            [*requested_grids, *object_grids]
+        )
+        padding_grids = self.grid_spec.sanitize_cells(
+            [*requested_grids, *anchor_grids, *object_grids]
+        )
+
+        primary_indices = self.get_joint_coverage_views(
             object_ids if strategy == "joint_coverage" else target_ids,
             max_views=k,
+            target_grids=requested_grids,
             pose_aware=pose_aware,
             frustum_method=frustum_method,
         )
         keyframe_indices = self.pad_keyframes_to_minimum(
-            keyframe_indices, object_ids, min_count=min(k, _MIN_KEYFRAMES)
+            primary_indices,
+            object_ids,
+            min_count=min(k, _MIN_KEYFRAMES),
+            target_grids=padding_grids,
         )
 
-        keyframe_paths, frame_mappings = self._resolve_keyframes(keyframe_indices)
+        keyframe_paths, frame_mappings = self._resolve_keyframes(
+            keyframe_indices,
+            primary_views=frozenset(primary_indices),
+            object_ids=frozenset(object_ids),
+            requested_grids=frozenset(requested_grids),
+        )
         anchor_term = self._anchor_term(selected_query)
+        frame_object_ids = {
+            fm.resolved_view_id: fm.visible_object_ids for fm in frame_mappings
+        }
+        frame_covered_grids = {
+            fm.resolved_view_id: fm.covered_grids for fm in frame_mappings
+        }
+        union_covered_grids = self.grid_spec.sanitize_cells(
+            [cell for fm in frame_mappings for cell in fm.covered_grids]
+        )
 
         return KeyframeResult(
             query=query,
@@ -1338,6 +1881,9 @@ class KeyframeSelector:
             keyframe_paths=keyframe_paths,
             target_objects=target_objects,
             anchor_objects=anchor_objects,
+            target_grids=all_target_grids,
+            frame_object_ids=frame_object_ids,
+            frame_covered_grids=frame_covered_grids,
             metadata=KeyframeSelectionMetadata(
                 status=execution.status,
                 strategy=strategy,
@@ -1345,6 +1891,114 @@ class KeyframeSelector:
                 selected_hypothesis_kind=execution.hypothesis.kind,
                 selected_hypothesis_rank=execution.hypothesis.rank,
                 all_object_ids=object_ids,
+                target_grids=all_target_grids,
+                covered_grids=union_covered_grids,
+                grid_shape=self.grid_spec.shape,
+                frame_mappings=frame_mappings,
+                attempts=execution.attempts,
+                hypothesis_output=hypothesis_output,
+            ),
+        )
+
+    def _collect_requested_grids(
+        self,
+        explicit_grids: Sequence[GridCell],
+        selected_hypothesis: QueryHypothesis | None,
+        hypothesis_output: HypothesisOutputV1,
+    ) -> list[GridCell]:
+        combined: list[GridCell] = list(explicit_grids)
+        if selected_hypothesis is not None:
+            combined.extend(selected_hypothesis.grounding_query.target_grids)
+            if not combined:
+                combined.extend(selected_hypothesis.grounding_query.anchor_grids)
+        else:
+            for hypothesis in hypothesis_output.ordered_hypotheses():
+                combined.extend(hypothesis.grounding_query.target_grids)
+            if not combined:
+                for hypothesis in hypothesis_output.ordered_hypotheses():
+                    combined.extend(hypothesis.grounding_query.anchor_grids)
+        return self.grid_spec.sanitize_cells(combined)
+
+    def _select_grid_only_keyframes(
+        self,
+        *,
+        query: str,
+        k: int,
+        strategy: str,
+        execution_mode: ExecutionMode,
+        execution: HypothesisExecution,
+        hypothesis_output: HypothesisOutputV1,
+        requested_grids: list[GridCell],
+        pose_aware: bool,
+        frustum_method: str,
+    ) -> KeyframeResult | None:
+        primary_indices = self.get_joint_coverage_views(
+            [],
+            max_views=k,
+            target_grids=requested_grids,
+            pose_aware=pose_aware,
+            frustum_method=frustum_method,
+        )
+        if not primary_indices:
+            return None
+        grid_object_ids: list[int] = []
+        seen_oids: set[int] = set()
+        for cell in requested_grids:
+            for oid in self.grid_to_objects.get(cell, []):
+                if oid not in seen_oids:
+                    seen_oids.add(oid)
+                    grid_object_ids.append(oid)
+
+        keyframe_indices = self.pad_keyframes_to_minimum(
+            primary_indices,
+            grid_object_ids,
+            min_count=min(k, _MIN_KEYFRAMES),
+            target_grids=requested_grids,
+        )
+        keyframe_paths, frame_mappings = self._resolve_keyframes(
+            keyframe_indices,
+            primary_views=frozenset(primary_indices),
+            object_ids=frozenset(),
+            requested_grids=frozenset(requested_grids),
+        )
+        first_hypothesis = hypothesis_output.ordered_hypotheses()[0]
+        by_id = {obj.obj_id: obj for obj in self.objects}
+        region_objects = [
+            by_id[oid]
+            for oid in grid_object_ids[:_MAX_COVERAGE_TARGETS]
+            if oid in by_id
+        ]
+        frame_object_ids = {
+            fm.resolved_view_id: fm.visible_object_ids for fm in frame_mappings
+        }
+        frame_covered_grids = {
+            fm.resolved_view_id: fm.covered_grids for fm in frame_mappings
+        }
+        union_covered_grids = self.grid_spec.sanitize_cells(
+            [cell for fm in frame_mappings for cell in fm.covered_grids]
+        )
+
+        return KeyframeResult(
+            query=query,
+            target_term=first_hypothesis.grounding_query.root.category,
+            anchor_term=self._anchor_term(first_hypothesis.grounding_query),
+            keyframe_indices=keyframe_indices,
+            keyframe_paths=keyframe_paths,
+            target_objects=region_objects,
+            anchor_objects=[],
+            target_grids=requested_grids,
+            frame_object_ids=frame_object_ids,
+            frame_covered_grids=frame_covered_grids,
+            metadata=KeyframeSelectionMetadata(
+                status=GroundingStatus.GRID_GROUNDED,
+                strategy=strategy,
+                execution_mode=execution_mode,
+                selected_hypothesis_kind=first_hypothesis.kind,
+                selected_hypothesis_rank=first_hypothesis.rank,
+                all_object_ids=grid_object_ids,
+                target_grids=requested_grids,
+                covered_grids=union_covered_grids,
+                grid_shape=self.grid_spec.shape,
                 frame_mappings=frame_mappings,
                 attempts=execution.attempts,
                 hypothesis_output=hypothesis_output,
@@ -1358,7 +2012,11 @@ class KeyframeSelector:
         anchors: list[SceneObject] = []
         for constraint in grounding_query.root.spatial_constraints:
             for anchor_node in constraint.anchors:
-                anchors.extend(executor.evaluate_node(anchor_node).matched_objects)
+                for obj in executor.evaluate_node(
+                    anchor_node, is_anchor=True
+                ).matched_objects:
+                    if obj.obj_id >= 0:
+                        anchors.append(obj)
         return anchors
 
     @staticmethod
@@ -1369,7 +2027,12 @@ class KeyframeSelector:
         return None
 
     def _resolve_keyframes(
-        self, keyframe_indices: list[int]
+        self,
+        keyframe_indices: list[int],
+        *,
+        primary_views: frozenset[int] = frozenset(),
+        object_ids: frozenset[int] = frozenset(),
+        requested_grids: frozenset[GridCell] = frozenset(),
     ) -> tuple[list[Path], list[FrameMapping]]:
         keyframe_paths: list[Path] = []
         frame_mappings: list[FrameMapping] = []
@@ -1377,6 +2040,20 @@ class KeyframeSelector:
             path, resolved_view = self._resolve_keyframe_path(view_id)
             if path is not None:
                 keyframe_paths.append(path)
+            visible_oids = [
+                int(oid) for oid, _ in self.view_to_objects.get(resolved_view, [])
+            ]
+            covered_grids = self.grid_index.covered_grids_for_view(resolved_view)
+            grid_bounds = self.grid_index.grid_bounds_for_view(resolved_view)
+            source = self._classify_frame_source(
+                view_id=view_id,
+                resolved_view=resolved_view,
+                primary_views=primary_views,
+                object_ids=object_ids,
+                requested_grids=requested_grids,
+                visible_oids=visible_oids,
+                covered_grids=covered_grids,
+            )
             frame_mappings.append(
                 FrameMapping(
                     requested_view_id=view_id,
@@ -1384,9 +2061,40 @@ class KeyframeSelector:
                     resolved_view_id=resolved_view,
                     resolved_frame_id=self.map_view_to_frame(resolved_view),
                     path=str(path) if path is not None else None,
+                    visible_object_ids=visible_oids,
+                    covered_grids=covered_grids,
+                    grid_bounds=grid_bounds,
+                    source=source,
                 )
             )
         return keyframe_paths, frame_mappings
+
+    @staticmethod
+    def _classify_frame_source(
+        *,
+        view_id: int,
+        resolved_view: int,
+        primary_views: frozenset[int],
+        object_ids: frozenset[int],
+        requested_grids: frozenset[GridCell],
+        visible_oids: Sequence[int],
+        covered_grids: Sequence[GridCell],
+    ) -> FrameSource:
+        if (
+            primary_views
+            and view_id not in primary_views
+            and resolved_view not in primary_views
+        ):
+            return "padding"
+        has_obj = bool(object_ids and (set(visible_oids) & object_ids))
+        has_grid = bool(requested_grids and (set(covered_grids) & requested_grids))
+        if has_obj and has_grid:
+            return "object+grid"
+        if has_grid and not object_ids:
+            return "grid"
+        if has_grid and not has_obj:
+            return "grid"
+        return "object"
 
 
 _STATUS_BY_KIND: dict[HypothesisKind, GroundingStatus] = {
@@ -1406,6 +2114,7 @@ def select_keyframes(
     model: str | None = None,
     dataset: str = "nr3d",
     use_visual_context: bool = False,
+    target_grids: Sequence[GridCell] = (),
 ) -> KeyframeResult:
     """Convenience wrapper: build a selector for a scene and select keyframes."""
     selector = KeyframeSelector.from_scene_path(
@@ -1416,5 +2125,8 @@ def select_keyframes(
         dataset=dataset,
     )
     return selector.select_keyframes_v2(
-        query, k=k, use_visual_context=use_visual_context
+        query,
+        k=k,
+        use_visual_context=use_visual_context,
+        target_grids=target_grids,
     )

@@ -27,6 +27,7 @@ from .models import ToolInputError
 
 _MAX_FRAMES = 3
 _CONCEPTGRAPH_DIRNAME = "conceptgraph"
+_SELECTOR_CACHE: dict[str, Any] = {}
 
 
 class KeyframeSelectorArgs(BaseModel):
@@ -36,6 +37,8 @@ class KeyframeSelectorArgs(BaseModel):
 
     query: str = Field(min_length=1)
     k: int = Field(default=3, ge=1)
+    use_bev: bool = True
+    target_grids: list[tuple[int, int]] = Field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -68,7 +71,13 @@ def keyframe_selector(
     capped_k = min(args.k, _MAX_FRAMES)
     note = "" if args.k == capped_k else f"(k capped at {_MAX_FRAMES} from {args.k})"
 
-    result = _run_selector(conceptgraph_dir, args.query, capped_k)
+    result = _run_selector(
+        conceptgraph_dir,
+        args.query,
+        capped_k,
+        use_bev=args.use_bev,
+        target_grids=args.target_grids,
+    )
     frame_ids = _map_result_to_frame_ids(scene, result)
     frames = tuple(
         frame
@@ -82,12 +91,34 @@ def keyframe_selector(
     )
 
 
-def _run_selector(conceptgraph_dir: Path, query: str, k: int) -> Any:
+def _run_selector(
+    conceptgraph_dir: Path,
+    query: str,
+    k: int,
+    *,
+    use_bev: bool = True,
+    target_grids: list[tuple[int, int]] | None = None,
+) -> Any:
     try:
         from keyframe.keyframe_selector import KeyframeSelector
 
-        selector = KeyframeSelector.from_scene_path(conceptgraph_dir, dataset="nr3d")
-        return selector.select_keyframes_v2(query, k=k, viewpoint_aware=True)
+        cache_key = str(conceptgraph_dir.resolve())
+        selector = _SELECTOR_CACHE.get(cache_key)
+        if selector is None:
+            selector = KeyframeSelector.from_scene_path(
+                conceptgraph_dir,
+                dataset="nr3d",
+                prefer_lightweight_pcd=True,
+                ensure_lightweight_pcd=True,
+            )
+            _SELECTOR_CACHE[cache_key] = selector
+        kwargs: dict[str, Any] = {
+            "k": k,
+            "use_visual_context": use_bev,
+        }
+        if target_grids:
+            kwargs["target_grids"] = target_grids
+        return selector.select_keyframes_v2(query, **kwargs)
     except ToolInputError:
         raise
     except Exception as exc:  # re-raised as a recoverable tool error for the agent
@@ -98,13 +129,7 @@ def _run_selector(conceptgraph_dir: Path, query: str, k: int) -> Any:
 
 
 def _map_result_to_frame_ids(scene: Nr3dScene, result: Any) -> list[int]:
-    """Map a ``KeyframeResult`` to catalog frame ids.
-
-    ``keyframe_indices`` come from the scene's per-frame visibility index, which
-    is keyed by the same frame ids the catalog uses, so they map directly. Only
-    when that yields nothing do we fall back to matching the resolved RGB paths'
-    basenames against the catalog's per-frame views.
-    """
+    """Map a ``KeyframeResult`` to catalog frame ids."""
     valid_frames = set(scene.proposal_pool.frame_to_proposal_ids())
     direct = _dedupe_present(
         (int(view_id) for view_id in getattr(result, "keyframe_indices", []) or []),

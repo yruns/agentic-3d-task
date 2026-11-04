@@ -217,7 +217,13 @@ class AttributeFilter:
 
     @staticmethod
     def _searchable_text(obj: SceneObject) -> str:
-        parts = [obj.summary, obj.object_tag, obj.category]
+        parts = [
+            obj.summary,
+            obj.location,
+            obj.object_tag,
+            obj.category,
+            *obj.color,
+        ]
         return " ".join(part for part in parts if part).lower()
 
     @staticmethod

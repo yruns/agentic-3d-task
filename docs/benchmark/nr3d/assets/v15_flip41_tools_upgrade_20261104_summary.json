@@ -1,0 +1,2224 @@
+{
+  "n": 41,
+  "mean_iou": 0.8559093276227299,
+  "Acc@0.25": 0.8536585365853658,
+  "Acc@0.50": 0.8536585365853658,
+  "cache_hit_rate": 0.5853658536585366,
+  "mean_cache_ratio": 0.4577601285370588,
+  "per_sample": [
+    {
+      "sample_id": "scannet/scene0084_00::43::31587",
+      "status": "completed",
+      "iou": 0.9999999999999979,
+      "predicted_bbox_9dof": [
+        0.6175869027741375,
+        -0.3978865867428334,
+        0.7945915145383121,
+        0.06843682846689497,
+        1.0773772568047355,
+        0.10917151215998147,
+        -0.007903939470425725,
+        0.008517423388696876,
+        -0.3070251727631796
+      ],
+      "gt_bbox_9dof": [
+        0.6175869027741375,
+        -0.3978865867428334,
+        0.7945915145383121,
+        0.06843682846689497,
+        1.0773772568047355,
+        0.10917151215998147,
+        -0.007903939470425725,
+        0.008517423388696876,
+        -0.3070251727631796
+      ],
+      "selected_object_id": 43,
+      "confidence": 0.95,
+      "query": "The rail on the side opposite side of 2 other rails.",
+      "summary": "In the shower stall, there are three rails: #43, #44, and #45. Rails #44 (horizontal grab bar) and #45 (vertical slide bar) are mounted together on the back wall, constituting the '2 other rails', while proposal #43 is the single grab rail mounted on the adjacent side wall.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 150177,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 19970,
+          "input_tokens": 23745,
+          "output_tokens": 1245,
+          "reasoning_output_tokens": 1121,
+          "total_tokens": 24990
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 99923,
+          "input_tokens": 220095,
+          "output_tokens": 4760,
+          "reasoning_output_tokens": 3746,
+          "total_tokens": 224855
+        }
+      },
+      "input_tokens": 23745,
+      "cached_input_tokens": 19970
+    },
+    {
+      "sample_id": "scannet/scene0643_00::12::40462",
+      "status": "completed",
+      "iou": 1.0000000000000007,
+      "predicted_bbox_9dof": [
+        0.9223836976824902,
+        -1.5180479231692026,
+        1.0093017396895492,
+        0.049940717724045035,
+        0.583344185286134,
+        0.39356739609508407,
+        -0.08351160799963256,
+        -0.08793385495843853,
+        0.10649532611091916
+      ],
+      "gt_bbox_9dof": [
+        0.9223836976824902,
+        -1.5180479231692026,
+        1.0093017396895492,
+        0.049940717724045035,
+        0.583344185286134,
+        0.39356739609508407,
+        -0.08351160799963256,
+        -0.08793385495843853,
+        0.10649532611091916
+      ],
+      "selected_object_id": 12,
+      "confidence": 0.9,
+      "query": "facing the monitors, right",
+      "summary": "When standing in the room and facing the desks and monitors aligned along the positive X wall, proposal #12 (at y = -1.52 m) is to the observer's right, whereas proposal #13 (at y = 0.57 m) is to the observer's left.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 16652,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 19162,
+          "output_tokens": 713,
+          "reasoning_output_tokens": 589,
+          "total_tokens": 19875
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 39956,
+          "input_tokens": 118588,
+          "output_tokens": 2716,
+          "reasoning_output_tokens": 2085,
+          "total_tokens": 121304
+        }
+      },
+      "input_tokens": 19162,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0647_00::16::21577",
+      "status": "completed",
+      "iou": 1.0000000000000044,
+      "predicted_bbox_9dof": [
+        -2.220406739282836,
+        1.2095479435151835,
+        0.9598773437344286,
+        0.07654190882498804,
+        1.2353759899774126,
+        1.7316455618709166,
+        -0.0035761741040715236,
+        0.22825752434720692,
+        0.09475491730338487
+      ],
+      "gt_bbox_9dof": [
+        -2.220406739282836,
+        1.2095479435151835,
+        0.9598773437344286,
+        0.07654190882498804,
+        1.2353759899774126,
+        1.7316455618709166,
+        -0.0035761741040715236,
+        0.22825752434720692,
+        0.09475491730338487
+      ],
+      "selected_object_id": 16,
+      "confidence": 0.88,
+      "query": "It is the door with the big silver handle on the wall with the large yellow and orange and blue painting.",
+      "summary": "Proposal #16 is the door located on the left wall (wall #3) along with the very large painting (#17), which features bright orange, yellow/red dandelion artwork on a teal/blue background. Proposal #16 features a prominent silver handle.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 21889,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 13037,
+          "output_tokens": 1217,
+          "reasoning_output_tokens": 1108,
+          "total_tokens": 14254
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 36463,
+          "output_tokens": 1832,
+          "reasoning_output_tokens": 1509,
+          "total_tokens": 38295
+        }
+      },
+      "input_tokens": 13037,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0690_00::13::34953",
+      "status": "completed",
+      "iou": 1.0,
+      "predicted_bbox_9dof": [
+        -2.7812830472551826,
+        -0.9000234792449965,
+        0.4095735424508604,
+        0.9068391378130062,
+        0.7943908427032915,
+        0.6045290053180907,
+        -0.3722426010792655,
+        -0.3296959988715844,
+        0.12454129890764713
+      ],
+      "gt_bbox_9dof": [
+        -2.7812830472551826,
+        -0.9000234792449965,
+        0.4095735424508604,
+        0.9068391378130062,
+        0.7943908427032915,
+        0.6045290053180907,
+        -0.3722426010792655,
+        -0.3296959988715844,
+        0.12454129890764713
+      ],
+      "selected_object_id": 13,
+      "confidence": 0.95,
+      "query": "if looking into the living room from the china cabinet it's the table in the back left",
+      "summary": "Standing at the china cabinet (#9) and looking into the living room facing west (-X direction), the coffee table (#12) is in the foreground center, end table #14 is in the back right (+Y), and end table #13 (under lamp #11 next to the couch) is in the back left (-Y).",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 61138,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 15279,
+          "output_tokens": 983,
+          "reasoning_output_tokens": 855,
+          "total_tokens": 16262
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 19917,
+          "input_tokens": 83210,
+          "output_tokens": 2868,
+          "reasoning_output_tokens": 2256,
+          "total_tokens": 86078
+        }
+      },
+      "input_tokens": 15279,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0246_00::39::37886",
+      "status": "completed",
+      "iou": 1.0000000000000007,
+      "predicted_bbox_9dof": [
+        0.71379658426448,
+        0.9087339727424062,
+        0.5459508488900675,
+        0.4770264288522158,
+        0.52578340604629,
+        0.1456247122719816,
+        0.05197478723199922,
+        0.04790898674558086,
+        0.6778101806823216
+      ],
+      "gt_bbox_9dof": [
+        0.71379658426448,
+        0.9087339727424062,
+        0.5459508488900675,
+        0.4770264288522158,
+        0.52578340604629,
+        0.1456247122719816,
+        0.05197478723199922,
+        0.04790898674558086,
+        0.6778101806823216
+      ],
+      "selected_object_id": 39,
+      "confidence": 0.95,
+      "query": "You are looking for the gray pillow closest to the headboard.",
+      "summary": "Proposal #39 is the dark gray/charcoal throw pillow resting on the bed behind the front blue pillow (#38) and in front of the white pillows (#40, #41). It is positioned closer to the headboard than the blue pillow in front of it.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 251981,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 27977,
+          "input_tokens": 33803,
+          "output_tokens": 954,
+          "reasoning_output_tokens": 837,
+          "total_tokens": 34757
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 335829,
+          "input_tokens": 490996,
+          "output_tokens": 5388,
+          "reasoning_output_tokens": 3600,
+          "total_tokens": 496384
+        }
+      },
+      "input_tokens": 33803,
+      "cached_input_tokens": 27977
+    },
+    {
+      "sample_id": "scannet/scene0423_00::3::12539",
+      "status": "completed",
+      "iou": 0.0,
+      "predicted_bbox_9dof": [
+        0.1261330802501073,
+        0.7446344454080065,
+        0.40468214520670465,
+        0.8440224860275974,
+        0.7687921805139957,
+        0.9139413297929271,
+        -0.42813401233665777,
+        -0.7830383198508145,
+        0.3020275444543173
+      ],
+      "gt_bbox_9dof": [
+        -0.29400881970136405,
+        -0.9608444582636788,
+        0.427648719854422,
+        0.8098655086255686,
+        0.9125029825465841,
+        0.7885671163539846,
+        0.4348698132812073,
+        -0.6403862826707954,
+        0.43352415979552134
+      ],
+      "selected_object_id": 2,
+      "confidence": 0.85,
+      "query": "How's the 3 chairs that are aligned, the chair is in the middle.",
+      "summary": "Looking at the seating group against the planter wall, armchairs #4, #2, and #1 form an aligned row along the background, with chair #2 positioned in the middle between #4 and #1.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 14843,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 27873,
+          "input_tokens": 38879,
+          "output_tokens": 289,
+          "reasoning_output_tokens": 138,
+          "total_tokens": 39168
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 460225,
+          "input_tokens": 705459,
+          "output_tokens": 13559,
+          "reasoning_output_tokens": 10290,
+          "total_tokens": 719018
+        }
+      },
+      "input_tokens": 38879,
+      "cached_input_tokens": 27873
+    },
+    {
+      "sample_id": "scannet/scene0328_00::27::35192",
+      "status": "completed",
+      "iou": 1.0000000000000075,
+      "predicted_bbox_9dof": [
+        1.0215918654314615,
+        -0.4433147371191849,
+        1.3281493826272497,
+        0.06724630986882305,
+        0.2520616571883399,
+        0.3206846675094378,
+        -0.07863241000520595,
+        0.2016740558849348,
+        -0.034736773808643984
+      ],
+      "gt_bbox_9dof": [
+        1.0215918654314615,
+        -0.4433147371191849,
+        1.3281493826272497,
+        0.06724630986882305,
+        0.2520616571883399,
+        0.3206846675094378,
+        -0.07863241000520595,
+        0.2016740558849348,
+        -0.034736773808643984
+      ],
+      "selected_object_id": 27,
+      "confidence": 0.98,
+      "query": "the sign to the left by itself on the windowsill",
+      "summary": "Proposal #27 is the leftmost sign in the scene, isolated by itself on the window/backsplash panel (#1) above the sink, while proposals #28, #29, and #30 form a cluster on the countertop further to the right under the upper cabinets.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 66250,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 11952,
+          "input_tokens": 17606,
+          "output_tokens": 314,
+          "reasoning_output_tokens": 196,
+          "total_tokens": 17920
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 11952,
+          "input_tokens": 107571,
+          "output_tokens": 2195,
+          "reasoning_output_tokens": 1531,
+          "total_tokens": 109766
+        }
+      },
+      "input_tokens": 17606,
+      "cached_input_tokens": 11952
+    },
+    {
+      "sample_id": "scannet/scene0651_00::7::6342",
+      "status": "completed",
+      "iou": 0.9999999999999998,
+      "predicted_bbox_9dof": [
+        0.22482512474035551,
+        -1.8528468089133323,
+        0.35383041758560596,
+        0.8170559704387892,
+        0.939562412566783,
+        1.160440462776886,
+        0.3987865473143246,
+        -0.01928200605093866,
+        0.5930378677978363
+      ],
+      "gt_bbox_9dof": [
+        0.22482512474035551,
+        -1.8528468089133323,
+        0.35383041758560596,
+        0.8170559704387892,
+        0.939562412566783,
+        1.160440462776886,
+        0.3987865473143246,
+        -0.01928200605093866,
+        0.5930378677978363
+      ],
+      "selected_object_id": 7,
+      "confidence": 0.95,
+      "query": "The chair on the same side as the refrigerator",
+      "summary": "Chair #7 is positioned on the right side of dining table #15, along the same right-hand wall and side of the room as refrigerator #2.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 8829,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 12875,
+          "output_tokens": 528,
+          "reasoning_output_tokens": 448,
+          "total_tokens": 13403
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 7959,
+          "input_tokens": 37091,
+          "output_tokens": 1251,
+          "reasoning_output_tokens": 1013,
+          "total_tokens": 38342
+        }
+      },
+      "input_tokens": 12875,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0208_00::1::5894",
+      "status": "completed",
+      "iou": 0.0,
+      "predicted_bbox_9dof": [
+        -1.0203731271527283,
+        4.492063586769994,
+        0.9902860138265941,
+        0.48947116306113875,
+        0.2609400187844611,
+        1.856364113079803,
+        0.6668682004407924,
+        -0.12155021309504122,
+        0.06674978895640749
+      ],
+      "gt_bbox_9dof": [
+        2.554505146877366,
+        -1.4726189081118517,
+        1.0532287410420678,
+        0.5470606727625396,
+        2.5804080175531166,
+        2.195879381602013,
+        0.01122145570117239,
+        0.014397035513932233,
+        0.11090506770406029
+      ],
+      "selected_object_id": 15,
+      "confidence": 0.95,
+      "query": "Choose the bookcase that is in the corner next to the long set of shelves.",
+      "summary": "Proposal #15 is a multi-tiered wooden bookcase standing directly in the corner adjacent to the long row of wall shelves (#106). Both frames 80 and 224 visually confirm #15 positioned in the room corner next to the long set of shelves.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 120411,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 24182,
+          "input_tokens": 33157,
+          "output_tokens": 454,
+          "reasoning_output_tokens": 340,
+          "total_tokens": 33611
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 76594,
+          "input_tokens": 240397,
+          "output_tokens": 2481,
+          "reasoning_output_tokens": 1750,
+          "total_tokens": 242878
+        }
+      },
+      "input_tokens": 33157,
+      "cached_input_tokens": 24182
+    },
+    {
+      "sample_id": "scannet/scene0169_00::26::28815",
+      "status": "completed",
+      "iou": 1.0,
+      "predicted_bbox_9dof": [
+        -2.4493498679174524,
+        -3.147216323742084,
+        0.475691733840382,
+        0.5500859334143989,
+        0.8296866841620831,
+        1.0065960832761496,
+        -0.04643646521184061,
+        0.041517324461670224,
+        -0.3463345788569243
+      ],
+      "gt_bbox_9dof": [
+        -2.4493498679174524,
+        -3.147216323742084,
+        0.475691733840382,
+        0.5500859334143989,
+        0.8296866841620831,
+        1.0065960832761496,
+        -0.04643646521184061,
+        0.041517324461670224,
+        -0.3463345788569243
+      ],
+      "selected_object_id": 26,
+      "confidence": 0.95,
+      "query": "The smaller cabinet.",
+      "summary": "There are two cabinets in the scene: #12 (a large light-wood credenza/cabinet measuring 2.10m x 0.83m x 1.10m) and #26 (a smaller white cabinet situated in the corner alcove behind a drafting chair, measuring 0.55m x 0.83m x 1.01m). Proposal #26 is the smaller cabinet.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 75768,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 19105,
+          "output_tokens": 604,
+          "reasoning_output_tokens": 454,
+          "total_tokens": 19709
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 12011,
+          "input_tokens": 105678,
+          "output_tokens": 1844,
+          "reasoning_output_tokens": 1257,
+          "total_tokens": 107522
+        }
+      },
+      "input_tokens": 19105,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0643_00::26::21245",
+      "status": "completed",
+      "iou": 1.0,
+      "predicted_bbox_9dof": [
+        -1.3900143547912662,
+        -0.5921886523463902,
+        0.44509045159739036,
+        0.9194826307199285,
+        0.34732475180875827,
+        1.0932969714933611,
+        -0.01277950823178886,
+        0.20641910447754852,
+        0.6092184382575476
+      ],
+      "gt_bbox_9dof": [
+        -1.3900143547912662,
+        -0.5921886523463902,
+        0.44509045159739036,
+        0.9194826307199285,
+        0.34732475180875827,
+        1.0932969714933611,
+        -0.01277950823178886,
+        0.20641910447754852,
+        0.6092184382575476
+      ],
+      "selected_object_id": 26,
+      "confidence": 0.95,
+      "query": "The shelf closest to the recycling bins and the window",
+      "summary": "Proposal #26 is a low white two-shelf bookcase positioned adjacent to desk #40 on the room's south side, closest to the pair of recycling and trash bins (#29, #30) and the exterior window wall (#7).",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 141050,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 15941,
+          "input_tokens": 22878,
+          "output_tokens": 879,
+          "reasoning_output_tokens": 766,
+          "total_tokens": 23757
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 119747,
+          "input_tokens": 269117,
+          "output_tokens": 4034,
+          "reasoning_output_tokens": 2650,
+          "total_tokens": 273151
+        }
+      },
+      "input_tokens": 22878,
+      "cached_input_tokens": 15941
+    },
+    {
+      "sample_id": "scannet/scene0474_00::12::11078",
+      "status": "completed",
+      "iou": 0.09228243253190097,
+      "predicted_bbox_9dof": [
+        1.2249452883345509,
+        -0.1700037482704242,
+        0.9765972097747917,
+        0.12175818986424425,
+        0.8129042801479995,
+        0.4853141225086672,
+        -0.15868224372138295,
+        0.11760906089724887,
+        0.11253278751009478
+      ],
+      "gt_bbox_9dof": [
+        1.231427344785517,
+        0.44419098479557656,
+        1.0024251303780243,
+        0.13347391184855473,
+        0.7406855539542303,
+        0.5337616470254047,
+        0.12802285775526173,
+        -0.1567095344379552,
+        0.12110810734249526
+      ],
+      "selected_object_id": 11,
+      "confidence": 0.95,
+      "query": "You need to select the computer monitor that has a man sitting in front of it.",
+      "summary": "Proposal #11 is the computer monitor positioned on the desk directly in front of the seated person (#4). Viewed in frames 55, 61, and 65, the man is sitting in his office chair directly facing this monitor beneath the wall collage poster.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 142258,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 25278,
+          "output_tokens": 502,
+          "reasoning_output_tokens": 386,
+          "total_tokens": 25780
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 83976,
+          "input_tokens": 241405,
+          "output_tokens": 4317,
+          "reasoning_output_tokens": 3221,
+          "total_tokens": 245722
+        }
+      },
+      "input_tokens": 25278,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0412_00::28::27494",
+      "status": "completed",
+      "iou": 0.9999999999999998,
+      "predicted_bbox_9dof": [
+        0.6132985420550969,
+        -0.891421798349474,
+        0.675799896181745,
+        0.9013679653185692,
+        1.8084554105500925,
+        0.15010011928512854,
+        -0.08689251974099581,
+        -0.006725945863813809,
+        -0.10731571521556436
+      ],
+      "gt_bbox_9dof": [
+        0.6132985420550969,
+        -0.891421798349474,
+        0.675799896181745,
+        0.9013679653185692,
+        1.8084554105500925,
+        0.15010011928512854,
+        -0.08689251974099581,
+        -0.006725945863813809,
+        -0.10731571521556436
+      ],
+      "selected_object_id": 28,
+      "confidence": 0.98,
+      "query": "The cluttered table.",
+      "summary": "Proposal #28 is the folding utility table covered and cluttered with cardboard boxes, a green tote bag, and a plastic bin of tape, whereas proposal #4 is an empty, clean folding table.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 36782,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 14657,
+          "output_tokens": 137,
+          "reasoning_output_tokens": 39,
+          "total_tokens": 14794
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 7975,
+          "input_tokens": 69398,
+          "output_tokens": 874,
+          "reasoning_output_tokens": 400,
+          "total_tokens": 70272
+        }
+      },
+      "input_tokens": 14657,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0314_00::4::24825",
+      "status": "completed",
+      "iou": 0.0,
+      "predicted_bbox_9dof": [
+        1.7688941027483498,
+        0.7189860701260391,
+        0.46471337670781127,
+        0.794751957589964,
+        0.7303351580502675,
+        1.25718356595113,
+        -0.2568002777734629,
+        0.019195363318218472,
+        0.48123375515654376
+      ],
+      "gt_bbox_9dof": [
+        0.24849048826260767,
+        -1.2035635584681932,
+        0.8729248347268821,
+        0.6419945396099389,
+        0.2558431410833013,
+        0.5541307465596509,
+        -0.17746316677832144,
+        0.19847468029668147,
+        -0.0566501895544947
+      ],
+      "selected_object_id": 8,
+      "confidence": 0.85,
+      "query": "The chair opposite of the laptop.",
+      "summary": "Office chair #8 is positioned at the round conference table directly facing and pulled up opposite the laptop/computer workstation (proposal #2). Both visual inspection in frames 21, 25, 31, and 62 and proposal metadata confirm #8 as the office chair situated opposite the laptop setup.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 14508,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 27841,
+          "input_tokens": 38166,
+          "output_tokens": 374,
+          "reasoning_output_tokens": 248,
+          "total_tokens": 38540
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 563961,
+          "input_tokens": 751811,
+          "output_tokens": 12867,
+          "reasoning_output_tokens": 9252,
+          "total_tokens": 764678
+        }
+      },
+      "input_tokens": 38166,
+      "cached_input_tokens": 27841
+    },
+    {
+      "sample_id": "scannet/scene0221_00::51::24914",
+      "status": "completed",
+      "iou": 0.9999999999999971,
+      "predicted_bbox_9dof": [
+        1.4863621534045068,
+        -4.031165402253905,
+        1.2258933323675052,
+        0.27605519874010453,
+        0.13780327313886276,
+        0.3795234203963278,
+        -0.19932555476410246,
+        -0.03798176742911208,
+        0.029699965173540677
+      ],
+      "gt_bbox_9dof": [
+        1.4863621534045068,
+        -4.031165402253905,
+        1.2258933323675052,
+        0.27605519874010453,
+        0.13780327313886276,
+        0.3795234203963278,
+        -0.19932555476410246,
+        -0.03798176742911208,
+        0.029699965173540677
+      ],
+      "selected_object_id": 51,
+      "confidence": 0.95,
+      "query": "The towel in the furthest corner of the room",
+      "summary": "Between the two towel proposals (#50 and #51) mounted on the wall above the vanity counter in the entryway alcove, proposal #51 is located at (1.486, -4.031, 1.226), tucked directly into the furthest corner of the alcove against the partition wall, whereas #50 is positioned further out towards the door.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 186365,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 24017,
+          "input_tokens": 29391,
+          "output_tokens": 4220,
+          "reasoning_output_tokens": 4079,
+          "total_tokens": 33611
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 180005,
+          "input_tokens": 306670,
+          "output_tokens": 9863,
+          "reasoning_output_tokens": 8620,
+          "total_tokens": 316533
+        }
+      },
+      "input_tokens": 29391,
+      "cached_input_tokens": 24017
+    },
+    {
+      "sample_id": "scannet/scene0644_00::38::1222",
+      "status": "completed",
+      "iou": 0.9999999999999988,
+      "predicted_bbox_9dof": [
+        -0.25305950316670694,
+        1.8682317150397156,
+        0.7214240168890419,
+        0.46213334897629244,
+        0.21355329222390573,
+        0.030042254067066725,
+        -0.1963424489894951,
+        -0.01073132896776774,
+        0.019548776694968822
+      ],
+      "gt_bbox_9dof": [
+        -0.25305950316670694,
+        1.8682317150397156,
+        0.7214240168890419,
+        0.46213334897629244,
+        0.21355329222390573,
+        0.030042254067066725,
+        -0.1963424489894951,
+        -0.01073132896776774,
+        0.019548776694968822
+      ],
+      "selected_object_id": 38,
+      "confidence": 0.95,
+      "query": "on the desk facing the wall with two whiteboards on it, the keyboard you want is near the end of the desk with two chairs pushed under it.",
+      "summary": "On the desk facing the wall with two whiteboards (#34 and #35), keyboard #38 is situated near the end where two office chairs (#2 and #3) are pushed under the desk, whereas the opposite end near keyboard #40 has only one chair (#39) pushed under.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 227084,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 28088,
+          "input_tokens": 36672,
+          "output_tokens": 403,
+          "reasoning_output_tokens": 277,
+          "total_tokens": 37075
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 284950,
+          "input_tokens": 460693,
+          "output_tokens": 6846,
+          "reasoning_output_tokens": 5091,
+          "total_tokens": 467539
+        }
+      },
+      "input_tokens": 36672,
+      "cached_input_tokens": 28088
+    },
+    {
+      "sample_id": "scannet/scene0149_00::25::10119",
+      "status": "completed",
+      "iou": 0.9999999999999991,
+      "predicted_bbox_9dof": [
+        0.8584672005419889,
+        -0.28178732385447625,
+        1.8096498521108606,
+        0.5738546589801865,
+        0.8309425629714553,
+        1.0839470064801602,
+        -0.02589522977666674,
+        0.11662657064816528,
+        0.04328291972195544
+      ],
+      "gt_bbox_9dof": [
+        0.8584672005419889,
+        -0.28178732385447625,
+        1.8096498521108606,
+        0.5738546589801865,
+        0.8309425629714553,
+        1.0839470064801602,
+        -0.02589522977666674,
+        0.11662657064816528,
+        0.04328291972195544
+      ],
+      "selected_object_id": 25,
+      "confidence": 0.95,
+      "query": "Kitchen cabniet on the top nearest to the white dishwasher",
+      "summary": "Proposal #25 is the upper two-door dark brown kitchen cabinet mounted on the wall above the counter section housing the white dishwasher, directly to the right of the sink and window as seen in frames 39 and 122.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 49189,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 15649,
+          "output_tokens": 718,
+          "reasoning_output_tokens": 612,
+          "total_tokens": 16367
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 23965,
+          "input_tokens": 58369,
+          "output_tokens": 1947,
+          "reasoning_output_tokens": 1554,
+          "total_tokens": 60316
+        }
+      },
+      "input_tokens": 15649,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0307_00::22::28551",
+      "status": "completed",
+      "iou": 1.0000000000000004,
+      "predicted_bbox_9dof": [
+        -0.7129557448879144,
+        1.3763267056644062,
+        1.0011929237796862,
+        0.7193471742002568,
+        0.7021017375997125,
+        2.0187072370269026,
+        0.025929788859632825,
+        -0.05412983902347612,
+        -0.0061190791102904134
+      ],
+      "gt_bbox_9dof": [
+        -0.7129557448879144,
+        1.3763267056644062,
+        1.0011929237796862,
+        0.7193471742002568,
+        0.7021017375997125,
+        2.0187072370269026,
+        0.025929788859632825,
+        -0.05412983902347612,
+        -0.0061190791102904134
+      ],
+      "selected_object_id": 22,
+      "confidence": 0.95,
+      "query": "This is a tall white cabinet by an open door.",
+      "summary": "Proposal #22 is a tall white cabinet (height ~2.02m) located immediately adjacent to the open doorway and door (#0 / #11). Proposals #23 and #25 are low units (under 1.3m) located elsewhere.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 123306,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 19941,
+          "input_tokens": 23226,
+          "output_tokens": 180,
+          "reasoning_output_tokens": 64,
+          "total_tokens": 23406
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 107814,
+          "input_tokens": 228155,
+          "output_tokens": 2753,
+          "reasoning_output_tokens": 1648,
+          "total_tokens": 230908
+        }
+      },
+      "input_tokens": 23226,
+      "cached_input_tokens": 19941
+    },
+    {
+      "sample_id": "scannet/scene0565_00::40::3635",
+      "status": "completed",
+      "iou": 1.0000000000000004,
+      "predicted_bbox_9dof": [
+        -1.8343967147838434,
+        -1.5919540544563096,
+        0.43531955000688105,
+        0.4746685244420983,
+        0.7143492549882645,
+        0.9275031475307938,
+        0.15074163833691798,
+        -0.13072168813628915,
+        -0.08135933719526667
+      ],
+      "gt_bbox_9dof": [
+        -1.8343967147838434,
+        -1.5919540544563096,
+        0.43531955000688105,
+        0.4746685244420983,
+        0.7143492549882645,
+        0.9275031475307938,
+        0.15074163833691798,
+        -0.13072168813628915,
+        -0.08135933719526667
+      ],
+      "selected_object_id": 40,
+      "confidence": 0.95,
+      "query": "When standing in the middle of the room facing the carts, the correct one is on the left. It is next to the bin with the blue lid.",
+      "summary": "Standing in the middle of the room facing the wall with the carts (looking in the negative x direction), the carts are arranged along the wall from left (negative y) to right (positive y). Cart #40 is positioned to the left (south) right next to recycling bin #16 with the blue lid.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 77011,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 15952,
+          "input_tokens": 19079,
+          "output_tokens": 110,
+          "reasoning_output_tokens": 0,
+          "total_tokens": 19189
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 51950,
+          "input_tokens": 138413,
+          "output_tokens": 2427,
+          "reasoning_output_tokens": 1666,
+          "total_tokens": 140840
+        }
+      },
+      "input_tokens": 19079,
+      "cached_input_tokens": 15952
+    },
+    {
+      "sample_id": "scannet/scene0221_00::40::8565",
+      "status": "completed",
+      "iou": 0.9999999999999992,
+      "predicted_bbox_9dof": [
+        -1.6855249424377798,
+        -0.3189428310621294,
+        0.8340955610674557,
+        0.2122174553840984,
+        0.7421405363398654,
+        0.48215954640171554,
+        0.1690311696090725,
+        0.2721227320114443,
+        -0.6855297272474652
+      ],
+      "gt_bbox_9dof": [
+        -1.6855249424377798,
+        -0.3189428310621294,
+        0.8340955610674557,
+        0.2122174553840984,
+        0.7421405363398654,
+        0.48215954640171554,
+        0.1690311696090725,
+        0.2721227320114443,
+        -0.6855297272474652
+      ],
+      "selected_object_id": 40,
+      "confidence": 0.95,
+      "query": "Facing beds, its on the left-hand bed, and is the pillow on the far left.",
+      "summary": "When facing the beds from the room walkway (looking toward the headboards in the -x direction), bed #7 (y≈0.0) is the left-hand bed and bed #8 (y≈2.1) is on the right. On bed #7, the pillows are arranged along the headboard from left (-y) to right (+y): pillow #40 is at y=-0.319 (far left), pillow #39 is near the center at y=-0.030, and pillow #41 is at y=+0.317 (toward the nightstand on the right). Thus, proposal #40 is the far left pillow.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 25539,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 16861,
+          "output_tokens": 2643,
+          "reasoning_output_tokens": 2426,
+          "total_tokens": 19504
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 16861,
+          "output_tokens": 2643,
+          "reasoning_output_tokens": 2426,
+          "total_tokens": 19504
+        }
+      },
+      "input_tokens": 16861,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0648_00::38::10961",
+      "status": "completed",
+      "iou": 1.0000000000000004,
+      "predicted_bbox_9dof": [
+        0.8805050836324774,
+        -0.3123046729268725,
+        0.12933209024078413,
+        0.26386737479035904,
+        0.40129888646988,
+        0.5253351303682997,
+        0.599159761785141,
+        -0.007181534383369881,
+        0.7292011865444401
+      ],
+      "gt_bbox_9dof": [
+        0.8805050836324774,
+        -0.3123046729268725,
+        0.12933209024078413,
+        0.26386737479035904,
+        0.40129888646988,
+        0.5253351303682997,
+        0.599159761785141,
+        -0.007181534383369881,
+        0.7292011865444401
+      ],
+      "selected_object_id": 38,
+      "confidence": 0.98,
+      "query": "Backpack by the bed with a purple comforter.",
+      "summary": "Proposal #38 is a backpack located on the floor right next to loft bed #14, which is covered with a purple comforter. In contrast, backpack #4 is located across the room by bed #15, which has a multicolored comforter.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 69516,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 18604,
+          "output_tokens": 272,
+          "reasoning_output_tokens": 161,
+          "total_tokens": 18876
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 24050,
+          "input_tokens": 88339,
+          "output_tokens": 1235,
+          "reasoning_output_tokens": 749,
+          "total_tokens": 89574
+        }
+      },
+      "input_tokens": 18604,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0653_00::52::2767",
+      "status": "completed",
+      "iou": 0.9999999999999988,
+      "predicted_bbox_9dof": [
+        1.6212142857876435,
+        -0.8232538010952108,
+        0.6510443559379633,
+        0.3144006725643972,
+        0.4285209115704254,
+        0.3328860619799761,
+        0.21203171889459294,
+        -0.3154283136752323,
+        -0.6073840649945471
+      ],
+      "gt_bbox_9dof": [
+        1.6212142857876435,
+        -0.8232538010952108,
+        0.6510443559379633,
+        0.3144006725643972,
+        0.4285209115704254,
+        0.3328860619799761,
+        0.21203171889459294,
+        -0.3154283136752323,
+        -0.6073840649945471
+      ],
+      "selected_object_id": 52,
+      "confidence": 0.85,
+      "query": "When facing the two black framed white boards, choose the box on the left.",
+      "summary": "Facing the two black-framed whiteboards (#8 and #11) from the open walkway towards the -Y direction, the viewer's left corresponds to the +X direction. Box proposal #52 (centered at x=1.621, y=-0.823) is located to the left of proposal #51 (x=1.302) and to the left of the boards.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 104424,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 19241,
+          "output_tokens": 3215,
+          "reasoning_output_tokens": 3076,
+          "total_tokens": 22456
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 16069,
+          "input_tokens": 74671,
+          "output_tokens": 12103,
+          "reasoning_output_tokens": 11759,
+          "total_tokens": 86774
+        }
+      },
+      "input_tokens": 19241,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0329_00::31::21581",
+      "status": "completed",
+      "iou": 1.0000000000000024,
+      "predicted_bbox_9dof": [
+        0.9829438491166277,
+        -2.4646670240426882,
+        1.3005250148524854,
+        0.5074569554327353,
+        0.15064363786283946,
+        0.427502342004376,
+        0.6897188933640609,
+        -0.2509644908235391,
+        0.5432667224832676
+      ],
+      "gt_bbox_9dof": [
+        0.9829438491166277,
+        -2.4646670240426882,
+        1.3005250148524854,
+        0.5074569554327353,
+        0.15064363786283946,
+        0.427502342004376,
+        0.6897188933640609,
+        -0.2509644908235391,
+        0.5432667224832676
+      ],
+      "selected_object_id": 31,
+      "confidence": 0.9,
+      "query": "Facing the monitors, the monitor in the top right corner.",
+      "summary": "The scene contains a 2x2 arrangement of monitor annotations across the desk partition area: two lower monitors (#12 at x=-0.112, z=1.155 and #30 at x=1.007, z=1.146) and two upper monitors (#33 at x=-0.127, z=1.235 and #31 at x=0.983, z=1.301). Facing the monitors (looking in the -Y direction toward the desks from the chair/office area), +X corresponds to the right side and +Z corresponds to the top. Thus, proposal #31 is the monitor located in the top right corner.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 562858,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 23964,
+          "input_tokens": 38943,
+          "output_tokens": 2012,
+          "reasoning_output_tokens": 1787,
+          "total_tokens": 40955
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 474946,
+          "input_tokens": 688256,
+          "output_tokens": 11778,
+          "reasoning_output_tokens": 9143,
+          "total_tokens": 700034
+        }
+      },
+      "input_tokens": 38943,
+      "cached_input_tokens": 23964
+    },
+    {
+      "sample_id": "scannet/scene0496_00::29::10819",
+      "status": "completed",
+      "iou": 1.0000000000000018,
+      "predicted_bbox_9dof": [
+        3.3228589667450503,
+        0.870727697426591,
+        0.710435819892751,
+        0.21828034731317153,
+        0.3764862022708521,
+        0.7078605425638176,
+        -0.22492311715396504,
+        0.1784248467464915,
+        0.21026378946160382
+      ],
+      "gt_bbox_9dof": [
+        3.3228589667450503,
+        0.870727697426591,
+        0.710435819892751,
+        0.21828034731317153,
+        0.3764862022708521,
+        0.7078605425638176,
+        -0.22492311715396504,
+        0.1784248467464915,
+        0.21026378946160382
+      ],
+      "selected_object_id": 29,
+      "confidence": 0.95,
+      "query": "When facing the wall of windows, the furthest on the right.",
+      "summary": "When facing the wall of windows spanning the exterior boundary of the room (#25, #26, #27, #29 from left to right), proposal #29 is the furthest window on the right, confirmed by 3D spatial alignment and first-person frames 46 and 50.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 289081,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 17346,
+          "output_tokens": 260,
+          "reasoning_output_tokens": 139,
+          "total_tokens": 17606
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 31919,
+          "input_tokens": 107858,
+          "output_tokens": 2140,
+          "reasoning_output_tokens": 1509,
+          "total_tokens": 109998
+        }
+      },
+      "input_tokens": 17346,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0435_00::60::27767",
+      "status": "completed",
+      "iou": 1.0000000000000004,
+      "predicted_bbox_9dof": [
+        -1.2157258687852397,
+        2.3933033997494135,
+        0.13091384625190428,
+        0.558945339000522,
+        0.759351777297153,
+        0.3300718750229309,
+        0.2245331824356792,
+        0.07718876604029878,
+        0.223185119687205
+      ],
+      "gt_bbox_9dof": [
+        -1.2157258687852397,
+        2.3933033997494135,
+        0.13091384625190428,
+        0.558945339000522,
+        0.759351777297153,
+        0.3300718750229309,
+        0.2245331824356792,
+        0.07718876604029878,
+        0.223185119687205
+      ],
+      "selected_object_id": 60,
+      "confidence": 0.9,
+      "query": "Facing the foot of the bed, the suitcase on the left.",
+      "summary": "The utterance specifies 'Facing the foot of the bed, the suitcase on the left.' In the bedroom, when viewing towards the foot of the bed (anchor #11), suitcase #60 is positioned to the left of the bed across all 26 co-visible frames (e.g. frames 3 and 172) and ranks first in 3D virtual-observer facing ranking, whereas suitcase #63 is positioned to the right of bed #10.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 351348,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 44158,
+          "input_tokens": 48893,
+          "output_tokens": 1723,
+          "reasoning_output_tokens": 1569,
+          "total_tokens": 50616
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 690681,
+          "input_tokens": 896802,
+          "output_tokens": 19150,
+          "reasoning_output_tokens": 16572,
+          "total_tokens": 915952
+        }
+      },
+      "input_tokens": 48893,
+      "cached_input_tokens": 44158
+    },
+    {
+      "sample_id": "scannet/scene0208_00::106::14558",
+      "status": "completed",
+      "iou": 1.0,
+      "predicted_bbox_9dof": [
+        -2.2164718484382773,
+        2.3438301721309243,
+        1.177626454300865,
+        0.5087283162389311,
+        4.072100505197136,
+        2.4743692369668833,
+        -0.5425038868779417,
+        -0.1004634978239507,
+        -0.06393601836678109
+      ],
+      "gt_bbox_9dof": [
+        -2.2164718484382773,
+        2.3438301721309243,
+        1.177626454300865,
+        0.5087283162389311,
+        4.072100505197136,
+        2.4743692369668833,
+        -0.5425038868779417,
+        -0.1004634978239507,
+        -0.06393601836678109
+      ],
+      "selected_object_id": 106,
+      "confidence": 0.95,
+      "query": "There is one wall of books that at a unique angle. Go to the end of that wall that is closest to the two small tables containing books. Find the bookshelf against the angled wall that is just to the left of the furthest right bookshelf.",
+      "summary": "The wall of books set at a unique angle is located in the upper-left of the scene. The end closest to the two book display tables (#16 and #17) terminates at the furthest-right bookshelf column (#15). Proposal #106 is the bookshelf unit against this angled wall immediately to the left of #15, confirmed across all co-visible frames including frames 82 and 224.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 284253,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 44435,
+          "input_tokens": 51260,
+          "output_tokens": 633,
+          "reasoning_output_tokens": 486,
+          "total_tokens": 51893
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 484793,
+          "input_tokens": 618256,
+          "output_tokens": 14661,
+          "reasoning_output_tokens": 12769,
+          "total_tokens": 632917
+        }
+      },
+      "input_tokens": 51260,
+      "cached_input_tokens": 44435
+    },
+    {
+      "sample_id": "scannet/scene0378_00::38::30964",
+      "status": "completed",
+      "iou": 1.000000000000001,
+      "predicted_bbox_9dof": [
+        -0.8496220097392511,
+        1.7886692503713673,
+        1.0844420813085072,
+        1.1074450153993114,
+        0.5602293012567547,
+        1.9199378829316054,
+        -0.07049089609682024,
+        -0.0008493808307492579,
+        0.043307075397088446
+      ],
+      "gt_bbox_9dof": [
+        -0.8496220097392511,
+        1.7886692503713673,
+        1.0844420813085072,
+        1.1074450153993114,
+        0.5602293012567547,
+        1.9199378829316054,
+        -0.07049089609682024,
+        -0.0008493808307492579,
+        0.043307075397088446
+      ],
+      "selected_object_id": 38,
+      "confidence": 0.95,
+      "query": "The bookshelf has many items in front of it",
+      "summary": "There are two bookshelves in the room: #37 and #38. Bookshelf #38 stands against the wall adjacent to the black filing cabinet, where numerous items including cardboard boxes, a tote bag, running shoes, and packages are cluttered directly on the floor in front of it (as seen in frames 89, 91, and 93). In contrast, bookshelf #37 has an office desk and chair in front of it.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 59763,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 15994,
+          "input_tokens": 19832,
+          "output_tokens": 740,
+          "reasoning_output_tokens": 599,
+          "total_tokens": 20572
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 44025,
+          "input_tokens": 107414,
+          "output_tokens": 2234,
+          "reasoning_output_tokens": 1644,
+          "total_tokens": 109648
+        }
+      },
+      "input_tokens": 19832,
+      "cached_input_tokens": 15994
+    },
+    {
+      "sample_id": "scannet/scene0690_00::10::26558",
+      "status": "completed",
+      "iou": 1.0000000000000024,
+      "predicted_bbox_9dof": [
+        -2.506366296501311,
+        1.4620259546056746,
+        0.8943227897949182,
+        0.23471172998824574,
+        0.3723878611276187,
+        0.515545654975875,
+        -0.5888931559670111,
+        -0.140853667906369,
+        -0.07887256719033386
+      ],
+      "gt_bbox_9dof": [
+        -2.506366296501311,
+        1.4620259546056746,
+        0.8943227897949182,
+        0.23471172998824574,
+        0.3723878611276187,
+        0.515545654975875,
+        -0.5888931559670111,
+        -0.140853667906369,
+        -0.07887256719033386
+      ],
+      "selected_object_id": 10,
+      "confidence": 0.95,
+      "query": "if looking at the living from from the large cabinet, the back right lamp.",
+      "summary": "When viewing the living room seating area from the large cabinet (#9, located on the east wall facing west toward the couch), the two table lamps flanking the couch are #11 on the left and #10 on the right. Proposal #10 is the lamp situated on the back-right end table (#14), as confirmed geometrically and visually in frame 18.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 42768,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 14268,
+          "output_tokens": 332,
+          "reasoning_output_tokens": 199,
+          "total_tokens": 14600
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 27854,
+          "input_tokens": 66044,
+          "output_tokens": 1563,
+          "reasoning_output_tokens": 1041,
+          "total_tokens": 67607
+        }
+      },
+      "input_tokens": 14268,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0518_00::3::1731",
+      "status": "completed",
+      "iou": 1.0000000000000016,
+      "predicted_bbox_9dof": [
+        0.3007332257758252,
+        -0.8116762793935739,
+        0.49855072341528484,
+        0.49686987452724246,
+        0.5408536807373101,
+        1.013317430809399,
+        0.27427410947700437,
+        -0.4577654366936468,
+        -0.029124953393187797
+      ],
+      "gt_bbox_9dof": [
+        0.3007332257758252,
+        -0.8116762793935739,
+        0.49855072341528484,
+        0.49686987452724246,
+        0.5408536807373101,
+        1.013317430809399,
+        0.27427410947700437,
+        -0.4577654366936468,
+        -0.029124953393187797
+      ],
+      "selected_object_id": 3,
+      "confidence": 0.95,
+      "query": "Choose the all black desk chair.",
+      "summary": "There are two office chairs positioned at the long desk (#6): proposal #2 and proposal #3. Proposal #2 has a bright yellow backpack (#16) draped over its backrest, making it noticeably yellow and black. Proposal #3 is the other desk chair with no backpack, featuring a black mesh back and dark frame, identifying it as the all black desk chair.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 345590,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 31835,
+          "input_tokens": 34414,
+          "output_tokens": 527,
+          "reasoning_output_tokens": 389,
+          "total_tokens": 34941
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 389592,
+          "input_tokens": 580343,
+          "output_tokens": 9309,
+          "reasoning_output_tokens": 7110,
+          "total_tokens": 589652
+        }
+      },
+      "input_tokens": 34414,
+      "cached_input_tokens": 31835
+    },
+    {
+      "sample_id": "scannet/scene0025_00::17::37165",
+      "status": "completed",
+      "iou": 0.0,
+      "predicted_bbox_9dof": [
+        -1.2254661905793234,
+        0.10893391453580159,
+        0.2677603714636955,
+        0.45339102444945456,
+        0.6763403451312876,
+        0.7202671188662484,
+        0.3491750987403533,
+        0.6150667507593326,
+        -0.45155483029179194
+      ],
+      "gt_bbox_9dof": [
+        0.73685448912612,
+        0.39139677630137565,
+        0.3024553439534689,
+        0.9402942809368604,
+        0.6540019173021665,
+        0.81481776202798,
+        -0.37925893002416483,
+        0.5554688557994547,
+        0.3613422983074594
+      ],
+      "selected_object_id": 38,
+      "confidence": 0.95,
+      "query": "The file cabinet at the end of the desk with a whiteboard behind it.",
+      "summary": "Proposal #38 is a white mobile file cabinet located at the end of desk #9, positioned directly in front of and beneath a large whiteboard mounted on the wall, as clearly observed in frame 168 and confirmed by spatial and proposal metadata.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 22689,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 15959,
+          "input_tokens": 23994,
+          "output_tokens": 104,
+          "reasoning_output_tokens": 0,
+          "total_tokens": 24098
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 95855,
+          "input_tokens": 230744,
+          "output_tokens": 3597,
+          "reasoning_output_tokens": 2527,
+          "total_tokens": 234341
+        }
+      },
+      "input_tokens": 23994,
+      "cached_input_tokens": 15959
+    },
+    {
+      "sample_id": "scannet/scene0030_00::0::23137",
+      "status": "completed",
+      "iou": 0.9999999999999994,
+      "predicted_bbox_9dof": [
+        1.9431770493101093,
+        0.4276551056263219,
+        0.3999859634991565,
+        0.3909630573249488,
+        0.507994163702634,
+        1.0186359784979473,
+        0.3431037232936862,
+        0.38598153080207176,
+        0.47915441754726185
+      ],
+      "gt_bbox_9dof": [
+        1.9431770493101093,
+        0.4276551056263219,
+        0.3999859634991565,
+        0.3909630573249488,
+        0.507994163702634,
+        1.0186359784979473,
+        0.3431037232936862,
+        0.38598153080207176,
+        0.47915441754726185
+      ],
+      "selected_object_id": 0,
+      "confidence": 0.95,
+      "query": "focus on the wall with the longer chalkboard. the side of the table closest to this chalkboard has several chairs that are facing away from this chalkboard. select the office chair that lines up center to the chalkboard and is slightly angled away from the table",
+      "summary": "Blackboard #21 on the wall is the longer chalkboard in the room. The long table #47 adjacent to it has chairs lined along the side closest to the board (#14, #0, and #7). Proposal #0 is an office chair positioned centrally along the chalkboard that is swiveled and slightly angled away from the table edge.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 98088,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 24183,
+          "input_tokens": 29738,
+          "output_tokens": 794,
+          "reasoning_output_tokens": 665,
+          "total_tokens": 30532
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 48385,
+          "input_tokens": 164007,
+          "output_tokens": 2682,
+          "reasoning_output_tokens": 2081,
+          "total_tokens": 166689
+        }
+      },
+      "input_tokens": 29738,
+      "cached_input_tokens": 24183
+    },
+    {
+      "sample_id": "scannet/scene0196_00::3::16361",
+      "status": "completed",
+      "iou": 1.0000000000000002,
+      "predicted_bbox_9dof": [
+        1.904529312381299,
+        -1.3799193234228007,
+        0.4937968197061215,
+        1.5297298572827318,
+        0.6933061320243493,
+        0.7458235242434141,
+        0.04641894983781231,
+        0.06562087586663545,
+        -0.20624584175717436
+      ],
+      "gt_bbox_9dof": [
+        1.904529312381299,
+        -1.3799193234228007,
+        0.4937968197061215,
+        1.5297298572827318,
+        0.6933061320243493,
+        0.7458235242434141,
+        0.04641894983781231,
+        0.06562087586663545,
+        -0.20624584175717436
+      ],
+      "selected_object_id": 3,
+      "confidence": 0.9,
+      "query": "looking in from the door, the front right table.",
+      "summary": "Looking into the classroom from the entrance door (#6 at the rear of the room), the tables are arranged into a left side and a right side. On the right side, there are three tables aligned from near to far: table #3 in the front (closest to the entrance), table #2 in the middle, and table #4 in the back (near the front whiteboard). Thus, the front right table relative to the entrance perspective is proposal #3.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 368945,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 40091,
+          "input_tokens": 45295,
+          "output_tokens": 1590,
+          "reasoning_output_tokens": 1434,
+          "total_tokens": 46885
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 539980,
+          "input_tokens": 743002,
+          "output_tokens": 19230,
+          "reasoning_output_tokens": 16314,
+          "total_tokens": 762232
+        }
+      },
+      "input_tokens": 45295,
+      "cached_input_tokens": 40091
+    },
+    {
+      "sample_id": "scannet/scene0328_00::27::15909",
+      "status": "completed",
+      "iou": 1.0000000000000075,
+      "predicted_bbox_9dof": [
+        1.0215918654314615,
+        -0.4433147371191849,
+        1.3281493826272497,
+        0.06724630986882305,
+        0.2520616571883399,
+        0.3206846675094378,
+        -0.07863241000520595,
+        0.2016740558849348,
+        -0.034736773808643984
+      ],
+      "gt_bbox_9dof": [
+        1.0215918654314615,
+        -0.4433147371191849,
+        1.3281493826272497,
+        0.06724630986882305,
+        0.2520616571883399,
+        0.3206846675094378,
+        -0.07863241000520595,
+        0.2016740558849348,
+        -0.034736773808643984
+      ],
+      "selected_object_id": 27,
+      "confidence": 0.98,
+      "query": "The highest sign in between the 2 cabinets.",
+      "summary": "Proposal #27 is the white product information sign mounted directly on the wall panel between the two upper kitchen cabinets (#19 and #7). At z=1.328 m, it is distinctly higher than the countertop signs (#28, #29, #30).",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 19904,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 15681,
+          "output_tokens": 107,
+          "reasoning_output_tokens": 0,
+          "total_tokens": 15788
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 11948,
+          "input_tokens": 72180,
+          "output_tokens": 1095,
+          "reasoning_output_tokens": 596,
+          "total_tokens": 73275
+        }
+      },
+      "input_tokens": 15681,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0552_00::10::35833",
+      "status": "completed",
+      "iou": 1.0000000000000024,
+      "predicted_bbox_9dof": [
+        -0.06629895629899127,
+        1.0705980493876366,
+        0.6993710028521801,
+        1.2466416104507627,
+        1.2374476171961772,
+        0.07097947652357249,
+        0.5429535908312446,
+        0.06488920420035749,
+        -0.026997209269608358
+      ],
+      "gt_bbox_9dof": [
+        -0.06629895629899127,
+        1.0705980493876366,
+        0.6993710028521801,
+        1.2466416104507627,
+        1.2374476171961772,
+        0.07097947652357249,
+        0.5429535908312446,
+        0.06488920420035749,
+        -0.026997209269608358
+      ],
+      "selected_object_id": 10,
+      "confidence": 0.95,
+      "query": "It is the table NEXT to the table across from the refrigerator.",
+      "summary": "Table #9 is situated directly across from the refrigerator (#12) in the breakroom. Table #10 is the matching square cafe table positioned directly next to table #9.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 129112,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 11934,
+          "input_tokens": 17814,
+          "output_tokens": 198,
+          "reasoning_output_tokens": 105,
+          "total_tokens": 18012
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 35825,
+          "input_tokens": 124306,
+          "output_tokens": 1539,
+          "reasoning_output_tokens": 801,
+          "total_tokens": 125845
+        }
+      },
+      "input_tokens": 17814,
+      "cached_input_tokens": 11934
+    },
+    {
+      "sample_id": "scannet/scene0583_00::0::26453",
+      "status": "completed",
+      "iou": 1.0000000000000013,
+      "predicted_bbox_9dof": [
+        -1.740065936549283,
+        -1.0100983869116067,
+        0.5799924005664346,
+        0.18145665126937,
+        0.9850016141168545,
+        1.3449689436191945,
+        0.14552530727676058,
+        6.89171901713248e-05,
+        -0.04729684430883782
+      ],
+      "gt_bbox_9dof": [
+        -1.740065936549283,
+        -1.0100983869116067,
+        0.5799924005664346,
+        0.18145665126937,
+        0.9850016141168545,
+        1.3449689436191945,
+        0.14552530727676058,
+        6.89171901713248e-05,
+        -0.04729684430883782
+      ],
+      "selected_object_id": 0,
+      "confidence": 0.95,
+      "query": "In the room with three closed doors, it is the one in the middle.",
+      "summary": "In the hallway/landing area outside the bathroom, there are three closed doors arranged side-by-side along the wall (#3, #0, and #12). As seen in frame 183 and confirmed by 3D spatial ranking ('between' and facing order [3, 0, 12]), proposal #0 is the middle door between door #3 on the left and door #12 on the right.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 52666,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 11930,
+          "input_tokens": 16128,
+          "output_tokens": 302,
+          "reasoning_output_tokens": 160,
+          "total_tokens": 16430
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 31838,
+          "input_tokens": 86941,
+          "output_tokens": 1487,
+          "reasoning_output_tokens": 919,
+          "total_tokens": 88428
+        }
+      },
+      "input_tokens": 16128,
+      "cached_input_tokens": 11930
+    },
+    {
+      "sample_id": "scannet/scene0423_00::3::23715",
+      "status": "completed",
+      "iou": 1.000000000000001,
+      "predicted_bbox_9dof": [
+        -0.29400881970136405,
+        -0.9608444582636788,
+        0.427648719854422,
+        0.8098655086255686,
+        0.9125029825465841,
+        0.7885671163539846,
+        0.4348698132812073,
+        -0.6403862826707954,
+        0.43352415979552134
+      ],
+      "gt_bbox_9dof": [
+        -0.29400881970136405,
+        -0.9608444582636788,
+        0.427648719854422,
+        0.8098655086255686,
+        0.9125029825465841,
+        0.7885671163539846,
+        0.4348698132812073,
+        -0.6403862826707954,
+        0.43352415979552134
+      ],
+      "selected_object_id": 3,
+      "confidence": 0.95,
+      "query": "there are two that are closest to the table,from behind its the armchair on the right",
+      "summary": "Out of the four armchairs in the lounge area, proposals #3 and #4 are closest to the small round end table (#5), located at distances of approximately 0.72m and 0.69m respectively. When viewing the pair from behind (looking from behind the chairs toward the table as in frames 10, 11, and 20), proposal #4 is on the left and proposal #3 is the armchair on the right.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 196176,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 19871,
+          "input_tokens": 26272,
+          "output_tokens": 368,
+          "reasoning_output_tokens": 212,
+          "total_tokens": 26640
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 178247,
+          "input_tokens": 315959,
+          "output_tokens": 9415,
+          "reasoning_output_tokens": 7636,
+          "total_tokens": 325374
+        }
+      },
+      "input_tokens": 26272,
+      "cached_input_tokens": 19871
+    },
+    {
+      "sample_id": "scannet/scene0704_00::14::20092",
+      "status": "completed",
+      "iou": 0.9999999999999991,
+      "predicted_bbox_9dof": [
+        0.4693445665118816,
+        1.928918493067428,
+        1.7571798577496534,
+        2.027671232097803,
+        0.328125252766834,
+        0.7706751966308746,
+        0.0852376085051818,
+        0.03065503649404766,
+        -0.0698325914522136
+      ],
+      "gt_bbox_9dof": [
+        0.4693445665118816,
+        1.928918493067428,
+        1.7571798577496534,
+        2.027671232097803,
+        0.328125252766834,
+        0.7706751966308746,
+        0.0852376085051818,
+        0.03065503649404766,
+        -0.0698325914522136
+      ],
+      "selected_object_id": 14,
+      "confidence": 0.95,
+      "query": "The cabinets above the printer",
+      "summary": "Proposal #14 is the set of wall-mounted upper cabinets positioned directly above the countertop printers, as clearly observed in frame 7. In contrast, proposal #5 represents base cabinets below the counter and proposal #15 is mounted over an adjacent counter section without printers.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 50587,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 13923,
+          "output_tokens": 772,
+          "reasoning_output_tokens": 679,
+          "total_tokens": 14695
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 15929,
+          "input_tokens": 52747,
+          "output_tokens": 1486,
+          "reasoning_output_tokens": 1129,
+          "total_tokens": 54233
+        }
+      },
+      "input_tokens": 13923,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0063_00::10::1029",
+      "status": "completed",
+      "iou": 0.9999999999999979,
+      "predicted_bbox_9dof": [
+        1.9098928572152973,
+        0.7656653944351923,
+        0.3844379200606759,
+        0.13509120871584596,
+        0.974271003485597,
+        0.913602080578432,
+        0.04022149155918171,
+        -0.12547740965062593,
+        -0.07409375708124252
+      ],
+      "gt_bbox_9dof": [
+        1.9098928572152973,
+        0.7656653944351923,
+        0.3844379200606759,
+        0.13509120871584596,
+        0.974271003485597,
+        0.913602080578432,
+        0.04022149155918171,
+        -0.12547740965062593,
+        -0.07409375708124252
+      ],
+      "selected_object_id": 10,
+      "confidence": 0.9,
+      "query": "The larger of the cabinets.",
+      "summary": "Between the two candidate kitchen cabinets in the pool (#10 and #16), proposal #10 is the sink base cabinet measuring approximately 0.97m by 0.91m on its front face, which is distinctly larger than the smaller upper kitchen cabinet section #16 (measuring 0.72m by 0.35m by 0.45m).",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 12322,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 10734,
+          "output_tokens": 1363,
+          "reasoning_output_tokens": 1224,
+          "total_tokens": 12097
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 10734,
+          "output_tokens": 1363,
+          "reasoning_output_tokens": 1224,
+          "total_tokens": 12097
+        }
+      },
+      "input_tokens": 10734,
+      "cached_input_tokens": 0
+    },
+    {
+      "sample_id": "scannet/scene0696_00::0::28948",
+      "status": "completed",
+      "iou": 0.0,
+      "predicted_bbox_9dof": [
+        -2.363132182316534,
+        -0.45032469860988217,
+        0.5697802189919666,
+        0.6571506291043219,
+        2.161529341189912,
+        1.31361380168633,
+        -0.041976924180622634,
+        -0.07632055972320795,
+        -0.159978047662582
+      ],
+      "gt_bbox_9dof": [
+        1.8755426006258722,
+        -0.10050441504640824,
+        0.6436903385308945,
+        0.616153129859622,
+        1.9514546240458435,
+        1.760813001488749,
+        -0.05490991065192563,
+        0.3133884986276205,
+        0.18238115591991882
+      ],
+      "selected_object_id": 22,
+      "confidence": 0.95,
+      "query": "Choose the cabinets with lots of stuff on top to the right of the fake wood cabinet.",
+      "summary": "Proposal #22 is the multi-door credenza/cabinet unit positioned directly to the right of the tall fake-wood laminate cabinet unit (#21). The top surface of #22 is heavily covered with items including two CRT monitors, stereo equipment, and runners, matching 'cabinets with lots of stuff on top to the right of the fake wood cabinet'.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 217291,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 19898,
+          "input_tokens": 25668,
+          "output_tokens": 1428,
+          "reasoning_output_tokens": 1293,
+          "total_tokens": 27096
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 199185,
+          "input_tokens": 328565,
+          "output_tokens": 5403,
+          "reasoning_output_tokens": 3857,
+          "total_tokens": 333968
+        }
+      },
+      "input_tokens": 25668,
+      "cached_input_tokens": 19898
+    },
+    {
+      "sample_id": "scannet/scene0025_00::26::38922",
+      "status": "completed",
+      "iou": 0.9999999999999997,
+      "predicted_bbox_9dof": [
+        0.2805489151964656,
+        -1.0285318821742915,
+        0.9422589649401378,
+        0.21585018347943574,
+        0.4295098871015095,
+        0.5362892146049432,
+        0.10170148589446056,
+        0.4761531528025351,
+        0.15550142508248022
+      ],
+      "gt_bbox_9dof": [
+        0.2805489151964656,
+        -1.0285318821742915,
+        0.9422589649401378,
+        0.21585018347943574,
+        0.4295098871015095,
+        0.5362892146049432,
+        0.10170148589446056,
+        0.4761531528025351,
+        0.15550142508248022
+      ],
+      "selected_object_id": 26,
+      "confidence": 0.95,
+      "query": "on the larger desk to the left, the monitor furthest from the door",
+      "summary": "When entering the room from the door (#7), the larger L-shaped desk (#10, measuring ~2.94m in length) is located to the left. On desk #10 there are three monitors: #2 (closest to the door), #25 (middle), and #26 (furthest from the door at y=-1.03m, distance ~3.50m from door #7).",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 309521,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 27921,
+          "input_tokens": 32892,
+          "output_tokens": 3412,
+          "reasoning_output_tokens": 3260,
+          "total_tokens": 36304
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 379489,
+          "input_tokens": 531012,
+          "output_tokens": 10628,
+          "reasoning_output_tokens": 8521,
+          "total_tokens": 541640
+        }
+      },
+      "input_tokens": 32892,
+      "cached_input_tokens": 27921
+    },
+    {
+      "sample_id": "scannet/scene0565_00::7::7026",
+      "status": "completed",
+      "iou": 1.0000000000000004,
+      "predicted_bbox_9dof": [
+        0.2092060164701269,
+        -0.8829623424452174,
+        0.16957075395242835,
+        0.9759937935877673,
+        0.8496150985028739,
+        0.37385844012362035,
+        0.041985537110119334,
+        -0.00761667903341845,
+        -0.07903501558402519
+      ],
+      "gt_bbox_9dof": [
+        0.2092060164701269,
+        -0.8829623424452174,
+        0.16957075395242835,
+        0.9759937935877673,
+        0.8496150985028739,
+        0.37385844012362035,
+        0.041985537110119334,
+        -0.00761667903341845,
+        -0.07903501558402519
+      ],
+      "selected_object_id": 7,
+      "confidence": 0.9,
+      "query": "starring at the boxes, the one on the right",
+      "summary": "When looking at the cluster of boxes (#8, #6, #7) from the open room walkway, proposal #8 is on the left, #6 is in the center, and #7 is on the right.",
+      "reasoning_summary": null,
+      "error": null,
+      "turn_duration_ms": 20678,
+      "turn_usage": {
+        "last": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 14734,
+          "output_tokens": 1695,
+          "reasoning_output_tokens": 1595,
+          "total_tokens": 16429
+        },
+        "total": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 14734,
+          "output_tokens": 1695,
+          "reasoning_output_tokens": 1595,
+          "total_tokens": 16429
+        }
+      },
+      "input_tokens": 14734,
+      "cached_input_tokens": 0
+    }
+  ]
+}

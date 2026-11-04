@@ -30,10 +30,23 @@ PILLOW_ON_SOFA = json.dumps(
                     "expect_unique": True,
                     "root": {
                         "categories": ["pillow"],
+                        "candidate_object_ids": [1],
+                        "grid_cells": [[1, 0]],
                         "spatial_constraints": [
-                            {"relation": "on", "anchors": [{"categories": ["sofa"]}]}
+                            {
+                                "relation": "on",
+                                "anchors": [
+                                    {
+                                        "categories": ["sofa"],
+                                        "candidate_object_ids": [0],
+                                        "grid_cells": [[1, 0]],
+                                    }
+                                ],
+                            }
                         ],
                     },
+                    "target_grids": [[1, 0]],
+                    "anchor_grids": [[1, 0]],
                 },
                 "lexical_hints": ["pillow", "sofa"],
             }
@@ -167,6 +180,9 @@ def build_scene(tmp_path: Path) -> Callable[[], Path]:
 
         for i in range(3):
             (scene / "results" / f"frame{i:06d}.jpg").write_bytes(b"\xff\xd8\xff")
+        from keyframe.keyframe_selector import KeyframeSelector
+
+        KeyframeSelector.build_offline_indices(scene, stride=1)
         return scene
 
     return _build

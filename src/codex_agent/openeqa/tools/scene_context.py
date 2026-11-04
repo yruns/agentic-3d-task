@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from keyframe.keyframe_selector import KeyframeSelector
 
 _CONCEPTGRAPH_DIRNAME = "conceptgraph"
+_SELECTOR_CACHE: dict[tuple[str, str | None], KeyframeSelector] = {}
 
 
 @dataclass(frozen=True)
@@ -70,23 +71,33 @@ class OpenEqaToolScene:
 def build_selector(
     conceptgraph_dir: Path, *, model: str | None = None
 ) -> KeyframeSelector:
-    """Build a ConceptGraph :class:`KeyframeSelector` for the OpenEQA dataset.
+    """Build or reuse a ConceptGraph :class:`KeyframeSelector` for OpenEQA.
 
-    Loads objects, camera trajectory, and the visibility index (no LLM call —
-    query parsing only happens later inside ``select_keyframes_v2``), so the
-    object ids it exposes match the ones the BEV highlights and keyframe results
-    use.
+    Loads objects (automatically writing/reusing the ``.light.pkl.gz`` sidecar),
+    camera trajectory, and the visibility + grid indices (no LLM call — query
+    parsing only happens later inside ``select_keyframes_v2``), so the object
+    ids it exposes match the ones the BEV highlights and keyframe results use.
 
     Raises:
         ToolInputError: If the scene cannot be loaded (reported recoverably so
             the agent can fall back to ``view_frame``).
     """
+    cache_key = (str(conceptgraph_dir.resolve()), model)
+    cached = _SELECTOR_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
     try:
         from keyframe.keyframe_selector import KeyframeSelector
 
-        return KeyframeSelector.from_scene_path(
-            conceptgraph_dir, dataset="openeqa", model=model
+        selector = KeyframeSelector.from_scene_path(
+            conceptgraph_dir,
+            dataset="openeqa",
+            model=model,
+            prefer_lightweight_pcd=True,
+            ensure_lightweight_pcd=True,
         )
+        _SELECTOR_CACHE[cache_key] = selector
+        return selector
     except Exception as exc:  # re-raised as a recoverable tool error for the agent
         raise ToolInputError(
             f"could not load ConceptGraph scene at {conceptgraph_dir} "

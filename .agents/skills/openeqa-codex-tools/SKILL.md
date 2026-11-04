@@ -1,19 +1,22 @@
 ---
 name: openeqa-codex-tools
-description: Answer one OpenEQA open-ended question about a prepared 3D indoor scene by fetching your own visual evidence with CLI tools for keyframe retrieval, frame switching, a top-down BEV, and the object list (no frames are attached).
+description: Answer one OpenEQA open-ended question about a prepared 3D indoor scene by combining the initial top-down BEV map and 3D grid/object overview with on-demand first-person frames and high-resolution crops via CLI tools.
 ---
 
-# OpenEQA Codex SDK Question Answering (tool-using)
+# OpenEQA Codex SDK Question Answering (Map-First + Evidence-Seeking Tools)
 
 You answer exactly one OpenEQA question about a prepared ScanNet clip. The prompt
-gives you the question, its category, and the scene id — but **no images are
-attached**. You start with zero visual information and must fetch every piece of
-visual evidence yourself with the CLI tools below.
+provides the question, its category, the scene id, the **Scene Grid Layout**, a
+compact **3D Object Catalog preview** (with each object's `(row, col)` grid cell
+and `best_frames`), and attaches the top-down **Schematic BEV map** when
+ConceptGraph assets are available — **but NO first-person RGB frames are
+attached**. You must fetch and view first-person visual evidence yourself using
+the CLI tools below.
 
 ## Output contract
 
-- Answer concisely and factually as a short phrase, grounded ONLY in visual
-  evidence you have actually fetched and viewed.
+- Answer concisely and factually as a short phrase, grounded ONLY in first-person
+  frames and crops you have actually fetched and viewed with `view_image`.
 - If the answer is not fully determinable, give your single best guess; do not
   refuse and do not answer with a question.
 - Your FINAL message must be a single JSON object matching the requested schema
@@ -24,75 +27,66 @@ visual evidence yourself with the CLI tools below.
 
 Run in the shell (the clip directory is given in the prompt as `scene_dir`):
 
-```
+```bash
 python -m codex_agent.openeqa.tools <tool> --scene-dir <scene_dir> --args '<json>'
 ```
 
 - `list_objects` prints one JSON object on stdout.
-- `view_frame`, `keyframe_selector`, `view_crop`, and `view_bev` also write an
-  image and print its `image_path` (`keyframe_selector` / `view_frame` also print
-  a `contact_sheet`). **You must open that path with the `view_image` tool before
-  you trust what it shows.** An image you have not viewed is not evidence.
-- Recoverable mistakes come back as `{"error": "..."}` — read it and adjust
-  (e.g. pick a frame id in range, switch `keyframe_selector` → `view_frame`).
+- `view_frame`, `keyframe_selector`, `view_crop`, and `view_bev` write an image
+  and print its `image_path` (`keyframe_selector` and multi-frame `view_frame`
+  also print a combined `contact_sheet` plus per-frame `visible_objects` with
+  normalized 2D boxes `bbox_norm`). **You must open the path with `view_image`
+  before relying on what it shows.**
+- Recoverable mistakes come back as `{"error": "..."}` — read the message and
+  adjust your next call.
 
 ## Tool catalog
 
-Understand the scene (text):
-- `list_objects` — the detected objects (ids, category, 3D center/size,
-  description). Use it to learn what is in the room and to get object ids for
-  `view_bev` / `view_crop`. `{}` or `{"category": "chair"}` or `{"limit": 60}`
+Fetch first-person frames & zoom in (image):
+- `view_frame` — fetch raw frames by `frame_id` / `frame_ids`, by a trajectory
+  neighborhood (`around_frame_id` + `step`), or by BEV `grid_cells` `[[r, c]]`.
+  Use this immediately when the printed catalog already lists `best_frames` for
+  your target or anchor object!
+  `{"frame_ids": [34, 60, 120]}` or `{"around_frame_id": 120, "step": 10}` or
+  `{"grid_cells": [[2, 3]]}`
+- `keyframe_selector` — language + spatial/grid prior → up to 4 spatially-DIVERSE
+  frames + `contact_sheet` + `grounded_objects` + per-frame `visible_objects`
+  (`bbox_norm`). Pass a **complete relational phrase** (target + anchor +
+  relation) and optional `target_grids`. Successive calls return fresh viewpoints.
+  `{"query": "the fire extinguisher under the window", "k": 3, "target_grids": [[1, 2]]}`
+- `view_crop` — HIGH-RESOLUTION zoom from the full-res raw RGB. Mandatory for
+  small objects, colors, brands, labels, and fine states. Aim by `object_id`
+  (optionally with `frame_id`) or by `frame_id` + `bbox` (`[0, 1]` normalized or
+  raw pixels).
+  `{"object_id": 12}` or `{"object_id": 12, "frame_id": 420}` or
+  `{"frame_id": 420, "bbox": [0.35, 0.25, 0.65, 0.70]}`
 
-Fetch first-person frames (image):
-- `keyframe_selector` — language → up to 4 frames most likely to show what you
-  describe; best when the answer is about a nameable object. Returns
-  spatially-DIVERSE frames plus one combined `contact_sheet`, and successive
-  calls return NEW viewpoints (it remembers what it already returned), so
-  re-asking explores instead of repeating.
-  `{"query": "the fire extinguisher under the window", "k": 3}`
-- `view_frame` — fetch any raw frame id (or a few) when you need a specific
-  viewpoint. The result reports `total_frames`, the valid `frame_id_range`, and a
-  `contact_sheet` when you ask for several.
-  `{"frame_id": 420}` or `{"frame_ids": [100, 300, 540]}`
-- `view_crop` — HIGH-RESOLUTION zoom for a detail too small/blurry to read in a
-  frame (a label, a color, an object's identity). Aim it by region after seeing a
-  frame, or by object id.
-  `{"frame_id": 420, "bbox": [0.4, 0.3, 0.7, 0.8]}` (bbox normalized 0-1 or
-  pixels) or `{"object_id": 12}`
+Search object details & highlight map (text / image):
+- `list_objects` — search or inspect the 3D object catalog (`obj_id`, `category`,
+  `grid_cell`, `best_frame_ids`, `color`, `note`, `location`, `nearby_objects`,
+  `usability`). Filter by `query`, `category`, `grid_cells`, or `object_ids`.
+  `{"query": "microwave counter"}` or `{"object_ids": [0, 5]}`
+- `view_bev` — re-render the schematic BEV highlighting specific object ids,
+  categories, or grid cells.
+  `{"highlight": [4, 11]}` or `{"categories": ["table"]}` or `{"highlight_grids": [[1, 2]]}`
 
-Read scene layout (image):
-- `view_bev` — top-down schematic map (object footprints + camera path) to read
-  layout, counts, and spatial relations; highlight objects by id/category.
-  `{}` or `{"highlight": [4, 11]}` or `{"categories": ["table", "chair"]}`
+## Critical rules by question category
 
-## Recommended loop
-
-1. Decide what evidence the question needs (you have none yet), then fetch it.
-2. For "what / where / how many / layout" questions, call `view_bev` and/or
-   `list_objects` for scene context.
-3. If the answer is about a specific object, call `keyframe_selector` with a
-   short description, then `view_image` the returned `contact_sheet`.
-4. If the detail you need is too small/blurry to read, use `view_crop` to zoom
-   in before answering — do not guess a label/color/identity from a blurry frame.
-5. If you need another viewpoint, call `view_frame` for a chosen frame id, or
-   call `keyframe_selector` again (it returns fresh viewpoints), then view it.
-6. Answer concisely, grounded only in frames/crops/BEV you have viewed.
-
-## Confirm before you commit (fine-grained questions)
-
-For "what is this object" / color / brand / small-detail questions, do not commit
-from a single distant frame. Either `view_crop` to read the detail, or confirm
-the object in a SECOND independent frame (a different viewpoint) before
-answering. If you still cannot resolve it, give your best answer with a LOWER
-confidence rather than asserting a guess at high confidence.
-
-## Tool budget — be decisive but don't under-look
-
-- Most questions resolve in a handful of targeted images; use the `contact_sheet`
-  and `view_crop` to get more evidence per action instead of opening many frames.
-- Never repeat a tool with identical arguments and never re-view an image you
-  have already seen. If a result is empty or errors, change approach (rephrase,
-  or switch `keyframe_selector` ↔ `view_frame` ↔ `view_crop`) instead of retrying
-  identically.
-- Once the evidence actually supports an answer, emit the final JSON
-  immediately; do not keep gathering to chase certainty you already have.
+1. **Never treat the 3D catalog as complete or infallible**: Small tabletop items
+   (erasers, pens, tissues, trophies, toiletries) and wall fixtures (phones,
+   thermostats, paintings, hooks) are often omitted or mislabeled in 3D
+   detection. Never claim an item is absent without inspecting first-person
+   frames of the relevant surfaces/walls.
+2. **Functional reasoning & World knowledge**: Look for the **most specific,
+   dedicated item(s)** in the room (e.g., an *hourglass* rather than a phone;
+   *furry earmuffs* or a *pink jacket* rather than bed covers; *green boxes of
+   paper* on the filing cabinet), not a generic room default. In your answer
+   phrase, name **both the specific item (plus any paired accessory like a
+   remote) and its location/surface** (e.g., *"use the paper cutter on the black
+   counter"*).
+3. **Object localization & Spatial understanding**: For *"Where is X?"*, include
+   **both** the immediate supporting surface/container AND the nearest salient
+   landmark (e.g., *"on the work table to the right of the green garbage can"*).
+   Always judge left/right from the first-person camera view.
+4. **Object & Attribute recognition**: Always call `view_crop` and `view_image`
+   to verify small objects, colors, text, or fine distinctions before answering.

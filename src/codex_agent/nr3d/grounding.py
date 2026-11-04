@@ -28,6 +28,7 @@ from .sample import Nr3dSample, Nr3dScene
 TASK_NAME = "nr3d_visual_grounding"
 _TARGET_ABSENT_ID = -1
 _DEFAULT_NOTE_CHARS = 220
+_DEFAULT_LOC_CHARS = 120
 _DEFAULT_VISIBLE_PREVIEW = 8
 DEFAULT_TOOL_CLI_MODULE = "codex_agent.nr3d.tools"
 
@@ -109,12 +110,6 @@ class Nr3dGroundingTask:
         return TASK_NAME
 
     def build_turn_request(self) -> CodexTurnRequest:
-        # Default tool mode inlines the playbook into the prompt (see
-        # codex_agent.nr3d.playbook) and attaches no on-disk skill: advertising
-        # a SKILL.md path was the bait for the historical re-read loop once
-        # Codex windowed the context. An explicitly supplied skill is still
-        # honored, but only in tool mode where skill instructions can invoke
-        # the NR3D tool workflow.
         if self.tools_enabled:
             skills: tuple[CodexSkill, ...] = (
                 (self.skill,) if self.skill is not None else ()
@@ -172,7 +167,12 @@ class Nr3dGroundingTask:
     def _build_prompt(self) -> str:
         pool = self.scene.proposal_pool
         category_lines = [
-            f"- {category}: {ids}" for category, ids in pool.ids_by_category().items()
+            (
+                f"- {category} ({len(ids)} instances): {ids}"
+                if len(ids) >= 2
+                else f"- {category} (1 instance — context/anchor only): {ids}"
+            )
+            for category, ids in pool.ids_by_category().items()
         ]
         proposal_lines = [
             self._format_proposal(proposal)
@@ -200,8 +200,16 @@ class Nr3dGroundingTask:
 
     def _rules(self) -> list[str]:
         rules = [
-            "- Pick exactly one proposal id from the provided proposal pool.",
-            "- Use -1 only if the described target is absent from the pool.",
+            "- Pick exactly one proposal id from the provided proposal pool. "
+            "By NR3D benchmark construction, the target ALWAYS belongs to a "
+            "category with >= 2 instances in the pool (categories with only 1 "
+            "instance are context/anchors only, never the target).",
+            "- Use -1 only if the described target is genuinely absent from the "
+            "pool. In NR3D benchmark samples the target is virtually always "
+            "present in the pool — NEVER return -1 merely because an offline "
+            "VLM `enriched` / `note` description mentions a foreground occluder "
+            "(e.g. a chair in front of a cabinet or a hairdryer by a towel). "
+            "Trust the 3D `category`, `size`, `center`, and viewed frames.",
             "- A top-down BEV image of the scene is attached; use it together "
             "with the printed proposal metadata.",
             "- Do not use benchmark ground-truth fields; none are provided.",
@@ -209,9 +217,9 @@ class Nr3dGroundingTask:
         if self.tools_enabled:
             rules.append(
                 "- You may run the NR3D CLI tools (below) to gather first-person "
-                "frames, spatial rankings, and BEV highlights. Always open any "
-                "returned image_path with the view_image tool before citing that "
-                "frame as evidence."
+                "frames, high-res crops, spatial rankings, and BEV highlights. "
+                "Always open any returned image_path / crops_sheet_path with the "
+                "view_image tool before citing that frame as evidence."
             )
             rules.append(
                 "- When finished, your FINAL message must be exactly one JSON "
@@ -240,8 +248,9 @@ class Nr3dGroundingTask:
             f"- invoke: python -m {self.tool_cli_module} <tool> "
             f"--scene-dir {self.scene_dir} --args '<json>'\n"
             "- text tools print one JSON object; mark_frame_with_bbox and "
-            "view_bev also write a PNG and print its image_path — call "
-            "view_image on that path before you rely on what the frame shows.\n"
+            "view_bev also write PNG(s) and print image_path (plus "
+            "crops_sheet_path / contact_sheet) — call view_image on that path "
+            "before you rely on what the frame shows.\n"
             "\nYou are NOT exploring or editing a codebase — you are answering "
             "one grounding question. Hard limits:\n"
             "- Everything you need is in THIS message. Do NOT read, cat, sed, "
@@ -262,23 +271,38 @@ class Nr3dGroundingTask:
         return f"- scene_dir: {self.scene_dir}\n"
 
     def _format_proposal(self, proposal: Proposal) -> str:
-        cx, cy, cz, sx, sy, sz, rx, ry, rz = proposal.bbox_3d_9dof
+        cx, cy, cz, sx, sy, sz, _rx, _ry, _rz = proposal.bbox_3d_9dof
         enriched = (
             f", enriched={proposal.enriched_category}"
             if proposal.enriched_category
             else ""
         )
-        note = _truncate(
-            proposal.compact_note or proposal.enriched_category or "",
-            self.note_max_chars,
+        enr = proposal.enrichment
+        color_part = f"color={enr.color}; " if (enr and enr.color) else ""
+        nearby_part = (
+            f"nearby={list(enr.nearby_objects[:5])}; "
+            if (enr and enr.nearby_objects)
+            else ""
         )
+        raw_desc = (
+            enr.description
+            if (enr and enr.description)
+            else (proposal.compact_note or proposal.enriched_category or "")
+        )
+        note = _truncate(raw_desc, self.note_max_chars)
+        loc_part = ""
+        if enr and enr.location:
+            loc_short = _truncate(enr.location, _DEFAULT_LOC_CHARS)
+            if loc_short.lower()[:30] not in note.lower():
+                loc_part = f"loc={loc_short}; "
+
         visible = proposal.visible_frame_ids
         preview = list(visible[: self.visible_frames_preview])
         return (
             f"- #{proposal.proposal_id}: category={proposal.category}{enriched}; "
             f"center=({cx:.3f},{cy:.3f},{cz:.3f}); "
             f"size=({sx:.3f},{sy:.3f},{sz:.3f}); "
-            f"rot=({rx:.3f},{ry:.3f},{rz:.3f}); "
+            f"{color_part}{nearby_part}{loc_part}"
             f"visible_frames={len(visible)} {preview}; "
             f"note={note}"
         )

@@ -27,9 +27,14 @@ from ..tasks.base import CodexExecutor
 
 #: Substrings that mark a transient error worth retrying the whole sample for.
 _RETRYABLE_TOKENS: tuple[str, ...] = (
+    "409",
     "429",
     "500",
+    "502",
     "503",
+    "504",
+    "indeterminate",
+    "rate limit",
     "timeout",
     "timed out",
     "connection reset",

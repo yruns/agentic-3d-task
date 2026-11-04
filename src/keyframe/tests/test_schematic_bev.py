@@ -63,6 +63,24 @@ def test_ortho_view_project_and_roundtrip() -> None:
     }
 
 
+def test_render_schematic_bev_attaches_grid_spec_and_highlights_cells() -> None:
+    image_plain, view = render_schematic_bev(_markers(), _camera_xy())
+    assert view.grid_spec is not None
+    assert view.grid_spec.shape == (
+        DEFAULT_SCHEMATIC_BEV_CONFIG.grid_rows,
+        DEFAULT_SCHEMATIC_BEV_CONFIG.grid_cols,
+    )
+    assert "grid_spec" in view.to_payload()
+
+    image_hl, _ = render_schematic_bev(
+        _markers(),
+        _camera_xy(),
+        highlight_grids=frozenset({(0, 0)}),
+    )
+    assert image_plain.shape == image_hl.shape
+    assert not np.array_equal(image_plain, image_hl)
+
+
 # ----- render_schematic_bev ---------------------------------------------------
 
 
@@ -211,6 +229,7 @@ def _build_openeqa_clip(tmp_path: Path) -> Path:
         json.dumps({"objects": []}), encoding="utf-8"
     )
     _write_traj(conceptgraph, n=4)
+    KeyframeSelector.build_offline_indices(conceptgraph, dataset="openeqa")
     return conceptgraph
 
 
