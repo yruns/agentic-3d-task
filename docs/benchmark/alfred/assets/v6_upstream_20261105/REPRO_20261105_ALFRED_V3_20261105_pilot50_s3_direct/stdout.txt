@@ -1,0 +1,42 @@
+WARNING: overwriting environment variables set in the machine
+overwriting variable ['CUDA_HOME']
+2026-11-05 02:40:19,638 INFO ALFRED episode 1/12: valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-4/trial_T20190909_164840_568811#2
+2026-11-05 03:03:25,241 INFO ALFRED episode 2/12: valid_seen/look_at_obj_in_light-Bowl-None-DeskLamp-316/trial_T20190908_230702_962704#1
+2026-11-05 03:18:20,373 INFO ALFRED episode 3/12: valid_seen/pick_cool_then_place_in_recep-Pan-None-DiningTable-7/trial_T20190908_232648_241836#1
+2026-11-05 03:45:33,404 INFO ALFRED episode 4/12: valid_seen/pick_and_place_simple-Mug-None-SideTable-329/trial_T20190909_032318_169393#0
+2026-11-05 04:06:56,768 INFO ALFRED episode 5/12: valid_seen/pick_heat_then_place_in_recep-AppleSliced-None-DiningTable-17/trial_T20190918_205656_000147#1
+2026-11-05 04:12:31,706 INFO ALFRED episode 6/12: valid_seen/pick_and_place_with_movable_recep-Ladle-Pan-SinkBasin-4/trial_T20190908_192636_561572#2
+2026-11-05 04:41:09,823 INFO ALFRED episode 7/12: valid_unseen/pick_and_place_with_movable_recep-ButterKnife-Pan-SinkBasin-10/trial_T20190907_194015_037530#0
+2026-11-05 05:02:36,554 INFO ALFRED episode 8/12: valid_unseen/pick_two_obj_and_place-ToiletPaper-None-Cabinet-424/trial_T20190906_203003_627271#2
+2026-11-05 05:19:38,133 INFO ALFRED episode 9/12: valid_unseen/pick_clean_then_place_in_recep-SoapBar-None-CounterTop-424/trial_T20190907_074124_966890#4
+2026-11-05 05:29:16,394 INFO ALFRED episode 10/12: valid_unseen/look_at_obj_in_light-CellPhone-None-FloorLamp-219/trial_T20190908_044139_261907#1
+2026-11-05 05:54:57,448 INFO ALFRED episode 11/12: valid_unseen/pick_cool_then_place_in_recep-BreadSliced-None-Microwave-10/trial_T20190906_224631_058932#0
+2026-11-05 06:04:45.445 | WARNING  | codex_agent.runtime:_interrupt_turn:428 - interrupting codex turn: exceeded turn_timeout_s=300
+2026-11-05 06:04:45.460 | WARNING  | codex_agent.runtime:_consume_guarded_turn:403 - codex turn interrupted (exceeded turn_timeout_s=300); finalizing from evidence gathered in 0 tool actions
+2026-11-05 06:04:45.460 | INFO     | codex_agent.runtime:_run_thread:281 - codex turn response unusable; finalization re-ask 1/1
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/ysh/codebase/agentic-3d-task/src/codex_agent/cli/run_alfred.py", line 201, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/home/ysh/codebase/agentic-3d-task/src/codex_agent/cli/run_alfred.py", line 196, in main
+    print(run_validation(config).model_dump_json(indent=2))
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ysh/codebase/agentic-3d-task/src/codex_agent/evaluation/alfred_runner.py", line 165, in run_validation
+    _run_episode(
+  File "/home/ysh/codebase/agentic-3d-task/src/codex_agent/evaluation/alfred_runner.py", line 225, in _run_episode
+    outcome = executor.run(episode.instruction, initial)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred/execution.py", line 130, in run
+    decision = self._decide(instruction)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred/execution.py", line 230, in _decide
+    result = self.runtime.execute(task)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ysh/codebase/agentic-3d-task/src/codex_agent/runtime.py", line 199, in execute
+    turn = self.run_turn(request, response_validator=task.is_valid_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ysh/codebase/agentic-3d-task/src/codex_agent/runtime.py", line 240, in run_turn
+    raise CodexTurnError(
+codex_agent.errors.CodexTurnError: Codex turn completed without a final_response; status=failed error=TurnError(additional_details=None, codex_error_info=CodexErrorInfo(root=HttpConnectionFailedCodexErrorInfo(http_connection_failed=HttpConnectionFailed(http_status_code=502))), message='unexpected status 502 Bad Gateway: Unable to reach upstream; outcome may be indeterminate, url: http://127.0.0.1:8787/v1/responses', misalignment=None)

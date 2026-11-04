@@ -1,0 +1,50 @@
+{
+  "ruff": {
+    "command": [
+      "ruff",
+      "check",
+      "src/"
+    ],
+    "exit_code": 0
+  },
+  "black": {
+    "command": [
+      "black",
+      "--check",
+      "src/"
+    ],
+    "exit_code": 0
+  },
+  "mypy": {
+    "command": [
+      "mypy",
+      "src/"
+    ],
+    "exit_code": 0
+  },
+  "source_tests": {
+    "command": [
+      "pytest",
+      "src/",
+      "-q"
+    ],
+    "exit_code": 0
+  },
+  "adapter_tests": {
+    "command": [
+      "pytest",
+      "tests/codex_adapter/",
+      "--cov=codex_adapter",
+      "--cov-branch",
+      "--cov-fail-under=80"
+    ],
+    "exit_code": 0
+  },
+  "docs": {
+    "command": [
+      "mkdocs",
+      "build"
+    ],
+    "exit_code": 0
+  }
+}

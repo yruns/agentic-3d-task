@@ -1,0 +1,17 @@
+{
+  "recorded_at_utc": "2026-11-04T22:41:51.050898+00:00",
+  "adapter_health_status": "ready",
+  "native_responses_probe": "../synthetic_probe_01/report.json",
+  "adapter_network_shim": {
+    "path": "/home/ysh/.local/lib/libaidp_proxy.so",
+    "sha256": "e352c86d1e55500d736025820f75de7d63b0a24204c83cb2ada8bb78a3c04a9d",
+    "observed_from": "adapter process LD_PRELOAD field only",
+    "observed_lookup_with_shim": "127.254.254.254",
+    "proxy_endpoint": "127.0.0.1:10800",
+    "greeting_hex": "050100",
+    "expected_reply_hex": "0500",
+    "evidence": "connect-function disassembly confirms SOCKS5 no-auth greeting to port10800; live checks recorded separately"
+  },
+  "scope": "Read-only diagnostics; no service, proxy, SSH session, credentials or environment configuration changed. SOCKS refusal/timeout identifies the unavailable local forwarding path, not the underlying remote/VPN cause.",
+  "credential_data_preserved": false
+}

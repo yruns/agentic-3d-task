@@ -1,0 +1,45 @@
+{"scored_episode_audited": 0, "progress": 1, "total_scored": 41}
+{"scored_episode_audited": 1, "progress": 2, "total_scored": 41}
+{"scored_episode_audited": 2, "progress": 3, "total_scored": 41}
+{"scored_episode_audited": 3, "progress": 4, "total_scored": 41}
+{"scored_episode_audited": 4, "progress": 5, "total_scored": 41}
+{"scored_episode_audited": 5, "progress": 6, "total_scored": 41}
+{"scored_episode_audited": 6, "progress": 7, "total_scored": 41}
+{"scored_episode_audited": 7, "progress": 8, "total_scored": 41}
+{"scored_episode_audited": 8, "progress": 9, "total_scored": 41}
+{"scored_episode_audited": 9, "progress": 10, "total_scored": 41}
+{"scored_episode_audited": 10, "progress": 11, "total_scored": 41}
+{"scored_episode_audited": 11, "progress": 12, "total_scored": 41}
+{"scored_episode_audited": 12, "progress": 13, "total_scored": 41}
+{"scored_episode_audited": 13, "progress": 14, "total_scored": 41}
+{"scored_episode_audited": 14, "progress": 15, "total_scored": 41}
+{"scored_episode_audited": 15, "progress": 16, "total_scored": 41}
+{"scored_episode_audited": 16, "progress": 17, "total_scored": 41}
+{"scored_episode_audited": 17, "progress": 18, "total_scored": 41}
+{"scored_episode_audited": 18, "progress": 19, "total_scored": 41}
+{"scored_episode_audited": 19, "progress": 20, "total_scored": 41}
+{"scored_episode_audited": 20, "progress": 21, "total_scored": 41}
+{"scored_episode_audited": 21, "progress": 22, "total_scored": 41}
+{"scored_episode_audited": 22, "progress": 23, "total_scored": 41}
+{"scored_episode_audited": 23, "progress": 24, "total_scored": 41}
+{"scored_episode_audited": 24, "progress": 25, "total_scored": 41}
+{"scored_episode_audited": 25, "progress": 26, "total_scored": 41}
+{"scored_episode_audited": 26, "progress": 27, "total_scored": 41}
+{"scored_episode_audited": 27, "progress": 28, "total_scored": 41}
+{"scored_episode_audited": 28, "progress": 29, "total_scored": 41}
+{"scored_episode_audited": 29, "progress": 30, "total_scored": 41}
+{"scored_episode_audited": 30, "progress": 31, "total_scored": 41}
+{"scored_episode_audited": 31, "progress": 32, "total_scored": 41}
+{"scored_episode_audited": 33, "progress": 33, "total_scored": 41}
+{"scored_episode_audited": 34, "progress": 34, "total_scored": 41}
+{"scored_episode_audited": 35, "progress": 35, "total_scored": 41}
+{"scored_episode_audited": 37, "progress": 36, "total_scored": 41}
+{"scored_episode_audited": 38, "progress": 37, "total_scored": 41}
+{"scored_episode_audited": 39, "progress": 38, "total_scored": 41}
+{"scored_episode_audited": 41, "progress": 39, "total_scored": 41}
+{"scored_episode_audited": 42, "progress": 40, "total_scored": 41}
+{"scored_episode_audited": 46, "progress": 41, "total_scored": 41}
+{"unscored_error_prefix_audited": 32, "unanswered_requests": 1}
+{"unscored_error_prefix_audited": 45, "unanswered_requests": 1}
+{"unscored_error_prefix_audited": 43, "unanswered_requests": 1}
+{"report": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot41_actor_boundary.json", "coverage": {"frozen_fold_size": 50, "scored_episodes_checked": 41, "unscored_error_prefixes_checked": 3, "pending_without_attempt": 6, "missing_scored_global_indices": [32, 36, 40, 43, 44, 45, 47, 48, 49]}, "available_boundary_checks_passed": true, "scored_counts": {"observations": 1522, "interactions": 314, "image_references": 3687, "saved_requests": 1825, "completed_responses": 1825, "catalogs": 1825, "sdk_trace_files": 1825, "episodes": 41}, "prefix_counts": {"observations": 41, "interactions": 2, "image_references": 118, "saved_requests": 59, "completed_responses": 56, "catalogs": 56, "sdk_trace_files": 56, "episodes": 3}, "violations": 0}

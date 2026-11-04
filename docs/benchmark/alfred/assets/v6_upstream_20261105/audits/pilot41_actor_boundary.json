@@ -1,0 +1,891 @@
+{
+  "checked_at_utc": "2026-11-04T22:25:49.247989+00:00",
+  "scope": "All original 41 scored episodes plus separately labelled three unscored infrastructure-error prefixes; incomplete 41/50 cohort coverage",
+  "coverage_complete": false,
+  "coverage": {
+    "frozen_fold_size": 50,
+    "scored_episodes_checked": 41,
+    "unscored_error_prefixes_checked": 3,
+    "pending_without_attempt": 6,
+    "missing_scored_global_indices": [
+      32,
+      36,
+      40,
+      43,
+      44,
+      45,
+      47,
+      48,
+      49
+    ]
+  },
+  "available_boundary_checks_passed": true,
+  "cohort_manifest_sha256": "f3b8ef2e59b0e2ab8d69df2814c5fa2dd15fb1dd54dde33ca3513f58e72de955",
+  "scripts": {
+    "audit_pilot_boundary.py": "261f7013da3a783160b90f8615a78e837ae94a3f9eccde7f9b7ae426c90b8a90",
+    "audit_recovered_pilot_boundary.py": "3227f7ee7fef53d2cbcaa934c8aa40ebd4663bcce7d5406f813fed5e3bb31cad",
+    "audit_partial_pilot_boundary.py": "68c0bfcaedd3037fff001ebd703e5d1e7b08bd07a87deef1bf0dd490020a1711"
+  },
+  "source_runs": [
+    {
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "status": "error",
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "fb408c34ab85284b32387002e92745b92983a173",
+        "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+        "tracked_worktree_drift": ""
+      },
+      "counts": {
+        "selected": 13,
+        "completed": 8,
+        "errors": 1,
+        "interrupted": 0,
+        "pending": 4
+      }
+    },
+    {
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "status": "error",
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "fb408c34ab85284b32387002e92745b92983a173",
+        "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+        "tracked_worktree_drift": ""
+      },
+      "counts": {
+        "selected": 13,
+        "completed": 11,
+        "errors": 1,
+        "interrupted": 0,
+        "pending": 1
+      }
+    },
+    {
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "status": "completed",
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "fb408c34ab85284b32387002e92745b92983a173",
+        "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+        "tracked_worktree_drift": ""
+      },
+      "counts": {
+        "selected": 12,
+        "completed": 12,
+        "errors": 0,
+        "interrupted": 0,
+        "pending": 0
+      }
+    },
+    {
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "status": "error",
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "fb408c34ab85284b32387002e92745b92983a173",
+        "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+        "tracked_worktree_drift": ""
+      },
+      "counts": {
+        "selected": 12,
+        "completed": 10,
+        "errors": 1,
+        "interrupted": 0,
+        "pending": 1
+      }
+    }
+  ],
+  "scored_episode_audit": {
+    "counts": {
+      "observations": 1522,
+      "interactions": 314,
+      "image_references": 3687,
+      "saved_requests": 1825,
+      "completed_responses": 1825,
+      "catalogs": 1825,
+      "sdk_trace_files": 1825,
+      "episodes": 41
+    },
+    "episodes": [
+      {
+        "global_index": 0,
+        "episode_id": "valid_seen/look_at_obj_in_light-Pillow-None-DeskLamp-302/trial_T20190909_150916_682139#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0001",
+        "counts": {
+          "observations": 33,
+          "interactions": 4,
+          "image_references": 129,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 1,
+        "episode_id": "valid_seen/pick_and_place_simple-SprayBottle-None-Toilet-415/trial_T20190909_075955_678702#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0001",
+        "counts": {
+          "observations": 21,
+          "interactions": 3,
+          "image_references": 46,
+          "saved_requests": 23,
+          "completed_responses": 23,
+          "catalogs": 23,
+          "sdk_trace_files": 23,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 2,
+        "episode_id": "valid_seen/pick_and_place_with_movable_recep-Fork-Cup-DiningTable-23/trial_T20190906_205421_980666#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0001",
+        "counts": {
+          "observations": 23,
+          "interactions": 1,
+          "image_references": 121,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 3,
+        "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-4/trial_T20190909_164840_568811#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0001",
+        "counts": {
+          "observations": 45,
+          "interactions": 4,
+          "image_references": 120,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 4,
+        "episode_id": "valid_seen/pick_cool_then_place_in_recep-Plate-None-CounterTop-1/trial_T20190906_205324_559361#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0002",
+        "counts": {
+          "observations": 47,
+          "interactions": 10,
+          "image_references": 90,
+          "saved_requests": 45,
+          "completed_responses": 45,
+          "catalogs": 45,
+          "sdk_trace_files": 45,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 5,
+        "episode_id": "valid_seen/pick_heat_then_place_in_recep-Tomato-None-DiningTable-16/trial_T20190907_201243_698086#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0002",
+        "counts": {
+          "observations": 48,
+          "interactions": 9,
+          "image_references": 120,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 6,
+        "episode_id": "valid_seen/pick_two_obj_and_place-SprayBottle-None-Toilet-429/trial_T20190907_033843_707544#3",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0002",
+        "counts": {
+          "observations": 17,
+          "interactions": 10,
+          "image_references": 38,
+          "saved_requests": 19,
+          "completed_responses": 19,
+          "catalogs": 19,
+          "sdk_trace_files": 19,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 7,
+        "episode_id": "valid_seen/look_at_obj_in_light-Bowl-None-DeskLamp-316/trial_T20190908_230702_962704#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0002",
+        "counts": {
+          "observations": 19,
+          "interactions": 9,
+          "image_references": 64,
+          "saved_requests": 32,
+          "completed_responses": 32,
+          "catalogs": 32,
+          "sdk_trace_files": 32,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 8,
+        "episode_id": "valid_seen/pick_and_place_simple-WineBottle-None-Shelf-7/trial_T20190907_200154_378982#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0003",
+        "counts": {
+          "observations": 52,
+          "interactions": 7,
+          "image_references": 127,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 9,
+        "episode_id": "valid_seen/pick_and_place_with_movable_recep-Ladle-Plate-Cabinet-16/trial_T20190907_070152_814652#3",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0003",
+        "counts": {
+          "observations": 38,
+          "interactions": 12,
+          "image_references": 82,
+          "saved_requests": 41,
+          "completed_responses": 41,
+          "catalogs": 41,
+          "sdk_trace_files": 41,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 10,
+        "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-CounterTop-14/trial_T20190909_113844_191747#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0003",
+        "counts": {
+          "observations": 54,
+          "interactions": 6,
+          "image_references": 120,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 11,
+        "episode_id": "valid_seen/pick_cool_then_place_in_recep-Pan-None-DiningTable-7/trial_T20190908_232648_241836#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0003",
+        "counts": {
+          "observations": 34,
+          "interactions": 4,
+          "image_references": 123,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 12,
+        "episode_id": "valid_seen/pick_heat_then_place_in_recep-BreadSliced-None-Fridge-19/trial_T20190908_070424_700178#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0004",
+        "counts": {
+          "observations": 45,
+          "image_references": 122,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 13,
+        "episode_id": "valid_seen/pick_two_obj_and_place-CD-None-Drawer-304/trial_T20190907_230232_832893#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0004",
+        "counts": {
+          "observations": 13,
+          "interactions": 8,
+          "image_references": 28,
+          "saved_requests": 14,
+          "completed_responses": 14,
+          "catalogs": 14,
+          "sdk_trace_files": 14,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 14,
+        "episode_id": "valid_seen/look_at_obj_in_light-Bowl-None-DeskLamp-301/trial_T20190909_150719_492274#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0004",
+        "counts": {
+          "observations": 10,
+          "interactions": 2,
+          "image_references": 26,
+          "saved_requests": 13,
+          "completed_responses": 13,
+          "catalogs": 13,
+          "sdk_trace_files": 13,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 15,
+        "episode_id": "valid_seen/pick_and_place_simple-Mug-None-SideTable-329/trial_T20190909_032318_169393#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0004",
+        "counts": {
+          "observations": 51,
+          "image_references": 123,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 16,
+        "episode_id": "valid_seen/pick_and_place_with_movable_recep-AppleSliced-Pot-Fridge-24/trial_T20190909_064046_163660#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0005",
+        "counts": {
+          "observations": 32,
+          "interactions": 11,
+          "image_references": 72,
+          "saved_requests": 36,
+          "completed_responses": 36,
+          "catalogs": 36,
+          "sdk_trace_files": 36,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 17,
+        "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-27/trial_T20190911_131350_027076#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0005",
+        "counts": {
+          "observations": 24,
+          "interactions": 10,
+          "image_references": 52,
+          "saved_requests": 26,
+          "completed_responses": 26,
+          "catalogs": 26,
+          "sdk_trace_files": 26,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 18,
+        "episode_id": "valid_seen/pick_cool_then_place_in_recep-Apple-None-GarbageCan-2/trial_T20190906_195943_081289#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0005",
+        "counts": {
+          "observations": 40,
+          "interactions": 10,
+          "image_references": 109,
+          "saved_requests": 54,
+          "completed_responses": 54,
+          "catalogs": 54,
+          "sdk_trace_files": 54,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 19,
+        "episode_id": "valid_seen/pick_heat_then_place_in_recep-AppleSliced-None-DiningTable-17/trial_T20190918_205656_000147#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0005",
+        "counts": {
+          "observations": 15,
+          "interactions": 10,
+          "image_references": 36,
+          "saved_requests": 18,
+          "completed_responses": 18,
+          "catalogs": 18,
+          "sdk_trace_files": 18,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 20,
+        "episode_id": "valid_seen/pick_two_obj_and_place-SoapBar-None-Toilet-412/trial_T20190908_071602_531614#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0006",
+        "counts": {
+          "observations": 27,
+          "interactions": 8,
+          "image_references": 80,
+          "saved_requests": 40,
+          "completed_responses": 40,
+          "catalogs": 40,
+          "sdk_trace_files": 40,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 21,
+        "episode_id": "valid_seen/look_at_obj_in_light-RemoteControl-None-FloorLamp-202/trial_T20190908_232929_254246#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0006",
+        "counts": {
+          "observations": 19,
+          "interactions": 5,
+          "image_references": 52,
+          "saved_requests": 26,
+          "completed_responses": 26,
+          "catalogs": 26,
+          "sdk_trace_files": 26,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 22,
+        "episode_id": "valid_seen/pick_and_place_simple-Book-None-Sofa-229/trial_T20190907_042856_259139#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0006",
+        "counts": {
+          "observations": 44,
+          "interactions": 7,
+          "image_references": 120,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 23,
+        "episode_id": "valid_seen/pick_and_place_with_movable_recep-Ladle-Pan-SinkBasin-4/trial_T20190908_192636_561572#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0006",
+        "counts": {
+          "observations": 51,
+          "interactions": 15,
+          "image_references": 123,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 24,
+        "episode_id": "valid_seen/pick_clean_then_place_in_recep-SoapBar-None-BathtubBasin-413/trial_T20190908_191121_189259#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0007",
+        "counts": {
+          "observations": 59,
+          "interactions": 7,
+          "image_references": 121,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 25,
+        "episode_id": "valid_unseen/look_at_obj_in_light-RemoteControl-None-FloorLamp-219/trial_T20190909_032721_511027#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0007",
+        "counts": {
+          "observations": 46,
+          "interactions": 4,
+          "image_references": 126,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 26,
+        "episode_id": "valid_unseen/pick_and_place_simple-Plunger-None-Cabinet-424/trial_T20190908_021537_611374#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0007",
+        "counts": {
+          "observations": 18,
+          "interactions": 7,
+          "image_references": 34,
+          "saved_requests": 17,
+          "completed_responses": 17,
+          "catalogs": 17,
+          "sdk_trace_files": 17,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 27,
+        "episode_id": "valid_unseen/pick_and_place_with_movable_recep-ButterKnife-Pan-SinkBasin-10/trial_T20190907_194015_037530#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0007",
+        "counts": {
+          "observations": 30,
+          "interactions": 11,
+          "image_references": 78,
+          "saved_requests": 39,
+          "completed_responses": 39,
+          "catalogs": 39,
+          "sdk_trace_files": 39,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 28,
+        "episode_id": "valid_unseen/pick_clean_then_place_in_recep-Cloth-None-Cabinet-424/trial_T20190908_022321_380927#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0008",
+        "counts": {
+          "observations": 30,
+          "interactions": 15,
+          "image_references": 68,
+          "saved_requests": 34,
+          "completed_responses": 34,
+          "catalogs": 34,
+          "sdk_trace_files": 34,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 29,
+        "episode_id": "valid_unseen/pick_cool_then_place_in_recep-Mug-None-Cabinet-10/trial_T20190909_121710_650938#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0008",
+        "counts": {
+          "observations": 67,
+          "interactions": 3,
+          "image_references": 121,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 30,
+        "episode_id": "valid_unseen/pick_heat_then_place_in_recep-Apple-None-Fridge-10/trial_T20190906_182435_622538#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0008",
+        "counts": {
+          "observations": 46,
+          "interactions": 12,
+          "image_references": 96,
+          "saved_requests": 48,
+          "completed_responses": 48,
+          "catalogs": 48,
+          "sdk_trace_files": 48,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 31,
+        "episode_id": "valid_unseen/pick_two_obj_and_place-ToiletPaper-None-Cabinet-424/trial_T20190906_203003_627271#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0008",
+        "counts": {
+          "observations": 38,
+          "interactions": 13,
+          "image_references": 84,
+          "saved_requests": 42,
+          "completed_responses": 42,
+          "catalogs": 42,
+          "sdk_trace_files": 42,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 33,
+        "episode_id": "valid_unseen/pick_and_place_simple-Plunger-None-Cabinet-424/trial_T20190908_021510_064551#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0009",
+        "counts": {
+          "observations": 61,
+          "interactions": 9,
+          "image_references": 120,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 34,
+        "episode_id": "valid_unseen/pick_and_place_with_movable_recep-Glassbottle-Plate-SinkBasin-10/trial_T20190908_123236_460615#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0009",
+        "counts": {
+          "observations": 49,
+          "interactions": 15,
+          "image_references": 86,
+          "saved_requests": 43,
+          "completed_responses": 43,
+          "catalogs": 43,
+          "sdk_trace_files": 43,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 35,
+        "episode_id": "valid_unseen/pick_clean_then_place_in_recep-SoapBar-None-CounterTop-424/trial_T20190907_074124_966890#4",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0009",
+        "counts": {
+          "observations": 27,
+          "interactions": 10,
+          "image_references": 52,
+          "saved_requests": 26,
+          "completed_responses": 26,
+          "catalogs": 26,
+          "sdk_trace_files": 26,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 37,
+        "episode_id": "valid_unseen/pick_heat_then_place_in_recep-Mug-None-CoffeeMachine-10/trial_T20190907_171933_349922#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0010",
+        "counts": {
+          "observations": 38,
+          "interactions": 5,
+          "image_references": 120,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 38,
+        "episode_id": "valid_unseen/pick_two_obj_and_place-CD-None-Safe-308/trial_T20190907_051056_585414#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0010",
+        "counts": {
+          "observations": 22,
+          "interactions": 10,
+          "image_references": 44,
+          "saved_requests": 22,
+          "completed_responses": 22,
+          "catalogs": 22,
+          "sdk_trace_files": 22,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 39,
+        "episode_id": "valid_unseen/look_at_obj_in_light-CellPhone-None-FloorLamp-219/trial_T20190908_044139_261907#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0010",
+        "counts": {
+          "observations": 50,
+          "interactions": 2,
+          "image_references": 116,
+          "saved_requests": 58,
+          "completed_responses": 58,
+          "catalogs": 58,
+          "sdk_trace_files": 58,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 41,
+        "episode_id": "valid_unseen/pick_and_place_with_movable_recep-Egg-Bowl-CounterTop-10/trial_T20190912_190125_832581#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0011",
+        "counts": {
+          "observations": 60,
+          "interactions": 8,
+          "image_references": 120,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 42,
+        "episode_id": "valid_unseen/pick_clean_then_place_in_recep-Knife-None-CounterTop-10/trial_T20190909_110531_148235#2",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0011",
+        "counts": {
+          "observations": 50,
+          "interactions": 9,
+          "image_references": 120,
+          "saved_requests": 60,
+          "completed_responses": 60,
+          "catalogs": 60,
+          "sdk_trace_files": 60,
+          "episodes": 1
+        }
+      },
+      {
+        "global_index": 46,
+        "episode_id": "valid_unseen/look_at_obj_in_light-CellPhone-None-FloorLamp-219/trial_T20190908_044113_026049#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0012",
+        "counts": {
+          "observations": 29,
+          "interactions": 9,
+          "image_references": 58,
+          "saved_requests": 29,
+          "completed_responses": 29,
+          "catalogs": 29,
+          "sdk_trace_files": 29,
+          "episodes": 1
+        }
+      }
+    ],
+    "violations": []
+  },
+  "unscored_error_prefix_audit": {
+    "counts": {
+      "observations": 41,
+      "interactions": 2,
+      "image_references": 118,
+      "saved_requests": 59,
+      "completed_responses": 56,
+      "catalogs": 56,
+      "sdk_trace_files": 56,
+      "episodes": 3
+    },
+    "prefixes": [
+      {
+        "global_index": 32,
+        "episode_id": "valid_unseen/look_at_obj_in_light-Box-None-FloorLamp-219/trial_T20190907_102952_001375#1",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "status": "error",
+        "score": null,
+        "included_in_scored_denominator": false,
+        "complete_execution_evidence": false,
+        "counts": {
+          "observations": 24,
+          "interactions": 2,
+          "image_references": 78,
+          "saved_requests": 39,
+          "completed_responses": 38,
+          "catalogs": 38,
+          "sdk_trace_files": 38,
+          "episodes": 1
+        },
+        "incomplete_decisions": [
+          {
+            "request_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0009/decisions/0039/request.json",
+            "response_present": false,
+            "completed_decision": false,
+            "sdk_catalog_and_trace_status": "unverified: response metadata does not identify the failed SDK run home"
+          }
+        ]
+      },
+      {
+        "global_index": 45,
+        "episode_id": "valid_unseen/pick_two_obj_and_place-PepperShaker-None-Drawer-10/trial_T20190908_010306_215435#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "status": "error",
+        "score": null,
+        "included_in_scored_denominator": false,
+        "complete_execution_evidence": false,
+        "counts": {
+          "observations": 6,
+          "image_references": 16,
+          "saved_requests": 8,
+          "completed_responses": 7,
+          "catalogs": 7,
+          "sdk_trace_files": 7,
+          "episodes": 1
+        },
+        "incomplete_decisions": [
+          {
+            "request_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0012/decisions/0008/request.json",
+            "response_present": false,
+            "completed_decision": false,
+            "sdk_catalog_and_trace_status": "unverified: response metadata does not identify the failed SDK run home"
+          }
+        ]
+      },
+      {
+        "global_index": 43,
+        "episode_id": "valid_unseen/pick_cool_then_place_in_recep-BreadSliced-None-Microwave-10/trial_T20190906_224631_058932#0",
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "status": "error",
+        "score": null,
+        "included_in_scored_denominator": false,
+        "complete_execution_evidence": false,
+        "counts": {
+          "observations": 11,
+          "image_references": 24,
+          "saved_requests": 12,
+          "completed_responses": 11,
+          "catalogs": 11,
+          "sdk_trace_files": 11,
+          "episodes": 1
+        },
+        "incomplete_decisions": [
+          {
+            "request_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0011/decisions/0012/request.json",
+            "response_present": false,
+            "completed_decision": false,
+            "sdk_catalog_and_trace_status": "unverified: response metadata does not identify the failed SDK run home"
+          }
+        ]
+      }
+    ],
+    "unanswered_request_count": 3,
+    "available_boundary_violations": []
+  },
+  "sdk_response_item_types": {
+    "scored_episodes": {
+      "message": 7300,
+      "reasoning": 1825
+    },
+    "unscored_prefixes": {
+      "message": 224,
+      "reasoning": 56
+    }
+  },
+  "catalog_sha256_values": [
+    "57ca6210094af5b2305a1e363bda9c39e0e09e5e1cabac569588512d20fdc44c"
+  ],
+  "artifact_manifest_sha256": "9eae7ec871b962c187711c952b88448120993fdabd7c5cef7ab64a3b49001ee7",
+  "limits": [
+    "41/50 coverage is explicitly incomplete; recovery jobs and the nine unscored identities are not represented as completed tasks.",
+    "Three unanswered final SDK requests remain incomplete. Their failed SDK run-home catalog/trace cannot be joined without response metadata; they are not counted as completed decisions.",
+    "Fresh-mask proof joins action source frame/memory identity to the corresponding prediction and saved memory NPZ; original simulator RPC mask arguments were not separately persisted.",
+    "Catalogs check declared host-tool isolation and saved SDK traces check tool execution. Full on-wire tool lists were not captured for every pilot request.",
+    "No model, simulator, scorer, runtime config, process environment, credentials or dataset trajectory contents are accessed by this audit."
+  ],
+  "report_format": "Summary with original per-file manifest preserved in lossless full-report archive",
+  "full_report_archive": {
+    "file": "pilot41_actor_boundary.full.json.gz",
+    "sha256": "3777e76b63aac0ddbfb2e965183b540222ae076d3e379446527c78972858d42a",
+    "uncompressed_sha256": "9acce6256adf0a9d8f200ded115928d6b36f2a6f078ef2c331658c6f9a2fa115",
+    "artifact_manifest_entries": 5962
+  }
+}

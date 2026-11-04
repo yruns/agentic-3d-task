@@ -1,0 +1,27 @@
+{
+  "started_at_utc": "2026-11-04T22:08:23.754708+00:00",
+  "code": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "fb408c34ab85284b32387002e92745b92983a173",
+    "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+    "tracked_worktree_drift": ""
+  },
+  "model": "gpt-5.4-2026-03-05",
+  "reasoning_effort": "medium",
+  "turn_timeout_s": 90,
+  "max_finalization_retries": 0,
+  "scope": "Synthetic native Responses vision/schema transport probe; no simulator or task score",
+  "expected": {
+    "operation": "Stop",
+    "object_id": 0,
+    "cell_x": 0,
+    "cell_y": 0,
+    "repeat": 1,
+    "rationale": "Synthetic transport check",
+    "memory_note": "No simulator task was run"
+  },
+  "request": "This is a synthetic connectivity check, not an embodied task. Return exactly: {\"operation\": \"Stop\", \"object_id\": 0, \"cell_x\": 0, \"cell_y\": 0, \"repeat\": 1, \"rationale\": \"Synthetic transport check\", \"memory_note\": \"No simulator task was run\"}",
+  "error": "CodexTurnError: Codex turn completed without a final_response; status=failed error=TurnError(additional_details=None, codex_error_info=CodexErrorInfo(root=HttpConnectionFailedCodexErrorInfo(http_connection_failed=HttpConnectionFailed(http_status_code=502))), message='unexpected status 502 Bad Gateway: Unable to reach upstream; outcome may be indeterminate, url: http://127.0.0.1:8787/v1/responses', misalignment=None)",
+  "succeeded": false,
+  "wall_seconds": 10.452381517738104
+}

@@ -1,0 +1,7 @@
+{
+  "actions": 23,
+  "failures": 2,
+  "decisions": 39,
+  "observed_input_tokens_lower_bound": 329970,
+  "observed_output_tokens_lower_bound": 55176
+}

@@ -1,0 +1,13 @@
+{
+  "episode_id": "valid_unseen/pick_clean_then_place_in_recep-Cloth-None-Cabinet-424/trial_T20190908_022321_380927#2",
+  "status": "completed",
+  "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0008",
+  "score": {
+    "success": true,
+    "completed_goal_conditions": 3,
+    "total_goal_conditions": 3,
+    "expert_actions": 29,
+    "executed_actions": 29
+  },
+  "error": null
+}

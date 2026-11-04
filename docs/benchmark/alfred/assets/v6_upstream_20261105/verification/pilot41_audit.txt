@@ -1,0 +1,71 @@
+{
+  "coverage": {
+    "fold_requested": 50,
+    "scored": 41,
+    "unscored_error_prefixes": 3,
+    "unattempted": 6,
+    "missing_score_global_indices": [
+      32,
+      36,
+      40,
+      43,
+      44,
+      45,
+      47,
+      48,
+      49
+    ]
+  },
+  "official_checked": 41,
+  "official_matching": 41,
+  "all_match": true,
+  "metrics": {
+    "num_evals": 41,
+    "num_successes": 5,
+    "completed_goal_conditions": 20,
+    "total_goal_conditions": 102,
+    "expert_actions": 1813,
+    "executed_actions": 1481,
+    "success_rate": 0.12195121951219512,
+    "goal_condition_success_rate": 0.19607843137254902,
+    "path_length_weighted_success_rate": 0.07887479316050745,
+    "path_length_weighted_goal_condition_success_rate": 0.1607532525899873
+  },
+  "scored_execution_totals": {
+    "actions": 1481,
+    "failures": 267,
+    "decisions": 1825,
+    "input_tokens": 16824132,
+    "output_tokens": 2105734,
+    "perception_seconds": 719.7870656223968,
+    "policy_seconds": 42995.64594632201
+  },
+  "reported_usage": {
+    "cache_write_input_tokens": 0,
+    "cached_input_tokens": 605824,
+    "input_tokens": 16824132,
+    "output_tokens": 2105734,
+    "reasoning_output_tokens": 1853346,
+    "total_tokens": 18929866
+  },
+  "unscored_prefix_totals": {
+    "attempts": 3,
+    "score": null,
+    "actions": 38,
+    "failures": 3,
+    "decisions_started": 59,
+    "observations": 41,
+    "reported_usage_lower_bound": {
+      "cache_write_input_tokens": 0,
+      "cached_input_tokens": 25344,
+      "input_tokens": 439747,
+      "output_tokens": 75784,
+      "reasoning_output_tokens": 68188,
+      "total_tokens": 515531
+    },
+    "unknown_failed_request_usage": null,
+    "exact_total_consumed_usage": null
+  },
+  "rescore_output": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot41_terminal_rescore.json",
+  "accounting_output": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot41_accounting.json"
+}

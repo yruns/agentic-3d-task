@@ -1,0 +1,4392 @@
+{
+  "checked_at_utc": "2026-11-04T22:26:22.818762+00:00",
+  "scope": "Posthoc local audit of exactly the manifest's original41 completed episodes. No model/simulator invocation, replay, source changes, or feedback to actors.",
+  "coverage": {
+    "fold_requested": 50,
+    "scored": 41,
+    "unscored_error_prefixes": 3,
+    "unattempted": 6,
+    "missing_score_global_indices": [
+      32,
+      36,
+      40,
+      43,
+      44,
+      45,
+      47,
+      48,
+      49
+    ]
+  },
+  "cohort_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot50_cohort.json",
+  "cohort_sha256": "f3b8ef2e59b0e2ab8d69df2814c5fa2dd15fb1dd54dde33ca3513f58e72de955",
+  "fold": {
+    "path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/folds/pilot50.json",
+    "sha256": "1d22afc51da128395a6d65a250d9dc603c8f50f0252942ca28b335568f646d4e",
+    "splits_path": "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+    "splits_sha256": "c27918c1f64f58d047cb2a26d477dfdb8935bacde3504ec1ce9cb52cd2c72c83",
+    "data_root": "/home/ysh/Datasets/FILM/alfred/data/json_2.1.0",
+    "episode_count": 50
+  },
+  "matching_configuration": {
+    "fold_sha256": "1d22afc51da128395a6d65a250d9dc603c8f50f0252942ca28b335568f646d4e",
+    "splits_sha256": "c27918c1f64f58d047cb2a26d477dfdb8935bacde3504ec1ce9cb52cd2c72c83",
+    "model": "gpt-5.4-2026-03-05",
+    "model_provider": "codex_adapter",
+    "reasoning_effort": "medium",
+    "execution": {
+      "max_actions": 1000,
+      "max_failures": 10,
+      "max_decisions": 60,
+      "navigation_chunk": 12,
+      "retrieved_images": 3,
+      "use_step_instructions": false
+    },
+    "geometry": {
+      "camera_height_m": 1.576,
+      "step_size_m": 0.25,
+      "vertical_fov_degrees": 60.0,
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pose_source": "successful-action odometry and yaw/horizon proprioception",
+      "world_axes": "episode-relative THOR X/Z/Y (Z-up)"
+    },
+    "perception_profile": "film_predicted_rgb_v1",
+    "perception": {
+      "device": "cuda:0",
+      "score_threshold": 0.5,
+      "mask_threshold": 0.5,
+      "checkpoints": {
+        "maskrcnn_alfworld/objects_lr5e-3_005.pth": "1a996559aaf093d3aece1da456266843899eda03da49d5f56cd7a48d18ea67f4",
+        "maskrcnn_alfworld/receps_lr5e-3_003.pth": "3caf3a0a3eca76081b91fedf2bbdd9ff42937ca63ec9660852a9dd47d73d66d2",
+        "depth_models/valts0/model-102500-best_silog_17.00430": "55fe43a4701f8c9646ebeb2d7740b61073efa3af3da6fe0824183938d1222953",
+        "depth_models/valts/model-2000-best_silog_10.13741": "b7371f578160e23e6255f3f1907ba247fdda240a1bb0019f2ca36556f0164420"
+      }
+    },
+    "simulator": {
+      "python_executable": "/home/ysh/codebase/FILM/.venv/bin/python",
+      "x_display": "5",
+      "ai2thor_version": "2.1.0",
+      "build": "201909061227"
+    },
+    "external_sources": {
+      "alfred": {
+        "path": "/home/ysh/Datasets/FILM/alfred",
+        "head_sha": "f91f4c0c96c7a29f33d0557f86b0a21035379b3b",
+        "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tracked_dirty": false,
+        "python_source_sha256": "412cc3dba05844c40f7a9c673ac1a23f7b6d32695a1b0b0bf977ef1e8d692074",
+        "python_source_count": 55
+      },
+      "film": {
+        "path": "/home/ysh/codebase/FILM",
+        "head_sha": "63abf9599bbcfae0b2ab91695da86fcca751f044",
+        "tracked_diff_sha256": "78c3d94ab3d61e6b3b387b5aed97f01028277b73310bfc2d7a835033f71395c1",
+        "tracked_dirty": true,
+        "python_source_sha256": "d5c06183eb11d4be5f1034f76e70cfb1ddf7b4cccb54c6e8116ef87976902806",
+        "python_source_count": 115
+      }
+    },
+    "code": {
+      "branch": "feat/alfred-benchmark",
+      "head_sha": "fb408c34ab85284b32387002e92745b92983a173",
+      "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+      "tracked_worktree_drift": ""
+    },
+    "cli_arguments_excluding_run_and_shard": {
+      "data_root": "/home/ysh/Datasets/FILM/alfred/data/json_2.1.0",
+      "splits": "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+      "fold": "docs/benchmark/alfred/folds/pilot50.json",
+      "database": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/runs.sqlite",
+      "simulator_python": "/home/ysh/codebase/FILM/.venv/bin/python",
+      "alfred_root": "/home/ysh/Datasets/FILM/alfred",
+      "film_root": "/home/ysh/codebase/FILM",
+      "weights_root": "/home/ysh/Datasets/FILM/Pretrained_Models_FILM",
+      "x_display": "5",
+      "device": "cuda:0",
+      "model": "gpt-5.4-2026-03-05",
+      "reasoning_effort": "medium",
+      "max_actions": 1000,
+      "max_failures": 10,
+      "max_decisions": 60,
+      "navigation_chunk": 12,
+      "retrieved_images": 3,
+      "worker_timeout": 180.0,
+      "turn_timeout": 300.0,
+      "use_step_instructions": false,
+      "limit": null,
+      "preflight_only": false
+    }
+  },
+  "script_sha256": "6e00de834569c35da00da6ec8dd62f512af7a8bb155a45b5dfee46acf36124c1",
+  "helper_script_sha256": {
+    "analyze_recovered_pilot50.py": "f54cbcf1706a6d06f3cb60cd45015f5488f7fdf4f0396e14ba0a0f3f4f89bc1e",
+    "analyze_pilot50.py": "4f565e83422cab1b45d887ed189c214db66124c734e215123af4e4d4a4ab9cd0",
+    "rescore_pilot50.py": "ee5cb45e06d616425f53d85b4abe2f604bfd6b28860fc9da90d87ee3e3e1cae9"
+  },
+  "database_audit": [
+    {
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "run_status": "error",
+      "attempts": 9,
+      "matches": true
+    },
+    {
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "run_status": "error",
+      "attempts": 12,
+      "matches": true
+    },
+    {
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "run_status": "completed",
+      "attempts": 12,
+      "matches": true
+    },
+    {
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "run_status": "error",
+      "attempts": 11,
+      "matches": true
+    }
+  ],
+  "status": "partial_coverage_verified",
+  "scored_totals": {
+    "scored": 41,
+    "metrics": {
+      "num_evals": 41,
+      "num_successes": 5,
+      "completed_goal_conditions": 20,
+      "total_goal_conditions": 102,
+      "expert_actions": 1813,
+      "executed_actions": 1481,
+      "success_rate": 0.12195121951219512,
+      "goal_condition_success_rate": 0.19607843137254902,
+      "path_length_weighted_success_rate": 0.07887479316050745,
+      "path_length_weighted_goal_condition_success_rate": 0.1607532525899873
+    },
+    "execution_totals": {
+      "actions": 1481,
+      "failures": 267,
+      "decisions": 1825,
+      "input_tokens": 16824132,
+      "output_tokens": 2105734,
+      "perception_seconds": 719.7870656223968,
+      "policy_seconds": 42995.64594632201
+    },
+    "observations": 1522,
+    "reported_usage": {
+      "cache_write_input_tokens": 0,
+      "cached_input_tokens": 605824,
+      "input_tokens": 16824132,
+      "output_tokens": 2105734,
+      "reasoning_output_tokens": 1853346,
+      "total_tokens": 18929866
+    },
+    "stop_reasons": {
+      "decision_budget": 17,
+      "policy_stop": 11,
+      "failure_budget": 13
+    },
+    "operations": {
+      "RotateLeft": 280,
+      "NavigateObject": 573,
+      "MoveAhead": 121,
+      "LookUp": 86,
+      "RotateRight": 262,
+      "PickupObject": 126,
+      "NavigateCell": 61,
+      "RetrieveObject": 37,
+      "PutObject": 65,
+      "Stop": 11,
+      "OpenObject": 110,
+      "LookDown": 79,
+      "ToggleObjectOn": 12,
+      "ToggleObjectOff": 2
+    },
+    "action_types": {
+      "RotateLeft": 354,
+      "MoveAhead": 236,
+      "LookUp": 121,
+      "RotateRight": 333,
+      "LookDown": 123,
+      "PickupObject": 126,
+      "PutObject": 64,
+      "OpenObject": 110,
+      "ToggleObjectOn": 12,
+      "ToggleObjectOff": 2
+    },
+    "failed_action_types": {
+      "PickupObject": 101,
+      "PutObject": 53,
+      "OpenObject": 84,
+      "MoveAhead": 20,
+      "ToggleObjectOn": 9
+    },
+    "failure_messages": {
+      "object is not visible.": 101,
+      "No valid Receptacle found": 5,
+      "object not found: object": 38,
+      "DiningTable_061caa6c is blocking Agent 0 from moving 0": 1,
+      "": 23,
+      "GameObject is blocking Agent 0 from moving 0": 1,
+      "Desk_73061fe2 is blocking Agent 0 from moving 0": 1,
+      "Object failed to open/close successfully.": 8,
+      "Target openable Receptacle is CLOSED, can't place if target is not open!": 4,
+      "No valid positions to place object found": 41,
+      "Chair_c0b54654 is blocking Agent 0 from moving 0": 1,
+      "StandardCounterHeightWidth is blocking Agent 0 from moving 0": 1,
+      "Bad interact mask. Couldn't locate target object": 17,
+      "Beanbag is blocking Agent 0 from moving 0": 1,
+      "StandardIslandHeight2 is blocking Agent 0 from moving 0": 2,
+      "Toilet_c18caea3 is blocking Agent 0 from moving 0": 2,
+      "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 ": 8,
+      "TVStand_60641d47 is blocking Agent 0 from moving 0": 1,
+      "Toilet_149ddd51 is blocking Agent 0 from moving 0": 4,
+      "Toilet_daa15a38 is blocking Agent 0 from moving 0": 2,
+      "another object's collision is blocking held object from being placed": 1,
+      "HousePlant_e8f14f16 is blocking Agent 0 from moving 0": 1,
+      "Chair_eb23fa0f is blocking Agent 0 from moving 0": 1,
+      "SideTable_50177b4d is blocking Agent 0 from moving 0": 1,
+      "can't toggle object on if it's already on!": 1
+    },
+    "non_action_feedback": {
+      "Initial observation.": 41,
+      "No route through observed free cells; explore or select another approach.": 369,
+      "Retrieved observed frames [13, 12, 10]; no action performed.": 1,
+      "Retrieved observed frames [16, 15, 9]; no action performed.": 1,
+      "No additional historical views; obtain a new observation by moving/adjusting camera.": 21,
+      "Retrieved observed frames [23, 21, 19]; no action performed.": 1,
+      "Retrieved observed frames [1]; no action performed.": 1,
+      "Reached observed approach; verify current target mask and interaction distance.": 252,
+      "Retrieved observed frames [6]; no action performed.": 1,
+      "Retrieved observed frames [40, 16, 24]; no action performed.": 1,
+      "Retrieved observed frames [21, 14, 19]; no action performed.": 1,
+      "Retrieved observed frames [21, 20, 18]; no action performed.": 1,
+      "Retrieved observed frames [6, 2]; no action performed.": 1,
+      "Retrieved observed frames [4, 1, 3]; no action performed.": 1,
+      "Retrieved observed frames [2]; no action performed.": 1,
+      "Retrieved observed frames [25, 9, 15]; no action performed.": 1,
+      "Retrieved observed frames [14]; no action performed.": 1,
+      "Retrieved observed frames [10, 1, 3]; no action performed.": 1,
+      "Retrieved observed frames [9, 2, 5]; no action performed.": 1,
+      "Retrieved observed frames [13]; no action performed.": 1,
+      "Rejected interaction: target has no mask in the current observation.": 1,
+      "Object location is stale or held; obtain a new observation.": 2
+    },
+    "requests": 1825,
+    "responses": 1825,
+    "submitted_images": 3687,
+    "submitted_historical_images": 37,
+    "sdk_attempts_observed": 1825
+  },
+  "by_split": {
+    "valid_seen": {
+      "scored": 25,
+      "metrics": {
+        "num_evals": 25,
+        "num_successes": 3,
+        "completed_goal_conditions": 9,
+        "total_goal_conditions": 63,
+        "expert_actions": 1209,
+        "executed_actions": 836,
+        "success_rate": 0.12,
+        "goal_condition_success_rate": 0.14285714285714285,
+        "path_length_weighted_success_rate": 0.07775020678246485,
+        "path_length_weighted_goal_condition_success_rate": 0.12161315387121839
+      },
+      "execution_totals": {
+        "actions": 836,
+        "failures": 151,
+        "decisions": 1107,
+        "input_tokens": 10142583,
+        "output_tokens": 1276831,
+        "perception_seconds": 501.40227854065597,
+        "policy_seconds": 26467.621622716077
+      },
+      "observations": 861,
+      "reported_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 356608,
+        "input_tokens": 10142583,
+        "output_tokens": 1276831,
+        "reasoning_output_tokens": 1122718,
+        "total_tokens": 11419414
+      },
+      "stop_reasons": {
+        "decision_budget": 12,
+        "policy_stop": 5,
+        "failure_budget": 8
+      },
+      "operations": {
+        "RotateLeft": 182,
+        "NavigateObject": 364,
+        "MoveAhead": 75,
+        "LookUp": 28,
+        "RotateRight": 171,
+        "PickupObject": 76,
+        "NavigateCell": 35,
+        "RetrieveObject": 32,
+        "PutObject": 30,
+        "Stop": 5,
+        "OpenObject": 60,
+        "LookDown": 43,
+        "ToggleObjectOn": 5,
+        "ToggleObjectOff": 1
+      },
+      "action_types": {
+        "RotateLeft": 220,
+        "MoveAhead": 135,
+        "LookUp": 46,
+        "RotateRight": 213,
+        "LookDown": 50,
+        "PickupObject": 76,
+        "PutObject": 30,
+        "OpenObject": 60,
+        "ToggleObjectOn": 5,
+        "ToggleObjectOff": 1
+      },
+      "failed_action_types": {
+        "PickupObject": 62,
+        "PutObject": 25,
+        "OpenObject": 47,
+        "MoveAhead": 14,
+        "ToggleObjectOn": 3
+      },
+      "failure_messages": {
+        "object is not visible.": 62,
+        "No valid Receptacle found": 5,
+        "object not found: object": 25,
+        "DiningTable_061caa6c is blocking Agent 0 from moving 0": 1,
+        "": 11,
+        "GameObject is blocking Agent 0 from moving 0": 1,
+        "Desk_73061fe2 is blocking Agent 0 from moving 0": 1,
+        "Object failed to open/close successfully.": 7,
+        "Target openable Receptacle is CLOSED, can't place if target is not open!": 1,
+        "No valid positions to place object found": 19,
+        "Chair_c0b54654 is blocking Agent 0 from moving 0": 1,
+        "StandardCounterHeightWidth is blocking Agent 0 from moving 0": 1,
+        "Bad interact mask. Couldn't locate target object": 4,
+        "Beanbag is blocking Agent 0 from moving 0": 1,
+        "StandardIslandHeight2 is blocking Agent 0 from moving 0": 1,
+        "Toilet_c18caea3 is blocking Agent 0 from moving 0": 2,
+        "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 ": 3,
+        "TVStand_60641d47 is blocking Agent 0 from moving 0": 1,
+        "Toilet_149ddd51 is blocking Agent 0 from moving 0": 4
+      },
+      "non_action_feedback": {
+        "Initial observation.": 25,
+        "No route through observed free cells; explore or select another approach.": 268,
+        "Retrieved observed frames [13, 12, 10]; no action performed.": 1,
+        "Retrieved observed frames [16, 15, 9]; no action performed.": 1,
+        "No additional historical views; obtain a new observation by moving/adjusting camera.": 19,
+        "Retrieved observed frames [23, 21, 19]; no action performed.": 1,
+        "Retrieved observed frames [1]; no action performed.": 1,
+        "Reached observed approach; verify current target mask and interaction distance.": 124,
+        "Retrieved observed frames [6]; no action performed.": 1,
+        "Retrieved observed frames [40, 16, 24]; no action performed.": 1,
+        "Retrieved observed frames [21, 14, 19]; no action performed.": 1,
+        "Retrieved observed frames [21, 20, 18]; no action performed.": 1,
+        "Retrieved observed frames [6, 2]; no action performed.": 1,
+        "Retrieved observed frames [4, 1, 3]; no action performed.": 1,
+        "Retrieved observed frames [2]; no action performed.": 1,
+        "Retrieved observed frames [25, 9, 15]; no action performed.": 1,
+        "Retrieved observed frames [14]; no action performed.": 1
+      },
+      "requests": 1107,
+      "responses": 1107,
+      "submitted_images": 2244,
+      "submitted_historical_images": 30,
+      "sdk_attempts_observed": 1107,
+      "fold_requested": 25
+    },
+    "valid_unseen": {
+      "scored": 16,
+      "metrics": {
+        "num_evals": 16,
+        "num_successes": 2,
+        "completed_goal_conditions": 11,
+        "total_goal_conditions": 39,
+        "expert_actions": 604,
+        "executed_actions": 645,
+        "success_rate": 0.125,
+        "goal_condition_success_rate": 0.28205128205128205,
+        "path_length_weighted_success_rate": 0.08112582781456953,
+        "path_length_weighted_goal_condition_success_rate": 0.23909825151547004
+      },
+      "execution_totals": {
+        "actions": 645,
+        "failures": 116,
+        "decisions": 718,
+        "input_tokens": 6681549,
+        "output_tokens": 828903,
+        "perception_seconds": 218.3847870817408,
+        "policy_seconds": 16528.024323605932
+      },
+      "observations": 661,
+      "reported_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 249216,
+        "input_tokens": 6681549,
+        "output_tokens": 828903,
+        "reasoning_output_tokens": 730628,
+        "total_tokens": 7510452
+      },
+      "stop_reasons": {
+        "policy_stop": 6,
+        "failure_budget": 5,
+        "decision_budget": 5
+      },
+      "operations": {
+        "RotateRight": 91,
+        "NavigateObject": 209,
+        "MoveAhead": 46,
+        "PickupObject": 50,
+        "LookDown": 36,
+        "RotateLeft": 98,
+        "RetrieveObject": 5,
+        "LookUp": 58,
+        "NavigateCell": 26,
+        "Stop": 6,
+        "OpenObject": 50,
+        "PutObject": 35,
+        "ToggleObjectOn": 7,
+        "ToggleObjectOff": 1
+      },
+      "action_types": {
+        "RotateRight": 120,
+        "MoveAhead": 101,
+        "PickupObject": 50,
+        "LookDown": 73,
+        "RotateLeft": 134,
+        "LookUp": 75,
+        "OpenObject": 50,
+        "PutObject": 34,
+        "ToggleObjectOn": 7,
+        "ToggleObjectOff": 1
+      },
+      "failed_action_types": {
+        "PickupObject": 39,
+        "MoveAhead": 6,
+        "PutObject": 28,
+        "OpenObject": 37,
+        "ToggleObjectOn": 6
+      },
+      "failure_messages": {
+        "object is not visible.": 39,
+        "Toilet_daa15a38 is blocking Agent 0 from moving 0": 2,
+        "No valid positions to place object found": 22,
+        "Bad interact mask. Couldn't locate target object": 13,
+        "StandardIslandHeight2 is blocking Agent 0 from moving 0": 1,
+        "another object's collision is blocking held object from being placed": 1,
+        "Object failed to open/close successfully.": 1,
+        "object not found: object": 13,
+        "Target openable Receptacle is CLOSED, can't place if target is not open!": 3,
+        "": 12,
+        "HousePlant_e8f14f16 is blocking Agent 0 from moving 0": 1,
+        "Chair_eb23fa0f is blocking Agent 0 from moving 0": 1,
+        "SideTable_50177b4d is blocking Agent 0 from moving 0": 1,
+        "can't toggle object on if it's already on!": 1,
+        "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 ": 5
+      },
+      "non_action_feedback": {
+        "Initial observation.": 16,
+        "No route through observed free cells; explore or select another approach.": 101,
+        "Reached observed approach; verify current target mask and interaction distance.": 128,
+        "Retrieved observed frames [10, 1, 3]; no action performed.": 1,
+        "Retrieved observed frames [9, 2, 5]; no action performed.": 1,
+        "Retrieved observed frames [13]; no action performed.": 1,
+        "No additional historical views; obtain a new observation by moving/adjusting camera.": 2,
+        "Rejected interaction: target has no mask in the current observation.": 1,
+        "Object location is stale or held; obtain a new observation.": 2
+      },
+      "requests": 718,
+      "responses": 718,
+      "submitted_images": 1443,
+      "submitted_historical_images": 7,
+      "sdk_attempts_observed": 718,
+      "fold_requested": 25
+    }
+  },
+  "by_task_type": {
+    "look_at_obj_in_light": {
+      "scored": 7,
+      "metrics": {
+        "num_evals": 7,
+        "num_successes": 1,
+        "completed_goal_conditions": 4,
+        "total_goal_conditions": 14,
+        "expert_actions": 198,
+        "executed_actions": 199,
+        "success_rate": 0.14285714285714285,
+        "goal_condition_success_rate": 0.2857142857142857,
+        "path_length_weighted_success_rate": 0.11616161616161616,
+        "path_length_weighted_goal_condition_success_rate": 0.18629148629148629
+      },
+      "execution_totals": {
+        "actions": 199,
+        "failures": 35,
+        "decisions": 278,
+        "input_tokens": 2296500,
+        "output_tokens": 318375,
+        "perception_seconds": 68.30726154521108,
+        "policy_seconds": 6484.164598676376
+      },
+      "observations": 206,
+      "reported_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 100992,
+        "input_tokens": 2296500,
+        "output_tokens": 318375,
+        "reasoning_output_tokens": 279664,
+        "total_tokens": 2614875
+      },
+      "stop_reasons": {
+        "decision_budget": 1,
+        "failure_budget": 1,
+        "policy_stop": 5
+      },
+      "operations": {
+        "RotateLeft": 38,
+        "NavigateObject": 101,
+        "MoveAhead": 20,
+        "LookUp": 13,
+        "RotateRight": 44,
+        "PickupObject": 25,
+        "NavigateCell": 11,
+        "RetrieveObject": 6,
+        "Stop": 5,
+        "ToggleObjectOn": 10,
+        "LookDown": 5
+      },
+      "action_types": {
+        "RotateLeft": 51,
+        "MoveAhead": 41,
+        "LookUp": 15,
+        "RotateRight": 48,
+        "LookDown": 9,
+        "PickupObject": 25,
+        "ToggleObjectOn": 10
+      },
+      "failed_action_types": {
+        "PickupObject": 22,
+        "MoveAhead": 4,
+        "ToggleObjectOn": 9
+      },
+      "failure_messages": {
+        "object is not visible.": 22,
+        "Desk_73061fe2 is blocking Agent 0 from moving 0": 1,
+        "Beanbag is blocking Agent 0 from moving 0": 1,
+        "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 ": 8,
+        "TVStand_60641d47 is blocking Agent 0 from moving 0": 1,
+        "SideTable_50177b4d is blocking Agent 0 from moving 0": 1,
+        "can't toggle object on if it's already on!": 1
+      },
+      "non_action_feedback": {
+        "Initial observation.": 7,
+        "No route through observed free cells; explore or select another approach.": 76,
+        "Retrieved observed frames [13, 12, 10]; no action performed.": 1,
+        "Retrieved observed frames [16, 15, 9]; no action performed.": 1,
+        "No additional historical views; obtain a new observation by moving/adjusting camera.": 1,
+        "Retrieved observed frames [23, 21, 19]; no action performed.": 1,
+        "Reached observed approach; verify current target mask and interaction distance.": 36,
+        "Retrieved observed frames [10, 1, 3]; no action performed.": 1,
+        "Retrieved observed frames [9, 2, 5]; no action performed.": 1
+      },
+      "requests": 278,
+      "responses": 278,
+      "submitted_images": 571,
+      "submitted_historical_images": 15,
+      "sdk_attempts_observed": 278
+    },
+    "pick_and_place_simple": {
+      "scored": 6,
+      "metrics": {
+        "num_evals": 6,
+        "num_successes": 2,
+        "completed_goal_conditions": 2,
+        "total_goal_conditions": 6,
+        "expert_actions": 195,
+        "executed_actions": 241,
+        "success_rate": 0.3333333333333333,
+        "goal_condition_success_rate": 0.3333333333333333,
+        "path_length_weighted_success_rate": 0.2717948717948718,
+        "path_length_weighted_goal_condition_success_rate": 0.2717948717948718
+      },
+      "execution_totals": {
+        "actions": 241,
+        "failures": 24,
+        "decisions": 280,
+        "input_tokens": 2280133,
+        "output_tokens": 305891,
+        "perception_seconds": 129.52646107971668,
+        "policy_seconds": 6288.223869960755
+      },
+      "observations": 247,
+      "reported_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 93952,
+        "input_tokens": 2280133,
+        "output_tokens": 305891,
+        "reasoning_output_tokens": 267535,
+        "total_tokens": 2586024
+      },
+      "stop_reasons": {
+        "policy_stop": 2,
+        "decision_budget": 4
+      },
+      "operations": {
+        "PickupObject": 7,
+        "RotateLeft": 74,
+        "PutObject": 14,
+        "RotateRight": 53,
+        "NavigateObject": 82,
+        "LookUp": 3,
+        "MoveAhead": 16,
+        "Stop": 2,
+        "RetrieveObject": 4,
+        "OpenObject": 12,
+        "NavigateCell": 6,
+        "LookDown": 7
+      },
+      "action_types": {
+        "PickupObject": 7,
+        "RotateLeft": 82,
+        "PutObject": 14,
+        "RotateRight": 79,
+        "LookUp": 4,
+        "MoveAhead": 36,
+        "OpenObject": 12,
+        "LookDown": 7
+      },
+      "failed_action_types": {
+        "PutObject": 12,
+        "OpenObject": 7,
+        "PickupObject": 3,
+        "MoveAhead": 2
+      },
+      "failure_messages": {
+        "No valid Receptacle found": 3,
+        "Object failed to open/close successfully.": 7,
+        "No valid positions to place object found": 8,
+        "object is not visible.": 3,
+        "Toilet_daa15a38 is blocking Agent 0 from moving 0": 2,
+        "Target openable Receptacle is CLOSED, can't place if target is not open!": 1
+      },
+      "non_action_feedback": {
+        "Initial observation.": 6,
+        "No route through observed free cells; explore or select another approach.": 46,
+        "Retrieved observed frames [6]; no action performed.": 1,
+        "Reached observed approach; verify current target mask and interaction distance.": 39,
+        "Retrieved observed frames [40, 16, 24]; no action performed.": 1,
+        "Retrieved observed frames [21, 14, 19]; no action performed.": 1,
+        "Retrieved observed frames [4, 1, 3]; no action performed.": 1
+      },
+      "requests": 280,
+      "responses": 280,
+      "submitted_images": 570,
+      "submitted_historical_images": 10,
+      "sdk_attempts_observed": 280
+    },
+    "pick_and_place_with_movable_recep": {
+      "scored": 7,
+      "metrics": {
+        "num_evals": 7,
+        "num_successes": 0,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 22,
+        "expert_actions": 292,
+        "executed_actions": 276,
+        "success_rate": 0.0,
+        "goal_condition_success_rate": 0.0,
+        "path_length_weighted_success_rate": 0.0,
+        "path_length_weighted_goal_condition_success_rate": 0.0
+      },
+      "execution_totals": {
+        "actions": 276,
+        "failures": 58,
+        "decisions": 339,
+        "input_tokens": 3560777,
+        "output_tokens": 477690,
+        "perception_seconds": 148.60370036866516,
+        "policy_seconds": 9397.433539118618
+      },
+      "observations": 283,
+      "reported_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 126848,
+        "input_tokens": 3560777,
+        "output_tokens": 477690,
+        "reasoning_output_tokens": 430803,
+        "total_tokens": 4038467
+      },
+      "stop_reasons": {
+        "decision_budget": 3,
+        "failure_budget": 4
+      },
+      "operations": {
+        "RotateRight": 38,
+        "NavigateObject": 102,
+        "MoveAhead": 22,
+        "RotateLeft": 32,
+        "OpenObject": 38,
+        "RetrieveObject": 14,
+        "LookDown": 19,
+        "LookUp": 27,
+        "NavigateCell": 12,
+        "PickupObject": 14,
+        "PutObject": 21
+      },
+      "action_types": {
+        "RotateRight": 45,
+        "MoveAhead": 40,
+        "RotateLeft": 49,
+        "OpenObject": 38,
+        "LookDown": 35,
+        "LookUp": 34,
+        "PickupObject": 14,
+        "PutObject": 21
+      },
+      "failed_action_types": {
+        "OpenObject": 27,
+        "MoveAhead": 2,
+        "PickupObject": 9,
+        "PutObject": 20
+      },
+      "failure_messages": {
+        "object not found: object": 8,
+        "DiningTable_061caa6c is blocking Agent 0 from moving 0": 1,
+        "object is not visible.": 9,
+        "Target openable Receptacle is CLOSED, can't place if target is not open!": 1,
+        "No valid positions to place object found": 16,
+        "": 16,
+        "Bad interact mask. Couldn't locate target object": 5,
+        "StandardIslandHeight2 is blocking Agent 0 from moving 0": 1,
+        "another object's collision is blocking held object from being placed": 1
+      },
+      "non_action_feedback": {
+        "Initial observation.": 7,
+        "No route through observed free cells; explore or select another approach.": 81,
+        "Retrieved observed frames [1]; no action performed.": 1,
+        "No additional historical views; obtain a new observation by moving/adjusting camera.": 12,
+        "Reached observed approach; verify current target mask and interaction distance.": 29,
+        "Retrieved observed frames [25, 9, 15]; no action performed.": 1,
+        "Object location is stale or held; obtain a new observation.": 1
+      },
+      "requests": 339,
+      "responses": 339,
+      "submitted_images": 682,
+      "submitted_historical_images": 4,
+      "sdk_attempts_observed": 339
+    },
+    "pick_clean_then_place_in_recep": {
+      "scored": 7,
+      "metrics": {
+        "num_evals": 7,
+        "num_successes": 2,
+        "completed_goal_conditions": 9,
+        "total_goal_conditions": 21,
+        "expert_actions": 248,
+        "executed_actions": 282,
+        "success_rate": 0.2857142857142857,
+        "goal_condition_success_rate": 0.42857142857142855,
+        "path_length_weighted_success_rate": 0.2701612903225806,
+        "path_length_weighted_goal_condition_success_rate": 0.4329178885630499
+      },
+      "execution_totals": {
+        "actions": 282,
+        "failures": 46,
+        "decisions": 326,
+        "input_tokens": 2919393,
+        "output_tokens": 343559,
+        "perception_seconds": 110.35514793824404,
+        "policy_seconds": 7030.639629816636
+      },
+      "observations": 289,
+      "reported_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 98304,
+        "input_tokens": 2919393,
+        "output_tokens": 343559,
+        "reasoning_output_tokens": 297068,
+        "total_tokens": 3262952
+      },
+      "stop_reasons": {
+        "decision_budget": 4,
+        "policy_stop": 2,
+        "failure_budget": 1
+      },
+      "operations": {
+        "RotateLeft": 53,
+        "LookDown": 13,
+        "LookUp": 8,
+        "RotateRight": 57,
+        "PickupObject": 28,
+        "NavigateObject": 107,
+        "MoveAhead": 17,
+        "PutObject": 18,
+        "OpenObject": 11,
+        "ToggleObjectOn": 2,
+        "ToggleObjectOff": 2,
+        "Stop": 2,
+        "NavigateCell": 3,
+        "RetrieveObject": 5
+      },
+      "action_types": {
+        "RotateLeft": 72,
+        "LookDown": 18,
+        "LookUp": 12,
+        "RotateRight": 77,
+        "PickupObject": 28,
+        "MoveAhead": 42,
+        "PutObject": 18,
+        "OpenObject": 11,
+        "ToggleObjectOn": 2,
+        "ToggleObjectOff": 2
+      },
+      "failed_action_types": {
+        "PickupObject": 22,
+        "PutObject": 14,
+        "OpenObject": 6,
+        "MoveAhead": 4
+      },
+      "failure_messages": {
+        "object is not visible.": 22,
+        "No valid positions to place object found": 12,
+        "object not found: object": 3,
+        "No valid Receptacle found": 2,
+        "": 2,
+        "Toilet_149ddd51 is blocking Agent 0 from moving 0": 4,
+        "Object failed to open/close successfully.": 1
+      },
+      "non_action_feedback": {
+        "Initial observation.": 7,
+        "No route through observed free cells; explore or select another approach.": 25,
+        "Reached observed approach; verify current target mask and interaction distance.": 84,
+        "Retrieved observed frames [14]; no action performed.": 1,
+        "No additional historical views; obtain a new observation by moving/adjusting camera.": 4
+      },
+      "requests": 326,
+      "responses": 326,
+      "submitted_images": 653,
+      "submitted_historical_images": 1,
+      "sdk_attempts_observed": 326
+    },
+    "pick_cool_then_place_in_recep": {
+      "scored": 4,
+      "metrics": {
+        "num_evals": 4,
+        "num_successes": 0,
+        "completed_goal_conditions": 2,
+        "total_goal_conditions": 12,
+        "expert_actions": 252,
+        "executed_actions": 184,
+        "success_rate": 0.0,
+        "goal_condition_success_rate": 0.16666666666666666,
+        "path_length_weighted_success_rate": 0.0,
+        "path_length_weighted_goal_condition_success_rate": 0.16666666666666666
+      },
+      "execution_totals": {
+        "actions": 184,
+        "failures": 29,
+        "decisions": 219,
+        "input_tokens": 2050767,
+        "output_tokens": 245091,
+        "perception_seconds": 104.51674743089825,
+        "policy_seconds": 5030.163121562451
+      },
+      "observations": 188,
+      "reported_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 73600,
+        "input_tokens": 2050767,
+        "output_tokens": 245091,
+        "reasoning_output_tokens": 214858,
+        "total_tokens": 2295858
+      },
+      "stop_reasons": {
+        "failure_budget": 2,
+        "decision_budget": 2
+      },
+      "operations": {
+        "RotateLeft": 34,
+        "OpenObject": 20,
+        "NavigateObject": 64,
+        "MoveAhead": 19,
+        "RotateRight": 33,
+        "LookDown": 9,
+        "LookUp": 16,
+        "NavigateCell": 12,
+        "PickupObject": 7,
+        "RetrieveObject": 5
+      },
+      "action_types": {
+        "RotateLeft": 38,
+        "OpenObject": 20,
+        "MoveAhead": 33,
+        "RotateRight": 41,
+        "LookDown": 22,
+        "LookUp": 23,
+        "PickupObject": 7
+      },
+      "failed_action_types": {
+        "OpenObject": 19,
+        "MoveAhead": 4,
+        "PickupObject": 6
+      },
+      "failure_messages": {
+        "object not found: object": 17,
+        "": 1,
+        "GameObject is blocking Agent 0 from moving 0": 1,
+        "object is not visible.": 6,
+        "Chair_c0b54654 is blocking Agent 0 from moving 0": 1,
+        "StandardCounterHeightWidth is blocking Agent 0 from moving 0": 1,
+        "StandardIslandHeight2 is blocking Agent 0 from moving 0": 1,
+        "Bad interact mask. Couldn't locate target object": 1
+      },
+      "non_action_feedback": {
+        "Initial observation.": 4,
+        "No route through observed free cells; explore or select another approach.": 60,
+        "Reached observed approach; verify current target mask and interaction distance.": 14,
+        "Retrieved observed frames [21, 20, 18]; no action performed.": 1,
+        "Retrieved observed frames [2]; no action performed.": 1,
+        "Retrieved observed frames [13]; no action performed.": 1,
+        "No additional historical views; obtain a new observation by moving/adjusting camera.": 2
+      },
+      "requests": 219,
+      "responses": 219,
+      "submitted_images": 443,
+      "submitted_historical_images": 5,
+      "sdk_attempts_observed": 219
+    },
+    "pick_heat_then_place_in_recep": {
+      "scored": 5,
+      "metrics": {
+        "num_evals": 5,
+        "num_successes": 0,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 17,
+        "expert_actions": 352,
+        "executed_actions": 187,
+        "success_rate": 0.0,
+        "goal_condition_success_rate": 0.058823529411764705,
+        "path_length_weighted_success_rate": 0.0,
+        "path_length_weighted_goal_condition_success_rate": 0.03890993265993266
+      },
+      "execution_totals": {
+        "actions": 187,
+        "failures": 35,
+        "decisions": 246,
+        "input_tokens": 2709386,
+        "output_tokens": 276694,
+        "perception_seconds": 117.2116245534271,
+        "policy_seconds": 5839.463119902648
+      },
+      "observations": 192,
+      "reported_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 79104,
+        "input_tokens": 2709386,
+        "output_tokens": 276694,
+        "reasoning_output_tokens": 243058,
+        "total_tokens": 2986080
+      },
+      "stop_reasons": {
+        "decision_budget": 3,
+        "failure_budget": 2
+      },
+      "operations": {
+        "RotateLeft": 36,
+        "PickupObject": 20,
+        "NavigateObject": 77,
+        "NavigateCell": 15,
+        "MoveAhead": 19,
+        "RotateRight": 28,
+        "LookUp": 13,
+        "LookDown": 18,
+        "RetrieveObject": 3,
+        "PutObject": 7,
+        "OpenObject": 10
+      },
+      "action_types": {
+        "RotateLeft": 46,
+        "PickupObject": 20,
+        "MoveAhead": 28,
+        "RotateRight": 30,
+        "LookUp": 26,
+        "LookDown": 21,
+        "PutObject": 6,
+        "OpenObject": 10
+      },
+      "failed_action_types": {
+        "PickupObject": 18,
+        "PutObject": 6,
+        "OpenObject": 9,
+        "MoveAhead": 2
+      },
+      "failure_messages": {
+        "object is not visible.": 18,
+        "Target openable Receptacle is CLOSED, can't place if target is not open!": 1,
+        "No valid positions to place object found": 5,
+        "": 4,
+        "Bad interact mask. Couldn't locate target object": 3,
+        "object not found: object": 2,
+        "HousePlant_e8f14f16 is blocking Agent 0 from moving 0": 1,
+        "Chair_eb23fa0f is blocking Agent 0 from moving 0": 1
+      },
+      "non_action_feedback": {
+        "Initial observation.": 5,
+        "No route through observed free cells; explore or select another approach.": 57,
+        "Reached observed approach; verify current target mask and interaction distance.": 34,
+        "Retrieved observed frames [6, 2]; no action performed.": 1,
+        "No additional historical views; obtain a new observation by moving/adjusting camera.": 2,
+        "Rejected interaction: target has no mask in the current observation.": 1
+      },
+      "requests": 246,
+      "responses": 246,
+      "submitted_images": 494,
+      "submitted_historical_images": 2,
+      "sdk_attempts_observed": 246
+    },
+    "pick_two_obj_and_place": {
+      "scored": 5,
+      "metrics": {
+        "num_evals": 5,
+        "num_successes": 0,
+        "completed_goal_conditions": 2,
+        "total_goal_conditions": 10,
+        "expert_actions": 276,
+        "executed_actions": 112,
+        "success_rate": 0.0,
+        "goal_condition_success_rate": 0.2,
+        "path_length_weighted_success_rate": 0.0,
+        "path_length_weighted_goal_condition_success_rate": 0.13949275362318841
+      },
+      "execution_totals": {
+        "actions": 112,
+        "failures": 40,
+        "decisions": 137,
+        "input_tokens": 1007176,
+        "output_tokens": 138434,
+        "perception_seconds": 41.266122706234455,
+        "policy_seconds": 2925.5580672845244
+      },
+      "observations": 117,
+      "reported_usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 33024,
+        "input_tokens": 1007176,
+        "output_tokens": 138434,
+        "reasoning_output_tokens": 120360,
+        "total_tokens": 1145610
+      },
+      "stop_reasons": {
+        "failure_budget": 3,
+        "policy_stop": 2
+      },
+      "operations": {
+        "RotateRight": 9,
+        "PickupObject": 25,
+        "NavigateObject": 40,
+        "MoveAhead": 8,
+        "LookUp": 6,
+        "LookDown": 8,
+        "OpenObject": 19,
+        "NavigateCell": 2,
+        "PutObject": 5,
+        "Stop": 2,
+        "RotateLeft": 13
+      },
+      "action_types": {
+        "RotateRight": 13,
+        "PickupObject": 25,
+        "MoveAhead": 16,
+        "LookUp": 7,
+        "LookDown": 11,
+        "OpenObject": 19,
+        "PutObject": 5,
+        "RotateLeft": 16
+      },
+      "failed_action_types": {
+        "PickupObject": 21,
+        "OpenObject": 16,
+        "MoveAhead": 2,
+        "PutObject": 1
+      },
+      "failure_messages": {
+        "object is not visible.": 21,
+        "Bad interact mask. Couldn't locate target object": 8,
+        "object not found: object": 8,
+        "Toilet_c18caea3 is blocking Agent 0 from moving 0": 2,
+        "Target openable Receptacle is CLOSED, can't place if target is not open!": 1
+      },
+      "non_action_feedback": {
+        "Initial observation.": 5,
+        "No route through observed free cells; explore or select another approach.": 24,
+        "Reached observed approach; verify current target mask and interaction distance.": 16,
+        "Object location is stale or held; obtain a new observation.": 1
+      },
+      "requests": 137,
+      "responses": 137,
+      "submitted_images": 274,
+      "submitted_historical_images": 0,
+      "sdk_attempts_observed": 137
+    }
+  },
+  "unscored_prefix_totals": {
+    "attempts": 3,
+    "score": null,
+    "actions": 38,
+    "failures": 3,
+    "decisions_started": 59,
+    "observations": 41,
+    "reported_usage_lower_bound": {
+      "cache_write_input_tokens": 0,
+      "cached_input_tokens": 25344,
+      "input_tokens": 439747,
+      "output_tokens": 75784,
+      "reasoning_output_tokens": 68188,
+      "total_tokens": 515531
+    },
+    "unknown_failed_request_usage": null,
+    "exact_total_consumed_usage": null
+  },
+  "all_original_attempts_reported_usage_lower_bound": {
+    "cache_write_input_tokens": 0,
+    "cached_input_tokens": 631168,
+    "input_tokens": 17263879,
+    "output_tokens": 2181518,
+    "reasoning_output_tokens": 1921534,
+    "total_tokens": 19445397
+  },
+  "usage_caveat": "Scored totals exactly sum persisted SDK totals for the41 scored tasks. Original error prefixes add only observed lower bounds; final502/timeout usage is unknown, never imputed as zero. These are not full50 results.",
+  "episodes": [
+    {
+      "global_index": 0,
+      "episode_id": "valid_seen/look_at_obj_in_light-Pillow-None-DeskLamp-302/trial_T20190909_150916_682139#0",
+      "split": "valid_seen",
+      "task_type": "look_at_obj_in_light",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0001",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 35,
+        "executed_actions": 32
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 32,
+        "failures": 4,
+        "decisions": 60,
+        "input_tokens": 499689,
+        "output_tokens": 75006,
+        "perception_seconds": 19.64191927574575,
+        "policy_seconds": 1537.5187070639804
+      },
+      "observations": 33,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 22272,
+          "input_tokens": 499689,
+          "output_tokens": 75006,
+          "reasoning_output_tokens": 66396,
+          "total_tokens": 574695
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 129,
+        "submitted_historical_images": 9,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateLeft": 12,
+          "NavigateObject": 23,
+          "MoveAhead": 3,
+          "LookUp": 1,
+          "RotateRight": 10,
+          "PickupObject": 4,
+          "NavigateCell": 3,
+          "RetrieveObject": 4
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 26,
+          "Retrieved observed frames [13, 12, 10]; no action performed.": 1,
+          "Retrieved observed frames [16, 15, 9]; no action performed.": 1,
+          "No additional historical views; obtain a new observation by moving/adjusting camera.": 1,
+          "Retrieved observed frames [23, 21, 19]; no action performed.": 1
+        }
+      },
+      "action_types": {
+        "RotateLeft": 12,
+        "MoveAhead": 4,
+        "LookUp": 1,
+        "RotateRight": 10,
+        "LookDown": 1,
+        "PickupObject": 4
+      },
+      "failed_action_types": {
+        "PickupObject": 4
+      },
+      "failure_messages": {
+        "object is not visible.": 4
+      }
+    },
+    {
+      "global_index": 1,
+      "episode_id": "valid_seen/pick_and_place_simple-SprayBottle-None-Toilet-415/trial_T20190909_075955_678702#0",
+      "split": "valid_seen",
+      "task_type": "pick_and_place_simple",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0001",
+      "score": {
+        "success": true,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 1,
+        "expert_actions": 33,
+        "executed_actions": 20
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 20,
+        "failures": 1,
+        "decisions": 23,
+        "input_tokens": 166350,
+        "output_tokens": 18639,
+        "perception_seconds": 13.480258040130138,
+        "policy_seconds": 428.2833658158779
+      },
+      "observations": 21,
+      "decision_audit": {
+        "requests": 23,
+        "responses": 23,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 6272,
+          "input_tokens": 166350,
+          "output_tokens": 18639,
+          "reasoning_output_tokens": 15651,
+          "total_tokens": 184989
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 46,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 23,
+        "operations": {
+          "PickupObject": 1,
+          "RotateLeft": 7,
+          "PutObject": 2,
+          "RotateRight": 5,
+          "NavigateObject": 4,
+          "LookUp": 1,
+          "MoveAhead": 2,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 4
+        }
+      },
+      "action_types": {
+        "PickupObject": 1,
+        "RotateLeft": 7,
+        "PutObject": 2,
+        "RotateRight": 5,
+        "LookUp": 1,
+        "MoveAhead": 4
+      },
+      "failed_action_types": {
+        "PutObject": 1
+      },
+      "failure_messages": {
+        "No valid Receptacle found": 1
+      }
+    },
+    {
+      "global_index": 2,
+      "episode_id": "valid_seen/pick_and_place_with_movable_recep-Fork-Cup-DiningTable-23/trial_T20190906_205421_980666#2",
+      "split": "valid_seen",
+      "task_type": "pick_and_place_with_movable_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0001",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 41,
+        "executed_actions": 22
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 22,
+        "failures": 2,
+        "decisions": 60,
+        "input_tokens": 537242,
+        "output_tokens": 105427,
+        "perception_seconds": 18.704378734342754,
+        "policy_seconds": 2114.3059313250706
+      },
+      "observations": 23,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 20480,
+          "input_tokens": 537242,
+          "output_tokens": 105427,
+          "reasoning_output_tokens": 96402,
+          "total_tokens": 642669
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 121,
+        "submitted_historical_images": 1,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateRight": 7,
+          "NavigateObject": 24,
+          "MoveAhead": 3,
+          "RotateLeft": 6,
+          "OpenObject": 1,
+          "RetrieveObject": 13,
+          "LookDown": 2,
+          "LookUp": 1,
+          "NavigateCell": 3
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 26,
+          "Retrieved observed frames [1]; no action performed.": 1,
+          "No additional historical views; obtain a new observation by moving/adjusting camera.": 12
+        }
+      },
+      "action_types": {
+        "RotateRight": 7,
+        "MoveAhead": 4,
+        "RotateLeft": 6,
+        "OpenObject": 1,
+        "LookDown": 2,
+        "LookUp": 2
+      },
+      "failed_action_types": {
+        "OpenObject": 1,
+        "MoveAhead": 1
+      },
+      "failure_messages": {
+        "object not found: object": 1,
+        "DiningTable_061caa6c is blocking Agent 0 from moving 0": 1
+      }
+    },
+    {
+      "global_index": 3,
+      "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-4/trial_T20190909_164840_568811#2",
+      "split": "valid_seen",
+      "task_type": "pick_clean_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0001",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 3,
+        "expert_actions": 42,
+        "executed_actions": 44
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 44,
+        "failures": 4,
+        "decisions": 60,
+        "input_tokens": 516729,
+        "output_tokens": 58582,
+        "perception_seconds": 29.132049928419292,
+        "policy_seconds": 1275.9587709717453
+      },
+      "observations": 45,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 12672,
+          "input_tokens": 516729,
+          "output_tokens": 58582,
+          "reasoning_output_tokens": 49654,
+          "total_tokens": 575311
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 120,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateLeft": 13,
+          "LookDown": 2,
+          "LookUp": 2,
+          "RotateRight": 10,
+          "PickupObject": 4,
+          "NavigateObject": 25,
+          "MoveAhead": 4
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 6,
+          "Reached observed approach; verify current target mask and interaction distance.": 19
+        }
+      },
+      "action_types": {
+        "RotateLeft": 15,
+        "LookDown": 2,
+        "LookUp": 2,
+        "RotateRight": 16,
+        "PickupObject": 4,
+        "MoveAhead": 5
+      },
+      "failed_action_types": {
+        "PickupObject": 4
+      },
+      "failure_messages": {
+        "object is not visible.": 4
+      }
+    },
+    {
+      "global_index": 4,
+      "episode_id": "valid_seen/pick_cool_then_place_in_recep-Plate-None-CounterTop-1/trial_T20190906_205324_559361#0",
+      "split": "valid_seen",
+      "task_type": "pick_cool_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0002",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 3,
+        "expert_actions": 59,
+        "executed_actions": 46
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 46,
+        "failures": 10,
+        "decisions": 45,
+        "input_tokens": 478292,
+        "output_tokens": 41931,
+        "perception_seconds": 30.245993024669588,
+        "policy_seconds": 938.764476025477
+      },
+      "observations": 47,
+      "decision_audit": {
+        "requests": 45,
+        "responses": 45,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 16512,
+          "input_tokens": 478292,
+          "output_tokens": 41931,
+          "reasoning_output_tokens": 35779,
+          "total_tokens": 520223
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 90,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 45,
+        "operations": {
+          "RotateLeft": 7,
+          "OpenObject": 8,
+          "NavigateObject": 6,
+          "MoveAhead": 9,
+          "RotateRight": 3,
+          "LookDown": 3,
+          "LookUp": 4,
+          "NavigateCell": 3,
+          "PickupObject": 2
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 7,
+          "Reached observed approach; verify current target mask and interaction distance.": 1
+        }
+      },
+      "action_types": {
+        "RotateLeft": 9,
+        "OpenObject": 8,
+        "MoveAhead": 17,
+        "RotateRight": 3,
+        "LookDown": 3,
+        "LookUp": 4,
+        "PickupObject": 2
+      },
+      "failed_action_types": {
+        "OpenObject": 7,
+        "MoveAhead": 1,
+        "PickupObject": 2
+      },
+      "failure_messages": {
+        "object not found: object": 6,
+        "": 1,
+        "GameObject is blocking Agent 0 from moving 0": 1,
+        "object is not visible.": 2
+      }
+    },
+    {
+      "global_index": 5,
+      "episode_id": "valid_seen/pick_heat_then_place_in_recep-Tomato-None-DiningTable-16/trial_T20190907_201243_698086#0",
+      "split": "valid_seen",
+      "task_type": "pick_heat_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0002",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 89,
+        "executed_actions": 47
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 47,
+        "failures": 8,
+        "decisions": 60,
+        "input_tokens": 746362,
+        "output_tokens": 56923,
+        "perception_seconds": 31.63942056056112,
+        "policy_seconds": 1278.2759242253378
+      },
+      "observations": 48,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 23168,
+          "input_tokens": 746362,
+          "output_tokens": 56923,
+          "reasoning_output_tokens": 49047,
+          "total_tokens": 803285
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 120,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateLeft": 13,
+          "PickupObject": 9,
+          "NavigateObject": 19,
+          "NavigateCell": 3,
+          "MoveAhead": 6,
+          "RotateRight": 5,
+          "LookUp": 4,
+          "LookDown": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 22
+        }
+      },
+      "action_types": {
+        "RotateLeft": 14,
+        "PickupObject": 9,
+        "MoveAhead": 13,
+        "RotateRight": 5,
+        "LookUp": 4,
+        "LookDown": 2
+      },
+      "failed_action_types": {
+        "PickupObject": 8
+      },
+      "failure_messages": {
+        "object is not visible.": 8
+      }
+    },
+    {
+      "global_index": 6,
+      "episode_id": "valid_seen/pick_two_obj_and_place-SprayBottle-None-Toilet-429/trial_T20190907_033843_707544#3",
+      "split": "valid_seen",
+      "task_type": "pick_two_obj_and_place",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0002",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 76,
+        "executed_actions": 16
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 16,
+        "failures": 10,
+        "decisions": 19,
+        "input_tokens": 106300,
+        "output_tokens": 15877,
+        "perception_seconds": 7.291177609935403,
+        "policy_seconds": 364.9993064608425
+      },
+      "observations": 17,
+      "decision_audit": {
+        "requests": 19,
+        "responses": 19,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 2816,
+          "input_tokens": 106300,
+          "output_tokens": 15877,
+          "reasoning_output_tokens": 13448,
+          "total_tokens": 122177
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 38,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 19,
+        "operations": {
+          "RotateRight": 1,
+          "PickupObject": 10,
+          "NavigateObject": 3,
+          "MoveAhead": 3,
+          "LookUp": 1,
+          "LookDown": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 3
+        }
+      },
+      "action_types": {
+        "RotateRight": 1,
+        "PickupObject": 10,
+        "MoveAhead": 3,
+        "LookUp": 1,
+        "LookDown": 1
+      },
+      "failed_action_types": {
+        "PickupObject": 10
+      },
+      "failure_messages": {
+        "object is not visible.": 10
+      }
+    },
+    {
+      "global_index": 7,
+      "episode_id": "valid_seen/look_at_obj_in_light-Bowl-None-DeskLamp-316/trial_T20190908_230702_962704#1",
+      "split": "valid_seen",
+      "task_type": "look_at_obj_in_light",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0002",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 21,
+        "executed_actions": 18
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 18,
+        "failures": 10,
+        "decisions": 32,
+        "input_tokens": 249956,
+        "output_tokens": 40270,
+        "perception_seconds": 9.875122927129269,
+        "policy_seconds": 848.8671371880919
+      },
+      "observations": 19,
+      "decision_audit": {
+        "requests": 32,
+        "responses": 32,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 3584,
+          "input_tokens": 249956,
+          "output_tokens": 40270,
+          "reasoning_output_tokens": 35848,
+          "total_tokens": 290226
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 64,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 32,
+        "operations": {
+          "RotateLeft": 3,
+          "NavigateObject": 11,
+          "MoveAhead": 3,
+          "PickupObject": 9,
+          "NavigateCell": 4,
+          "RotateRight": 2
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 15
+        }
+      },
+      "action_types": {
+        "RotateLeft": 3,
+        "MoveAhead": 4,
+        "PickupObject": 9,
+        "RotateRight": 2
+      },
+      "failed_action_types": {
+        "PickupObject": 9,
+        "MoveAhead": 1
+      },
+      "failure_messages": {
+        "object is not visible.": 9,
+        "Desk_73061fe2 is blocking Agent 0 from moving 0": 1
+      }
+    },
+    {
+      "global_index": 8,
+      "episode_id": "valid_seen/pick_and_place_simple-WineBottle-None-Shelf-7/trial_T20190907_200154_378982#0",
+      "split": "valid_seen",
+      "task_type": "pick_and_place_simple",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0003",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 1,
+        "expert_actions": 52,
+        "executed_actions": 51
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 51,
+        "failures": 7,
+        "decisions": 60,
+        "input_tokens": 540567,
+        "output_tokens": 88547,
+        "perception_seconds": 23.57631703466177,
+        "policy_seconds": 1774.1628194916993
+      },
+      "observations": 52,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 17024,
+          "input_tokens": 540567,
+          "output_tokens": 88547,
+          "reasoning_output_tokens": 80269,
+          "total_tokens": 629114
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 127,
+        "submitted_historical_images": 7,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateLeft": 14,
+          "NavigateObject": 19,
+          "MoveAhead": 3,
+          "RotateRight": 12,
+          "RetrieveObject": 3,
+          "OpenObject": 7,
+          "NavigateCell": 2
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 12,
+          "Retrieved observed frames [6]; no action performed.": 1,
+          "Reached observed approach; verify current target mask and interaction distance.": 9,
+          "Retrieved observed frames [40, 16, 24]; no action performed.": 1,
+          "Retrieved observed frames [21, 14, 19]; no action performed.": 1
+        }
+      },
+      "action_types": {
+        "RotateLeft": 19,
+        "MoveAhead": 5,
+        "RotateRight": 20,
+        "OpenObject": 7
+      },
+      "failed_action_types": {
+        "OpenObject": 7
+      },
+      "failure_messages": {
+        "Object failed to open/close successfully.": 7
+      }
+    },
+    {
+      "global_index": 9,
+      "episode_id": "valid_seen/pick_and_place_with_movable_recep-Ladle-Plate-Cabinet-16/trial_T20190907_070152_814652#3",
+      "split": "valid_seen",
+      "task_type": "pick_and_place_with_movable_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0003",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 75,
+        "executed_actions": 37
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 37,
+        "failures": 10,
+        "decisions": 41,
+        "input_tokens": 498290,
+        "output_tokens": 57850,
+        "perception_seconds": 22.37004676554352,
+        "policy_seconds": 1211.5324656842276
+      },
+      "observations": 38,
+      "decision_audit": {
+        "requests": 41,
+        "responses": 41,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 14720,
+          "input_tokens": 498290,
+          "output_tokens": 57850,
+          "reasoning_output_tokens": 52239,
+          "total_tokens": 556140
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 82,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 41,
+        "operations": {
+          "NavigateObject": 13,
+          "MoveAhead": 5,
+          "RotateRight": 3,
+          "PickupObject": 10,
+          "LookUp": 4,
+          "LookDown": 3,
+          "RotateLeft": 1,
+          "OpenObject": 1,
+          "PutObject": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 11,
+          "Reached observed approach; verify current target mask and interaction distance.": 2
+        }
+      },
+      "action_types": {
+        "MoveAhead": 9,
+        "RotateRight": 4,
+        "PickupObject": 10,
+        "LookUp": 4,
+        "LookDown": 6,
+        "RotateLeft": 2,
+        "OpenObject": 1,
+        "PutObject": 1
+      },
+      "failed_action_types": {
+        "PickupObject": 9,
+        "PutObject": 1
+      },
+      "failure_messages": {
+        "object is not visible.": 9,
+        "Target openable Receptacle is CLOSED, can't place if target is not open!": 1
+      }
+    },
+    {
+      "global_index": 10,
+      "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-CounterTop-14/trial_T20190909_113844_191747#1",
+      "split": "valid_seen",
+      "task_type": "pick_clean_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0003",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 23,
+        "executed_actions": 53
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 53,
+        "failures": 5,
+        "decisions": 60,
+        "input_tokens": 500894,
+        "output_tokens": 51545,
+        "perception_seconds": 37.72953431587666,
+        "policy_seconds": 1122.9524550987408
+      },
+      "observations": 54,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 17664,
+          "input_tokens": 500894,
+          "output_tokens": 51545,
+          "reasoning_output_tokens": 43055,
+          "total_tokens": 552439
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 120,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateRight": 21,
+          "PickupObject": 1,
+          "RotateLeft": 11,
+          "NavigateObject": 17,
+          "MoveAhead": 2,
+          "PutObject": 5,
+          "LookDown": 2,
+          "LookUp": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 3,
+          "Reached observed approach; verify current target mask and interaction distance.": 14
+        }
+      },
+      "action_types": {
+        "RotateRight": 21,
+        "PickupObject": 1,
+        "RotateLeft": 19,
+        "MoveAhead": 2,
+        "PutObject": 5,
+        "LookDown": 3,
+        "LookUp": 2
+      },
+      "failed_action_types": {
+        "PutObject": 5
+      },
+      "failure_messages": {
+        "No valid positions to place object found": 5
+      }
+    },
+    {
+      "global_index": 11,
+      "episode_id": "valid_seen/pick_cool_then_place_in_recep-Pan-None-DiningTable-7/trial_T20190908_232648_241836#1",
+      "split": "valid_seen",
+      "task_type": "pick_cool_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0003",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 78,
+        "executed_actions": 33
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 33,
+        "failures": 6,
+        "decisions": 60,
+        "input_tokens": 440956,
+        "output_tokens": 73089,
+        "perception_seconds": 21.868989253416657,
+        "policy_seconds": 1550.9262563847005
+      },
+      "observations": 34,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 19328,
+          "input_tokens": 440956,
+          "output_tokens": 73089,
+          "reasoning_output_tokens": 64758,
+          "total_tokens": 514045
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 123,
+        "submitted_historical_images": 3,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateRight": 16,
+          "NavigateObject": 24,
+          "MoveAhead": 3,
+          "RotateLeft": 7,
+          "PickupObject": 4,
+          "RetrieveObject": 1,
+          "NavigateCell": 5
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 28,
+          "Retrieved observed frames [21, 20, 18]; no action performed.": 1
+        }
+      },
+      "action_types": {
+        "RotateRight": 18,
+        "MoveAhead": 4,
+        "RotateLeft": 7,
+        "PickupObject": 4
+      },
+      "failed_action_types": {
+        "MoveAhead": 2,
+        "PickupObject": 4
+      },
+      "failure_messages": {
+        "Chair_c0b54654 is blocking Agent 0 from moving 0": 1,
+        "object is not visible.": 4,
+        "StandardCounterHeightWidth is blocking Agent 0 from moving 0": 1
+      }
+    },
+    {
+      "global_index": 12,
+      "episode_id": "valid_seen/pick_heat_then_place_in_recep-BreadSliced-None-Fridge-19/trial_T20190908_070424_700178#2",
+      "split": "valid_seen",
+      "task_type": "pick_heat_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0004",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 4,
+        "expert_actions": 92,
+        "executed_actions": 44
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 44,
+        "failures": 0,
+        "decisions": 60,
+        "input_tokens": 699879,
+        "output_tokens": 77851,
+        "perception_seconds": 28.74943188019097,
+        "policy_seconds": 1548.197698594071
+      },
+      "observations": 45,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 24832,
+          "input_tokens": 699879,
+          "output_tokens": 77851,
+          "reasoning_output_tokens": 69252,
+          "total_tokens": 777730
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 122,
+        "submitted_historical_images": 2,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateLeft": 5,
+          "NavigateObject": 28,
+          "NavigateCell": 3,
+          "MoveAhead": 1,
+          "LookDown": 12,
+          "LookUp": 1,
+          "RotateRight": 7,
+          "RetrieveObject": 3
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 4,
+          "Reached observed approach; verify current target mask and interaction distance.": 27,
+          "Retrieved observed frames [6, 2]; no action performed.": 1,
+          "No additional historical views; obtain a new observation by moving/adjusting camera.": 2
+        }
+      },
+      "action_types": {
+        "RotateLeft": 12,
+        "MoveAhead": 1,
+        "LookDown": 12,
+        "LookUp": 12,
+        "RotateRight": 7
+      },
+      "failed_action_types": {},
+      "failure_messages": {}
+    },
+    {
+      "global_index": 13,
+      "episode_id": "valid_seen/pick_two_obj_and_place-CD-None-Drawer-304/trial_T20190907_230232_832893#1",
+      "split": "valid_seen",
+      "task_type": "pick_two_obj_and_place",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0004",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 2,
+        "expert_actions": 40,
+        "executed_actions": 12
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 12,
+        "failures": 3,
+        "decisions": 14,
+        "input_tokens": 79804,
+        "output_tokens": 8261,
+        "perception_seconds": 5.225162722170353,
+        "policy_seconds": 208.9873855523765
+      },
+      "observations": 13,
+      "decision_audit": {
+        "requests": 14,
+        "responses": 14,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 2816,
+          "input_tokens": 79804,
+          "output_tokens": 8261,
+          "reasoning_output_tokens": 6613,
+          "total_tokens": 88065
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 28,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 14,
+        "operations": {
+          "OpenObject": 4,
+          "LookDown": 2,
+          "NavigateObject": 1,
+          "NavigateCell": 1,
+          "RotateRight": 1,
+          "PickupObject": 2,
+          "PutObject": 2,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "Reached observed approach; verify current target mask and interaction distance.": 1,
+          "No route through observed free cells; explore or select another approach.": 1
+        }
+      },
+      "action_types": {
+        "OpenObject": 4,
+        "LookDown": 2,
+        "RotateRight": 2,
+        "PickupObject": 2,
+        "PutObject": 2
+      },
+      "failed_action_types": {
+        "OpenObject": 3
+      },
+      "failure_messages": {
+        "Bad interact mask. Couldn't locate target object": 3
+      }
+    },
+    {
+      "global_index": 14,
+      "episode_id": "valid_seen/look_at_obj_in_light-Bowl-None-DeskLamp-301/trial_T20190909_150719_492274#1",
+      "split": "valid_seen",
+      "task_type": "look_at_obj_in_light",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0004",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 44,
+        "executed_actions": 9
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 9,
+        "failures": 3,
+        "decisions": 13,
+        "input_tokens": 99001,
+        "output_tokens": 10853,
+        "perception_seconds": 6.5748541029170156,
+        "policy_seconds": 228.07191544398665
+      },
+      "observations": 10,
+      "decision_audit": {
+        "requests": 13,
+        "responses": 13,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 7680,
+          "input_tokens": 99001,
+          "output_tokens": 10853,
+          "reasoning_output_tokens": 9069,
+          "total_tokens": 109854
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 26,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 13,
+        "operations": {
+          "RotateRight": 2,
+          "NavigateObject": 4,
+          "MoveAhead": 2,
+          "PickupObject": 2,
+          "LookUp": 1,
+          "RotateLeft": 1,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 4
+        }
+      },
+      "action_types": {
+        "RotateRight": 2,
+        "MoveAhead": 3,
+        "PickupObject": 2,
+        "LookUp": 1,
+        "RotateLeft": 1
+      },
+      "failed_action_types": {
+        "MoveAhead": 1,
+        "PickupObject": 2
+      },
+      "failure_messages": {
+        "Beanbag is blocking Agent 0 from moving 0": 1,
+        "object is not visible.": 2
+      }
+    },
+    {
+      "global_index": 15,
+      "episode_id": "valid_seen/pick_and_place_simple-Mug-None-SideTable-329/trial_T20190909_032318_169393#0",
+      "split": "valid_seen",
+      "task_type": "pick_and_place_simple",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0004",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 1,
+        "expert_actions": 35,
+        "executed_actions": 50
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 50,
+        "failures": 0,
+        "decisions": 60,
+        "input_tokens": 404719,
+        "output_tokens": 55538,
+        "perception_seconds": 22.080870951525867,
+        "policy_seconds": 1187.01346204523
+      },
+      "observations": 51,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 29312,
+          "input_tokens": 404719,
+          "output_tokens": 55538,
+          "reasoning_output_tokens": 46960,
+          "total_tokens": 460257
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 123,
+        "submitted_historical_images": 3,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateLeft": 23,
+          "NavigateObject": 22,
+          "MoveAhead": 3,
+          "RotateRight": 11,
+          "RetrieveObject": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 4,
+          "Reached observed approach; verify current target mask and interaction distance.": 18,
+          "Retrieved observed frames [4, 1, 3]; no action performed.": 1
+        }
+      },
+      "action_types": {
+        "RotateLeft": 23,
+        "MoveAhead": 5,
+        "RotateRight": 22
+      },
+      "failed_action_types": {},
+      "failure_messages": {}
+    },
+    {
+      "global_index": 16,
+      "episode_id": "valid_seen/pick_and_place_with_movable_recep-AppleSliced-Pot-Fridge-24/trial_T20190909_064046_163660#1",
+      "split": "valid_seen",
+      "task_type": "pick_and_place_with_movable_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0005",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 4,
+        "expert_actions": 41,
+        "executed_actions": 31
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 31,
+        "failures": 10,
+        "decisions": 36,
+        "input_tokens": 363039,
+        "output_tokens": 43392,
+        "perception_seconds": 20.34976238477975,
+        "policy_seconds": 819.9850948462263
+      },
+      "observations": 32,
+      "decision_audit": {
+        "requests": 36,
+        "responses": 36,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 4864,
+          "input_tokens": 363039,
+          "output_tokens": 43392,
+          "reasoning_output_tokens": 38424,
+          "total_tokens": 406431
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 72,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 36,
+        "operations": {
+          "LookUp": 3,
+          "RotateRight": 3,
+          "PickupObject": 1,
+          "PutObject": 10,
+          "LookDown": 5,
+          "NavigateObject": 9,
+          "MoveAhead": 4,
+          "RotateLeft": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 4,
+          "Reached observed approach; verify current target mask and interaction distance.": 5
+        }
+      },
+      "action_types": {
+        "LookUp": 5,
+        "RotateRight": 4,
+        "PickupObject": 1,
+        "PutObject": 10,
+        "LookDown": 5,
+        "MoveAhead": 4,
+        "RotateLeft": 2
+      },
+      "failed_action_types": {
+        "PutObject": 10
+      },
+      "failure_messages": {
+        "No valid positions to place object found": 10
+      }
+    },
+    {
+      "global_index": 17,
+      "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-27/trial_T20190911_131350_027076#1",
+      "split": "valid_seen",
+      "task_type": "pick_clean_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0005",
+      "score": {
+        "success": true,
+        "completed_goal_conditions": 3,
+        "total_goal_conditions": 3,
+        "expert_actions": 38,
+        "executed_actions": 23
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 23,
+        "failures": 4,
+        "decisions": 26,
+        "input_tokens": 232672,
+        "output_tokens": 15879,
+        "perception_seconds": 15.645244394429028,
+        "policy_seconds": 368.05270279664546
+      },
+      "observations": 24,
+      "decision_audit": {
+        "requests": 26,
+        "responses": 26,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 8448,
+          "input_tokens": 232672,
+          "output_tokens": 15879,
+          "reasoning_output_tokens": 12402,
+          "total_tokens": 248551
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 52,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 26,
+        "operations": {
+          "RotateRight": 3,
+          "NavigateObject": 7,
+          "MoveAhead": 3,
+          "OpenObject": 2,
+          "RotateLeft": 1,
+          "PickupObject": 2,
+          "PutObject": 4,
+          "LookDown": 1,
+          "ToggleObjectOn": 1,
+          "ToggleObjectOff": 1,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 6,
+          "Reached observed approach; verify current target mask and interaction distance.": 1
+        }
+      },
+      "action_types": {
+        "RotateRight": 3,
+        "MoveAhead": 7,
+        "OpenObject": 2,
+        "RotateLeft": 2,
+        "PickupObject": 2,
+        "PutObject": 4,
+        "LookDown": 1,
+        "ToggleObjectOn": 1,
+        "ToggleObjectOff": 1
+      },
+      "failed_action_types": {
+        "OpenObject": 2,
+        "PutObject": 2
+      },
+      "failure_messages": {
+        "object not found: object": 2,
+        "No valid Receptacle found": 2
+      }
+    },
+    {
+      "global_index": 18,
+      "episode_id": "valid_seen/pick_cool_then_place_in_recep-Apple-None-GarbageCan-2/trial_T20190906_195943_081289#2",
+      "split": "valid_seen",
+      "task_type": "pick_cool_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0005",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 48,
+        "executed_actions": 39
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 39,
+        "failures": 10,
+        "decisions": 54,
+        "input_tokens": 559239,
+        "output_tokens": 54769,
+        "perception_seconds": 22.703957492485642,
+        "policy_seconds": 1127.6098448270932
+      },
+      "observations": 40,
+      "decision_audit": {
+        "requests": 54,
+        "responses": 54,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 17152,
+          "input_tokens": 559239,
+          "output_tokens": 54769,
+          "reasoning_output_tokens": 47419,
+          "total_tokens": 614008
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 109,
+        "submitted_historical_images": 1,
+        "sdk_attempts_observed": 54,
+        "operations": {
+          "RotateLeft": 14,
+          "PickupObject": 1,
+          "NavigateObject": 16,
+          "MoveAhead": 2,
+          "RetrieveObject": 1,
+          "RotateRight": 10,
+          "OpenObject": 9,
+          "NavigateCell": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 17,
+          "Retrieved observed frames [2]; no action performed.": 1
+        }
+      },
+      "action_types": {
+        "RotateLeft": 14,
+        "PickupObject": 1,
+        "MoveAhead": 3,
+        "RotateRight": 12,
+        "OpenObject": 9
+      },
+      "failed_action_types": {
+        "OpenObject": 9,
+        "MoveAhead": 1
+      },
+      "failure_messages": {
+        "object not found: object": 9,
+        "StandardIslandHeight2 is blocking Agent 0 from moving 0": 1
+      }
+    },
+    {
+      "global_index": 19,
+      "episode_id": "valid_seen/pick_heat_then_place_in_recep-AppleSliced-None-DiningTable-17/trial_T20190918_205656_000147#1",
+      "split": "valid_seen",
+      "task_type": "pick_heat_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0005",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 4,
+        "expert_actions": 80,
+        "executed_actions": 14
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 14,
+        "failures": 10,
+        "decisions": 18,
+        "input_tokens": 147377,
+        "output_tokens": 11550,
+        "perception_seconds": 12.815175709314644,
+        "policy_seconds": 287.31528860516846
+      },
+      "observations": 15,
+      "decision_audit": {
+        "requests": 18,
+        "responses": 18,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 1408,
+          "input_tokens": 147377,
+          "output_tokens": 11550,
+          "reasoning_output_tokens": 9219,
+          "total_tokens": 158927
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 36,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 18,
+        "operations": {
+          "RotateRight": 2,
+          "PickupObject": 10,
+          "NavigateObject": 4,
+          "LookDown": 1,
+          "LookUp": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 4
+        }
+      },
+      "action_types": {
+        "RotateRight": 2,
+        "PickupObject": 10,
+        "LookDown": 1,
+        "LookUp": 1
+      },
+      "failed_action_types": {
+        "PickupObject": 10
+      },
+      "failure_messages": {
+        "object is not visible.": 10
+      }
+    },
+    {
+      "global_index": 20,
+      "episode_id": "valid_seen/pick_two_obj_and_place-SoapBar-None-Toilet-412/trial_T20190908_071602_531614#2",
+      "split": "valid_seen",
+      "task_type": "pick_two_obj_and_place",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0006",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 40,
+        "executed_actions": 26
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 26,
+        "failures": 10,
+        "decisions": 40,
+        "input_tokens": 288988,
+        "output_tokens": 50718,
+        "perception_seconds": 13.991754171438515,
+        "policy_seconds": 1026.7084536598995
+      },
+      "observations": 27,
+      "decision_audit": {
+        "requests": 40,
+        "responses": 40,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 11136,
+          "input_tokens": 288988,
+          "output_tokens": 50718,
+          "reasoning_output_tokens": 45304,
+          "total_tokens": 339706
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 80,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 40,
+        "operations": {
+          "NavigateObject": 16,
+          "OpenObject": 8,
+          "MoveAhead": 3,
+          "LookDown": 1,
+          "RotateRight": 5,
+          "RotateLeft": 6,
+          "NavigateCell": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 15,
+          "Reached observed approach; verify current target mask and interaction distance.": 1
+        }
+      },
+      "action_types": {
+        "OpenObject": 8,
+        "MoveAhead": 4,
+        "LookDown": 1,
+        "RotateRight": 6,
+        "LookUp": 1,
+        "RotateLeft": 6
+      },
+      "failed_action_types": {
+        "OpenObject": 8,
+        "MoveAhead": 2
+      },
+      "failure_messages": {
+        "object not found: object": 7,
+        "Bad interact mask. Couldn't locate target object": 1,
+        "Toilet_c18caea3 is blocking Agent 0 from moving 0": 2
+      }
+    },
+    {
+      "global_index": 21,
+      "episode_id": "valid_seen/look_at_obj_in_light-RemoteControl-None-FloorLamp-202/trial_T20190908_232929_254246#0",
+      "split": "valid_seen",
+      "task_type": "look_at_obj_in_light",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0006",
+      "score": {
+        "success": true,
+        "completed_goal_conditions": 2,
+        "total_goal_conditions": 2,
+        "expert_actions": 23,
+        "executed_actions": 18
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 18,
+        "failures": 4,
+        "decisions": 26,
+        "input_tokens": 168054,
+        "output_tokens": 22068,
+        "perception_seconds": 7.174966024234891,
+        "policy_seconds": 450.5675835330039
+      },
+      "observations": 19,
+      "decision_audit": {
+        "requests": 26,
+        "responses": 26,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 13312,
+          "input_tokens": 168054,
+          "output_tokens": 22068,
+          "reasoning_output_tokens": 18668,
+          "total_tokens": 190122
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 52,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 26,
+        "operations": {
+          "PickupObject": 1,
+          "NavigateObject": 9,
+          "ToggleObjectOn": 4,
+          "MoveAhead": 3,
+          "RotateRight": 4,
+          "RotateLeft": 4,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 9
+        }
+      },
+      "action_types": {
+        "PickupObject": 1,
+        "ToggleObjectOn": 4,
+        "MoveAhead": 5,
+        "RotateRight": 4,
+        "RotateLeft": 4
+      },
+      "failed_action_types": {
+        "ToggleObjectOn": 3,
+        "MoveAhead": 1
+      },
+      "failure_messages": {
+        "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 ": 3,
+        "TVStand_60641d47 is blocking Agent 0 from moving 0": 1
+      }
+    },
+    {
+      "global_index": 22,
+      "episode_id": "valid_seen/pick_and_place_simple-Book-None-Sofa-229/trial_T20190907_042856_259139#1",
+      "split": "valid_seen",
+      "task_type": "pick_and_place_simple",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0006",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 1,
+        "expert_actions": 29,
+        "executed_actions": 43
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 43,
+        "failures": 6,
+        "decisions": 60,
+        "input_tokens": 510122,
+        "output_tokens": 57134,
+        "perception_seconds": 23.802851393818855,
+        "policy_seconds": 1248.0757517758757
+      },
+      "observations": 44,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 17792,
+          "input_tokens": 510122,
+          "output_tokens": 57134,
+          "reasoning_output_tokens": 48962,
+          "total_tokens": 567256
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 120,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "NavigateObject": 19,
+          "MoveAhead": 4,
+          "RotateLeft": 15,
+          "PickupObject": 1,
+          "PutObject": 6,
+          "RotateRight": 14,
+          "LookDown": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 18
+        }
+      },
+      "action_types": {
+        "MoveAhead": 6,
+        "RotateLeft": 15,
+        "PickupObject": 1,
+        "PutObject": 6,
+        "RotateRight": 14,
+        "LookDown": 1
+      },
+      "failed_action_types": {
+        "PutObject": 6
+      },
+      "failure_messages": {
+        "No valid Receptacle found": 2,
+        "No valid positions to place object found": 4
+      }
+    },
+    {
+      "global_index": 23,
+      "episode_id": "valid_seen/pick_and_place_with_movable_recep-Ladle-Pan-SinkBasin-4/trial_T20190908_192636_561572#2",
+      "split": "valid_seen",
+      "task_type": "pick_and_place_with_movable_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0006",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 40,
+        "executed_actions": 50
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 50,
+        "failures": 8,
+        "decisions": 60,
+        "input_tokens": 731140,
+        "output_tokens": 83030,
+        "perception_seconds": 39.304026413708925,
+        "policy_seconds": 1601.736254317686
+      },
+      "observations": 51,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 27776,
+          "input_tokens": 731140,
+          "output_tokens": 83030,
+          "reasoning_output_tokens": 74866,
+          "total_tokens": 814170
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 123,
+        "submitted_historical_images": 3,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateLeft": 10,
+          "OpenObject": 14,
+          "LookDown": 4,
+          "NavigateObject": 16,
+          "LookUp": 2,
+          "RotateRight": 9,
+          "PickupObject": 1,
+          "NavigateCell": 3,
+          "RetrieveObject": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "Reached observed approach; verify current target mask and interaction distance.": 2,
+          "No route through observed free cells; explore or select another approach.": 16,
+          "Retrieved observed frames [25, 9, 15]; no action performed.": 1
+        }
+      },
+      "action_types": {
+        "RotateLeft": 12,
+        "OpenObject": 14,
+        "LookDown": 4,
+        "MoveAhead": 5,
+        "RotateRight": 10,
+        "LookUp": 4,
+        "PickupObject": 1
+      },
+      "failed_action_types": {
+        "OpenObject": 8
+      },
+      "failure_messages": {
+        "": 8
+      }
+    },
+    {
+      "global_index": 24,
+      "episode_id": "valid_seen/pick_clean_then_place_in_recep-SoapBar-None-BathtubBasin-413/trial_T20190908_191121_189259#0",
+      "split": "valid_seen",
+      "task_type": "pick_clean_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0007",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 35,
+        "executed_actions": 58
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 58,
+        "failures": 6,
+        "decisions": 60,
+        "input_tokens": 576922,
+        "output_tokens": 102102,
+        "perception_seconds": 17.42901342920959,
+        "policy_seconds": 1918.7525709830225
+      },
+      "observations": 59,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 13568,
+          "input_tokens": 576922,
+          "output_tokens": 102102,
+          "reasoning_output_tokens": 93014,
+          "total_tokens": 679024
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 121,
+        "submitted_historical_images": 1,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateRight": 5,
+          "OpenObject": 6,
+          "LookDown": 2,
+          "NavigateObject": 25,
+          "RotateLeft": 8,
+          "MoveAhead": 4,
+          "NavigateCell": 3,
+          "RetrieveObject": 5,
+          "LookUp": 1,
+          "PickupObject": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 3,
+          "Reached observed approach; verify current target mask and interaction distance.": 24,
+          "Retrieved observed frames [14]; no action performed.": 1,
+          "No additional historical views; obtain a new observation by moving/adjusting camera.": 4
+        }
+      },
+      "action_types": {
+        "RotateRight": 13,
+        "OpenObject": 6,
+        "LookDown": 3,
+        "RotateLeft": 16,
+        "MoveAhead": 18,
+        "LookUp": 1,
+        "PickupObject": 1
+      },
+      "failed_action_types": {
+        "OpenObject": 2,
+        "MoveAhead": 4
+      },
+      "failure_messages": {
+        "": 2,
+        "Toilet_149ddd51 is blocking Agent 0 from moving 0": 4
+      }
+    },
+    {
+      "global_index": 25,
+      "episode_id": "valid_unseen/look_at_obj_in_light-RemoteControl-None-FloorLamp-219/trial_T20190909_032721_511027#0",
+      "split": "valid_unseen",
+      "task_type": "look_at_obj_in_light",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0007",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 2,
+        "expert_actions": 27,
+        "executed_actions": 45
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 45,
+        "failures": 3,
+        "decisions": 60,
+        "input_tokens": 509321,
+        "output_tokens": 55747,
+        "perception_seconds": 18.51399931591004,
+        "policy_seconds": 1191.1697159018368
+      },
+      "observations": 46,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 16256,
+          "input_tokens": 509321,
+          "output_tokens": 55747,
+          "reasoning_output_tokens": 47438,
+          "total_tokens": 565068
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 126,
+        "submitted_historical_images": 6,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateRight": 14,
+          "NavigateObject": 31,
+          "MoveAhead": 1,
+          "PickupObject": 4,
+          "LookDown": 1,
+          "RotateLeft": 2,
+          "RetrieveObject": 2,
+          "LookUp": 3,
+          "NavigateCell": 1,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 3,
+          "Reached observed approach; verify current target mask and interaction distance.": 29,
+          "Retrieved observed frames [10, 1, 3]; no action performed.": 1,
+          "Retrieved observed frames [9, 2, 5]; no action performed.": 1
+        }
+      },
+      "action_types": {
+        "RotateRight": 16,
+        "MoveAhead": 7,
+        "PickupObject": 4,
+        "LookDown": 2,
+        "RotateLeft": 12,
+        "LookUp": 4
+      },
+      "failed_action_types": {
+        "PickupObject": 3
+      },
+      "failure_messages": {
+        "object is not visible.": 3
+      }
+    },
+    {
+      "global_index": 26,
+      "episode_id": "valid_unseen/pick_and_place_simple-Plunger-None-Cabinet-424/trial_T20190908_021537_611374#0",
+      "split": "valid_unseen",
+      "task_type": "pick_and_place_simple",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0007",
+      "score": {
+        "success": true,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 1,
+        "expert_actions": 20,
+        "executed_actions": 17
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 17,
+        "failures": 5,
+        "decisions": 17,
+        "input_tokens": 122754,
+        "output_tokens": 11473,
+        "perception_seconds": 10.864391871728003,
+        "policy_seconds": 254.9182215249166
+      },
+      "observations": 18,
+      "decision_audit": {
+        "requests": 17,
+        "responses": 17,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 2816,
+          "input_tokens": 122754,
+          "output_tokens": 11473,
+          "reasoning_output_tokens": 9296,
+          "total_tokens": 134227
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 34,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 17,
+        "operations": {
+          "RotateRight": 2,
+          "PickupObject": 4,
+          "NavigateObject": 4,
+          "LookDown": 2,
+          "RotateLeft": 1,
+          "OpenObject": 1,
+          "PutObject": 2,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 1,
+          "Reached observed approach; verify current target mask and interaction distance.": 2
+        }
+      },
+      "action_types": {
+        "RotateRight": 2,
+        "PickupObject": 4,
+        "LookDown": 2,
+        "MoveAhead": 5,
+        "RotateLeft": 1,
+        "OpenObject": 1,
+        "PutObject": 2
+      },
+      "failed_action_types": {
+        "PickupObject": 3,
+        "MoveAhead": 1,
+        "PutObject": 1
+      },
+      "failure_messages": {
+        "object is not visible.": 3,
+        "Toilet_daa15a38 is blocking Agent 0 from moving 0": 1,
+        "No valid positions to place object found": 1
+      }
+    },
+    {
+      "global_index": 27,
+      "episode_id": "valid_unseen/pick_and_place_with_movable_recep-ButterKnife-Pan-SinkBasin-10/trial_T20190907_194015_037530#0",
+      "split": "valid_unseen",
+      "task_type": "pick_and_place_with_movable_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0007",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 31,
+        "executed_actions": 29
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 29,
+        "failures": 10,
+        "decisions": 39,
+        "input_tokens": 359856,
+        "output_tokens": 65039,
+        "perception_seconds": 20.51065807323903,
+        "policy_seconds": 1207.1997344782576
+      },
+      "observations": 30,
+      "decision_audit": {
+        "requests": 39,
+        "responses": 39,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 8320,
+          "input_tokens": 359856,
+          "output_tokens": 65039,
+          "reasoning_output_tokens": 59588,
+          "total_tokens": 424895
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 78,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 39,
+        "operations": {
+          "RotateRight": 5,
+          "PickupObject": 1,
+          "PutObject": 9,
+          "NavigateObject": 12,
+          "RotateLeft": 1,
+          "LookDown": 3,
+          "MoveAhead": 1,
+          "LookUp": 4,
+          "NavigateCell": 2,
+          "OpenObject": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 13,
+          "Reached observed approach; verify current target mask and interaction distance.": 1
+        }
+      },
+      "action_types": {
+        "RotateRight": 5,
+        "PickupObject": 1,
+        "PutObject": 9,
+        "RotateLeft": 2,
+        "LookDown": 4,
+        "MoveAhead": 1,
+        "LookUp": 6,
+        "OpenObject": 1
+      },
+      "failed_action_types": {
+        "PutObject": 9,
+        "MoveAhead": 1
+      },
+      "failure_messages": {
+        "Bad interact mask. Couldn't locate target object": 2,
+        "No valid positions to place object found": 6,
+        "StandardIslandHeight2 is blocking Agent 0 from moving 0": 1,
+        "another object's collision is blocking held object from being placed": 1
+      }
+    },
+    {
+      "global_index": 28,
+      "episode_id": "valid_unseen/pick_clean_then_place_in_recep-Cloth-None-Cabinet-424/trial_T20190908_022321_380927#2",
+      "split": "valid_unseen",
+      "task_type": "pick_clean_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0008",
+      "score": {
+        "success": true,
+        "completed_goal_conditions": 3,
+        "total_goal_conditions": 3,
+        "expert_actions": 29,
+        "executed_actions": 29
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 29,
+        "failures": 8,
+        "decisions": 34,
+        "input_tokens": 254585,
+        "output_tokens": 28664,
+        "perception_seconds": 2.917100035585463,
+        "policy_seconds": 590.2589785251766
+      },
+      "observations": 30,
+      "decision_audit": {
+        "requests": 34,
+        "responses": 34,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 25216,
+          "input_tokens": 254585,
+          "output_tokens": 28664,
+          "reasoning_output_tokens": 24117,
+          "total_tokens": 283249
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 68,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 34,
+        "operations": {
+          "RotateRight": 1,
+          "PickupObject": 2,
+          "PutObject": 9,
+          "NavigateObject": 11,
+          "LookDown": 4,
+          "LookUp": 1,
+          "MoveAhead": 1,
+          "ToggleObjectOn": 1,
+          "ToggleObjectOff": 1,
+          "OpenObject": 2,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "Reached observed approach; verify current target mask and interaction distance.": 11
+        }
+      },
+      "action_types": {
+        "RotateRight": 1,
+        "PickupObject": 2,
+        "PutObject": 9,
+        "LookDown": 6,
+        "LookUp": 4,
+        "MoveAhead": 3,
+        "ToggleObjectOn": 1,
+        "ToggleObjectOff": 1,
+        "OpenObject": 2
+      },
+      "failed_action_types": {
+        "PutObject": 7,
+        "OpenObject": 1
+      },
+      "failure_messages": {
+        "No valid positions to place object found": 7,
+        "Object failed to open/close successfully.": 1
+      }
+    },
+    {
+      "global_index": 29,
+      "episode_id": "valid_unseen/pick_cool_then_place_in_recep-Mug-None-Cabinet-10/trial_T20190909_121710_650938#2",
+      "split": "valid_unseen",
+      "task_type": "pick_cool_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0008",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 3,
+        "expert_actions": 67,
+        "executed_actions": 66
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 66,
+        "failures": 3,
+        "decisions": 60,
+        "input_tokens": 572280,
+        "output_tokens": 75302,
+        "perception_seconds": 29.69780766032636,
+        "policy_seconds": 1412.8625443251804
+      },
+      "observations": 67,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 20608,
+          "input_tokens": 572280,
+          "output_tokens": 75302,
+          "reasoning_output_tokens": 66902,
+          "total_tokens": 647582
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 121,
+        "submitted_historical_images": 1,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateRight": 4,
+          "NavigateObject": 18,
+          "NavigateCell": 3,
+          "RotateLeft": 6,
+          "MoveAhead": 5,
+          "OpenObject": 3,
+          "LookDown": 6,
+          "LookUp": 12,
+          "RetrieveObject": 3
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 8,
+          "Reached observed approach; verify current target mask and interaction distance.": 13,
+          "Retrieved observed frames [13]; no action performed.": 1,
+          "No additional historical views; obtain a new observation by moving/adjusting camera.": 2
+        }
+      },
+      "action_types": {
+        "RotateRight": 8,
+        "RotateLeft": 8,
+        "MoveAhead": 9,
+        "OpenObject": 3,
+        "LookDown": 19,
+        "LookUp": 19
+      },
+      "failed_action_types": {
+        "OpenObject": 3
+      },
+      "failure_messages": {
+        "Bad interact mask. Couldn't locate target object": 1,
+        "object not found: object": 2
+      }
+    },
+    {
+      "global_index": 30,
+      "episode_id": "valid_unseen/pick_heat_then_place_in_recep-Apple-None-Fridge-10/trial_T20190906_182435_622538#1",
+      "split": "valid_unseen",
+      "task_type": "pick_heat_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0008",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 3,
+        "expert_actions": 43,
+        "executed_actions": 45
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 45,
+        "failures": 10,
+        "decisions": 48,
+        "input_tokens": 583693,
+        "output_tokens": 52140,
+        "perception_seconds": 32.077777007594705,
+        "policy_seconds": 1091.9207780184224
+      },
+      "observations": 46,
+      "decision_audit": {
+        "requests": 48,
+        "responses": 48,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 17664,
+          "input_tokens": 583693,
+          "output_tokens": 52140,
+          "reasoning_output_tokens": 45690,
+          "total_tokens": 635833
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 96,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 48,
+        "operations": {
+          "LookUp": 6,
+          "RotateLeft": 7,
+          "LookDown": 3,
+          "RotateRight": 5,
+          "NavigateCell": 1,
+          "MoveAhead": 6,
+          "NavigateObject": 7,
+          "PickupObject": 1,
+          "PutObject": 7,
+          "OpenObject": 5
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 2,
+          "Reached observed approach; verify current target mask and interaction distance.": 6,
+          "Rejected interaction: target has no mask in the current observation.": 1
+        }
+      },
+      "action_types": {
+        "LookUp": 8,
+        "RotateLeft": 8,
+        "LookDown": 5,
+        "RotateRight": 6,
+        "MoveAhead": 6,
+        "PickupObject": 1,
+        "PutObject": 6,
+        "OpenObject": 5
+      },
+      "failed_action_types": {
+        "PutObject": 6,
+        "OpenObject": 4
+      },
+      "failure_messages": {
+        "Target openable Receptacle is CLOSED, can't place if target is not open!": 1,
+        "No valid positions to place object found": 5,
+        "": 4
+      }
+    },
+    {
+      "global_index": 31,
+      "episode_id": "valid_unseen/pick_two_obj_and_place-ToiletPaper-None-Cabinet-424/trial_T20190906_203003_627271#2",
+      "split": "valid_unseen",
+      "task_type": "pick_two_obj_and_place",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0008",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 2,
+        "expert_actions": 37,
+        "executed_actions": 37
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 37,
+        "failures": 7,
+        "decisions": 42,
+        "input_tokens": 364805,
+        "output_tokens": 46874,
+        "perception_seconds": 13.032027529552579,
+        "policy_seconds": 955.2517635403201
+      },
+      "observations": 38,
+      "decision_audit": {
+        "requests": 42,
+        "responses": 42,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 9856,
+          "input_tokens": 364805,
+          "output_tokens": 46874,
+          "reasoning_output_tokens": 41120,
+          "total_tokens": 411679
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 84,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 42,
+        "operations": {
+          "PickupObject": 3,
+          "NavigateObject": 17,
+          "MoveAhead": 1,
+          "RotateLeft": 2,
+          "OpenObject": 7,
+          "LookUp": 4,
+          "RotateRight": 2,
+          "LookDown": 2,
+          "PutObject": 3,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 2,
+          "Reached observed approach; verify current target mask and interaction distance.": 14,
+          "Object location is stale or held; obtain a new observation.": 1
+        }
+      },
+      "action_types": {
+        "PickupObject": 3,
+        "MoveAhead": 7,
+        "LookDown": 5,
+        "RotateLeft": 4,
+        "OpenObject": 7,
+        "LookUp": 4,
+        "RotateRight": 4,
+        "PutObject": 3
+      },
+      "failed_action_types": {
+        "PickupObject": 1,
+        "OpenObject": 5,
+        "PutObject": 1
+      },
+      "failure_messages": {
+        "object is not visible.": 1,
+        "Bad interact mask. Couldn't locate target object": 4,
+        "object not found: object": 1,
+        "Target openable Receptacle is CLOSED, can't place if target is not open!": 1
+      }
+    },
+    {
+      "global_index": 33,
+      "episode_id": "valid_unseen/pick_and_place_simple-Plunger-None-Cabinet-424/trial_T20190908_021510_064551#0",
+      "split": "valid_unseen",
+      "task_type": "pick_and_place_simple",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0009",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 1,
+        "expert_actions": 26,
+        "executed_actions": 60
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 60,
+        "failures": 5,
+        "decisions": 60,
+        "input_tokens": 535621,
+        "output_tokens": 74560,
+        "perception_seconds": 35.72177178785205,
+        "policy_seconds": 1395.7702493071556
+      },
+      "observations": 61,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 20736,
+          "input_tokens": 535621,
+          "output_tokens": 74560,
+          "reasoning_output_tokens": 66397,
+          "total_tokens": 610181
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 120,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateLeft": 14,
+          "RotateRight": 9,
+          "NavigateObject": 14,
+          "MoveAhead": 4,
+          "NavigateCell": 4,
+          "OpenObject": 4,
+          "LookDown": 4,
+          "PickupObject": 1,
+          "PutObject": 4,
+          "LookUp": 2
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 7,
+          "Reached observed approach; verify current target mask and interaction distance.": 10
+        }
+      },
+      "action_types": {
+        "RotateLeft": 17,
+        "RotateRight": 16,
+        "MoveAhead": 11,
+        "OpenObject": 4,
+        "LookDown": 4,
+        "PickupObject": 1,
+        "PutObject": 4,
+        "LookUp": 3
+      },
+      "failed_action_types": {
+        "PutObject": 4,
+        "MoveAhead": 1
+      },
+      "failure_messages": {
+        "No valid positions to place object found": 3,
+        "Target openable Receptacle is CLOSED, can't place if target is not open!": 1,
+        "Toilet_daa15a38 is blocking Agent 0 from moving 0": 1
+      }
+    },
+    {
+      "global_index": 34,
+      "episode_id": "valid_unseen/pick_and_place_with_movable_recep-Glassbottle-Plate-SinkBasin-10/trial_T20190908_123236_460615#2",
+      "split": "valid_unseen",
+      "task_type": "pick_and_place_with_movable_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0009",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 26,
+        "executed_actions": 48
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 48,
+        "failures": 10,
+        "decisions": 43,
+        "input_tokens": 514498,
+        "output_tokens": 54357,
+        "perception_seconds": 22.78254503570497,
+        "policy_seconds": 1100.2541788248345
+      },
+      "observations": 49,
+      "decision_audit": {
+        "requests": 43,
+        "responses": 43,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 22784,
+          "input_tokens": 514498,
+          "output_tokens": 54357,
+          "reasoning_output_tokens": 48488,
+          "total_tokens": 568855
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 86,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 43,
+        "operations": {
+          "RotateLeft": 8,
+          "NavigateObject": 10,
+          "PickupObject": 1,
+          "PutObject": 1,
+          "OpenObject": 13,
+          "MoveAhead": 3,
+          "LookUp": 4,
+          "RotateRight": 2,
+          "LookDown": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "Reached observed approach; verify current target mask and interaction distance.": 9,
+          "Object location is stale or held; obtain a new observation.": 1
+        }
+      },
+      "action_types": {
+        "RotateLeft": 13,
+        "PickupObject": 1,
+        "PutObject": 1,
+        "LookDown": 6,
+        "OpenObject": 13,
+        "MoveAhead": 5,
+        "LookUp": 4,
+        "RotateRight": 5
+      },
+      "failed_action_types": {
+        "OpenObject": 10
+      },
+      "failure_messages": {
+        "": 8,
+        "Bad interact mask. Couldn't locate target object": 2
+      }
+    },
+    {
+      "global_index": 35,
+      "episode_id": "valid_unseen/pick_clean_then_place_in_recep-SoapBar-None-CounterTop-424/trial_T20190907_074124_966890#4",
+      "split": "valid_unseen",
+      "task_type": "pick_clean_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0009",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 3,
+        "expert_actions": 31,
+        "executed_actions": 26
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 26,
+        "failures": 10,
+        "decisions": 26,
+        "input_tokens": 186721,
+        "output_tokens": 26038,
+        "perception_seconds": 2.6787663977593184,
+        "policy_seconds": 530.2308091595769
+      },
+      "observations": 27,
+      "decision_audit": {
+        "requests": 26,
+        "responses": 26,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 5760,
+          "input_tokens": 186721,
+          "output_tokens": 26038,
+          "reasoning_output_tokens": 22411,
+          "total_tokens": 212759
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 52,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 26,
+        "operations": {
+          "RotateRight": 7,
+          "PickupObject": 10,
+          "LookUp": 1,
+          "RotateLeft": 6,
+          "NavigateObject": 2
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "Reached observed approach; verify current target mask and interaction distance.": 2
+        }
+      },
+      "action_types": {
+        "RotateRight": 9,
+        "PickupObject": 10,
+        "LookUp": 1,
+        "RotateLeft": 6
+      },
+      "failed_action_types": {
+        "PickupObject": 10
+      },
+      "failure_messages": {
+        "object is not visible.": 10
+      }
+    },
+    {
+      "global_index": 37,
+      "episode_id": "valid_unseen/pick_heat_then_place_in_recep-Mug-None-CoffeeMachine-10/trial_T20190907_171933_349922#1",
+      "split": "valid_unseen",
+      "task_type": "pick_heat_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0010",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 48,
+        "executed_actions": 37
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 37,
+        "failures": 7,
+        "decisions": 60,
+        "input_tokens": 532075,
+        "output_tokens": 78230,
+        "perception_seconds": 11.929819395765662,
+        "policy_seconds": 1633.7534304596484
+      },
+      "observations": 38,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 12032,
+          "input_tokens": 532075,
+          "output_tokens": 78230,
+          "reasoning_output_tokens": 69850,
+          "total_tokens": 610305
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 120,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateRight": 9,
+          "NavigateObject": 19,
+          "MoveAhead": 6,
+          "OpenObject": 5,
+          "LookDown": 1,
+          "RotateLeft": 11,
+          "LookUp": 1,
+          "NavigateCell": 8
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 25,
+          "Reached observed approach; verify current target mask and interaction distance.": 1
+        }
+      },
+      "action_types": {
+        "RotateRight": 10,
+        "MoveAhead": 8,
+        "OpenObject": 5,
+        "LookDown": 1,
+        "RotateLeft": 12,
+        "LookUp": 1
+      },
+      "failed_action_types": {
+        "OpenObject": 5,
+        "MoveAhead": 2
+      },
+      "failure_messages": {
+        "Bad interact mask. Couldn't locate target object": 3,
+        "object not found: object": 2,
+        "HousePlant_e8f14f16 is blocking Agent 0 from moving 0": 1,
+        "Chair_eb23fa0f is blocking Agent 0 from moving 0": 1
+      }
+    },
+    {
+      "global_index": 38,
+      "episode_id": "valid_unseen/pick_two_obj_and_place-CD-None-Safe-308/trial_T20190907_051056_585414#2",
+      "split": "valid_unseen",
+      "task_type": "pick_two_obj_and_place",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0010",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 83,
+        "executed_actions": 21
+      },
+      "execution": {
+        "stop_reason": "failure_budget",
+        "actions": 21,
+        "failures": 10,
+        "decisions": 22,
+        "input_tokens": 167279,
+        "output_tokens": 16704,
+        "perception_seconds": 1.7260006731376052,
+        "policy_seconds": 369.6111580710858
+      },
+      "observations": 22,
+      "decision_audit": {
+        "requests": 22,
+        "responses": 22,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 6400,
+          "input_tokens": 167279,
+          "output_tokens": 16704,
+          "reasoning_output_tokens": 13875,
+          "total_tokens": 183983
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 44,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 22,
+        "operations": {
+          "RotateLeft": 5,
+          "NavigateObject": 3,
+          "MoveAhead": 1,
+          "PickupObject": 10,
+          "LookDown": 2,
+          "LookUp": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 3
+        }
+      },
+      "action_types": {
+        "RotateLeft": 6,
+        "MoveAhead": 2,
+        "PickupObject": 10,
+        "LookDown": 2,
+        "LookUp": 1
+      },
+      "failed_action_types": {
+        "PickupObject": 10
+      },
+      "failure_messages": {
+        "object is not visible.": 10
+      }
+    },
+    {
+      "global_index": 39,
+      "episode_id": "valid_unseen/look_at_obj_in_light-CellPhone-None-FloorLamp-219/trial_T20190908_044139_261907#1",
+      "split": "valid_unseen",
+      "task_type": "look_at_obj_in_light",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0010",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 30,
+        "executed_actions": 49
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 49,
+        "failures": 3,
+        "decisions": 58,
+        "input_tokens": 541131,
+        "output_tokens": 75886,
+        "perception_seconds": 3.9376160698011518,
+        "policy_seconds": 1469.857500613667
+      },
+      "observations": 50,
+      "decision_audit": {
+        "requests": 58,
+        "responses": 58,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 26752,
+          "input_tokens": 541131,
+          "output_tokens": 75886,
+          "reasoning_output_tokens": 67826,
+          "total_tokens": 617017
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 116,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 58,
+        "operations": {
+          "NavigateObject": 17,
+          "LookUp": 8,
+          "MoveAhead": 6,
+          "LookDown": 4,
+          "RotateRight": 8,
+          "RotateLeft": 10,
+          "NavigateCell": 2,
+          "ToggleObjectOn": 2,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "Reached observed approach; verify current target mask and interaction distance.": 2,
+          "No route through observed free cells; explore or select another approach.": 17
+        }
+      },
+      "action_types": {
+        "LookUp": 8,
+        "MoveAhead": 14,
+        "LookDown": 6,
+        "RotateRight": 9,
+        "RotateLeft": 10,
+        "ToggleObjectOn": 2
+      },
+      "failed_action_types": {
+        "MoveAhead": 1,
+        "ToggleObjectOn": 2
+      },
+      "failure_messages": {
+        "SideTable_50177b4d is blocking Agent 0 from moving 0": 1,
+        "can't toggle object on if it's already on!": 1,
+        "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 ": 1
+      }
+    },
+    {
+      "global_index": 41,
+      "episode_id": "valid_unseen/pick_and_place_with_movable_recep-Egg-Bowl-CounterTop-10/trial_T20190912_190125_832581#1",
+      "split": "valid_unseen",
+      "task_type": "pick_and_place_with_movable_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0011",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 38,
+        "executed_actions": 59
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 59,
+        "failures": 8,
+        "decisions": 60,
+        "input_tokens": 556712,
+        "output_tokens": 68595,
+        "perception_seconds": 4.582282961346209,
+        "policy_seconds": 1342.4198796423152
+      },
+      "observations": 60,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 27904,
+          "input_tokens": 556712,
+          "output_tokens": 68595,
+          "reasoning_output_tokens": 60796,
+          "total_tokens": 625307
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 120,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateRight": 9,
+          "NavigateObject": 18,
+          "NavigateCell": 4,
+          "OpenObject": 8,
+          "MoveAhead": 6,
+          "RotateLeft": 5,
+          "LookDown": 1,
+          "LookUp": 9
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 11,
+          "Reached observed approach; verify current target mask and interaction distance.": 10
+        }
+      },
+      "action_types": {
+        "RotateRight": 10,
+        "OpenObject": 8,
+        "MoveAhead": 12,
+        "RotateLeft": 12,
+        "LookDown": 8,
+        "LookUp": 9
+      },
+      "failed_action_types": {
+        "OpenObject": 8
+      },
+      "failure_messages": {
+        "object not found: object": 7,
+        "Bad interact mask. Couldn't locate target object": 1
+      }
+    },
+    {
+      "global_index": 42,
+      "episode_id": "valid_unseen/pick_clean_then_place_in_recep-Knife-None-CounterTop-10/trial_T20190909_110531_148235#2",
+      "split": "valid_unseen",
+      "task_type": "pick_clean_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0011",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 3,
+        "expert_actions": 50,
+        "executed_actions": 49
+      },
+      "execution": {
+        "stop_reason": "decision_budget",
+        "actions": 49,
+        "failures": 9,
+        "decisions": 60,
+        "input_tokens": 650870,
+        "output_tokens": 60749,
+        "perception_seconds": 4.823439436964691,
+        "policy_seconds": 1224.433342281729
+      },
+      "observations": 50,
+      "decision_audit": {
+        "requests": 60,
+        "responses": 60,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 14976,
+          "input_tokens": 650870,
+          "output_tokens": 60749,
+          "reasoning_output_tokens": 52415,
+          "total_tokens": 711619
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 120,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 60,
+        "operations": {
+          "RotateRight": 10,
+          "NavigateObject": 20,
+          "MoveAhead": 3,
+          "RotateLeft": 14,
+          "LookDown": 2,
+          "LookUp": 2,
+          "OpenObject": 1,
+          "PickupObject": 8
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 7,
+          "Reached observed approach; verify current target mask and interaction distance.": 13
+        }
+      },
+      "action_types": {
+        "RotateRight": 14,
+        "MoveAhead": 7,
+        "RotateLeft": 14,
+        "LookDown": 3,
+        "LookUp": 2,
+        "OpenObject": 1,
+        "PickupObject": 8
+      },
+      "failed_action_types": {
+        "OpenObject": 1,
+        "PickupObject": 8
+      },
+      "failure_messages": {
+        "object not found: object": 1,
+        "object is not visible.": 8
+      }
+    },
+    {
+      "global_index": 46,
+      "episode_id": "valid_unseen/look_at_obj_in_light-CellPhone-None-FloorLamp-219/trial_T20190908_044113_026049#0",
+      "split": "valid_unseen",
+      "task_type": "look_at_obj_in_light",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0012",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 2,
+        "expert_actions": 18,
+        "executed_actions": 28
+      },
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 28,
+        "failures": 8,
+        "decisions": 29,
+        "input_tokens": 229348,
+        "output_tokens": 38545,
+        "perception_seconds": 2.588783829472959,
+        "policy_seconds": 758.1120389318094
+      },
+      "observations": 29,
+      "decision_audit": {
+        "requests": 29,
+        "responses": 29,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 11136,
+          "input_tokens": 229348,
+          "output_tokens": 38545,
+          "reasoning_output_tokens": 34419,
+          "total_tokens": 267893
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [],
+        "submitted_images": 58,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 29,
+        "operations": {
+          "NavigateObject": 6,
+          "MoveAhead": 2,
+          "PickupObject": 5,
+          "ToggleObjectOn": 4,
+          "RotateLeft": 6,
+          "RotateRight": 4,
+          "NavigateCell": 1,
+          "Stop": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 2,
+          "Reached observed approach; verify current target mask and interaction distance.": 5
+        }
+      },
+      "action_types": {
+        "MoveAhead": 4,
+        "PickupObject": 5,
+        "LookUp": 1,
+        "ToggleObjectOn": 4,
+        "RotateLeft": 9,
+        "RotateRight": 5
+      },
+      "failed_action_types": {
+        "PickupObject": 4,
+        "ToggleObjectOn": 4
+      },
+      "failure_messages": {
+        "object is not visible.": 4,
+        "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 ": 4
+      }
+    }
+  ],
+  "unscored_original_attempts": [
+    {
+      "global_index": 32,
+      "episode_id": "valid_unseen/look_at_obj_in_light-Box-None-FloorLamp-219/trial_T20190907_102952_001375#1",
+      "split": "valid_unseen",
+      "task_type": "look_at_obj_in_light",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0009",
+      "score": null,
+      "execution": {
+        "actions": 23,
+        "failures": 2,
+        "decisions": 39,
+        "observed_input_tokens_lower_bound": 329970,
+        "observed_output_tokens_lower_bound": 55176
+      },
+      "observations": 24,
+      "decision_audit": {
+        "requests": 39,
+        "responses": 38,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 17024,
+          "input_tokens": 329970,
+          "output_tokens": 55176,
+          "reasoning_output_tokens": 49813,
+          "total_tokens": 385146
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [
+          39
+        ],
+        "submitted_images": 78,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 38,
+        "operations": {
+          "NavigateObject": 13,
+          "MoveAhead": 3,
+          "PickupObject": 2,
+          "LookUp": 1,
+          "NavigateCell": 7,
+          "RotateRight": 8,
+          "RotateLeft": 4
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 20
+        }
+      },
+      "action_types": {
+        "MoveAhead": 7,
+        "PickupObject": 2,
+        "LookUp": 1,
+        "RotateRight": 9,
+        "RotateLeft": 4
+      },
+      "failed_action_types": {
+        "PickupObject": 2
+      },
+      "failure_messages": {
+        "object is not visible.": 2
+      },
+      "error": "CodexTurnError: Codex turn completed without a final_response; status=failed error=TurnError(additional_details=None, codex_error_info=CodexErrorInfo(root=HttpConnectionFailedCodexErrorInfo(http_connection_failed=HttpConnectionFailed(http_status_code=502))), message='unexpected status 502 Bad Gateway: Unable to reach upstream; outcome may be indeterminate, url: http://127.0.0.1:8787/v1/responses', misalignment=None)",
+      "exact_consumed_usage": null,
+      "failed_or_missing_decision_usage": null,
+      "usage_interpretation": "Persisted successful-response totals are a lower bound; the final failed request/finalization may have consumed unreported tokens. Unknown usage is not zero."
+    },
+    {
+      "global_index": 43,
+      "episode_id": "valid_unseen/pick_cool_then_place_in_recep-BreadSliced-None-Microwave-10/trial_T20190906_224631_058932#0",
+      "split": "valid_unseen",
+      "task_type": "pick_cool_then_place_in_recep",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0011",
+      "score": null,
+      "execution": {
+        "actions": 10,
+        "failures": 1,
+        "decisions": 12,
+        "observed_input_tokens_lower_bound": 67538,
+        "observed_output_tokens_lower_bound": 13299
+      },
+      "observations": 11,
+      "decision_audit": {
+        "requests": 12,
+        "responses": 11,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 5504,
+          "input_tokens": 67538,
+          "output_tokens": 13299,
+          "reasoning_output_tokens": 11899,
+          "total_tokens": 80837
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [
+          12
+        ],
+        "submitted_images": 24,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 11,
+        "operations": {
+          "NavigateCell": 1,
+          "MoveAhead": 4,
+          "RotateRight": 3,
+          "NavigateObject": 3
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "No route through observed free cells; explore or select another approach.": 4
+        }
+      },
+      "action_types": {
+        "MoveAhead": 7,
+        "RotateRight": 3
+      },
+      "failed_action_types": {
+        "MoveAhead": 1
+      },
+      "failure_messages": {
+        "StandardWallSize is blocking Agent 0 from moving 0": 1
+      },
+      "error": "CodexTurnError: Codex turn completed without a final_response; status=failed error=TurnError(additional_details=None, codex_error_info=CodexErrorInfo(root=HttpConnectionFailedCodexErrorInfo(http_connection_failed=HttpConnectionFailed(http_status_code=502))), message='unexpected status 502 Bad Gateway: Unable to reach upstream; outcome may be indeterminate, url: http://127.0.0.1:8787/v1/responses', misalignment=None)",
+      "exact_consumed_usage": null,
+      "failed_or_missing_decision_usage": null,
+      "usage_interpretation": "Persisted successful-response totals are a lower bound; the final failed request/finalization may have consumed unreported tokens. Unknown usage is not zero."
+    },
+    {
+      "global_index": 45,
+      "episode_id": "valid_unseen/pick_two_obj_and_place-PepperShaker-None-Drawer-10/trial_T20190908_010306_215435#0",
+      "split": "valid_unseen",
+      "task_type": "pick_two_obj_and_place",
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct/episodes/0012",
+      "score": null,
+      "execution": {
+        "actions": 5,
+        "failures": 0,
+        "decisions": 8,
+        "observed_input_tokens_lower_bound": 42239,
+        "observed_output_tokens_lower_bound": 7309
+      },
+      "observations": 6,
+      "decision_audit": {
+        "requests": 8,
+        "responses": 7,
+        "reported_usage": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 2816,
+          "input_tokens": 42239,
+          "output_tokens": 7309,
+          "reasoning_output_tokens": 6476,
+          "total_tokens": 49548
+        },
+        "missing_usage_decisions": [],
+        "missing_response_decisions": [
+          8
+        ],
+        "submitted_images": 16,
+        "submitted_historical_images": 0,
+        "sdk_attempts_observed": 7,
+        "operations": {
+          "LookUp": 1,
+          "RotateLeft": 2,
+          "NavigateObject": 2,
+          "LookDown": 1,
+          "MoveAhead": 1
+        },
+        "non_action_feedback": {
+          "Initial observation.": 1,
+          "Reached observed approach; verify current target mask and interaction distance.": 1,
+          "No route through observed free cells; explore or select another approach.": 1
+        }
+      },
+      "action_types": {
+        "LookUp": 1,
+        "RotateLeft": 2,
+        "LookDown": 1,
+        "MoveAhead": 1
+      },
+      "failed_action_types": {},
+      "failure_messages": {},
+      "error": "CodexTurnError: Codex turn completed without a final_response; status=failed error=TurnError(additional_details=None, codex_error_info=CodexErrorInfo(root=HttpConnectionFailedCodexErrorInfo(http_connection_failed=HttpConnectionFailed(http_status_code=502))), message='unexpected status 502 Bad Gateway: Unable to reach upstream; outcome may be indeterminate, url: http://127.0.0.1:8787/v1/responses', misalignment=None)",
+      "exact_consumed_usage": null,
+      "failed_or_missing_decision_usage": null,
+      "usage_interpretation": "Persisted successful-response totals are a lower bound; the final failed request/finalization may have consumed unreported tokens. Unknown usage is not zero."
+    }
+  ],
+  "official_rescore_all_match": true
+}

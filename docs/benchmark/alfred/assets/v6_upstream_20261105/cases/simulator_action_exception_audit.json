@@ -1,0 +1,145 @@
+{
+  "schema_version": 2,
+  "scope": "Evaluator-only posthoc audit of existing records after terminal scoring. No replay, retries, source edits, or active-agent feedback.",
+  "cases": [
+    {
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+      "episode": "0010",
+      "episode_id": "valid_unseen/look_at_obj_in_light-CellPhone-None-FloorLamp-219/trial_T20190908_044139_261907#1",
+      "action_record_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0010/actions.jsonl",
+      "terminal_snapshot_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0010/simulator/terminal_evaluation.json",
+      "failed_action": {
+        "index": 49,
+        "action": "ToggleObjectOn",
+        "object_id": 61,
+        "source_frame": 48,
+        "result_frame": 49,
+        "success": false,
+        "error": "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 "
+      },
+      "official_terminal_score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 30,
+        "executed_actions": 49
+      },
+      "attempt_status": "completed",
+      "next_episode_start_evidence": {
+        "episode": "0011",
+        "launcher_log_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot50_direct_s3.log",
+        "launcher_log_line": "2026-11-05 05:54:57,448 INFO ALFRED episode 11/12: valid_unseen/pick_cool_then_place_in_recep-BreadSliced-None-Microwave-10/trial_T20190906_224631_058932#0",
+        "observations_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0011/observations.jsonl",
+        "first_observation": {
+          "frame_id": 0,
+          "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct/episodes/0011/simulator/frames/000000.png",
+          "yaw_degrees": 180.0,
+          "horizon_degrees": 30.0000038,
+          "last_action_success": true,
+          "last_action_error": ""
+        },
+        "observed_frame_count_at_audit": 4,
+        "first_recorded_action": {
+          "index": 1,
+          "action": "MoveAhead",
+          "object_id": null,
+          "source_frame": 0,
+          "result_frame": 1,
+          "success": true,
+          "error": ""
+        }
+      },
+      "run_summary_at_audit": {
+        "selected": 12,
+        "completed": 10,
+        "errors": 0,
+        "interrupted": 0,
+        "pending": 2
+      },
+      "classification": "Scored action failure: simulator returned last-action success=false plus its errorMessage, observation RPC remained valid, and authoritative terminal scoring completed. This episode contributes to completed/scored denominators and its failed-action count, not to unscored infrastructure-error count. A broken RPC/process or absent terminal score would instead be an infrastructure error.",
+      "raw_simulator_error_message": "object not found: FloorLamp|-00.65|+00.27|+04.43System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 ",
+      "actor_error_message_note": "failed_action.error is the exact stored actor-facing error, with simulator object identifiers sanitized; raw_simulator_error_message preserves the simulator terminal metadata text for evaluator-only audit."
+    },
+    {
+      "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+      "episode": "0012",
+      "episode_id": "valid_unseen/look_at_obj_in_light-CellPhone-None-FloorLamp-219/trial_T20190908_044113_026049#0",
+      "action_record_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0012/actions.jsonl",
+      "terminal_snapshot_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0012/simulator/terminal_evaluation.json",
+      "failed_actions": [
+        {
+          "index": 11,
+          "action": "ToggleObjectOn",
+          "object_id": 3,
+          "source_frame": 10,
+          "result_frame": 11,
+          "success": false,
+          "error": "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 "
+        },
+        {
+          "index": 12,
+          "action": "ToggleObjectOn",
+          "object_id": 19,
+          "source_frame": 11,
+          "result_frame": 12,
+          "success": false,
+          "error": "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 "
+        },
+        {
+          "index": 21,
+          "action": "ToggleObjectOn",
+          "object_id": 3,
+          "source_frame": 20,
+          "result_frame": 21,
+          "success": false,
+          "error": "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 "
+        },
+        {
+          "index": 26,
+          "action": "ToggleObjectOn",
+          "object_id": 19,
+          "source_frame": 25,
+          "result_frame": 26,
+          "success": false,
+          "error": "object not found: objectSystem.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.NullReferenceException: Object reference not set to an instance of an object\n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.SimObjPhysics target, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObject (.ServerAction action, Boolean toggleOn, Boolean forceAction) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.ToggleObjectOn (.ServerAction action) [0x00000] in <filename unknown>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod:InternalInvoke (object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  --- End of inner exception stack trace ---\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00000] in <filename unknown>:0 \n  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <filename unknown>:0 \n  at UnityStandardAssets.Characters.FirstPerson.BaseFPSAgentController.ProcessControlCommand (.ServerAction controlCommand) [0x00000] in <filename unknown>:0 "
+        }
+      ],
+      "error_provenance": "Exact stored actor-facing messages preserve the Unity stack but sanitize simulator object IDs. The original unsanitized error for these earlier actions was not separately persisted; terminal metadata follows later motion and is not substituted as their error.",
+      "official_terminal_score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 2,
+        "expert_actions": 18,
+        "executed_actions": 28
+      },
+      "attempt_status": "completed",
+      "execution": {
+        "stop_reason": "policy_stop",
+        "actions": 28,
+        "failures": 8,
+        "decisions": 29,
+        "input_tokens": 229348,
+        "output_tokens": 38545,
+        "perception_seconds": 2.588783829472959,
+        "policy_seconds": 758.1120389318094
+      },
+      "lifecycle_evidence": {
+        "run_metadata_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/run.json",
+        "run_status": "completed",
+        "finished_at_utc": "2026-11-04T21:58:48.840200+00:00",
+        "database_path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/runs.sqlite",
+        "database_run_status": "completed",
+        "database_attempt_counts": [
+          [
+            "completed",
+            12
+          ]
+        ],
+        "owned_runner_predictor_simulator_pids_at_audit": [],
+        "audit_time_utc": "2026-11-04T22:01:28.870518+00:00",
+        "next_episode": "None: this was the final episode; completed run, SQLite rows and process exit establish normal lifecycle completion."
+      },
+      "classification": "Scored action failures: all exception-bearing action attempts had success=false, remained included in execution actions/failures, and authoritative terminal scoring completed. They are not unscored infrastructure errors."
+    }
+  ]
+}

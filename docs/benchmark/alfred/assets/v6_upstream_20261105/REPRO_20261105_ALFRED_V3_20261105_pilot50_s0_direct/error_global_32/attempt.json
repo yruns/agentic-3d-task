@@ -1,0 +1,7 @@
+{
+  "episode_id": "valid_unseen/look_at_obj_in_light-Box-None-FloorLamp-219/trial_T20190907_102952_001375#1",
+  "status": "error",
+  "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0009",
+  "score": null,
+  "error": "CodexTurnError: Codex turn completed without a final_response; status=failed error=TurnError(additional_details=None, codex_error_info=CodexErrorInfo(root=HttpConnectionFailedCodexErrorInfo(http_connection_failed=HttpConnectionFailed(http_status_code=502))), message='unexpected status 502 Bad Gateway: Unable to reach upstream; outcome may be indeterminate, url: http://127.0.0.1:8787/v1/responses', misalignment=None)"
+}

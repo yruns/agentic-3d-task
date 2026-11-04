@@ -4,9 +4,11 @@ This track evaluates incremental scene memory during interactive ALFRED task
 execution. [Implementation and setup](../../codex_agent/alfred.md) describe the
 actor's observations and external dependencies.
 
-**The first scored prefix diagnostic failed by early policy termination.**
-It reached official terminal scoring with zero physical actions; pilot50 has
-not run yet. A simulator reset or neural forward pass is not a task success.
+**The frozen pilot reached 41/50 official terminal scores before an upstream
+transport outage.** Five tasks succeeded; three error attempts remain unscored
+and six tasks were not attempted. [v6](v6_upstream_outage_20261105.md) records
+the partial results, independent score/boundary audits, costs, and exact nine-task
+recovery plan. This is not a completed pilot50 result.
 
 ## Protocol
 
@@ -25,7 +27,7 @@ types. Thus the first four types receive four entries and the last three receive
 three entries per split when sufficient candidates exist. The manifest retains
 the official splits-file hash and each selected trajectory's hash.
 
-The intended frozen file is `folds/pilot50.json`. It is the first matched fold for
+The frozen file is `folds/pilot50.json`. It is the first matched fold for
 this project's ALFRED comparisons, **not an official ALFRED subset**, and its
 balanced task distribution is not the full-split distribution. Preserve it for
 future comparisons; do not resample after seeing results. Report seen/unseen
@@ -71,6 +73,7 @@ every episode attempt without overwriting old run IDs.
 
 | Record | Date | Scope | Result |
 |---|---|---|---|
+| [v6 partial pilot and upstream outage](v6_upstream_outage_20261105.md) | 2026-11-05 | Frozen50, predicted perception, H input | 41/50 scored, 5 successes; 3 upstream errors and 6 pending; 41/41 independent score checks agree |
 | [v5 loopback routing](v5_loopback_proxy_20261105.md) | 2026-11-05 | Physical scalar-wire rollout and first pilot launch | Transient local health 502; pilot interrupted unscored; run-local proxy bypass verified |
 | [v4 schema compatibility](v4_schema_compatibility_20261105.md) | 2026-11-05 | Same-code medium retry and controlled command probes | Medium retry 0 actions; scalar wire format passes 7/7 command families |
 | [v3 repaired contract](v3_smoke1_20261105.md) | 2026-11-05 | Same prefix1; nested commands and progressive retrieval | 1/1 scored; early Stop, 0 actions, SR 0 and GC 0/2 |
@@ -80,5 +83,6 @@ every episode attempt without overwriting old run IDs.
 See the [local leaderboard](leaderboard.md). Before launching evaluation,
 `AGENTS.md` requires a clean tracked tree and recorded branch, HEAD and executed
 code hash; new executable files must also be committed. The reviewed
-implementation is prepared for a clean-source launch. Evaluation status remains
-pending until an actual agent run and its logs are available.
+implementation was evaluated from a clean committed tree. Remaining recovery
+requires the existing upstream forwarding connection to work; task failures
+will not be rerun or replaced to improve the result.

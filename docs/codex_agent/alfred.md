@@ -7,10 +7,12 @@ the current image, a gridded BEV, and retrieved historical views to choose its
 next action. The first implementation is an integration baseline, not a claim
 that the proposed program-generation method is complete.
 
-**Status on 2026-11-05:** infrastructure checks passed, and a one-task diagnostic
-reached official scoring but failed after an early policy Stop. The pilot50
-evaluation has not completed.
-See the [setup record](../benchmark/alfred/v1_setup_20261105.md) and
+**Status on 2026-11-05:** 41/50 frozen validation tasks reached official scoring,
+with five successes. Three upstream transport failures and six unattempted
+tasks remain; the exact nine-task recovery plan is prepared. All 41 scores
+passed an independent official-goal recheck. This is an integration baseline
+with partial pilot coverage, not completed pilot50 accuracy.
+See the [results and failure evidence](../benchmark/alfred/v6_upstream_outage_20261105.md) and
 [benchmark protocol](../benchmark/alfred/README.md).
 
 ## Inputs and information boundary
@@ -22,6 +24,9 @@ and terminal goal conditions. The actor never receives those fields, simulator
 object identities, world positions, reachable-position lists, or true masks and
 depth. Simulator mask-to-object dispatch and official scoring remain inside the
 simulator worker.
+
+Native action-error feedback can still contain obstacle names/categories after
+simulator IDs are redacted; it is part of the declared action-feedback input.
 
 The first policy runtime explicitly supports registered **native Responses**
 models through `codex_adapter`. Its per-turn SDK catalog removes all host tools;
@@ -153,7 +158,8 @@ python -m codex_agent.cli.run_alfred \
   --film-root /home/ysh/codebase/FILM \
   --weights-root /home/ysh/Datasets/FILM/Pretrained_Models_FILM \
   --x-display 5 --device cuda:0 \
-  --model gpt-5.4-2026-03-05 --reasoning-effort low \
+  --model gpt-5.4-2026-03-05 --reasoning-effort medium \
+  --max-actions 1000 --max-failures 10 --max-decisions 60 \
   --preflight-only
 ```
 
@@ -168,7 +174,8 @@ in tmux. For the first diagnostic add `--limit 1` and use a different output
 directory, such as `outputs/alfred/smoke1_20261105`; this runs a prefix of the
 same frozen fold. The complete pilot uses all 50 entries. Defaults are 1,000
 attempted actions, 10 failed simulator actions, and 120 model decisions per
-episode. No output directory or archived run ID may be reused.
+episode. The evaluated pilot explicitly used 60 decisions, as shown above.
+No output directory or archived run ID may be reused.
 
 The active display created for this setup uses `DISPLAY=:5` and
 `XAUTHORITY=/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/Xauthority`.
@@ -187,6 +194,21 @@ directory. Selection is exactly `manifest[index::num_shards]`, producing
 sharding. Aggregate only completed shards with identical executed-code, fold,
 model, perception and action budgets; verify all 50 episode IDs occur once.
 Each process owns its own predictor and simulator lifecycle.
+
+After the v6 transport outage, only original global indices
+`32, 36, 40, 43, 44, 45, 47, 48, 49` lack scores. Using `--num-shards 50` and
+`--shard-index <index>` selects exactly one of these from the unchanged fold;
+new run IDs retain the failed attempts separately. Do not rerun already scored
+tasks or substitute another model/protocol to complete this cohort. Recovery
+can follow a documentation-only commit if the executed-source digest, branch,
+clean state, and all actor settings remain identical; record each actual HEAD.
+
+The shared adapter currently relies on an existing local SOCKS forward at
+`127.0.0.1:10800` via its network shim. A healthy `/health` endpoint does not
+verify that forward. At the outage, SOCKS negotiation stopped and then the
+port refused connections. Restore the established forwarding path and verify
+one native Responses turn before launching the prepared recovery jobs;
+there is no need to restart unrelated benchmark services.
 
 ## Related implementation references
 

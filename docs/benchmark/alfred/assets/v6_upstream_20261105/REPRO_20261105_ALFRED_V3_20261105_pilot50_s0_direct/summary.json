@@ -1,0 +1,158 @@
+{
+  "selected": 13,
+  "completed": 8,
+  "errors": 1,
+  "interrupted": 0,
+  "pending": 4,
+  "metrics": {
+    "num_evals": 8,
+    "num_successes": 1,
+    "completed_goal_conditions": 4,
+    "total_goal_conditions": 22,
+    "expert_actions": 383,
+    "executed_actions": 317,
+    "success_rate": 0.125,
+    "goal_condition_success_rate": 0.18181818181818182,
+    "path_length_weighted_success_rate": 0.07571801566579635,
+    "path_length_weighted_goal_condition_success_rate": 0.12706701479547433
+  },
+  "by_split": {
+    "valid_seen": {
+      "num_evals": 7,
+      "num_successes": 0,
+      "completed_goal_conditions": 1,
+      "total_goal_conditions": 19,
+      "expert_actions": 354,
+      "executed_actions": 288,
+      "success_rate": 0.0,
+      "goal_condition_success_rate": 0.05263157894736842,
+      "path_length_weighted_success_rate": 0.0,
+      "path_length_weighted_goal_condition_success_rate": 0.05555555555555556
+    },
+    "valid_unseen": {
+      "num_evals": 1,
+      "num_successes": 1,
+      "completed_goal_conditions": 3,
+      "total_goal_conditions": 3,
+      "expert_actions": 29,
+      "executed_actions": 29,
+      "success_rate": 1.0,
+      "goal_condition_success_rate": 1.0,
+      "path_length_weighted_success_rate": 1.0,
+      "path_length_weighted_goal_condition_success_rate": 1.0
+    }
+  },
+  "attempts": [
+    {
+      "episode_id": "valid_seen/look_at_obj_in_light-Pillow-None-DeskLamp-302/trial_T20190909_150916_682139#0",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0001",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 35,
+        "executed_actions": 32
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/pick_cool_then_place_in_recep-Plate-None-CounterTop-1/trial_T20190906_205324_559361#0",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0002",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 3,
+        "expert_actions": 59,
+        "executed_actions": 46
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/pick_and_place_simple-WineBottle-None-Shelf-7/trial_T20190907_200154_378982#0",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0003",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 1,
+        "expert_actions": 52,
+        "executed_actions": 51
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/pick_heat_then_place_in_recep-BreadSliced-None-Fridge-19/trial_T20190908_070424_700178#2",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0004",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 4,
+        "expert_actions": 92,
+        "executed_actions": 44
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/pick_and_place_with_movable_recep-AppleSliced-Pot-Fridge-24/trial_T20190909_064046_163660#1",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0005",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 4,
+        "expert_actions": 41,
+        "executed_actions": 31
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/pick_two_obj_and_place-SoapBar-None-Toilet-412/trial_T20190908_071602_531614#2",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0006",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 40,
+        "executed_actions": 26
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/pick_clean_then_place_in_recep-SoapBar-None-BathtubBasin-413/trial_T20190908_191121_189259#0",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0007",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 35,
+        "executed_actions": 58
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_unseen/pick_clean_then_place_in_recep-Cloth-None-Cabinet-424/trial_T20190908_022321_380927#2",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0008",
+      "score": {
+        "success": true,
+        "completed_goal_conditions": 3,
+        "total_goal_conditions": 3,
+        "expert_actions": 29,
+        "executed_actions": 29
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_unseen/look_at_obj_in_light-Box-None-FloorLamp-219/trial_T20190907_102952_001375#1",
+      "status": "error",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct/episodes/0009",
+      "score": null,
+      "error": "CodexTurnError: Codex turn completed without a final_response; status=failed error=TurnError(additional_details=None, codex_error_info=CodexErrorInfo(root=HttpConnectionFailedCodexErrorInfo(http_connection_failed=HttpConnectionFailed(http_status_code=502))), message='unexpected status 502 Bad Gateway: Unable to reach upstream; outcome may be indeterminate, url: http://127.0.0.1:8787/v1/responses', misalignment=None)"
+    }
+  ]
+}

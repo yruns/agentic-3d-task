@@ -1,0 +1,203 @@
+{
+  "selected": 12,
+  "completed": 12,
+  "errors": 0,
+  "interrupted": 0,
+  "pending": 0,
+  "metrics": {
+    "num_evals": 12,
+    "num_successes": 1,
+    "completed_goal_conditions": 4,
+    "total_goal_conditions": 28,
+    "expert_actions": 501,
+    "executed_actions": 390,
+    "success_rate": 0.08333333333333333,
+    "goal_condition_success_rate": 0.14285714285714285,
+    "path_length_weighted_success_rate": 0.03992015968063872,
+    "path_length_weighted_goal_condition_success_rate": 0.11207320808119212
+  },
+  "by_split": {
+    "valid_seen": {
+      "num_evals": 6,
+      "num_successes": 0,
+      "completed_goal_conditions": 0,
+      "total_goal_conditions": 14,
+      "expert_actions": 261,
+      "executed_actions": 182,
+      "success_rate": 0.0,
+      "goal_condition_success_rate": 0.0,
+      "path_length_weighted_success_rate": 0.0,
+      "path_length_weighted_goal_condition_success_rate": 0.0
+    },
+    "valid_unseen": {
+      "num_evals": 6,
+      "num_successes": 1,
+      "completed_goal_conditions": 4,
+      "total_goal_conditions": 14,
+      "expert_actions": 240,
+      "executed_actions": 208,
+      "success_rate": 0.16666666666666666,
+      "goal_condition_success_rate": 0.2857142857142857,
+      "path_length_weighted_success_rate": 0.08333333333333333,
+      "path_length_weighted_goal_condition_success_rate": 0.23395282186948854
+    }
+  },
+  "attempts": [
+    {
+      "episode_id": "valid_seen/pick_and_place_with_movable_recep-Fork-Cup-DiningTable-23/trial_T20190906_205421_980666#2",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0001",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 41,
+        "executed_actions": 22
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/pick_two_obj_and_place-SprayBottle-None-Toilet-429/trial_T20190907_033843_707544#3",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0002",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 76,
+        "executed_actions": 16
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-CounterTop-14/trial_T20190909_113844_191747#1",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0003",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 23,
+        "executed_actions": 53
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/look_at_obj_in_light-Bowl-None-DeskLamp-301/trial_T20190909_150719_492274#1",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0004",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 44,
+        "executed_actions": 9
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/pick_cool_then_place_in_recep-Apple-None-GarbageCan-2/trial_T20190906_195943_081289#2",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0005",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 48,
+        "executed_actions": 39
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_seen/pick_and_place_simple-Book-None-Sofa-229/trial_T20190907_042856_259139#1",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0006",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 1,
+        "expert_actions": 29,
+        "executed_actions": 43
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_unseen/pick_and_place_simple-Plunger-None-Cabinet-424/trial_T20190908_021537_611374#0",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0007",
+      "score": {
+        "success": true,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 1,
+        "expert_actions": 20,
+        "executed_actions": 17
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_unseen/pick_heat_then_place_in_recep-Apple-None-Fridge-10/trial_T20190906_182435_622538#1",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0008",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 3,
+        "expert_actions": 43,
+        "executed_actions": 45
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_unseen/pick_and_place_with_movable_recep-Glassbottle-Plate-SinkBasin-10/trial_T20190908_123236_460615#2",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0009",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 3,
+        "expert_actions": 26,
+        "executed_actions": 48
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_unseen/pick_two_obj_and_place-CD-None-Safe-308/trial_T20190907_051056_585414#2",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0010",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 83,
+        "executed_actions": 21
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_unseen/pick_clean_then_place_in_recep-Knife-None-CounterTop-10/trial_T20190909_110531_148235#2",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0011",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 3,
+        "expert_actions": 50,
+        "executed_actions": 49
+      },
+      "error": null
+    },
+    {
+      "episode_id": "valid_unseen/look_at_obj_in_light-CellPhone-None-FloorLamp-219/trial_T20190908_044113_026049#0",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct/episodes/0012",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 2,
+        "expert_actions": 18,
+        "executed_actions": 28
+      },
+      "error": null
+    }
+  ]
+}
