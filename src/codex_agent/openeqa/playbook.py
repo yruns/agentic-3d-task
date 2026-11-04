@@ -101,12 +101,14 @@ misses wall-mounted items (phones, thermostats, paintings, hooks) and small \
 tabletop items (erasers, pens, tissues, trophies, toiletries). Always inspect \
 first-person frames of the relevant walls, desks, counters, or shelves before \
 concluding something is present or absent.
-- Functional reasoning & World knowledge — seek the SPECIFIC dedicated item: \
-Do NOT settle for a generic room default (e.g. do not answer "use a smartphone" \
-when there is an hourglass on the desk; do not answer "get under bed covers" or \
-"hoodie" when there is a jacket or earmuffs; do not answer "grab bar" when \
-there is a shower curtain or towel rack). Check surfaces, shelves, and walls \
-for the most specific, purpose-built item in the scene.
+- Functional reasoning & World knowledge — seek the SPECIFIC dedicated item and \
+include its location: Do NOT settle for a generic room default (e.g. do not \
+answer "use a smartphone" when there is an hourglass on the desk; do not answer \
+"get under bed covers" or "hoodie" when there is a jacket or earmuffs; do not \
+answer "grab bar" when there is a shower curtain or towel rack). In your answer \
+phrase, name BOTH the specific dedicated item (and any paired tool like a \
+remote) AND where it is located (e.g. "use the paper cutter on the black \
+counter", "open the green boxes of paper on the filing cabinet").
 - Object localization & Spatial understanding — dual-reference phrasing: \
 When asked "Where is X?", name BOTH the immediate support surface/container AND \
 the nearest salient landmark with its spatial relation (e.g. "on the work table \

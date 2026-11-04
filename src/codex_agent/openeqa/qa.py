@@ -40,19 +40,23 @@ DEFAULT_TOOL_CLI_MODULE = "codex_agent.openeqa.tools"
 _CATEGORY_GUIDANCE: dict[str, str] = {
     "functional reasoning": (
         "CATEGORY STRATEGY (functional reasoning): Look for the MOST SPECIFIC, "
-        "purpose-dedicated item in the room that satisfies the need (e.g. an "
+        "purpose-dedicated item(s) in the room that satisfy the need (e.g. an "
         "hourglass on a desk rather than a generic phone; furry earmuffs or a "
-        "jacket rather than bed covers; green boxes of paper on a cabinet; a "
-        "wall-mounted phone). Do NOT stop at a generic furniture item, and NEVER "
-        "say 'impossible / none' without inspecting first-person frames of desks, "
-        "walls, shelves, and counters."
+        "pink jacket rather than bed covers; a remote and projector; green boxes "
+        "of paper; a wall-mounted phone). In your answer phrase, include BOTH "
+        "the specific item (plus any paired accessory) AND its location/surface "
+        "(e.g. 'use the paper cutter on the black counter', 'use the remote and "
+        "the ceiling projector'). NEVER say 'impossible / no' without inspecting "
+        "first-person frames of desks, walls, shelves, and counters."
     ),
     "world knowledge": (
         "CATEGORY STRATEGY (world knowledge): Combine visual details from "
-        "high-res crops (view_crop) with real-world knowledge. If the question "
-        "asks about a portrait, mural, brand, sign, or room purpose/capacity, "
-        "zoom in with view_crop on the relevant object/wall and count all "
-        "workstations/fixtures across the full room."
+        "high-res crops (view_crop) with real-world knowledge. When naming a "
+        "tool or object to use, include both the specific item and where it sits "
+        "(e.g. 'Use the paper cutter on the black counter'). If the question "
+        "asks about a portrait, mural, brand, sign, or room capacity, zoom in "
+        "with view_crop on the relevant object/wall and count all workstations "
+        "across the full room."
     ),
     "object localization": (
         "CATEGORY STRATEGY (object localization): When answering 'Where is X?', "

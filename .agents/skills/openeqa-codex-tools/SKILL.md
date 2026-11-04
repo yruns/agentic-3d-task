@@ -78,9 +78,12 @@ Search object details & highlight map (text / image):
    detection. Never claim an item is absent without inspecting first-person
    frames of the relevant surfaces/walls.
 2. **Functional reasoning & World knowledge**: Look for the **most specific,
-   dedicated item** in the room (e.g., an *hourglass* rather than a phone;
+   dedicated item(s)** in the room (e.g., an *hourglass* rather than a phone;
    *furry earmuffs* or a *pink jacket* rather than bed covers; *green boxes of
-   paper* on the filing cabinet), not a generic room default.
+   paper* on the filing cabinet), not a generic room default. In your answer
+   phrase, name **both the specific item (plus any paired accessory like a
+   remote) and its location/surface** (e.g., *"use the paper cutter on the black
+   counter"*).
 3. **Object localization & Spatial understanding**: For *"Where is X?"*, include
    **both** the immediate supporting surface/container AND the nearest salient
    landmark (e.g., *"on the work table to the right of the green garbage can"*).
