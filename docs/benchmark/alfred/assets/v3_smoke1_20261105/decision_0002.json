@@ -1,0 +1,46 @@
+{
+  "decision": {
+    "command": {
+      "kind": "stop"
+    },
+    "rationale": "No valid decision possible.",
+    "memory_note": "noop"
+  },
+  "metadata": {
+    "turn_id": "01a1a7b9-7d51-7fc1-b626-19eef4143f78",
+    "status": "completed",
+    "duration_ms": 8119,
+    "usage": {
+      "last": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 4536,
+        "output_tokens": 216,
+        "reasoning_output_tokens": 182,
+        "total_tokens": 4752
+      },
+      "total": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 4536,
+        "output_tokens": 216,
+        "reasoning_output_tokens": 182,
+        "total_tokens": 4752
+      }
+    },
+    "input_tokens": 4536,
+    "cached_input_tokens": 0,
+    "reasoning_summary": null,
+    "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/7a7f6bd205ee4d089c88ad0c391513c9",
+    "attempts": [
+      {
+        "turn_id": "01a1a7b9-7d51-7fc1-b626-19eef4143f78",
+        "status": "completed",
+        "duration_ms": 8119,
+        "has_final_response": true,
+        "adapter_session_id": "efc2c9c3-b5a0-44a4-b194-c6f3fd562d7d"
+      }
+    ]
+  },
+  "raw_response": "{\"command\":{\"kind\":\"stop\"},\"memory_note\":\"noop\",\"rationale\":\"No valid decision possible.\"}"
+}

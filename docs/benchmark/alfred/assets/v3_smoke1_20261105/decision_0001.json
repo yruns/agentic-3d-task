@@ -1,0 +1,53 @@
+{
+  "decision": {
+    "command": {
+      "kind": "retrieve",
+      "target": {
+        "type": "cell",
+        "cell": [
+          -1,
+          0
+        ]
+      }
+    },
+    "rationale": "A retrieve on a nearby observed cell can provide complementary past evidence without spending motion when the initial pose is heavily occluded by the wall and lacks the target objects. This may reveal whether lamp/pillow were partially observed in the current mapped vicinity.",
+    "memory_note": "Goal: carry a purple pillow while turning on a lamp. Initial view only shows bed area objects (laptop, book, teddy bear, bed, safe); no pillow or lamp visible. Need broader scene context before moving. Retrieve complementary evidence for nearby front-right area to identify room layout and likely lamp/pillow locations."
+  },
+  "metadata": {
+    "turn_id": "01a1a7b9-5b05-73f0-96f1-b494917aa8cd",
+    "status": "completed",
+    "duration_ms": 8229,
+    "usage": {
+      "last": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 4459,
+        "output_tokens": 196,
+        "reasoning_output_tokens": 44,
+        "total_tokens": 4655
+      },
+      "total": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 4459,
+        "output_tokens": 196,
+        "reasoning_output_tokens": 44,
+        "total_tokens": 4655
+      }
+    },
+    "input_tokens": 4459,
+    "cached_input_tokens": 0,
+    "reasoning_summary": null,
+    "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/5aacfe5000c74642be5972d44d51be77",
+    "attempts": [
+      {
+        "turn_id": "01a1a7b9-5b05-73f0-96f1-b494917aa8cd",
+        "status": "completed",
+        "duration_ms": 8229,
+        "has_final_response": true,
+        "adapter_session_id": "3bdf1561-ba16-4e74-9dc8-439d5b36b21e"
+      }
+    ]
+  },
+  "raw_response": "{\"command\":{\"kind\":\"retrieve\",\"target\":{\"cell\":[-1,0],\"type\":\"cell\"}},\"memory_note\":\"Goal: carry a purple pillow while turning on a lamp. Initial view only shows bed area objects (laptop, book, teddy bear, bed, safe); no pillow or lamp visible. Need broader scene context before moving. Retrieve complementary evidence for nearby front-right area to identify room layout and likely lamp/pillow locations.\",\"rationale\":\"A retrieve on a nearby observed cell can provide complementary past evidence without spending motion when the initial pose is heavily occluded by the wall and lacks the target objects. This may reveal whether lamp/pillow were partially observed in the current mapped vicinity.\"}"
+}

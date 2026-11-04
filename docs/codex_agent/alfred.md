@@ -7,8 +7,9 @@ the current image, a gridded BEV, and retrieved historical views to choose its
 next action. The first implementation is an integration baseline, not a claim
 that the proposed program-generation method is complete.
 
-**Status on 2026-11-05:** simulator and neural-perception infrastructure smoke
-checks passed. No scored agent episode or pilot50 evaluation has been completed.
+**Status on 2026-11-05:** infrastructure checks passed, and a one-task diagnostic
+reached official scoring but failed after an early policy Stop. The pilot50
+evaluation has not completed.
 See the [setup record](../benchmark/alfred/v1_setup_20261105.md) and
 [benchmark protocol](../benchmark/alfred/README.md).
 

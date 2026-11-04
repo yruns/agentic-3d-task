@@ -4,9 +4,9 @@ This track evaluates incremental scene memory during interactive ALFRED task
 execution. [Implementation and setup](../../codex_agent/alfred.md) describe the
 actor's observations and external dependencies.
 
-**No scored run has completed as of 2026-11-05.** The current record documents
-infrastructure checks and a frozen evaluation protocol. A simulator reset or
-neural forward pass is not an end-to-end agent result.
+**The first scored prefix diagnostic failed by early policy termination.**
+It reached official terminal scoring with zero physical actions; pilot50 has
+not run yet. A simulator reset or neural forward pass is not a task success.
 
 ## Protocol
 
@@ -71,6 +71,7 @@ every episode attempt without overwriting old run IDs.
 
 | Record | Date | Scope | Result |
 |---|---|---|---|
+| [v3 repaired contract](v3_smoke1_20261105.md) | 2026-11-05 | Same prefix1; nested commands and progressive retrieval | 1/1 scored; early Stop, 0 actions, SR 0 and GC 0/2 |
 | [v2 first rollout](v2_smoke1_20261105.md) | 2026-11-05 | Frozen-fold prefix1; predicted perception and LLM actions | Decision-contract error after 10 actions; 0/1 scored |
 | [v1 setup](v1_setup_20261105.md) | 2026-11-05 | Simulator lifecycle, camera calibration, predicted perception, pilot protocol | Infrastructure checks passed; 0 scored episodes |
 

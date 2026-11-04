@@ -64,6 +64,7 @@ nav:
           - Local Leaderboard: benchmark/alfred/leaderboard.md
           - v1 Setup and Protocol: benchmark/alfred/v1_setup_20261105.md
           - v2 First Rollout Failure: benchmark/alfred/v2_smoke1_20261105.md
+          - v3 Early Policy Stop: benchmark/alfred/v3_smoke1_20261105.md
       - Adapter Protocol Diagnostics:
           - Timeline: benchmark/adapter/README.md
           - v1 ModelHub Tool and State Probe: benchmark/adapter/v1_modelhub_tool_state_20261103.md
