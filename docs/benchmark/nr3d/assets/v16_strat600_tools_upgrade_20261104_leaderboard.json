@@ -1,6 +1,12 @@
 {
   "fold": "v9_3_strat600",
   "n": 600,
+  "head": "8aa55a9",
+  "code_commits": [
+    "caebb4a",
+    "898b3fa"
+  ],
+  "model": "gemini-3.8-flash",
   "metric": "oriented_3d_iou@0.25",
   "slices": {
     "Overall": {
@@ -27,6 +33,31 @@
       "n": 389,
       "correct": 365,
       "acc": 0.9383033419023136
+    },
+    "Easy+View-Indep": {
+      "n": 198,
+      "correct": 187,
+      "acc": 0.9444444444444444
+    },
+    "Easy+View-Dep": {
+      "n": 92,
+      "correct": 86,
+      "acc": 0.9347826086956522
+    },
+    "Hard+View-Indep": {
+      "n": 191,
+      "correct": 178,
+      "acc": 0.9319371727748691
+    },
+    "Hard+View-Dep": {
+      "n": 119,
+      "correct": 104,
+      "acc": 0.8739495798319328
+    },
+    "flip41_subset": {
+      "n": 41,
+      "correct": 34,
+      "acc": 0.8292682926829268
     }
   },
   "mean_iou": 0.9253384562474894,
@@ -40,6 +71,7 @@
   "reasoning_summary_rate": 0.0,
   "latency_s": {
     "median": 81.891,
+    "mean": 126.004,
     "p90": 263.21,
     "max": 892.477
   },
