@@ -141,6 +141,8 @@ Validate paths and provider readiness with this command; `--preflight-only`
 does not start the simulator, predictor or a model turn:
 
 ```bash
+NO_PROXY="127.0.0.1,localhost,::1${NO_PROXY:+,$NO_PROXY}" \
+no_proxy="127.0.0.1,localhost,::1${no_proxy:+,$no_proxy}" \
 python -m codex_agent.cli.run_alfred \
   --data-root /home/ysh/Datasets/FILM/alfred/data/json_2.1.0 \
   --splits /home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json \
@@ -154,6 +156,12 @@ python -m codex_agent.cli.run_alfred \
   --model gpt-5.4-2026-03-05 --reasoning-effort low \
   --preflight-only
 ```
+
+The command-local proxy exclusions keep loopback health/model traffic direct
+while preserving existing exclusions. They do not change other running
+processes or the adapter's upstream route. The initial launch's missing loopback
+exclusion and interrupted attempts are retained in the
+[network diagnostic](../benchmark/alfred/v5_loopback_proxy_20261105.md).
 
 After the reviewed source is committed, remove `--preflight-only` to evaluate
 in tmux. For the first diagnostic add `--limit 1` and use a different output

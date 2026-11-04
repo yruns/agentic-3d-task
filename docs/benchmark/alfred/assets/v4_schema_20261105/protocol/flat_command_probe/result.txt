@@ -1,0 +1,7 @@
+interact True {'cell_x': 0, 'cell_y': 0, 'memory_note': 'interact', 'object_id': 0, 'operation': 'PickupObject', 'rationale': 'Protocol test', 'repeat': 1}
+navigate_cell True {'cell_x': 2, 'cell_y': -1, 'memory_note': 'navigate_cell', 'object_id': 0, 'operation': 'NavigateCell', 'rationale': 'Protocol test', 'repeat': 1}
+motion True {'cell_x': 0, 'cell_y': 0, 'memory_note': 'motion', 'object_id': 0, 'operation': 'RotateLeft', 'rationale': 'Protocol test', 'repeat': 1}
+navigate_object True {'cell_x': 0, 'cell_y': 0, 'memory_note': 'navigate_object', 'object_id': 0, 'operation': 'NavigateObject', 'rationale': 'Protocol test', 'repeat': 1}
+retrieve_cell True {'cell_x': 2, 'cell_y': -1, 'memory_note': 'retrieve_cell', 'object_id': 0, 'operation': 'RetrieveCell', 'rationale': 'Protocol test', 'repeat': 1}
+retrieve_object True {'cell_x': 0, 'cell_y': 0, 'memory_note': 'retrieve_object', 'object_id': 0, 'operation': 'RetrieveObject', 'rationale': 'Protocol test', 'repeat': 1}
+stop True {'cell_x': 0, 'cell_y': 0, 'memory_note': 'stop', 'object_id': 0, 'operation': 'Stop', 'rationale': 'Protocol test', 'repeat': 1}

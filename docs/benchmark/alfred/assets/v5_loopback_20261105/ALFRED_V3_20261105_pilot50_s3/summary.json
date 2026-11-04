@@ -1,0 +1,21 @@
+{
+  "selected": 12,
+  "completed": 0,
+  "errors": 0,
+  "interrupted": 1,
+  "pending": 11,
+  "metrics": null,
+  "by_split": {
+    "valid_seen": null,
+    "valid_unseen": null
+  },
+  "attempts": [
+    {
+      "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-4/trial_T20190909_164840_568811#2",
+      "status": "interrupted",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V3_20261105_pilot50_s3/episodes/0001",
+      "score": null,
+      "error": "KeyboardInterrupt: "
+    }
+  ]
+}

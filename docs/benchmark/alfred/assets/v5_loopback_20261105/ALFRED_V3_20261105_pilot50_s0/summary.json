@@ -1,0 +1,21 @@
+{
+  "selected": 13,
+  "completed": 0,
+  "errors": 0,
+  "interrupted": 1,
+  "pending": 12,
+  "metrics": null,
+  "by_split": {
+    "valid_seen": null,
+    "valid_unseen": null
+  },
+  "attempts": [
+    {
+      "episode_id": "valid_seen/look_at_obj_in_light-Pillow-None-DeskLamp-302/trial_T20190909_150916_682139#0",
+      "status": "interrupted",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V3_20261105_pilot50_s0/episodes/0001",
+      "score": null,
+      "error": "KeyboardInterrupt: "
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "selected": 12,
+  "completed": 0,
+  "errors": 0,
+  "interrupted": 1,
+  "pending": 11,
+  "metrics": null,
+  "by_split": {
+    "valid_seen": null,
+    "valid_unseen": null
+  },
+  "attempts": [
+    {
+      "episode_id": "valid_seen/pick_and_place_with_movable_recep-Fork-Cup-DiningTable-23/trial_T20190906_205421_980666#2",
+      "status": "interrupted",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V3_20261105_pilot50_s2/episodes/0001",
+      "score": null,
+      "error": "KeyboardInterrupt: "
+    }
+  ]
+}

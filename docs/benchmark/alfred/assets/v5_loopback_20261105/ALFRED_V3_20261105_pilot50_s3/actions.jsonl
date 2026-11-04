@@ -1,0 +1,15 @@
+{"index": 1, "action": "RotateLeft", "object_id": null, "source_frame": 0, "result_frame": 1, "success": true, "error": ""}
+{"index": 2, "action": "RotateLeft", "object_id": null, "source_frame": 1, "result_frame": 2, "success": true, "error": ""}
+{"index": 3, "action": "RotateLeft", "object_id": null, "source_frame": 2, "result_frame": 3, "success": true, "error": ""}
+{"index": 4, "action": "MoveAhead", "object_id": null, "source_frame": 3, "result_frame": 4, "success": true, "error": ""}
+{"index": 5, "action": "MoveAhead", "object_id": null, "source_frame": 4, "result_frame": 5, "success": true, "error": ""}
+{"index": 6, "action": "PickupObject", "object_id": 23, "source_frame": 5, "result_frame": 6, "success": false, "error": "object is not visible."}
+{"index": 7, "action": "PickupObject", "object_id": 23, "source_frame": 6, "result_frame": 7, "success": false, "error": "object is not visible."}
+{"index": 8, "action": "MoveAhead", "object_id": null, "source_frame": 7, "result_frame": 8, "success": true, "error": ""}
+{"index": 9, "action": "MoveAhead", "object_id": null, "source_frame": 8, "result_frame": 9, "success": true, "error": ""}
+{"index": 10, "action": "LookUp", "object_id": null, "source_frame": 9, "result_frame": 10, "success": true, "error": ""}
+{"index": 11, "action": "RotateLeft", "object_id": null, "source_frame": 10, "result_frame": 11, "success": true, "error": ""}
+{"index": 12, "action": "RotateRight", "object_id": null, "source_frame": 11, "result_frame": 12, "success": true, "error": ""}
+{"index": 13, "action": "RotateLeft", "object_id": null, "source_frame": 12, "result_frame": 13, "success": true, "error": ""}
+{"index": 14, "action": "RotateRight", "object_id": null, "source_frame": 13, "result_frame": 14, "success": true, "error": ""}
+{"index": 15, "action": "RotateLeft", "object_id": null, "source_frame": 14, "result_frame": 15, "success": true, "error": ""}

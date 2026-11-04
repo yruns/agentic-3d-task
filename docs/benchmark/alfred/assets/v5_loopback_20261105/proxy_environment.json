@@ -1,0 +1,37 @@
+{
+  "checked_at_utc": "2026-11-04T18:38:18.522021+00:00",
+  "proxy_sources": "urllib.request.getproxies()",
+  "proxies": {
+    "http": {
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 17890
+    },
+    "https": {
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 17890
+    }
+  },
+  "loopback_bypass": false,
+  "NO_PROXY_present": true,
+  "no_proxy_present": true,
+  "post_failure_health_command": [
+    "curl",
+    "-fsS",
+    "--max-time",
+    "3",
+    "http://127.0.0.1:8787/health"
+  ],
+  "post_failure_health_response": {
+    "status": "ready",
+    "service": "codex-adapter",
+    "version": "1.0.0",
+    "schema_version": 1,
+    "models": [
+      "gpt-5.4-2026-03-05",
+      "gemini-3.8-flash"
+    ]
+  },
+  "interpretation": "Local discovery was eligible for proxy routing; a transient proxy failure is a hypothesis, not an established remote/internal cause."
+}

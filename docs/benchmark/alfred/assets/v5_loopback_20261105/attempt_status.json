@@ -1,0 +1,102 @@
+[
+  {
+    "run_id": "ALFRED_V3_20261105_smoke1",
+    "status": "error",
+    "selected": 1,
+    "completed": 0,
+    "errors": 1,
+    "interrupted": 0,
+    "pending": 0,
+    "valid_decisions": 25,
+    "attempted_decisions": 26,
+    "actions": 19,
+    "action_failures": 2,
+    "terminal_score_present": false,
+    "sqlite_attempts": [
+      {
+        "status": "error",
+        "score_present": false
+      }
+    ]
+  },
+  {
+    "run_id": "ALFRED_V3_20261105_pilot50_s0",
+    "status": "interrupted",
+    "selected": 13,
+    "completed": 0,
+    "errors": 0,
+    "interrupted": 1,
+    "pending": 12,
+    "valid_decisions": 13,
+    "attempted_decisions": 14,
+    "actions": 10,
+    "action_failures": 2,
+    "terminal_score_present": false,
+    "sqlite_attempts": [
+      {
+        "status": "interrupted",
+        "score_present": false
+      }
+    ]
+  },
+  {
+    "run_id": "ALFRED_V3_20261105_pilot50_s1",
+    "status": "interrupted",
+    "selected": 13,
+    "completed": 0,
+    "errors": 0,
+    "interrupted": 1,
+    "pending": 12,
+    "valid_decisions": 14,
+    "attempted_decisions": 15,
+    "actions": 9,
+    "action_failures": 1,
+    "terminal_score_present": false,
+    "sqlite_attempts": [
+      {
+        "status": "interrupted",
+        "score_present": false
+      }
+    ]
+  },
+  {
+    "run_id": "ALFRED_V3_20261105_pilot50_s2",
+    "status": "interrupted",
+    "selected": 12,
+    "completed": 0,
+    "errors": 0,
+    "interrupted": 1,
+    "pending": 11,
+    "valid_decisions": 13,
+    "attempted_decisions": 13,
+    "actions": 7,
+    "action_failures": 2,
+    "terminal_score_present": false,
+    "sqlite_attempts": [
+      {
+        "status": "interrupted",
+        "score_present": false
+      }
+    ]
+  },
+  {
+    "run_id": "ALFRED_V3_20261105_pilot50_s3",
+    "status": "interrupted",
+    "selected": 12,
+    "completed": 0,
+    "errors": 0,
+    "interrupted": 1,
+    "pending": 11,
+    "valid_decisions": 16,
+    "attempted_decisions": 17,
+    "actions": 15,
+    "action_failures": 2,
+    "terminal_score_present": false,
+    "sqlite_attempts": [
+      {
+        "status": "interrupted",
+        "score_present": false
+      }
+    ]
+  }
+]

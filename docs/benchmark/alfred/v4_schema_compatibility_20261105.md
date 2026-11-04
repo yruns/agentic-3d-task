@@ -89,7 +89,7 @@ these controlled requests. The remote implementation was not inspected; these
 results do not establish which remote component or internal algorithm caused
 the behavior.
 
-Expanded [seven-command coverage](assets/v4_schema_20261105/protocol/all_command_probe/result.log)
+Expanded [seven-command coverage](assets/v4_schema_20261105/protocol/all_command_probe/result.txt)
 showed that distinct action fields alone were insufficient: motion, navigation
 to a cell, retrieval by object/cell, and Stop matched their requested commands;
 navigation to an object and object interaction did not. Thus that proposed
@@ -100,7 +100,7 @@ select exactly one target. This avoids relying on the observed problematic
 schema features without changing the model, protocol or action set. Every
 command branch and a physical rollout must pass before pilot expansion.
 
-The [flat-schema coverage probe](assets/v4_schema_20261105/protocol/flat_command_probe/result.log)
+The [flat-schema coverage probe](assets/v4_schema_20261105/protocol/flat_command_probe/result.txt)
 matched **7/7** requested command families on the actual provider: motion,
 interaction, navigation by object/cell, retrieval by object/cell, and Stop.
 The complete scalar schema and all responses are archived with that log.

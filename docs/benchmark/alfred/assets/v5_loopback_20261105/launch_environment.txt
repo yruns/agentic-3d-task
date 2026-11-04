@@ -1,0 +1,3 @@
+# Run-local repair only; preserve the previous uppercase and lowercase exclusions.
+export NO_PROXY="127.0.0.1,localhost,::1${NO_PROXY:+,$NO_PROXY}"
+export no_proxy="127.0.0.1,localhost,::1${no_proxy:+,$no_proxy}"

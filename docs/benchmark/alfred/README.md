@@ -71,6 +71,7 @@ every episode attempt without overwriting old run IDs.
 
 | Record | Date | Scope | Result |
 |---|---|---|---|
+| [v5 loopback routing](v5_loopback_proxy_20261105.md) | 2026-11-05 | Physical scalar-wire rollout and first pilot launch | Transient local health 502; pilot interrupted unscored; run-local proxy bypass verified |
 | [v4 schema compatibility](v4_schema_compatibility_20261105.md) | 2026-11-05 | Same-code medium retry and controlled command probes | Medium retry 0 actions; scalar wire format passes 7/7 command families |
 | [v3 repaired contract](v3_smoke1_20261105.md) | 2026-11-05 | Same prefix1; nested commands and progressive retrieval | 1/1 scored; early Stop, 0 actions, SR 0 and GC 0/2 |
 | [v2 first rollout](v2_smoke1_20261105.md) | 2026-11-05 | Frozen-fold prefix1; predicted perception and LLM actions | Decision-contract error after 10 actions; 0/1 scored |

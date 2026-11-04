@@ -1,0 +1,9 @@
+{"index": 1, "action": "PickupObject", "object_id": 1, "source_frame": 0, "result_frame": 1, "success": true, "error": ""}
+{"index": 2, "action": "RotateLeft", "object_id": null, "source_frame": 1, "result_frame": 2, "success": true, "error": ""}
+{"index": 3, "action": "LookUp", "object_id": null, "source_frame": 2, "result_frame": 3, "success": true, "error": ""}
+{"index": 4, "action": "RotateRight", "object_id": null, "source_frame": 3, "result_frame": 4, "success": true, "error": ""}
+{"index": 5, "action": "RotateRight", "object_id": null, "source_frame": 4, "result_frame": 5, "success": true, "error": ""}
+{"index": 6, "action": "PutObject", "object_id": 14, "source_frame": 5, "result_frame": 6, "success": false, "error": "No valid Receptacle found"}
+{"index": 7, "action": "RotateRight", "object_id": null, "source_frame": 6, "result_frame": 7, "success": true, "error": ""}
+{"index": 8, "action": "RotateLeft", "object_id": null, "source_frame": 7, "result_frame": 8, "success": true, "error": ""}
+{"index": 9, "action": "RotateRight", "object_id": null, "source_frame": 8, "result_frame": 9, "success": true, "error": ""}
