@@ -83,6 +83,7 @@ nav:
           - v12 Skill10 Keep Run Home: benchmark/nr3d/v12_skill10_keep_home_20260701.md
           - v13 Office Responses Smoke10: benchmark/nr3d/v13_office_responses_smoke10_20261103.md
           - v14 Strat600 GPT-5.4 vs Gemini-3.8-Flash: benchmark/nr3d/v14_strat600_gpt54_vs_gemini38flash_20261104.md
+          - v15 Flip41 Tools Upgrade: benchmark/nr3d/v15_flip41_tools_upgrade_20261104.md
       - OpenEQA:
           - Timeline: benchmark/openeqa/README.md
           - v1 SDK Migration Smoke: benchmark/openeqa/v1_codex_sdk_migration_smoke10_20260611.md
