@@ -37,58 +37,83 @@ Playbook (everything you need is here — do NOT look for a skill or any other \
 file):
 
 Tool catalog
-- inspect_proposal — full detail for one id (color, description, nearby objects, \
-every frame it appears in). args: {"proposal_id": 15}
-- list_scene_proposals — filter the pool. args: {"category": "chair"} or \
-{"region_bev": [xmin, ymin, xmax, ymax]} or {"limit": 20}
-- keyframe_selector — language -> up to 3 first-person frames for a free-form \
-description, when the catalog shortlist is unclear. args: {"query": "the trash \
-can by the tv", "k": 3}
-- select_by_proposal — frames that show given ids; set require_all to get a \
-frame where target AND anchor are co-visible. args: {"proposal_ids": [15, 23], \
-"require_all": true, "k": 3}
-- mark_frame_with_bbox — draw labeled boxes for ids/categories on a frame, then \
-view_image the returned image_path. args: {"frame_id": 212, "ids": [15, 23]}
-- list_frame_proposals — which proposals are in a frame, ordered left->right by \
-2D position. args: {"frame_id": 212}
-- compare_proposals_spatial — rank candidates against one anchor. args: \
-{"candidate_ids": [15, 16, 17], "anchor_id": 23, "relation": "closest_to"}. \
-Relations: closest_to, near, next_to, farthest_from, above, below, left_of, \
-right_of. Metric relations use 3D centers; left_of/right_of use votes over \
-co-visible frames (shared_frame_counts, supporting_frame_counts).
-- compare_candidates_to_anchors — rank candidates against several plausible \
-anchors at once and check agreement (globally_consistent_top1, \
-anchor_disagreement). args: {"candidate_ids": [15,16], "anchor_ids": [23,24], \
-"relation": "near"}
-- view_bev — top-down map; highlight ids/categories to tie first-person frames \
-to scene layout. args: {"highlight": [15, 23]}
+- inspect_proposal — full untruncated detail for one id (color, description, \
+location, nearby_objects, bbox_3d_9dof, every frame it appears in). \
+args: {"proposal_id": 15}
+- list_scene_proposals — filter the pool by category or 3D XY region. \
+args: {"category": "chair"} or {"region_bev": [xmin, ymin, xmax, ymax]} or \
+{"limit": 20}
+- select_by_proposal — fetch up to 4 spatially-diverse, high-visibility frames \
+showing given proposal ids, plus per_proposal_best_frames and \
+requested_left_to_right order. Set require_all=true for co-visible target+anchor \
+frames (auto-falls back to maximal partial co-visibility when >2 ids cannot all \
+fit in one view); set require_all=false for balanced coverage across all \
+candidate ids. \
+args: {"proposal_ids": [15, 23], "require_all": true, "k": 3}
+- mark_frame_with_bbox — draw labeled 2D boxes for ids/categories on one frame \
+(frame_id) or a batch of up to 4 frames (frame_ids, composing a single \
+contact_sheet), AND automatically write crops_sheet_path (high-res unoccluded \
+crops of the target objects from raw RGB). Open image_path and/or \
+crops_sheet_path with view_image! \
+args: {"frame_id": 212, "ids": [15, 23]} or \
+{"frame_ids": [45, 63], "ids": [12, 13]}
+- list_frame_proposals — all proposals visible in one frame, ordered left->right \
+by 2D box center. args: {"frame_id": 212}
+- compare_proposals_spatial — deterministic 3D + co-visible 2D + virtual-viewer \
+ranking. Supports relations: closest_to, near, next_to, farthest_from, above, \
+below, left_of, right_of, in_front_of, behind, between, opposite. Pass \
+anchor_id when relative to an anchor, or omit anchor_id when comparing a group \
+directly (e.g. "facing the monitors, the one on the right", or "the middle \
+window" with relation="between"). Pass observer_id when the query specifies \
+standing at / looking from another object (e.g. "looking from the door #11"). \
+Returns both co-visible 2D frame votes and 3D virtual-observer rankings \
+(facing_left_to_right_ids, facing_front_to_back_ids). \
+args: {"candidate_ids": [15, 16, 17], "anchor_id": 23, "relation": "closest_to"} \
+or {"candidate_ids": [12, 13], "observer_id": 0, "relation": "right_of"}
+- compare_candidates_to_anchors — rank candidates against multiple anchors at \
+once (e.g. relation="between" for "between the bed and the nightstand" using \
+exact 3D segment distance, or relation="near" when the anchor itself has multiple \
+instances). \
+args: {"candidate_ids": [15, 16], "anchor_ids": [23, 24], "relation": "between"}
+- view_bev — render the top-down map with highlighted 3D oriented footprints + \
+labels and return highlighted_objects (3D size/pos + 2D BEV pixel coords). \
+args: {"highlight": [15, 23]}
+- keyframe_selector — language -> up to 3 first-person frames when the anchor is \
+not in the proposal catalog. args: {"query": "the trash can by the tv", "k": 3}
+
+Critical disambiguation rules
+1. Trust 3D `category` and `size/center` over noisy `enriched/note` text: \
+Offline `enriched` / `note` text is generated from 2D crops and is frequently \
+polluted by a foreground occluder (e.g. a chair in front of a cabinet, or a \
+hairdryer cord next to a towel). NEVER eliminate a proposal of the target \
+`category` or output `proposal_id: -1` just because its `note` describes a \
+nearby/occluding object! Inspect `crops_sheet_path` from `mark_frame_with_bbox` \
+and verify its 3D `size` and `center`.
+2. Resolve view-dependent language ("facing X", "looking from Y", "left/right", \
+"front/behind"):
+   - Call `compare_proposals_spatial` (with `observer_id` if looking from a \
+specific object, or `anchor_id` if relative to an anchor) and check BOTH \
+co-visible frame votes (`supporting_frame_counts`) AND the 3D virtual-viewer \
+order (`facing_left_to_right_ids` / `facing_front_to_back_ids`).
+   - Fetch co-visible frame(s) with `select_by_proposal`, run \
+`mark_frame_with_bbox`, and `view_image` to confirm visually from the camera's \
+perspective.
+3. Resolve "between / middle / aligned row" queries:
+   - Between two anchors -> `compare_candidates_to_anchors` with `relation="between"`.
+   - Middle of a row of N same-category objects (e.g. "the middle window left of \
+the chalkboard") -> filter to the subset on the same wall/line (check `center` \
+coordinates and `view_bev(highlight=[...])`), then pick the geometric middle one.
 
 Recommended loop
-1. Parse the query: target category, anchor(s), relation, attributes.
-2. Shortlist candidates from the catalog (inspect_proposal / list_scene_proposals \
-for color/description).
-3. If one candidate is obvious from appearance, jump to step 5 to confirm.
-4. Resolve spatial language:
-   - metric (near / closest / above / below / between) -> compare_proposals_spatial \
-(or compare_candidates_to_anchors when the anchor itself is ambiguous);
-   - view-dependent (left / right / in front of / behind) -> fetch a co-visible \
-frame with select_by_proposal(require_all=true), then mark_frame_with_bbox + \
-view_image, and read left<->right from the pixels.
-5. Confirm the winner: mark_frame_with_bbox the top candidate (with its anchor) \
-on a frame that shows it, view_image it once, and check color / shape / relation \
-match the query.
-6. Emit the final JSON. Lower confidence and list rivals in uncertainties when \
-more than one candidate survives.
-
-Tool budget — be decisive
-- Aim to decide within about 6-10 tool calls; a unique target needs only one \
-confirming frame. View at most one or two images, then commit.
-- Never repeat a tool with the same arguments and never re-view an image you have \
-already seen. If a result is empty or errors, change approach instead of \
-retrying identically.
-- Once you have inspected the top candidates and confirmed with one co-visible \
-frame or one spatial comparison, output the final JSON immediately. Do not keep \
-gathering evidence to chase certainty on an already well-supported answer."""
+1. Shortlist all proposals matching the target category from the printed catalog.
+2. Run `compare_proposals_spatial` / `compare_candidates_to_anchors` to rank \
+candidates by the query's spatial or metric relation.
+3. Fetch the best co-visible or balanced frames with `select_by_proposal`, \
+annotate with `mark_frame_with_bbox` (passing `frame_ids` to batch up to 4 \
+frames at once), and call `view_image` on `image_path` (and `crops_sheet_path` \
+when appearance/color is subtle).
+4. Once visual and spatial evidence confirm the winner, emit the final JSON \
+immediately within ~6-10 tool calls."""
 
 
 __all__ = ["NR3D_TOOLS_PLAYBOOK", "NR3D_TOOL_NAMES"]

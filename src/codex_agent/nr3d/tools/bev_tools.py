@@ -1,10 +1,12 @@
 """Global-alignment (image) tool: ``view_bev``.
 
 Returns the prepared top-down BEV render. With ``highlight``/``categories`` it
-projects the chosen proposals' 3D centers onto the BEV using the same look-down
-camera that produced the base render (read from the ``.view.json`` sidecar),
-draws labeled markers, writes the overlay to a scratch dir, and returns its
-path so the agent can ``view_image`` it and tie first-person frames to the map.
+projects the chosen proposals' 3D centers and oriented 3D bounding box footprints
+onto the BEV using the same look-down camera that produced the base render
+(read from the ``.view.json`` sidecar), draws labeled footprint polygons and
+markers, writes the overlay to a scratch dir, and returns its path plus the
+projected 2D/3D coordinates so the agent can ``view_image`` it and tie
+first-person frames to the map.
 
 Requires the ``vision`` extra (OpenCV + NumPy); imported lazily by the
 dispatcher only when the tool runs.
@@ -14,7 +16,7 @@ from __future__ import annotations
 
 import os
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -23,16 +25,18 @@ import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..geometry import oriented_bbox_to_corners
 from ..proposals import Proposal
 from ..sample import Nr3dScene
 from ..scene_assets import BevViewParams
 from .image_io import downscale_for_view
 from .models import ToolInputError
 
-_HIGHLIGHT_RENDERER_VERSION = "v1"
+_HIGHLIGHT_RENDERER_VERSION = "v2"
 _MIN_PROJECTION_DEPTH = 0.01
-_MARKER_RADIUS = 9
+_MARKER_RADIUS = 8
 _MARKER_COLOR = (255, 64, 64)
+_FOOTPRINT_COLOR = (255, 96, 32)
 _LABEL_BG = (255, 255, 0)
 
 
@@ -53,6 +57,7 @@ class ViewBevResult:
     highlight_ids: tuple[int, ...]
     missing_categories: tuple[str, ...]
     is_default_view: bool
+    highlighted_objects: tuple[dict[str, Any], ...] = field(default_factory=tuple)
 
     def to_payload(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -60,6 +65,8 @@ class ViewBevResult:
             "highlight_ids": list(self.highlight_ids),
             "view": "default" if self.is_default_view else "highlighted",
         }
+        if self.highlighted_objects:
+            payload["highlighted_objects"] = list(self.highlighted_objects)
         if self.missing_categories:
             payload["categories_with_no_matches"] = list(self.missing_categories)
         return payload
@@ -86,10 +93,11 @@ def view_bev(scene: Nr3dScene, args: ViewBevArgs, *, out_dir: Path) -> ViewBevRe
         out_dir
         / f"{scene.scene_id}_bev_h_{ids_token}_{_HIGHLIGHT_RENDERER_VERSION}.png"
     )
-    _render_highlighted_bev(
+    proposals = [scene.proposal_pool.require(pid) for pid in highlight_ids]
+    hl_objects = _render_highlighted_bev(
         base_png=scene.bev_image_path,
         view=scene.bev_view_params,
-        proposals=[scene.proposal_pool.require(pid) for pid in highlight_ids],
+        proposals=proposals,
         out_path=out_path,
     )
     return ViewBevResult(
@@ -97,6 +105,7 @@ def view_bev(scene: Nr3dScene, args: ViewBevArgs, *, out_dir: Path) -> ViewBevRe
         highlight_ids=tuple(highlight_ids),
         missing_categories=tuple(missing),
         is_default_view=False,
+        highlighted_objects=tuple(hl_objects),
     )
 
 
@@ -122,8 +131,14 @@ def _resolve_highlight_ids(
             continue
         hits = by_category.get(key, [])
         if not hits:
-            missing_categories.append(raw)
-        ids.update(hits)
+            if not any(key in cat or cat in key for cat in by_category):
+                missing_categories.append(raw)
+            else:
+                for cat, pids in by_category.items():
+                    if key in cat or cat in key:
+                        ids.update(pids)
+        else:
+            ids.update(hits)
     return sorted(ids), missing_categories
 
 
@@ -133,21 +148,33 @@ def _render_highlighted_bev(
     view: BevViewParams,
     proposals: list[Proposal],
     out_path: Path,
-) -> None:
+) -> list[dict[str, Any]]:
     loaded = cv2.imread(str(base_png))
     if loaded is None:
         raise ToolInputError(f"BEV image is not readable: {base_png}")
     image: NDArray[np.uint8] = loaded.astype(np.uint8, copy=False)
     rotation = np.asarray(view.rotation, dtype=np.float64)
     translation = np.asarray(view.translation, dtype=np.float64)
+
+    placed: list[tuple[Proposal, tuple[int, int]]] = []
     for proposal in proposals:
+        _draw_footprint(image, proposal, rotation, translation, view)
         pixel = _project_to_bev(proposal.position_3d, rotation, translation, view)
         if pixel is None:
             continue
-        _draw_marker(image, pixel, f"#{proposal.proposal_id} {proposal.category}")
+        placed.append((proposal, pixel))
+
+    # Draw markers first, then labels on top
+    for _proposal, pixel in placed:
+        px, py = pixel
+        cv2.circle(image, (px, py), _MARKER_RADIUS, (0, 0, 0), -1)
+        cv2.circle(image, (px, py), _MARKER_RADIUS - 2, _MARKER_COLOR[::-1], -1)
+
+    for proposal, pixel in placed:
+        _draw_marker_label(image, pixel, f"#{proposal.proposal_id} {proposal.category}")
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    # Keep the written overlay within the view_image token budget.
-    rendered, _ = downscale_for_view(image)
+    rendered, scale = downscale_for_view(image)
     tmp_path = out_path.with_name(
         f".{out_path.stem}.{os.getpid()}.{threading.get_ident()}{out_path.suffix}"
     )
@@ -156,6 +183,46 @@ def _render_highlighted_bev(
         tmp_path.replace(out_path)
     finally:
         tmp_path.unlink(missing_ok=True)
+
+    hl_objects: list[dict[str, Any]] = []
+    for proposal, (px, py) in placed:
+        sx, sy, sz = proposal.bbox_3d_9dof[3:6]
+        hl_objects.append(
+            {
+                "proposal_id": proposal.proposal_id,
+                "category": proposal.category,
+                "position_3d": [round(v, 3) for v in proposal.position_3d],
+                "size_3d": [round(sx, 3), round(sy, 3), round(sz, 3)],
+                "bev_pixel": [int(round(px * scale)), int(round(py * scale))],
+            }
+        )
+    return hl_objects
+
+
+def _draw_footprint(
+    image: NDArray[np.uint8],
+    proposal: Proposal,
+    rotation: NDArray[np.float64],
+    translation: NDArray[np.float64],
+    view: BevViewParams,
+) -> None:
+    try:
+        corners = oriented_bbox_to_corners(proposal.bbox_3d_9dof)
+        # Top 4 corners (indices 4, 5, 6, 7) form the horizontal footprint loop
+        pts: list[tuple[int, int]] = []
+        for idx in (4, 5, 6, 7):
+            c = corners[idx]
+            p = _project_to_bev(
+                (float(c[0]), float(c[1]), float(c[2])), rotation, translation, view
+            )
+            if p is not None:
+                pts.append(p)
+        if len(pts) == 4:
+            poly = np.array(pts, dtype=np.int32).reshape((-1, 1, 2))
+            cv2.polylines(image, [poly], True, (0, 0, 0), 4, cv2.LINE_AA)
+            cv2.polylines(image, [poly], True, _FOOTPRINT_COLOR[::-1], 2, cv2.LINE_AA)
+    except Exception:
+        pass
 
 
 def _project_to_bev(
@@ -175,16 +242,15 @@ def _project_to_bev(
     return int(round(u)) - view.crop_offset[0], int(round(v)) - view.crop_offset[1]
 
 
-def _draw_marker(image: NDArray[np.uint8], pixel: tuple[int, int], label: str) -> None:
+def _draw_marker_label(
+    image: NDArray[np.uint8], pixel: tuple[int, int], label: str
+) -> None:
     height, width = int(image.shape[0]), int(image.shape[1])
     px, py = pixel
     if not (-_MARKER_RADIUS <= px < width + _MARKER_RADIUS):
         return
     if not (-_MARKER_RADIUS <= py < height + _MARKER_RADIUS):
         return
-    cv2.circle(image, (px, py), _MARKER_RADIUS, (0, 0, 0), -1)
-    cv2.circle(image, (px, py), _MARKER_RADIUS - 2, _MARKER_COLOR[::-1], -1)
-
     font = cv2.FONT_HERSHEY_DUPLEX
     scale = 0.6
     thickness = 1

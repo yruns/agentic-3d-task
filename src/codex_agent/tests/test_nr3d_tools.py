@@ -78,11 +78,13 @@ def test_inspect_proposal_unknown_id_raises(scene: Nr3dScene) -> None:
         inspect_proposal(scene, InspectProposalArgs(proposal_id=999))
 
 
-def test_list_scene_proposals_category_filter(scene: Nr3dScene) -> None:
+def test_list_scene_proposals_category_filter_and_enrichment(scene: Nr3dScene) -> None:
     result = list_scene_proposals(scene, ListSceneProposalsArgs(category="chair"))
     payload = result.to_payload()
     assert payload["count"] == 1
     assert payload["proposals"][0]["proposal_id"] == 3
+    assert payload["proposals"][0]["color"] == "red"
+    assert "size_3d" in payload["proposals"][0]
 
 
 def test_list_scene_proposals_region_and_limit(scene: Nr3dScene) -> None:
@@ -102,11 +104,13 @@ def test_select_by_proposal_union_vs_require_all(scene: Nr3dScene) -> None:
         scene, SelectByProposalArgs(proposal_ids=[3, 9], require_all=False)
     )
     assert {f.frame_id for f in union.frames} == {0, 1}
+    assert "per_proposal_best_frames" in union.to_payload()
 
     require_all = select_by_proposal(
         scene, SelectByProposalArgs(proposal_ids=[3, 7], require_all=True)
     )
     assert [f.frame_id for f in require_all.frames] == [0]
+    assert require_all.frames[0].requested_left_to_right == ("#3 chair", "#7 table")
 
 
 def test_select_by_proposal_require_all_empty_note(scene: Nr3dScene) -> None:
@@ -115,6 +119,16 @@ def test_select_by_proposal_require_all_empty_note(scene: Nr3dScene) -> None:
     )
     assert result.frames == ()
     assert "no single frame" in result.note
+
+
+def test_select_by_proposal_require_all_partial_fallback(scene: Nr3dScene) -> None:
+    # For >2 proposals ([3, 7, 9]), no single frame has all 3, but frame 0 has [3,7]
+    # and frame 1 has [3,9]; require_all=True falls back to partial co-visibility!
+    result = select_by_proposal(
+        scene, SelectByProposalArgs(proposal_ids=[3, 7, 9], require_all=True)
+    )
+    assert len(result.frames) >= 1
+    assert "co-view up to 2/3" in result.note
 
 
 def test_select_by_proposal_missing_id_raises(scene: Nr3dScene) -> None:
@@ -142,6 +156,8 @@ def test_relation_alias_normalization() -> None:
     assert canonical_spatial_relation("closer to") == "closest_to"
     assert canonical_spatial_relation("furthest_from") == "farthest_from"
     assert canonical_spatial_relation("to the left of") == "left_of"
+    assert canonical_spatial_relation("in front") == "in_front_of"
+    assert canonical_spatial_relation("in between") == "between"
 
 
 def test_compare_closest_to_ranks_by_distance(scene: Nr3dScene) -> None:
@@ -156,6 +172,17 @@ def test_compare_closest_to_ranks_by_distance(scene: Nr3dScene) -> None:
     assert payload["ranked_ids"] == [3, 9]
 
 
+def test_compare_self_anchor_ranked_last(scene: Nr3dScene) -> None:
+    # When anchor_id is also included in candidate_ids, self-anchor must be demoted
+    result = compare_proposals_spatial(
+        scene,
+        CompareProposalsSpatialArgs(
+            candidate_ids=[7, 3], anchor_id=7, relation="closest_to"
+        ),
+    )
+    assert result.to_payload()["ranked_ids"] == [3, 7]
+
+
 def test_compare_above_uses_vertical_offset(scene: Nr3dScene) -> None:
     result = compare_proposals_spatial(
         scene,
@@ -167,7 +194,9 @@ def test_compare_above_uses_vertical_offset(scene: Nr3dScene) -> None:
     assert result.to_payload()["ranked_ids"][0] == 9
 
 
-def test_compare_left_of_uses_coview_votes(scene: Nr3dScene) -> None:
+def test_compare_left_of_uses_coview_votes_and_emits_virtual_view(
+    scene: Nr3dScene,
+) -> None:
     result = compare_proposals_spatial(
         scene,
         CompareProposalsSpatialArgs(
@@ -179,6 +208,28 @@ def test_compare_left_of_uses_coview_votes(scene: Nr3dScene) -> None:
     assert payload["ranked_ids"][0] == 3
     assert payload["shared_frame_counts"][0] == 1
     assert payload["supporting_frame_counts"][0] == 1
+    assert "facing_left_to_right_ids" in payload
+    assert "facing_front_to_back_ids" in payload
+
+
+def test_compare_in_front_of_and_between_relations(scene: Nr3dScene) -> None:
+    front_res = compare_proposals_spatial(
+        scene,
+        CompareProposalsSpatialArgs(
+            candidate_ids=[3, 7], anchor_id=7, relation="in_front_of"
+        ),
+    )
+    assert front_res.to_payload()["ranked_ids"][0] == 3
+
+    between_res = compare_candidates_to_anchors(
+        scene,
+        CompareCandidatesToAnchorsArgs(
+            candidate_ids=[3, 9], anchor_ids=[3, 7], relation="between"
+        ),
+    )
+    payload = between_res.to_payload()
+    assert "between_segment_distances" in payload
+    assert "joint_ranked_ids" in payload
 
 
 def test_compare_unsupported_relation_raises(scene: Nr3dScene) -> None:
@@ -206,7 +257,9 @@ def test_compare_candidates_to_anchors_consistency(scene: Nr3dScene) -> None:
 # ----- render tools -----------------------------------------------------------
 
 
-def test_mark_frame_with_bbox_writes_image(scene: Nr3dScene, tmp_path: Path) -> None:
+def test_mark_frame_with_bbox_writes_image_and_crops(
+    scene: Nr3dScene, tmp_path: Path
+) -> None:
     out_dir = tmp_path / "scratch"
     result = mark_frame_with_bbox(
         scene, MarkFrameArgs(frame_id=0, ids=[3, 7]), out_dir=out_dir
@@ -214,6 +267,19 @@ def test_mark_frame_with_bbox_writes_image(scene: Nr3dScene, tmp_path: Path) -> 
     payload = result.to_payload()
     assert Path(payload["image_path"]).exists()
     assert payload["left_to_right"] == ["#3 chair", "#7 table"]
+    assert "crops_sheet_path" in payload
+    assert Path(payload["crops_sheet_path"]).exists()
+
+
+def test_mark_frame_with_bbox_batch_frame_ids(scene: Nr3dScene, tmp_path: Path) -> None:
+    out_dir = tmp_path / "scratch_batch"
+    result = mark_frame_with_bbox(
+        scene, MarkFrameArgs(frame_ids=[0, 1], ids=[3, 7, 9]), out_dir=out_dir
+    )
+    payload = result.to_payload()
+    assert "contact_sheet" in payload
+    assert Path(payload["contact_sheet"]).exists()
+    assert len(payload["frames"]) == 2
 
 
 def test_mark_frame_boxes_match_written_image(scene: Nr3dScene, tmp_path: Path) -> None:
@@ -225,8 +291,6 @@ def test_mark_frame_boxes_match_written_image(scene: Nr3dScene, tmp_path: Path) 
     payload = result.to_payload()
     with Image.open(payload["image_path"]) as image:
         width, height = image.size
-    # The written image respects the view-image budget and the reported boxes are
-    # expressed in that written image's coordinate space.
     assert max(width, height) <= MAX_VIEW_IMAGE_DIM
     for box in payload["boxes_2d"].values():
         x1, y1, x2, y2 = box
@@ -243,7 +307,7 @@ def test_downscale_for_view_shrinks_large_image() -> None:
     image = np.zeros((1000, 1500, 3), dtype=np.uint8)
     resized, scale = downscale_for_view(image)
     assert max(resized.shape[0], resized.shape[1]) == MAX_VIEW_IMAGE_DIM
-    assert resized.shape[1] >= resized.shape[0]  # aspect ratio preserved (landscape)
+    assert resized.shape[1] >= resized.shape[0]
     assert scale == pytest.approx(MAX_VIEW_IMAGE_DIM / 1500)
     assert resized.dtype == np.uint8
 
@@ -290,12 +354,15 @@ def test_view_bev_default_returns_base(scene: Nr3dScene, tmp_path: Path) -> None
     assert Path(payload["image_path"]) == scene.bev_image_path
 
 
-def test_view_bev_highlight_writes_overlay(scene: Nr3dScene, tmp_path: Path) -> None:
+def test_view_bev_highlight_writes_overlay_and_coords(
+    scene: Nr3dScene, tmp_path: Path
+) -> None:
     out_dir = tmp_path / "bev"
     result = view_bev(scene, ViewBevArgs(highlight=[3]), out_dir=out_dir)
     payload = result.to_payload()
     assert payload["view"] == "highlighted"
     assert payload["highlight_ids"] == [3]
+    assert "highlighted_objects" in payload
     assert Path(payload["image_path"]).exists()
 
 

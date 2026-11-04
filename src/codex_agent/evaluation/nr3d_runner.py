@@ -31,9 +31,14 @@ from ..nr3d.sample import (
 from ..tasks.base import CodexExecutor
 
 _RETRYABLE_TOKENS: tuple[str, ...] = (
+    "409",
     "429",
     "500",
+    "502",
     "503",
+    "504",
+    "indeterminate",
+    "rate limit",
     "timeout",
     "timed out",
     "connection reset",
