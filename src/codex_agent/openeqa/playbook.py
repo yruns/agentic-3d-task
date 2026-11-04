@@ -32,68 +32,97 @@ OPENEQA_TOOLS_PLAYBOOK = """\
 Playbook (everything you need is here — do NOT look for a skill or any other \
 file):
 
-NO images are attached to this question — you have zero visual evidence until \
-you fetch it. Use the tools below to gather ALL the visual evidence you need: \
-name an object to keyframe_selector, read the layout with view_bev / \
-list_objects, or grab a specific first-person frame with view_frame.
+NO first-person RGB frames are attached to this message (only the top-down \
+schematic BEV map and 3D catalog preview when available). A 3D catalog entry or \
+BEV label is a routing hint, NOT visual proof — small desktop/countertop items, \
+wall-mounted fixtures, and fine attributes are frequently missing or mislabeled \
+in 3D detection. You MUST fetch and view first-person frames/crops with \
+view_image before answering.
 
 Tool catalog
-- list_objects — the scene's detected objects (ids, category, 3D center/size, \
-description). Use it to learn what is in the room and to get object ids for \
-view_bev / view_crop. args: {} or {"category": "chair"} or {"limit": 60}
-- keyframe_selector — language -> up to 4 first-person frames most likely to \
-show what you describe; best when the answer is about a specific object you can \
-name. It returns spatially-DIVERSE frames and one combined contact_sheet image, \
-and successive calls in this turn return NEW viewpoints (it remembers what it \
-already gave you), so re-asking explores rather than repeats. \
-args: {"query": "the fire extinguisher under the window", "k": 3}
-- view_frame — fetch any raw frame id (or a few) when you need a specific view. \
-Frame ids run across the whole clip; the result reports total_frames and the \
-valid range, and a contact_sheet when you ask for several. \
-args: {"frame_id": 420} or {"frame_ids": [100, 300, 540]}
-- view_crop — HIGH-RESOLUTION zoom. When a detail is too small/blurry to read \
-in a frame (a label, a color, which object it is), crop in instead of guessing. \
-Aim it by region after seeing a frame, or by object id. \
-args: {"frame_id": 420, "bbox": [0.4, 0.3, 0.7, 0.8]} (bbox normalized 0-1 or \
-raw pixels) or {"object_id": 12}
-- view_bev — top-down schematic map (object footprints + camera path) to read \
-scene layout, counts, and spatial relations; highlight objects by id/category. \
-args: {} or {"highlight": [4, 11]} or {"categories": ["table", "chair"]}
+- view_frame — fetch raw first-person frames by id, by trajectory neighborhood \
+(around_frame_id + step), or by BEV grid_cells. Returns frame images, a combined \
+contact_sheet (when ≥2 frames), and per-frame visible_objects with normalized \
+2D boxes (bbox_norm) ready for view_crop. Use this immediately when the printed \
+catalog already gives you best_frames for a relevant object or grid cell! \
+args: {"frame_ids": [34, 60, 120]} or {"around_frame_id": 120, "step": 10} or \
+{"grid_cells": [[2, 3]]}
+- keyframe_selector — language + spatial/grid prior -> up to 4 spatially-DIVERSE \
+first-person frames + one combined contact_sheet + grounded_objects + per-frame \
+visible_objects (with bbox_norm). Pass a COMPLETE relational phrase (target + \
+anchor + spatial relation, not a bare noun) and optional target_grids [[r, c]]. \
+Successive calls automatically return NEW viewpoints. \
+args: {"query": "the framed photo next to the wooden double door", "k": 3, \
+"target_grids": [[1, 2]]}
+- view_crop — HIGH-RESOLUTION zoom cut from the full-res raw RGB. Mandatory \
+whenever you need to read a small object's identity, color, brand, text, or \
+state. Aim by object_id (optionally on a specific frame_id) or by frame_id + \
+bbox (using bbox_norm from view_frame/keyframe_selector or normalized [0,1] \
+coords). \
+args: {"object_id": 12} or {"object_id": 12, "frame_id": 420} or \
+{"frame_id": 420, "bbox": [0.35, 0.25, 0.65, 0.70]}
+- list_objects — search or inspect the 3D object catalog (returns obj_id, \
+category, grid_cell, best_frame_ids, color, note, location, nearby_objects, \
+usability). Filter by query keywords, category, grid_cells, or object_ids (full \
+untruncated text). \
+args: {"query": "microwave counter"} or {"object_ids": [0, 5]} or \
+{"grid_cells": [[2, 3]]}
+- view_bev — re-render the top-down schematic map with highlighted object ids, \
+categories, or grid cells. \
+args: {"highlight": [4, 11]} or {"categories": ["table", "chair"]} or \
+{"highlight_grids": [[1, 2]]}
 
-Every image tool writes a file and prints its image_path (keyframe_selector / \
-view_frame also print a contact_sheet). You MUST open the path with the \
-view_image tool before you trust what it shows — a frame, crop, or BEV you have \
-not viewed is not evidence. Prefer view_image on the contact_sheet to inspect a \
-whole batch with ONE action instead of opening each frame separately.
+Every image tool writes a file and prints its image_path (keyframe_selector and \
+multi-frame view_frame also print a contact_sheet). You MUST open the path with \
+view_image before trusting what it shows. Prefer view_image on the contact_sheet \
+to inspect a batch in ONE action, then view_crop + view_image on the best frame \
+to read fine details.
 
 Recommended loop
-1. Decide what evidence the question needs (you have none yet), then fetch it.
-2. If you need scene context (layout, counts, "what/where" questions), call \
-view_bev and/or list_objects.
-3. If the answer is about a specific object, call keyframe_selector with a short \
-description, then view_image the returned contact_sheet.
-4. If the detail you need is too small or blurry to read, use view_crop to zoom \
-in before answering — do NOT guess a label/color/identity from a blurry frame.
-5. If you need another viewpoint, call view_frame for a specific frame id, or \
-call keyframe_selector again (it returns fresh viewpoints), then view it.
-6. Answer concisely and factually, grounded only in frames/crops/BEV you viewed.
+1. Read the inlined Scene Grid Layout, Object Catalog preview, and attached BEV \
+map. Identify candidate object ids, their best_frames, and target grid cells \
+(row, col).
+2. Fetch first-person visual evidence:
+   - If candidate object(s) and their best_frames are already listed in the \
+catalog preview, jump straight to view_frame({"frame_ids": [...]}) or \
+view_crop({"object_id": ...})!
+   - If you need to locate an uncataloged object or resolve a spatial relation, \
+call keyframe_selector with the full relational description and target_grids, \
+then view_image the contact_sheet.
+   - If a view partially clips the area of interest, pan along the trajectory \
+with view_frame({"around_frame_id": <id>, "step": 10}).
+3. Zoom in before committing: for any small object, color, label, state, or \
+ambiguous identity, call view_crop on the target region and view_image the crop.
+4. Emit the final JSON immediately once visual evidence confirms the answer.
 
-Confirm before you commit (fine-grained questions)
-- For "what is this object" / color / brand / small-detail questions, do NOT \
-commit from a single distant frame. Either view_crop to read the detail, or \
-confirm the object in a SECOND independent frame (a different viewpoint) before \
-answering. If you still cannot resolve it, give your best answer with a LOWER \
-confidence rather than asserting a guess at high confidence.
+Critical rules by question category
+- Never claim an object is absent from the catalog alone: 3D detection often \
+misses wall-mounted items (phones, thermostats, paintings, hooks) and small \
+tabletop items (erasers, pens, tissues, trophies, toiletries). Always inspect \
+first-person frames of the relevant walls, desks, counters, or shelves before \
+concluding something is present or absent.
+- Functional reasoning & World knowledge — seek the SPECIFIC dedicated item: \
+Do NOT settle for a generic room default (e.g. do not answer "use a smartphone" \
+when there is an hourglass on the desk; do not answer "get under bed covers" or \
+"hoodie" when there is a jacket or earmuffs; do not answer "grab bar" when \
+there is a shower curtain or towel rack). Check surfaces, shelves, and walls \
+for the most specific, purpose-built item in the scene.
+- Object localization & Spatial understanding — dual-reference phrasing: \
+When asked "Where is X?", name BOTH the immediate support surface/container AND \
+the nearest salient landmark with its spatial relation (e.g. "on the work table \
+to the right of the green garbage can", "on the lower closet shelf to the \
+right"). Always judge left/right/front/behind from the first-person camera view, \
+never from world coordinates.
+- Object recognition & Attribute recognition — mandatory high-res crop: \
+Do NOT guess an object's identity (e.g. eraser vs. sponge, vacuum vs. fire \
+extinguisher, water carbonator vs. coffee maker) or color/brand from a distant \
+768px frame. Always view_crop the target and verify from a close-up view.
 
-Tool budget — be decisive but don't under-look
-- Most questions resolve in a handful of targeted images; use the contact_sheet \
-and view_crop to get more evidence per action instead of opening many frames.
+Tool budget — be decisive and avoid redundant calls
 - Never repeat a tool with identical arguments and never re-view an image you \
-have already seen. If a result is empty or errors, change approach (rephrase, \
-or switch keyframe_selector <-> view_frame <-> view_crop) instead of retrying \
-identically.
-- Once the evidence actually supports an answer, emit the final JSON \
-immediately; do not keep gathering to chase certainty you already have."""
+have already seen.
+- Once visual evidence from first-person frames/crops clearly supports the \
+answer, output the final JSON immediately."""
 
 
 __all__ = ["OPENEQA_TOOLS_PLAYBOOK", "OPENEQA_TOOL_NAMES"]

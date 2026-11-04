@@ -210,10 +210,15 @@ class KeyframeSelector:
     def _resolve_pcd_file(cls, scene_path: Path) -> Path | None:
         pcd_dir = scene_path / "pcd_saves"
         for pattern in ("*ram*_post.pkl.gz", "*_post.pkl.gz", "*.pkl.gz"):
-            matches = sorted(pcd_dir.glob(pattern))
+            matches = [
+                p
+                for p in sorted(pcd_dir.glob(pattern))
+                if not p.name.endswith(".light.pkl.gz")
+            ]
             if matches:
                 return matches[0]
-        return None
+        light_matches = sorted(pcd_dir.glob("*.light.pkl.gz"))
+        return light_matches[0] if light_matches else None
 
     @classmethod
     def from_scene_path(
@@ -224,7 +229,7 @@ class KeyframeSelector:
         llm_client: LLMClient | None = None,
         model: str | None = None,
         prefer_lightweight_pcd: bool = True,
-        ensure_lightweight_pcd: bool = False,
+        ensure_lightweight_pcd: bool = True,
         dataset: str = "nr3d",
         bev_config: SceneBEVConfig | None = None,
     ) -> KeyframeSelector:
@@ -252,7 +257,7 @@ class KeyframeSelector:
         pcd_file: Path | None = None,
         stride: int = 5,
         prefer_lightweight_pcd: bool = True,
-        ensure_lightweight_pcd: bool = False,
+        ensure_lightweight_pcd: bool = True,
         dataset: str = "nr3d",
         overwrite_visibility: bool = False,
         overwrite_grid: bool = False,
@@ -298,7 +303,7 @@ class KeyframeSelector:
         instance._clip_tokenizer = None
         instance._clip_lock = threading.Lock()
 
-        instance._load_scene(resolved_pcd)
+        instance._load_scene(resolved_pcd, sync_stride=not overwrite_visibility)
 
         vis_path = resolved_scene / "indices" / "visibility_index.pkl"
         if vis_path.is_file() and not overwrite_visibility:
@@ -314,7 +319,7 @@ class KeyframeSelector:
 
     # ----- scene loading ----------------------------------------------------
 
-    def _load_scene(self, pcd_file: Path | None) -> None:
+    def _load_scene(self, pcd_file: Path | None, *, sync_stride: bool = True) -> None:
         logger.info(f"[KeyframeSelector] loading scene: {self.scene_path}")
         if pcd_file is not None and pcd_file.exists():
             self.objects = load_scene_objects(
@@ -332,7 +337,8 @@ class KeyframeSelector:
                 "Run object enrichment to produce enriched_objects.json first."
             )
         self._load_enrichment(enrichment_file)
-        self._sync_stride_from_visibility_metadata()
+        if sync_stride:
+            self._sync_stride_from_visibility_metadata()
 
         self._load_camera_poses()
         if len(self.camera_poses) >= 2:
@@ -388,6 +394,12 @@ class KeyframeSelector:
             obj.category = str(enrichment.get("category", obj.category))
             obj.object_tag = obj.category
             obj.summary = str(enrichment.get("description", obj.summary))
+            obj.location = str(enrichment.get("location", obj.location))
+            raw_color = enrichment.get("color", obj.color)
+            if isinstance(raw_color, list):
+                obj.color = [str(item) for item in raw_color if str(item).strip()]
+            elif isinstance(raw_color, str) and raw_color.strip():
+                obj.color = [raw_color.strip()]
             obj.affordance_category = str(
                 enrichment.get("usability", obj.affordance_category)
             )
@@ -398,7 +410,16 @@ class KeyframeSelector:
         logger.info(f"[KeyframeSelector] enriched {count}/{len(self.objects)} objects")
 
     def _sync_stride_from_visibility_metadata(self) -> None:
-        """Align ``self.stride`` with precomputed ``visibility_index.pkl`` metadata when present."""
+        """Align ``self.stride`` with precomputed index metadata when present."""
+        build_info_path = self.scene_path / "indices" / "build_info.json"
+        if build_info_path.is_file():
+            try:
+                info = json.loads(build_info_path.read_text(encoding="utf-8"))
+                process_stride = info.get("process_stride")
+                if isinstance(process_stride, int) and process_stride >= 1:
+                    self.stride = process_stride
+            except Exception:
+                pass
         index_path = self.scene_path / "indices" / "visibility_index.pkl"
         if not index_path.is_file():
             return
@@ -412,7 +433,16 @@ class KeyframeSelector:
         metadata = payload.get("metadata")
         if isinstance(metadata, dict):
             indexed_stride = metadata.get("stride")
-            if isinstance(indexed_stride, int) and indexed_stride >= 1:
+            indexed_objects = metadata.get("num_objects")
+            if (
+                isinstance(indexed_stride, int)
+                and indexed_stride >= 1
+                and (
+                    indexed_objects is None
+                    or not self.objects
+                    or int(indexed_objects) == len(self.objects)
+                )
+            ):
                 self.stride = indexed_stride
 
     def _build_scene_categories(self) -> list[str]:
@@ -767,7 +797,10 @@ class KeyframeSelector:
                             max(0.0, size_score - (0.3 if clipped else 0.0)),
                         )
             geo = 0.0
-            if not np.allclose(centroid, 0.0):
+            if (
+                not np.allclose(centroid, 0.0)
+                and np.isfinite(self.camera_poses[view_id]).all()
+            ):
                 pose = self.camera_poses[view_id]
                 cam_pos = pose[:3, 3]
                 distance = float(np.linalg.norm(centroid - cam_pos))

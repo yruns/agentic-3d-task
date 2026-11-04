@@ -382,17 +382,36 @@ def openeqa_tools_fixture(tmp_path: Path) -> OpenEqaToolsFixture:
             {
                 "obj_id": 0,
                 "status": "success",
-                "enrichment": {"category": "desk", "description": "a wooden desk"},
+                "enrichment": {
+                    "category": "desk",
+                    "description": "a wooden desk",
+                    "color": ["brown"],
+                    "location": "against the north wall",
+                    "nearby_objects": ["chair"],
+                    "usability": "work surface for a computer",
+                },
             },
             {
                 "obj_id": 1,
                 "status": "success",
-                "enrichment": {"category": "chair", "description": "an office chair"},
+                "enrichment": {
+                    "category": "chair",
+                    "description": "an office chair",
+                    "color": ["black"],
+                    "location": "in front of the wooden desk",
+                    "nearby_objects": ["desk"],
+                    "usability": "seating at the desk",
+                },
             },
             {
                 "obj_id": 2,
                 "status": "success",
-                "enrichment": {"category": "door", "description": "a white door"},
+                "enrichment": {
+                    "category": "door",
+                    "description": "a white door",
+                    "color": ["white"],
+                    "location": "on the right wall",
+                },
             },
         ]
     }

@@ -56,15 +56,33 @@ def raw_only_scene(openeqa_fixture: OpenEqaFixture) -> OpenEqaToolScene:
 # ----- view_frame -------------------------------------------------------------
 
 
-def test_view_frame_single(tool_scene: OpenEqaToolScene, tmp_path: Path) -> None:
-    result = view_frame(tool_scene, ViewFrameArgs(frame_id=3), out_dir=tmp_path)
+def test_view_frame_single_includes_visible_objects(
+    tool_scene: OpenEqaToolScene, tmp_path: Path
+) -> None:
+    result = view_frame(tool_scene, ViewFrameArgs(frame_id=0), out_dir=tmp_path)
     payload = result.to_payload()
     assert payload["total_frames"] == 10
     assert payload["frame_id_range"] == [0, 9]
     assert len(payload["frames"]) == 1
     frame = payload["frames"][0]
-    assert frame["frame_id"] == 3
+    assert frame["frame_id"] == 0
     assert Path(frame["image_path"]).exists()
+    assert "visible_objects" in frame
+    assert any(obj["category"] == "desk" for obj in frame["visible_objects"])
+    assert all("bbox_norm" in obj for obj in frame["visible_objects"])
+
+
+def test_view_frame_around_frame_id(
+    tool_scene: OpenEqaToolScene, tmp_path: Path
+) -> None:
+    result = view_frame(
+        tool_scene,
+        ViewFrameArgs(around_frame_id=5, step=2),
+        out_dir=tmp_path,
+    )
+    ids = [f.frame_id for f in result.frames]
+    assert ids == [1, 3, 5, 7]
+    assert result.contact_sheet_path is not None
 
 
 def test_view_frame_multiple_dedupes(
@@ -102,7 +120,9 @@ def test_view_frame_requires_a_frame(
 # ----- list_objects -----------------------------------------------------------
 
 
-def test_list_objects_all(tool_scene: OpenEqaToolScene) -> None:
+def test_list_objects_all_with_enrichment_and_frames(
+    tool_scene: OpenEqaToolScene,
+) -> None:
     result = list_objects(tool_scene, ListObjectsArgs())
     payload = result.to_payload()
     assert payload["total"] == 3
@@ -110,12 +130,28 @@ def test_list_objects_all(tool_scene: OpenEqaToolScene) -> None:
     assert categories == {"desk", "chair", "door"}
     desk = next(e for e in payload["objects"] if e["category"] == "desk")
     assert "size" in desk and len(desk["size"]) == 3
+    assert "grid_cell" in desk and len(desk["grid_cell"]) == 2
+    assert "best_frame_ids" in desk and len(desk["best_frame_ids"]) >= 1
+    assert desk.get("color") == ["brown"]
+    assert "north wall" in desk.get("location", "")
+    assert "work surface" in desk.get("usability", "")
 
 
-def test_list_objects_category_filter(tool_scene: OpenEqaToolScene) -> None:
+def test_list_objects_category_and_query_filter(
+    tool_scene: OpenEqaToolScene,
+) -> None:
     result = list_objects(tool_scene, ListObjectsArgs(category="chair"))
     assert result.count == 1
     assert result.objects[0].obj_id == 1
+
+    # Full-text query matching usability / location / color
+    q_res = list_objects(tool_scene, ListObjectsArgs(query="work surface brown"))
+    assert q_res.count >= 1
+    assert q_res.objects[0].obj_id == 0
+
+    # Specific object_ids inspection
+    id_res = list_objects(tool_scene, ListObjectsArgs(object_ids=[2]))
+    assert [o.obj_id for o in id_res.objects] == [2]
 
 
 def test_list_objects_limit(tool_scene: OpenEqaToolScene) -> None:
@@ -149,9 +185,16 @@ def test_view_bev_default(tool_scene: OpenEqaToolScene, tmp_path: Path) -> None:
     assert Path(payload["image_path"]).exists()
 
 
-def test_view_bev_highlight_ids(tool_scene: OpenEqaToolScene, tmp_path: Path) -> None:
-    result = view_bev(tool_scene, ViewBevArgs(highlight=[0, 1]), out_dir=tmp_path)
+def test_view_bev_highlight_ids_and_grids(
+    tool_scene: OpenEqaToolScene, tmp_path: Path
+) -> None:
+    result = view_bev(
+        tool_scene,
+        ViewBevArgs(highlight=[0, 1], highlight_grids=[(1, 1)]),
+        out_dir=tmp_path,
+    )
     assert result.highlight_ids == (0, 1)
+    assert result.highlight_grids == ((1, 1),)
     assert result.to_payload()["view"] == "highlighted"
     assert Path(result.image_path).exists()
 

@@ -1,10 +1,11 @@
 """Global-alignment (image) tool: ``view_bev``.
 
 Renders the mesh-free top-down *schematic* BEV for the clip (object footprints +
-camera trajectory) so the agent can read scene layout and tie first-person
-frames to a map. With ``highlight``/``categories`` the named objects are drawn in
-the highlight color. The render is written into a writable scratch dir and its
-path returned for ``view_image``.
+camera trajectory + ``(row, col)`` grid coordinates) so the agent can read scene
+layout and tie first-person frames to a map. With ``highlight`` / ``categories``
+/ ``highlight_grids`` the named objects or grid cells are drawn in the
+highlight color. The render is written into a writable scratch dir and its path
+returned for ``view_image``.
 
 OpenEQA clips have no mesh, so this uses
 :meth:`keyframe.keyframe_selector.KeyframeSelector.generate_scene_bev` with the
@@ -33,6 +34,7 @@ class ViewBevArgs(BaseModel):
 
     highlight: list[int] = Field(default_factory=list)
     categories: list[str] = Field(default_factory=list)
+    highlight_grids: list[tuple[int, int]] = Field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -42,13 +44,17 @@ class ViewBevResult:
     image_path: Path
     highlight_ids: tuple[int, ...]
     missing_categories: tuple[str, ...]
+    highlight_grids: tuple[tuple[int, int], ...] = ()
 
     def to_payload(self) -> dict[str, Any]:
+        is_highlighted = bool(self.highlight_ids or self.highlight_grids)
         payload: dict[str, Any] = {
             "image_path": str(self.image_path),
             "highlight_ids": list(self.highlight_ids),
-            "view": "default" if not self.highlight_ids else "highlighted",
+            "view": "highlighted" if is_highlighted else "default",
         }
+        if self.highlight_grids:
+            payload["highlight_grids"] = [list(c) for c in self.highlight_grids]
         if self.missing_categories:
             payload["categories_with_no_matches"] = list(self.missing_categories)
         return payload
@@ -57,30 +63,41 @@ class ViewBevResult:
 def view_bev(
     tool_scene: OpenEqaToolScene, args: ViewBevArgs, *, out_dir: Path
 ) -> ViewBevResult:
-    """Render the schematic BEV, optionally highlighting objects by id/category."""
+    """Render the schematic BEV, optionally highlighting objects or grid cells."""
     conceptgraph_dir = tool_scene.require_conceptgraph()
     selector = build_selector(conceptgraph_dir)
 
     highlight_ids, missing = _resolve_highlight_ids(selector, args)
+    highlight_grids = tuple(sorted({(int(r), int(c)) for r, c in args.highlight_grids}))
     out_dir.mkdir(parents=True, exist_ok=True)
-    token = "_".join(str(i) for i in highlight_ids) if highlight_ids else "default"
+    id_part = "_".join(str(i) for i in highlight_ids) if highlight_ids else "none"
+    grid_part = (
+        "_".join(f"r{r}c{c}" for r, c in highlight_grids) if highlight_grids else "none"
+    )
+    token = (
+        "default"
+        if not highlight_ids and not highlight_grids
+        else f"id_{id_part}_g_{grid_part}"
+    )
     out_path = out_dir / f"{tool_scene.clip_id}_bev_{token}_{_BEV_RENDERER_VERSION}.png"
     try:
         rendered = selector.generate_scene_bev(
             output_path=out_path,
             use_cache=False,
             highlight_ids=frozenset(highlight_ids),
+            highlight_grids=frozenset(highlight_grids),
         )
     except ToolInputError:
         raise
     except Exception as exc:  # re-raised as a recoverable tool error for the agent
         raise ToolInputError(
-            f"could not render the BEV for this scene " f"({type(exc).__name__}: {exc})"
+            f"could not render the BEV for this scene ({type(exc).__name__}: {exc})"
         ) from exc
     return ViewBevResult(
         image_path=rendered,
         highlight_ids=tuple(highlight_ids),
         missing_categories=tuple(missing),
+        highlight_grids=highlight_grids,
     )
 
 

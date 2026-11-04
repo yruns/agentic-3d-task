@@ -2,24 +2,23 @@
 
 Wraps the production
 :meth:`keyframe.keyframe_selector.KeyframeSelector.select_keyframes_v2`
-(Stage-1 query parsing + geometric grounding + joint-coverage frame selection)
-so the agent can ask, in free-form language, for the first-person frames most
-likely to show the objects a question is about.
+(Stage-1 multimodal BEV + grid query parsing + geometric grounding +
+joint-coverage frame selection) so the agent can ask, in free-form language
+(including spatial relations and grid priors), for the first-person frames most
+likely to show the objects or regions a question is about.
 
-The trace analysis of the v4 run showed two failure modes this tool now defends
-against (without touching the shared selector, so NR3D is unaffected):
-
-* **Retrieval-pool collapse** — re-phrased queries kept returning the *same*
-  overlapping frames, wasting tool rounds. We now over-fetch candidates and
-  return a **spatially diverse** subset (camera position / viewing direction),
-  and remember frames already returned in this turn so successive calls surface
-  *new* viewpoints.
-* **Grounding misses** — when the selector grounds nothing, instead of returning
-  an empty result we **fall back** to category-visibility or a trajectory sweep
-  so the agent still gets frames to look at.
+Defends against two common failure modes:
+* **Retrieval-pool collapse** — over-fetches candidates, filters for spatially
+  distinct viewpoints (camera position / viewing direction), and remembers
+  frames already returned in this turn so successive calls surface *new*
+  viewpoints.
+* **Grounding misses** — when the selector grounds nothing, falls back to
+  multi-field object-enrichment matching or a trajectory sweep so the agent
+  always receives actionable visual frames.
 
 Every call also writes a single labelled **contact sheet** of the returned
-frames so the agent can inspect the whole batch with one ``view_image``.
+frames and annotates each frame with ``visible_objects`` (including normalized
+2D ``bbox_norm`` boxes ready for ``view_crop``).
 """
 
 from __future__ import annotations
@@ -29,13 +28,14 @@ import json
 import math
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..scene import DEFAULT_MAX_IMAGE_SIZE, downsize_rgb_for_view
+from .frame_tools import annotate_frame_from_selector
 from .imaging import compose_contact_sheet
 from .models import ToolInputError
 from .scene_context import OpenEqaToolScene, build_selector
@@ -63,7 +63,7 @@ class KeyframeSelectorArgs(BaseModel):
 
     query: str = Field(min_length=1)
     k: int = Field(default=3, ge=1)
-    use_bev: bool = False
+    use_bev: bool = True
     target_grids: list[tuple[int, int]] = Field(default_factory=list)
     max_image_size: int = Field(default=DEFAULT_MAX_IMAGE_SIZE, ge=64, le=2048)
 
@@ -75,6 +75,7 @@ class KeyframeHit:
     frame_id: int
     image_path: Path
     visible_object_ids: tuple[int, ...] = ()
+    visible_objects: tuple[dict[str, Any], ...] = field(default_factory=tuple)
     covered_grids: tuple[tuple[int, int], ...] = ()
     grid_bounds: tuple[int, int, int, int] | None = None
     source: str = ""
@@ -86,6 +87,8 @@ class KeyframeHit:
         }
         if self.visible_object_ids:
             payload["visible_object_ids"] = list(self.visible_object_ids)
+        if self.visible_objects:
+            payload["visible_objects"] = list(self.visible_objects)
         if self.covered_grids:
             payload["covered_grids"] = [list(c) for c in self.covered_grids]
         if self.grid_bounds is not None:
@@ -116,6 +119,7 @@ class KeyframeSelectorResult:
     hypothesis_summary: str
     note: str
     contact_sheet_path: Path | None = None
+    grounded_objects: tuple[dict[str, Any], ...] = field(default_factory=tuple)
     fallback: str = ""
 
     def to_payload(self) -> dict[str, Any]:
@@ -124,11 +128,13 @@ class KeyframeSelectorResult:
             "note": self.note,
             "frames": [frame.to_payload() for frame in self.frames],
         }
+        if self.grounded_objects:
+            payload["grounded_objects"] = list(self.grounded_objects)
         if self.contact_sheet_path is not None:
             payload["contact_sheet"] = str(self.contact_sheet_path)
             payload["tip"] = (
                 "view_image the contact_sheet to see all frames at once; "
-                "view_crop a frame_id for a high-res zoom"
+                "view_crop with object_id or bbox_norm for a high-res zoom"
             )
         if self.fallback:
             payload["fallback"] = self.fallback
@@ -164,13 +170,16 @@ def keyframe_selector(
     selected = _select_diverse(selector, candidates, capped_k, seen)
     _record_seen(seen_path, seen, [c.frame_id for c in selected])
 
-    frames = _downsize_selected(tool_scene, selected, out_dir, args.max_image_size)
+    frames = _downsize_selected(
+        tool_scene, selector, selected, out_dir, args.max_image_size
+    )
     contact_sheet = _build_contact_sheet(tool_scene, frames, out_dir)
     return KeyframeSelectorResult(
         frames=tuple(frames),
         hypothesis_summary=_summarize(result),
         note=note or _empty_note(frames),
         contact_sheet_path=contact_sheet,
+        grounded_objects=_extract_grounded_objects(selector, result),
         fallback=fallback,
     )
 
@@ -248,16 +257,33 @@ def _fallback_candidates(
 
 
 def _views_for_query_categories(selector: Any, query: str) -> list[int]:
-    """Best views of any object whose category appears in the query text."""
+    """Best views of any object whose category or enrichment matches the query."""
     lowered = query.lower()
+    tokens = [
+        tok
+        for tok in re.findall(r"[a-z0-9]+", lowered)
+        if len(tok) >= 3
+        and tok not in {"the", "and", "for", "with", "near", "where", "what", "which"}
+    ]
     object_to_views = getattr(selector, "object_to_views", {}) or {}
     scored: list[tuple[float, int]] = []
     for obj in getattr(selector, "objects", []) or []:
         category = (obj.object_tag or obj.category or "").strip().lower()
-        if not category or category not in lowered:
+        summary = str(getattr(obj, "summary", "") or "").lower()
+        location = str(getattr(obj, "location", "") or "").lower()
+        usability = str(getattr(obj, "affordance_category", "") or "").lower()
+        blob = " ".join((category, summary, location, usability))
+        weight = 0.0
+        if category and category in lowered:
+            weight += 3.0
+        elif tokens:
+            hits = sum(1 for tok in tokens if tok in blob)
+            if hits > 0:
+                weight += float(hits)
+        if weight <= 0.0:
             continue
         for view_id, score in object_to_views.get(obj.obj_id, []):
-            scored.append((float(score), int(view_id)))
+            scored.append((weight * float(score), int(view_id)))
     scored.sort(reverse=True)
     ordered: list[int] = []
     for _, view_id in scored:
@@ -271,7 +297,6 @@ def _trajectory_sweep_views(selector: Any, tool_scene: OpenEqaToolScene) -> list
     poses = getattr(selector, "camera_poses", []) or []
     count = len(poses)
     if count == 0:
-        # No poses: spread across the raw frame ids directly (view==frame here).
         frame_ids = tool_scene.scene.rgb_frame_ids
         if not frame_ids:
             return []
@@ -307,12 +332,7 @@ def _candidates_from_views(
 def _select_diverse(
     selector: Any, candidates: list[_Candidate], k: int, seen: list[int]
 ) -> list[_Candidate]:
-    """Greedily pick ≤ k spatially-distinct candidates, avoiding ``seen`` frames.
-
-    Relaxes progressively so a non-empty candidate set never yields zero frames:
-    first try (fresh + diverse), then allow already-seen frames, then drop the
-    spatial-diversity constraint entirely.
-    """
+    """Greedily pick ≤ k spatially-distinct candidates, avoiding ``seen`` frames."""
     if not candidates:
         return []
     seen_set = set(seen)
@@ -339,7 +359,7 @@ def _is_separated(selector: Any, cand: _Candidate, picked: list[_Candidate]) -> 
             return False
         other_feat = _pose_feature(selector, other.view_id)
         if feat is None or other_feat is None:
-            continue  # no geometry to compare; rely on frame-id distinctness
+            continue
         position_a, forward_a = feat
         position_b, forward_b = other_feat
         import numpy as np
@@ -361,7 +381,7 @@ def _pose_feature(selector: Any, view_id: int | None) -> tuple[Any, Any] | None:
     import numpy as np
 
     pose = np.asarray(poses[view_id], dtype=np.float64)
-    if pose.shape != (4, 4):
+    if pose.shape != (4, 4) or not np.isfinite(pose).all():
         return None
     position = pose[:3, 3]
     forward = -pose[:3, 2]
@@ -373,6 +393,7 @@ def _pose_feature(selector: Any, view_id: int | None) -> tuple[Any, Any] | None:
 
 def _downsize_selected(
     tool_scene: OpenEqaToolScene,
+    selector: Any,
     selected: list[_Candidate],
     out_dir: Path,
     max_size: int,
@@ -380,6 +401,7 @@ def _downsize_selected(
     hits: list[KeyframeHit] = []
     for cand in selected:
         destination = out_dir / f"{tool_scene.clip_id}_kf_{cand.frame_id:06d}.jpg"
+        vis_objs, cov_grids = annotate_frame_from_selector(selector, cand.frame_id)
         hits.append(
             KeyframeHit(
                 frame_id=cand.frame_id,
@@ -387,7 +409,8 @@ def _downsize_selected(
                     cand.source_path, destination, max_size=max_size
                 ),
                 visible_object_ids=cand.visible_object_ids,
-                covered_grids=cand.covered_grids,
+                visible_objects=vis_objs,
+                covered_grids=cand.covered_grids or cov_grids,
                 grid_bounds=cand.grid_bounds,
                 source=cand.source,
             )
@@ -409,6 +432,23 @@ def _build_contact_sheet(
         return None
 
 
+def _extract_grounded_objects(selector: Any, result: Any) -> tuple[dict[str, Any], ...]:
+    target_objs = getattr(result, "target_objects", None) or []
+    object_to_grids = getattr(selector, "object_to_grids", {}) or {}
+    out: list[dict[str, Any]] = []
+    for obj in target_objs[:6]:
+        oid = getattr(obj, "obj_id", None)
+        if oid is None:
+            continue
+        cat = str(getattr(obj, "object_tag", "") or getattr(obj, "category", "") or "")
+        entry: dict[str, Any] = {"obj_id": int(oid), "category": cat}
+        cells = object_to_grids.get(int(oid), [])
+        if cells:
+            entry["grid_cell"] = [int(cells[0][0]), int(cells[0][1])]
+        out.append(entry)
+    return tuple(out)
+
+
 # ----- view/frame mapping + seen-state helpers --------------------------------
 
 
@@ -426,13 +466,6 @@ def _stride(selector: Any) -> int:
 
 
 def _seen_state_path(out_dir: Path, clip_id: str) -> Path | None:
-    """Per-turn 'already returned' state file, or ``None`` to disable cross-call.
-
-    Scoped by ``CODEX_HOME`` (unique per turn in production) so successive calls
-    in the *same* turn dedupe against each other, without leaking across the
-    many questions that share one clip and one scratch dir. When ``CODEX_HOME``
-    is absent (tests / ad-hoc runs) cross-call dedup is disabled.
-    """
     codex_home = os.environ.get("CODEX_HOME")
     if not codex_home:
         return None
@@ -461,7 +494,7 @@ def _record_seen(
     try:
         seen_path.write_text(json.dumps(merged), encoding="utf-8")
     except OSError:
-        pass  # the dedup memory is best-effort
+        pass
 
 
 def _even_indices(count: int, k: int) -> list[int]:
