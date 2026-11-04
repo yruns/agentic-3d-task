@@ -35,6 +35,7 @@ class GroundingStatus(str, Enum):
     DIRECT_GROUNDED = "direct_grounded"
     PROXY_GROUNDED = "proxy_grounded"
     CONTEXT_ONLY = "context_only"
+    GRID_GROUNDED = "grid_grounded"
     NO_EVIDENCE = "no_evidence"
 
 
@@ -94,6 +95,10 @@ class HypothesisExecution(BaseModel):
         return self.hypothesis is not None and not self.result.is_empty
 
 
+#: Provenance of a selected keyframe view.
+FrameSource = Literal["object", "grid", "object+grid", "padding"]
+
+
 class FrameMapping(BaseModel):
     """Mapping from a selected view index to a resolved RGB frame on disk."""
 
@@ -102,6 +107,10 @@ class FrameMapping(BaseModel):
     resolved_view_id: int
     resolved_frame_id: int
     path: str | None = None
+    visible_object_ids: list[int] = Field(default_factory=list)
+    covered_grids: list[tuple[int, int]] = Field(default_factory=list)
+    grid_bounds: tuple[int, int, int, int] | None = None
+    source: FrameSource = "object"
 
 
 class KeyframeSelectionMetadata(BaseModel):
@@ -114,6 +123,9 @@ class KeyframeSelectionMetadata(BaseModel):
     selected_hypothesis_rank: int | None = None
     error: str = ""
     all_object_ids: list[int] = Field(default_factory=list)
+    target_grids: list[tuple[int, int]] = Field(default_factory=list)
+    covered_grids: list[tuple[int, int]] = Field(default_factory=list)
+    grid_shape: tuple[int, int] | None = None
     frame_mappings: list[FrameMapping] = Field(default_factory=list)
     attempts: list[HypothesisAttempt] = Field(default_factory=list)
     hypothesis_output: HypothesisOutputV1 | None = None
@@ -133,7 +145,10 @@ class KeyframeResult(BaseModel):
 
     target_objects: list[SceneObject] = Field(default_factory=list)
     anchor_objects: list[SceneObject] = Field(default_factory=list)
+    target_grids: list[tuple[int, int]] = Field(default_factory=list)
 
+    frame_object_ids: dict[int, list[int]] = Field(default_factory=dict)
+    frame_covered_grids: dict[int, list[tuple[int, int]]] = Field(default_factory=dict)
     selection_scores: dict[int, float] = Field(default_factory=dict)
     metadata: KeyframeSelectionMetadata
 

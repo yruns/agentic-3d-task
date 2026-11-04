@@ -25,6 +25,7 @@ from keyframe.models.results import (
     ExecutionMode,
     ExecutionResult,
     FrameMapping,
+    FrameSource,
     GroundingStatus,
     HypothesisAttempt,
     HypothesisExecution,
@@ -61,6 +62,7 @@ __all__ = [
     "HypothesisAttempt",
     "HypothesisExecution",
     "FrameMapping",
+    "FrameSource",
     "KeyframeSelectionMetadata",
     "KeyframeResult",
 ]

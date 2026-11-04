@@ -167,6 +167,9 @@ def build_scene(tmp_path: Path) -> Callable[[], Path]:
 
         for i in range(3):
             (scene / "results" / f"frame{i:06d}.jpg").write_bytes(b"\xff\xd8\xff")
+        from keyframe.keyframe_selector import KeyframeSelector
+
+        KeyframeSelector.build_offline_indices(scene, stride=1)
         return scene
 
     return _build

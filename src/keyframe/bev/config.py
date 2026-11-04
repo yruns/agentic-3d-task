@@ -56,6 +56,15 @@ class SceneBEVConfig(BaseModel):
     crop_margin: int = 3
     crop_white_threshold: int = 245
 
+    # Coordinate grid overlay (maps BEV (row, col) cells to 3D world XY regions).
+    grid: bool = True
+    grid_rows: int = 6
+    grid_cols: int = 6
+    grid_color: RGB = (180, 195, 215)
+    grid_label_color: RGB = (40, 55, 80)
+    grid_highlight_color: RGB = (255, 180, 0)
+    label_grid: bool = True
+
     # Object overlay.
     label_objects: bool = True
     marker_radius: int = 4

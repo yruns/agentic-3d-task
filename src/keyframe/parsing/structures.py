@@ -30,6 +30,10 @@ GroundingQuery structure:
 - raw_query: The original query text
 - root: A QueryNode representing the target object
 - expect_unique: True if the query uses "the" (singular), False otherwise
+- viewpoint_contexts (optional): List of ViewpointContext objects referenced by constraints
+- target_grids: List of [row, col] 0-indexed integer pairs (e.g., [[1, 2], [2, 2]])
+  identifying the most likely task-relevant grid cells on the scene BEV / SCENE GRID LAYOUT
+  for THIS hypothesis (1-4 cells per hypothesis when grid information or BEV image is provided).
 
 Each QueryNode has:
 - categories: LIST of object types (MUST be EXACT strings from SCENE CATEGORIES, or ["UNKNOW"] if no match)
@@ -91,6 +95,9 @@ DIRECT hypothesis (always rank=1):
 - Parse the query literally
 - Use ["UNKNOW"] for any category not found in scene
 - Keep original spatial constraints and select constraints
+- Set `target_grids` to the [row, col] cell(s) most likely containing the target object
+  that satisfies the spatial/select constraints (or, if target is ["UNKNOW"], the cell(s)
+  of the anchor/reference objects and the adjacent region where the target is located)
 
 PROXY hypothesis (rank=2, only in multi mode):
 - Created when target or anchor is UNKNOW
@@ -101,12 +108,16 @@ PROXY hypothesis (rank=2, only in multi mode):
 - For missing TARGET: replace ONLY the UNKNOW target with related categories from scene.
   Keep ALL spatial constraints and anchors exactly as in the DIRECT hypothesis.
 - For BETWEEN relations: ALWAYS keep 2 separate anchors. Never collapse into 1.
+- Set `target_grids` to the [row, col] cell(s) containing the proxy target candidates
+  and/or proxy anchor objects that match the spatial layout
 
 CONTEXT hypothesis (rank=3, used as last resort):
 - Created when both direct and proxy may fail
 - Remove all spatial constraints and select constraints
 - Replace target with the anchor categories (find the context/scene objects)
 - Set expect_unique=false
+- Set `target_grids` to the broader [row, col] cell(s) covering all candidate anchor/context
+  regions in the scene
 
 === CATEGORY RULES ===
 
@@ -175,16 +186,26 @@ When you emit ViewpointContext(s), put them in grounding_query.viewpoint_context
 a list, and reference them by id from the constraints that need them. The same
 context may be referenced by multiple constraints in one grounding_query.
 
-=== VISUAL CONTEXT (if image provided) ===
+=== GRID & BEV REGION LOCALIZATION (CRITICAL) ===
 
-When a Bird's Eye View (BEV) image is provided:
-- Each object is shown as a labeled circle at its centroid position
-- Labels follow format "NNN: category" (e.g., "001: sofa", "002: pillow")
-- Object IDs correspond to the SCENE CATEGORIES list
-- Use this visual context to understand spatial relationships
-- Reference the image to verify "near", "on", "between" relationships
-- Use object positions to resolve ambiguous references
-- Note: In the BEV, Y-axis increases downward (image coordinates)"""
+When `SCENE GRID LAYOUT` and/or a Bird's-Eye View (BEV) image is provided:
+- The scene is partitioned into a regular 0-indexed `(row, col)` grid where `row` increases
+  top-to-bottom (`0..R-1`, along `-Y`) and `col` increases left-to-right (`0..C-1`, along `+X`),
+  labeled as `(r,c)` on the BEV image and listed in `SCENE GRID LAYOUT`.
+- Each object is labeled as `#id category` in both the BEV image and `SCENE GRID LAYOUT`.
+- Every hypothesis (`direct`, `proxy`, `context`) MUST populate `grounding_query.target_grids`
+  with 1-4 `[row, col]` pairs representing the most likely task-relevant grid cells for that
+  hypothesis:
+  1. Combine visual layout from the BEV image (footprints, relative positions, camera path)
+     with `SCENE GRID LAYOUT` object-to-cell membership.
+  2. If multiple same-category objects exist in different cells, select the cell(s) where the
+     target and reference anchor actually satisfy the spatial relation (e.g., `on`, `near`,
+     `between`, or viewer-relative `left_of`/`right_of`).
+  3. Even when the target category is `["UNKNOW"]` (not in `SCENE CATEGORIES`), still output
+     the relevant `target_grids` around the reference anchor(s) or described region so the
+     system can retrieve views of that 3D region via the grid-view index.
+  4. For spatially separated targets or multi-region queries, include the grid coordinates
+     of each relevant region."""
 
 
 def get_few_shot_examples() -> str:
@@ -193,7 +214,7 @@ def get_few_shot_examples() -> str:
 EXAMPLES:
 
 === EXAMPLE 1: Simple query - target and anchor both exist (SINGLE mode) ===
-Query: "the pillow on the sofa" (scene has: pillow, throw_pillow, sofa, door)
+Query: "the pillow on the sofa" (scene has: pillow, throw_pillow, sofa, door; grid layout has sofa & pillow in (1, 2))
 {
   "format_version": "hypothesis_output_v1",
   "parse_mode": "single",
@@ -214,7 +235,8 @@ Query: "the pillow on the sofa" (scene has: pillow, throw_pillow, sofa, door)
           ],
           "select_constraint": null
         },
-        "expect_unique": true
+        "expect_unique": true,
+        "target_grids": [[1, 2]]
       },
       "lexical_hints": ["pillow", "sofa"]
     }
@@ -222,7 +244,7 @@ Query: "the pillow on the sofa" (scene has: pillow, throw_pillow, sofa, door)
 }
 
 === EXAMPLE 2: Superlative with reference (SINGLE mode) ===
-Query: "the sofa nearest the door" (scene has: sofa, door, window)
+Query: "the sofa nearest the door" (scene has: sofa, door, window; door in (0, 1), sofas in (1, 1) and (3, 3))
 {
   "format_version": "hypothesis_output_v1",
   "parse_mode": "single",
@@ -244,7 +266,8 @@ Query: "the sofa nearest the door" (scene has: sofa, door, window)
             "position": null
           }
         },
-        "expect_unique": true
+        "expect_unique": true,
+        "target_grids": [[1, 1], [0, 1]]
       },
       "lexical_hints": ["sofa", "door", "nearest"]
     }
@@ -252,8 +275,8 @@ Query: "the sofa nearest the door" (scene has: sofa, door, window)
 }
 
 === EXAMPLE 3: Missing anchor - "bed" not in scene (MULTI mode with PROXY) ===
-Query: "the pillow on the bed" (scene has: pillow, throw_pillow, sofa, armchair, door - NO bed)
-NOTE: "bed" is NOT in scene, so anchor uses ["UNKNOW"]. Add PROXY hypothesis with "sofa" as proxy anchor.
+Query: "the pillow on the bed" (scene has: pillow, throw_pillow, sofa, armchair, door - NO bed; pillow in (2, 1), sofa in (2, 1), armchair in (2, 2))
+NOTE: "bed" is NOT in scene, so anchor uses ["UNKNOW"]. Add PROXY hypothesis with "sofa" as proxy anchor. Each hypothesis includes its most likely target_grids.
 {
   "format_version": "hypothesis_output_v1",
   "parse_mode": "multi",
@@ -274,7 +297,8 @@ NOTE: "bed" is NOT in scene, so anchor uses ["UNKNOW"]. Add PROXY hypothesis wit
           ],
           "select_constraint": null
         },
-        "expect_unique": true
+        "expect_unique": true,
+        "target_grids": [[2, 1]]
       },
       "lexical_hints": ["pillow", "bed"]
     },
@@ -294,7 +318,8 @@ NOTE: "bed" is NOT in scene, so anchor uses ["UNKNOW"]. Add PROXY hypothesis wit
           ],
           "select_constraint": null
         },
-        "expect_unique": true
+        "expect_unique": true,
+        "target_grids": [[2, 1], [2, 2]]
       },
       "lexical_hints": ["proxy_anchor"]
     }
@@ -302,8 +327,8 @@ NOTE: "bed" is NOT in scene, so anchor uses ["UNKNOW"]. Add PROXY hypothesis wit
 }
 
 === EXAMPLE 4: Missing target - "laptop" not in scene (MULTI mode with PROXY and CONTEXT) ===
-Query: "the laptop on the table" (scene has: book, cup, side_table, coffee_table, chair - NO laptop)
-NOTE: "laptop" is NOT in scene. PROXY tries related objects like "book". CONTEXT falls back to anchor.
+Query: "the laptop on the table" (scene has: book, cup, side_table, coffee_table, chair - NO laptop; side_table & book in (1, 3), coffee_table & cup in (2, 2))
+NOTE: "laptop" is NOT in scene. DIRECT still locates the table grids; PROXY tries related objects ("book", "cup"); CONTEXT falls back to all table grids.
 {
   "format_version": "hypothesis_output_v1",
   "parse_mode": "multi",
@@ -324,7 +349,8 @@ NOTE: "laptop" is NOT in scene. PROXY tries related objects like "book". CONTEXT
           ],
           "select_constraint": null
         },
-        "expect_unique": true
+        "expect_unique": true,
+        "target_grids": [[1, 3], [2, 2]]
       },
       "lexical_hints": ["laptop", "table"]
     },
@@ -344,7 +370,8 @@ NOTE: "laptop" is NOT in scene. PROXY tries related objects like "book". CONTEXT
           ],
           "select_constraint": null
         },
-        "expect_unique": true
+        "expect_unique": true,
+        "target_grids": [[1, 3], [2, 2]]
       },
       "lexical_hints": ["proxy"]
     },
@@ -359,7 +386,8 @@ NOTE: "laptop" is NOT in scene. PROXY tries related objects like "book". CONTEXT
           "spatial_constraints": [],
           "select_constraint": null
         },
-        "expect_unique": false
+        "expect_unique": false,
+        "target_grids": [[1, 3], [2, 2]]
       },
       "lexical_hints": ["context"]
     }
@@ -367,8 +395,8 @@ NOTE: "laptop" is NOT in scene. PROXY tries related objects like "book". CONTEXT
 }
 
 === EXAMPLE 5: BETWEEN relation with missing target (MULTI mode, preserve both anchors) ===
-Query: "the blue object between the table and the fridge" (scene has: table, fridge, bag, chair - NO "blue object" match)
-NOTE: Target is UNKNOW. PROXY replaces target with scene objects ("bag"). BOTH anchors "table" and "fridge" are preserved exactly.
+Query: "the blue object between the table and the fridge" (scene has: table, fridge, bag, chair - NO "blue object" match; table in (1, 1), bag in (1, 2), fridge in (1, 3))
+NOTE: Target is UNKNOW. PROXY replaces target with scene objects ("bag"). BOTH anchors "table" and "fridge" are preserved, and target_grids covers the region between them.
 {
   "format_version": "hypothesis_output_v1",
   "parse_mode": "multi",
@@ -392,7 +420,8 @@ NOTE: Target is UNKNOW. PROXY replaces target with scene objects ("bag"). BOTH a
           ],
           "select_constraint": null
         },
-        "expect_unique": true
+        "expect_unique": true,
+        "target_grids": [[1, 2], [1, 1], [1, 3]]
       },
       "lexical_hints": ["blue", "table", "fridge"]
     },
@@ -415,7 +444,8 @@ NOTE: Target is UNKNOW. PROXY replaces target with scene objects ("bag"). BOTH a
           ],
           "select_constraint": null
         },
-        "expect_unique": true
+        "expect_unique": true,
+        "target_grids": [[1, 2]]
       },
       "lexical_hints": ["proxy"]
     },
@@ -430,7 +460,8 @@ NOTE: Target is UNKNOW. PROXY replaces target with scene objects ("bag"). BOTH a
           "spatial_constraints": [],
           "select_constraint": null
         },
-        "expect_unique": false
+        "expect_unique": false,
+        "target_grids": [[1, 1], [1, 2], [1, 3]]
       },
       "lexical_hints": ["context"]
     }

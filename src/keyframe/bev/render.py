@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict
 
 from keyframe.bev.config import DEFAULT_SCENE_BEV_CONFIG, RGB, SceneBEVConfig
 from keyframe.bev.mesh import TriangleMesh
+from keyframe.spatial.grid import GridCell, SceneGridSpec
 
 
 class BEVMarker(BaseModel):
@@ -48,6 +49,21 @@ class CameraView(BaseModel):
     c: float
     image_size: int
     crop_offset: tuple[int, int] = (0, 0)
+    grid_spec: SceneGridSpec | None = None
+
+    def to_payload(self) -> dict[str, object]:
+        """Serialize camera and optional grid parameters for ``.view.json``."""
+        payload: dict[str, object] = {
+            "R": self.R.tolist(),
+            "t": self.t.tolist(),
+            "f": float(self.f),
+            "c": float(self.c),
+            "image_size": int(self.image_size),
+            "crop_offset": [int(self.crop_offset[0]), int(self.crop_offset[1])],
+        }
+        if self.grid_spec is not None:
+            payload["grid_spec"] = self.grid_spec.to_payload()
+        return payload
 
 
 class RenderedBEV(BaseModel):
@@ -66,6 +82,8 @@ def render_scene_bev(
     markers: Sequence[BEVMarker] = (),
     *,
     highlight_ids: frozenset[int] = frozenset(),
+    highlight_grids: frozenset[GridCell] = frozenset(),
+    grid_spec: SceneGridSpec | None = None,
     config: SceneBEVConfig = DEFAULT_SCENE_BEV_CONFIG,
 ) -> RenderedBEV:
     """Render the scene BEV. ``camera_poses`` are ``(N, 4, 4)`` cam-to-world."""
@@ -77,11 +95,14 @@ def render_scene_bev(
     visible = _frustum_visibility(mesh.vertices, camera_poses, intrinsic, config)
     kept = _filter_triangles(mesh, visible, config)
 
+    resolved_grid = grid_spec or _grid_spec_from_mesh(mesh.vertices, kept, config)
     view = _look_down_camera(mesh.vertices, kept, config)
     image = _rasterize(mesh, kept, view, config)
     image = _draw_trajectory(image, camera_poses[:, :3, 3], view, config)
     image, offset = _crop_to_content(image, config)
-    view = view.model_copy(update={"crop_offset": offset})
+    view = view.model_copy(update={"crop_offset": offset, "grid_spec": resolved_grid})
+    if config.grid and resolved_grid is not None:
+        image = _overlay_grid(image, resolved_grid, view, highlight_grids, config)
     image = _overlay_markers(image, markers, view, highlight_ids, config)
     return RenderedBEV(image=image, view=view)
 
@@ -251,6 +272,100 @@ def _project_world(
     if apply_crop:
         return int(u) - view.crop_offset[0], int(v) - view.crop_offset[1]
     return int(u), int(v)
+
+
+def _grid_spec_from_mesh(
+    vertices: NDArray[np.float64],
+    triangles: NDArray[np.int64],
+    config: SceneBEVConfig,
+) -> SceneGridSpec:
+    """Build a :class:`SceneGridSpec` from the visible mesh vertices."""
+    used = np.unique(triangles.ravel())
+    visible_verts = vertices[used]
+    bmin = visible_verts.min(axis=0)
+    bmax = visible_verts.max(axis=0)
+    min_x, max_x = float(bmin[0]), float(bmax[0])
+    min_y, max_y = float(bmin[1]), float(bmax[1])
+    min_z, max_z = float(bmin[2]), float(bmax[2])
+    if max_x - min_x < 1.0:
+        mid_x = 0.5 * (min_x + max_x)
+        min_x, max_x = mid_x - 0.5, mid_x + 0.5
+    if max_y - min_y < 1.0:
+        mid_y = 0.5 * (min_y + max_y)
+        min_y, max_y = mid_y - 0.5, mid_y + 0.5
+    if max_z - min_z < 0.5:
+        max_z = min_z + 2.0
+    return SceneGridSpec(
+        min_x=min_x,
+        max_x=max_x,
+        min_y=min_y,
+        max_y=max_y,
+        min_z=min_z,
+        max_z=max_z,
+        rows=config.grid_rows,
+        cols=config.grid_cols,
+    )
+
+
+def _overlay_grid(
+    image: NDArray[np.uint8],
+    grid_spec: SceneGridSpec,
+    view: CameraView,
+    highlight_grids: frozenset[GridCell],
+    config: SceneBEVConfig,
+) -> NDArray[np.uint8]:
+    """Overlay ``(row, col)`` grid lines and coordinate labels onto ``image``."""
+    out: NDArray[np.uint8] = image.copy()
+    height, width = int(out.shape[0]), int(out.shape[1])
+    z_ref = grid_spec.min_z
+    line_color: RGB = config.grid_color
+    hl_color: RGB = config.grid_highlight_color
+    label_color: RGB = config.grid_label_color
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    for row in range(grid_spec.rows):
+        for col in range(grid_spec.cols):
+            x_min, y_min, x_max, y_max = grid_spec.cell_to_world_bounds(row, col)
+            tl = _project_world(
+                np.array([x_min, y_max, z_ref], dtype=np.float64),
+                view,
+                apply_crop=True,
+            )
+            br = _project_world(
+                np.array([x_max, y_min, z_ref], dtype=np.float64),
+                view,
+                apply_crop=True,
+            )
+            if tl is None or br is None:
+                continue
+            x0 = max(0, min(width - 1, min(tl[0], br[0])))
+            y0 = max(0, min(height - 1, min(tl[1], br[1])))
+            x1 = max(0, min(width - 1, max(tl[0], br[0])))
+            y1 = max(0, min(height - 1, max(tl[1], br[1])))
+            if x1 <= x0 or y1 <= y0:
+                continue
+            is_hl = (row, col) in highlight_grids
+            cv2.rectangle(
+                out,
+                (x0, y0),
+                (x1, y1),
+                hl_color if is_hl else line_color,
+                2 if is_hl else 1,
+                cv2.LINE_AA,
+            )
+            if config.label_grid and (x1 - x0) >= 24 and (y1 - y0) >= 16:
+                tag = f"({row},{col})"
+                cv2.putText(
+                    out,
+                    tag,
+                    (x0 + 3, y0 + 13),
+                    font,
+                    0.38,
+                    label_color,
+                    1,
+                    cv2.LINE_AA,
+                )
+    return out
 
 
 def _overlay_markers(

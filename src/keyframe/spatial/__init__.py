@@ -13,6 +13,18 @@ from keyframe.spatial.frustum import (
     frustum_overlap_l2,
     load_scene_intrinsic,
 )
+from keyframe.spatial.grid import (
+    GRID_INDEX_FORMAT_VERSION,
+    DepthLoader,
+    GridBounds,
+    GridCell,
+    GridVisibilityIndex,
+    SceneGridSpec,
+    build_grid_visibility_index,
+    compute_grid_bounds,
+    load_grid_visibility_index,
+    save_grid_visibility_index,
+)
 from keyframe.spatial.quick_filters import (
     QUICK_FILTER_CONFIGS,
     AttributeFilter,
@@ -44,6 +56,17 @@ __all__ = [
     "frustum_overlap_l1",
     "frustum_overlap_l2",
     "load_scene_intrinsic",
+    # Grid specification + depth-verified grid visibility
+    "GRID_INDEX_FORMAT_VERSION",
+    "GridCell",
+    "GridBounds",
+    "DepthLoader",
+    "SceneGridSpec",
+    "GridVisibilityIndex",
+    "compute_grid_bounds",
+    "build_grid_visibility_index",
+    "load_grid_visibility_index",
+    "save_grid_visibility_index",
     # Viewpoint geometry
     "ViewerPose",
     "resolve_viewer_pose",

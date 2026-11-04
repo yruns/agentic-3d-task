@@ -35,6 +35,7 @@ from keyframe.bev.schematic import (
     SchematicBevConfig,
     render_schematic_bev,
 )
+from keyframe.spatial.grid import GridCell, SceneGridSpec
 
 
 @runtime_checkable
@@ -54,6 +55,8 @@ class BevBuilder(Protocol):
         markers: Sequence[BEVMarker],
         output_path: Path,
         highlight_ids: frozenset[int] = frozenset(),
+        highlight_grids: frozenset[GridCell] = frozenset(),
+        grid_spec: SceneGridSpec | None = None,
         use_cache: bool = True,
     ) -> Path:
         """Render (or load cached) the scene BEV and return ``output_path``."""
@@ -118,11 +121,20 @@ class SceneBEVBuilder(ABC):
         markers: Sequence[BEVMarker],
         output_path: Path,
         highlight_ids: frozenset[int] = frozenset(),
+        highlight_grids: frozenset[GridCell] = frozenset(),
+        grid_spec: SceneGridSpec | None = None,
         use_cache: bool = True,
     ) -> Path:
         """Render (or load cached) the scene BEV and return ``output_path``."""
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        cache_path = self._cache_path(scene_id, data_root, markers, highlight_ids)
+        cache_path = self._cache_path(
+            scene_id,
+            data_root,
+            markers,
+            highlight_ids,
+            highlight_grids=highlight_grids,
+            grid_spec=grid_spec,
+        )
         if use_cache and cache_path.exists():
             if cache_path.resolve() != output_path.resolve():
                 output_path.write_bytes(cache_path.read_bytes())
@@ -147,10 +159,14 @@ class SceneBEVBuilder(ABC):
             intrinsic,
             markers,
             highlight_ids=highlight_ids,
+            highlight_grids=highlight_grids,
+            grid_spec=grid_spec,
             config=self.config,
         )
         bgr = cv2.cvtColor(rendered.image, cv2.COLOR_RGB2BGR)
         cv2.imwrite(str(output_path), bgr)
+        view_path = output_path.with_suffix(".view.json")
+        view_path.write_text(json.dumps(rendered.view.to_payload()), encoding="utf-8")
         if use_cache:
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(cache_path), bgr)
@@ -163,12 +179,25 @@ class SceneBEVBuilder(ABC):
         data_root: Path,
         markers: Sequence[BEVMarker],
         highlight_ids: frozenset[int],
+        *,
+        highlight_grids: frozenset[GridCell] = frozenset(),
+        grid_spec: SceneGridSpec | None = None,
     ) -> Path:
-        digest = self._render_hash(markers, highlight_ids)
+        digest = self._render_hash(
+            markers,
+            highlight_ids,
+            highlight_grids=highlight_grids,
+            grid_spec=grid_spec,
+        )
         return data_root / scene_id / "bev_cache" / f"keyframe_bev_{digest}.png"
 
     def _render_hash(
-        self, markers: Sequence[BEVMarker], highlight_ids: frozenset[int]
+        self,
+        markers: Sequence[BEVMarker],
+        highlight_ids: frozenset[int],
+        *,
+        highlight_grids: frozenset[GridCell] = frozenset(),
+        grid_spec: SceneGridSpec | None = None,
     ) -> str:
         marker_sig = sorted(
             (m.obj_id, m.category, tuple(round(v, 4) for v in m.position))
@@ -180,6 +209,8 @@ class SceneBEVBuilder(ABC):
                 self.config.model_dump_json(),
                 repr(marker_sig),
                 repr(sorted(highlight_ids)),
+                repr(sorted(highlight_grids)),
+                grid_spec.model_dump_json() if grid_spec is not None else "none",
             ]
         )
         return hashlib.md5(payload.encode("utf-8")).hexdigest()[:12]
@@ -289,11 +320,20 @@ class OpenEqaSceneBEVBuilder:
         markers: Sequence[BEVMarker],
         output_path: Path,
         highlight_ids: frozenset[int] = frozenset(),
+        highlight_grids: frozenset[GridCell] = frozenset(),
+        grid_spec: SceneGridSpec | None = None,
         use_cache: bool = True,
     ) -> Path:
         """Render (or load cached) the schematic BEV and return ``output_path``."""
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        cache_path = self._cache_path(scene_id, data_root, markers, highlight_ids)
+        cache_path = self._cache_path(
+            scene_id,
+            data_root,
+            markers,
+            highlight_ids,
+            highlight_grids=highlight_grids,
+            grid_spec=grid_spec,
+        )
         if use_cache and cache_path.exists():
             if cache_path.resolve() != output_path.resolve():
                 output_path.write_bytes(cache_path.read_bytes())
@@ -302,7 +342,12 @@ class OpenEqaSceneBEVBuilder:
 
         camera_xy = _load_trajectory_xy(_resolve_trajectory(data_root / scene_id))
         image, view = render_schematic_bev(
-            markers, camera_xy, highlight_ids=highlight_ids, config=self.config
+            markers,
+            camera_xy,
+            highlight_ids=highlight_ids,
+            highlight_grids=highlight_grids,
+            grid_spec=grid_spec,
+            config=self.config,
         )
         bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         tmp_path = output_path.with_name(
@@ -334,12 +379,25 @@ class OpenEqaSceneBEVBuilder:
         data_root: Path,
         markers: Sequence[BEVMarker],
         highlight_ids: frozenset[int],
+        *,
+        highlight_grids: frozenset[GridCell] = frozenset(),
+        grid_spec: SceneGridSpec | None = None,
     ) -> Path:
-        digest = self._render_hash(markers, highlight_ids)
+        digest = self._render_hash(
+            markers,
+            highlight_ids,
+            highlight_grids=highlight_grids,
+            grid_spec=grid_spec,
+        )
         return data_root / scene_id / "bev_cache" / f"schematic_bev_{digest}.png"
 
     def _render_hash(
-        self, markers: Sequence[BEVMarker], highlight_ids: frozenset[int]
+        self,
+        markers: Sequence[BEVMarker],
+        highlight_ids: frozenset[int],
+        *,
+        highlight_grids: frozenset[GridCell] = frozenset(),
+        grid_spec: SceneGridSpec | None = None,
     ) -> str:
         marker_sig = sorted(
             (
@@ -356,6 +414,8 @@ class OpenEqaSceneBEVBuilder:
                 self.config.model_dump_json(),
                 repr(marker_sig),
                 repr(sorted(highlight_ids)),
+                repr(sorted(highlight_grids)),
+                grid_spec.model_dump_json() if grid_spec is not None else "none",
             ]
         )
         return hashlib.md5(payload.encode("utf-8")).hexdigest()[:12]

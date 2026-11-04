@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict
 
 from keyframe.bev.config import RGB
 from keyframe.bev.render import BEVMarker
+from keyframe.spatial.grid import GridCell, SceneGridSpec
 
 #: Smallest footprint half-extent (meters) drawn for an object, so a marker with
 #: a near-zero or missing extent is still visible as a small square.
@@ -49,8 +50,13 @@ class SchematicBevConfig(BaseModel):
 
     background_color: RGB = (245, 245, 245)
     grid: bool = True
-    grid_color: RGB = (228, 228, 228)
+    grid_color: RGB = (210, 218, 230)
     grid_step_m: float = 1.0
+    grid_rows: int = 6
+    grid_cols: int = 6
+    label_grid: bool = True
+    grid_label_color: RGB = (70, 85, 110)
+    grid_highlight_color: RGB = (255, 180, 0)
 
     footprint_fill: RGB = (203, 219, 240)
     footprint_outline: RGB = (60, 96, 150)
@@ -91,6 +97,7 @@ class OrthoBevView(BaseModel):
     scale: float
     width: int
     height: int
+    grid_spec: SceneGridSpec | None = None
 
     def project(self, x: float, y: float) -> tuple[int, int]:
         """Project a world ``(x, y)`` point to integer ``(px, py)`` pixels."""
@@ -98,15 +105,18 @@ class OrthoBevView(BaseModel):
         py = int(round((self.max_y - y) * self.scale))
         return px, py
 
-    def to_payload(self) -> dict[str, float | int]:
+    def to_payload(self) -> dict[str, object]:
         """Return a JSON-ready mapping of the transform parameters."""
-        return {
+        payload: dict[str, object] = {
             "min_x": self.min_x,
             "max_y": self.max_y,
             "scale": self.scale,
             "width": self.width,
             "height": self.height,
         }
+        if self.grid_spec is not None:
+            payload["grid_spec"] = self.grid_spec.to_payload()
+        return payload
 
 
 def render_schematic_bev(
@@ -114,6 +124,8 @@ def render_schematic_bev(
     camera_xy: NDArray[np.float64],
     *,
     highlight_ids: frozenset[int] = frozenset(),
+    highlight_grids: frozenset[GridCell] = frozenset(),
+    grid_spec: SceneGridSpec | None = None,
     config: SchematicBevConfig = DEFAULT_SCHEMATIC_BEV_CONFIG,
 ) -> tuple[NDArray[np.uint8], OrthoBevView]:
     """Render a top-down schematic BEV from object footprints + camera path.
@@ -122,6 +134,9 @@ def render_schematic_bev(
         markers: Objects to draw; ``extent`` (when present) sizes the footprint.
         camera_xy: ``(N, 2)`` world XY camera positions (may be empty).
         highlight_ids: Object ids drawn in the highlight color.
+        highlight_grids: Grid cells ``(row, col)`` drawn with highlighted borders.
+        grid_spec: Explicit 3D grid specification; derived from the view bounds
+            when omitted.
         config: Rendering parameters.
 
     Returns:
@@ -132,13 +147,13 @@ def render_schematic_bev(
         ValueError: If there is no geometry to render (no markers and no poses).
     """
     footprints = [_footprint(marker) for marker in markers]
-    view = _build_view(footprints, camera_xy, config)
+    view = _build_view(footprints, camera_xy, config, grid_spec=grid_spec)
     canvas = np.empty((view.height, view.width, 3), dtype=np.uint8)
     canvas[:] = _bgr(config.background_color)
-    if config.grid:
-        _draw_grid(canvas, view, config)
-    _draw_trajectory(canvas, camera_xy, view, config)
     placed = _draw_footprints(canvas, markers, footprints, view, highlight_ids, config)
+    if config.grid:
+        _draw_grid(canvas, view, highlight_grids, config)
+    _draw_trajectory(canvas, camera_xy, view, config)
     if config.label_objects:
         _draw_labels(canvas, placed, highlight_ids, config)
     rgb: NDArray[np.uint8] = np.asarray(
@@ -167,6 +182,8 @@ def _build_view(
     footprints: Sequence[tuple[float, float, float, float]],
     camera_xy: NDArray[np.float64],
     config: SchematicBevConfig,
+    *,
+    grid_spec: SceneGridSpec | None = None,
 ) -> OrthoBevView:
     xs: list[float] = []
     ys: list[float] = []
@@ -174,8 +191,13 @@ def _build_view(
         xs.extend((xmin, xmax))
         ys.extend((ymin, ymax))
     if camera_xy.size:
-        xs.extend(float(v) for v in camera_xy[:, 0])
-        ys.extend(float(v) for v in camera_xy[:, 1])
+        finite_mask = np.isfinite(camera_xy).all(axis=1)
+        finite_xy = camera_xy[finite_mask]
+        xs.extend(float(v) for v in finite_xy[:, 0])
+        ys.extend(float(v) for v in finite_xy[:, 1])
+    if grid_spec is not None:
+        xs.extend((grid_spec.min_x, grid_spec.max_x))
+        ys.extend((grid_spec.min_y, grid_spec.max_y))
     if not xs or not ys:
         raise ValueError("schematic BEV needs at least one object or camera pose")
 
@@ -191,19 +213,85 @@ def _build_view(
     margin = config.margin_px
     width = int(round(span_x * scale)) + 2 * margin
     height = int(round(span_y * scale)) + 2 * margin
+    view_min_x = min_x - margin / scale
+    view_max_y = max_y + margin / scale
+    resolved_width = max(width, 2 * margin + 1)
+    resolved_height = max(height, 2 * margin + 1)
+
+    resolved_grid = grid_spec
+    if resolved_grid is None and config.grid:
+        g_min_x, g_max_x = min_x, max_x
+        g_min_y, g_max_y = min_y, max_y
+        if g_max_x - g_min_x < 1.0:
+            mid_x = 0.5 * (g_min_x + g_max_x)
+            g_min_x, g_max_x = mid_x - 0.5, mid_x + 0.5
+        if g_max_y - g_min_y < 1.0:
+            mid_y = 0.5 * (g_min_y + g_max_y)
+            g_min_y, g_max_y = mid_y - 0.5, mid_y + 0.5
+        resolved_grid = SceneGridSpec(
+            min_x=g_min_x,
+            max_x=g_max_x,
+            min_y=g_min_y,
+            max_y=g_max_y,
+            rows=config.grid_rows,
+            cols=config.grid_cols,
+        )
+
     return OrthoBevView(
-        min_x=min_x - margin / scale,
-        max_y=max_y + margin / scale,
+        min_x=view_min_x,
+        max_y=view_max_y,
         scale=scale,
-        width=max(width, 2 * margin + 1),
-        height=max(height, 2 * margin + 1),
+        width=resolved_width,
+        height=resolved_height,
+        grid_spec=resolved_grid,
     )
 
 
 def _draw_grid(
-    canvas: NDArray[np.uint8], view: OrthoBevView, config: SchematicBevConfig
+    canvas: NDArray[np.uint8],
+    view: OrthoBevView,
+    highlight_grids: frozenset[GridCell],
+    config: SchematicBevConfig,
 ) -> None:
     color = _bgr(config.grid_color)
+    hl_color = _bgr(config.grid_highlight_color)
+    label_color = _bgr(config.grid_label_color)
+    grid_spec = view.grid_spec
+    if grid_spec is not None:
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        for row in range(grid_spec.rows):
+            for col in range(grid_spec.cols):
+                x_min, y_min, x_max, y_max = grid_spec.cell_to_world_bounds(row, col)
+                tl = view.project(x_min, y_max)
+                br = view.project(x_max, y_min)
+                x0 = max(0, min(view.width - 1, min(tl[0], br[0])))
+                y0 = max(0, min(view.height - 1, min(tl[1], br[1])))
+                x1 = max(0, min(view.width - 1, max(tl[0], br[0])))
+                y1 = max(0, min(view.height - 1, max(tl[1], br[1])))
+                if x1 <= x0 or y1 <= y0:
+                    continue
+                is_hl = (row, col) in highlight_grids
+                cv2.rectangle(
+                    canvas,
+                    (x0, y0),
+                    (x1, y1),
+                    hl_color if is_hl else color,
+                    2 if is_hl else 1,
+                    cv2.LINE_AA,
+                )
+                if config.label_grid and (x1 - x0) >= 24 and (y1 - y0) >= 16:
+                    cv2.putText(
+                        canvas,
+                        f"({row},{col})",
+                        (x0 + 3, y0 + 12),
+                        font,
+                        0.35,
+                        label_color,
+                        1,
+                        cv2.LINE_AA,
+                    )
+        return
+
     step = max(config.grid_step_m, 1e-3)
     x_start = np.floor(view.min_x / step) * step
     x_world = x_start
@@ -232,7 +320,10 @@ def _draw_trajectory(
 ) -> None:
     if not camera_xy.size:
         return
-    pixels = [view.project(float(x), float(y)) for x, y in camera_xy]
+    finite_xy = camera_xy[np.isfinite(camera_xy).all(axis=1)]
+    if not finite_xy.size:
+        return
+    pixels = [view.project(float(x), float(y)) for x, y in finite_xy]
     traj_color = _bgr(config.trajectory_color)
     for start, end in zip(pixels[:-1], pixels[1:]):
         cv2.line(

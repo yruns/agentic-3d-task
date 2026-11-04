@@ -44,7 +44,14 @@ from keyframe.models import (
 )
 from keyframe.parsing import QueryParser, parse_query
 from keyframe.query_executor import QueryExecutor, execute_query
-from keyframe.spatial import RelationResult, SpatialRelationChecker
+from keyframe.spatial import (
+    GridBounds,
+    GridCell,
+    GridVisibilityIndex,
+    RelationResult,
+    SceneGridSpec,
+    SpatialRelationChecker,
+)
 
 __version__ = "0.1.0"
 
@@ -84,6 +91,10 @@ __all__ = [
     "execute_query",
     "SpatialRelationChecker",
     "RelationResult",
+    "GridCell",
+    "GridBounds",
+    "SceneGridSpec",
+    "GridVisibilityIndex",
     # Scene loading + LLM
     "load_scene_objects",
     "LLMClient",

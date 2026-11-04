@@ -27,11 +27,33 @@ operations, e.g. "the pillow on the sofa nearest the door":
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import re
+from collections.abc import Iterable, Mapping, Sequence
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+_GRID_STR_RE = re.compile(r"^\s*\(?[rR]?\s*(\d+)\s*[,;:\s]\s*[cC]?\s*(\d+)\s*\)?\s*$")
+
+
+def _coerce_grid_cell(item: object) -> tuple[int, int]:
+    if isinstance(item, (list, tuple)) and len(item) == 2:
+        r, c = item[0], item[1]
+        if isinstance(r, (int, float)) and isinstance(c, (int, float)):
+            return (int(r), int(c))
+    if isinstance(item, Mapping):
+        r = item.get("row", item.get("r"))
+        c = item.get("col", item.get("c"))
+        if isinstance(r, (int, float)) and isinstance(c, (int, float)):
+            return (int(r), int(c))
+    if isinstance(item, str):
+        match = _GRID_STR_RE.match(item)
+        if match is not None:
+            return (int(match.group(1)), int(match.group(2)))
+    raise ValueError(
+        f"invalid grid coordinate {item!r}; expected [row, col] or {{'row': r, 'col': c}}"
+    )
 
 
 class ConstraintType(str, Enum):
@@ -365,6 +387,26 @@ class GroundingQuery(BaseModel):
         default_factory=list,
         description="Viewpoint contexts referenced by constraints in this query.",
     )
+    target_grids: list[tuple[int, int]] = Field(
+        default_factory=list,
+        description="Optional 0-indexed (row, col) BEV grid coordinates relevant to the query.",
+    )
+
+    @field_validator("target_grids", mode="before")
+    @classmethod
+    def _normalize_target_grids(cls, value: object) -> list[tuple[int, int]]:
+        if value is None:
+            return []
+        if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+            raise ValueError("target_grids must be a list of [row, col] pairs")
+        deduped: list[tuple[int, int]] = []
+        seen: set[tuple[int, int]] = set()
+        for item in value:
+            cell = _coerce_grid_cell(item)
+            if cell not in seen:
+                seen.add(cell)
+                deduped.append(cell)
+        return deduped
 
     def get_all_categories(self) -> list[str]:
         """Every object category mentioned anywhere in the query."""

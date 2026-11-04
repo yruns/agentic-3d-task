@@ -413,5 +413,10 @@ def openeqa_tools_fixture(tmp_path: Path) -> OpenEqaToolsFixture:
     }
     with (conceptgraph / "indices" / "visibility_index.pkl").open("wb") as handle:
         pickle.dump(visibility, handle)
+    from keyframe.keyframe_selector import KeyframeSelector
+
+    KeyframeSelector.build_offline_indices(
+        conceptgraph, dataset="openeqa", overwrite_visibility=False
+    )
 
     return OpenEqaToolsFixture(data_root=data_root, scene_dir=scene_dir)

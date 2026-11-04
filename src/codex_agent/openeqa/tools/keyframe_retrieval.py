@@ -64,6 +64,7 @@ class KeyframeSelectorArgs(BaseModel):
     query: str = Field(min_length=1)
     k: int = Field(default=3, ge=1)
     use_bev: bool = False
+    target_grids: list[tuple[int, int]] = Field(default_factory=list)
     max_image_size: int = Field(default=DEFAULT_MAX_IMAGE_SIZE, ge=64, le=2048)
 
 
@@ -73,9 +74,25 @@ class KeyframeHit:
 
     frame_id: int
     image_path: Path
+    visible_object_ids: tuple[int, ...] = ()
+    covered_grids: tuple[tuple[int, int], ...] = ()
+    grid_bounds: tuple[int, int, int, int] | None = None
+    source: str = ""
 
     def to_payload(self) -> dict[str, Any]:
-        return {"frame_id": self.frame_id, "image_path": str(self.image_path)}
+        payload: dict[str, Any] = {
+            "frame_id": self.frame_id,
+            "image_path": str(self.image_path),
+        }
+        if self.visible_object_ids:
+            payload["visible_object_ids"] = list(self.visible_object_ids)
+        if self.covered_grids:
+            payload["covered_grids"] = [list(c) for c in self.covered_grids]
+        if self.grid_bounds is not None:
+            payload["grid_bounds"] = list(self.grid_bounds)
+        if self.source:
+            payload["source"] = self.source
+        return payload
 
 
 @dataclass(frozen=True)
@@ -85,6 +102,10 @@ class _Candidate:
     frame_id: int
     view_id: int | None
     source_path: Path
+    visible_object_ids: tuple[int, ...] = ()
+    covered_grids: tuple[tuple[int, int], ...] = ()
+    grid_bounds: tuple[int, int, int, int] | None = None
+    source: str = ""
 
 
 @dataclass(frozen=True)
@@ -124,7 +145,13 @@ def keyframe_selector(
 
     selector = build_selector(conceptgraph_dir)
     internal_k = min(_MAX_INTERNAL_K, capped_k + _DIVERSITY_BUFFER)
-    result = _run_selector(selector, args.query, internal_k, use_bev=args.use_bev)
+    result = _run_selector(
+        selector,
+        args.query,
+        internal_k,
+        use_bev=args.use_bev,
+        target_grids=args.target_grids,
+    )
 
     candidates = _candidates_from_result(tool_scene, selector, result)
     fallback = ""
@@ -148,11 +175,23 @@ def keyframe_selector(
     )
 
 
-def _run_selector(selector: Any, query: str, k: int, *, use_bev: bool) -> Any:
+def _run_selector(
+    selector: Any,
+    query: str,
+    k: int,
+    *,
+    use_bev: bool,
+    target_grids: list[tuple[int, int]] | None = None,
+) -> Any:
     try:
-        return selector.select_keyframes_v2(
-            query, k=k, viewpoint_aware=True, use_visual_context=use_bev
-        )
+        kwargs: dict[str, Any] = {
+            "k": k,
+            "viewpoint_aware": True,
+            "use_visual_context": use_bev,
+        }
+        if target_grids:
+            kwargs["target_grids"] = target_grids
+        return selector.select_keyframes_v2(query, **kwargs)
     except Exception as exc:  # re-raised as a recoverable tool error for the agent
         raise ToolInputError(
             f"keyframe_selector failed ({type(exc).__name__}: {exc}); "
@@ -164,7 +203,7 @@ def _candidates_from_result(
     tool_scene: OpenEqaToolScene, selector: Any, result: Any
 ) -> list[_Candidate]:
     """Build ordered candidates from the selector result (paths + view ids)."""
-    view_by_frame = _view_by_frame(result)
+    view_by_frame, mapping_by_frame = _mappings_by_frame(result)
     stride = _stride(selector)
     candidates: list[_Candidate] = []
     seen_ids: set[int] = set()
@@ -177,8 +216,17 @@ def _candidates_from_result(
         view_id = view_by_frame.get(frame_id)
         if view_id is None:
             view_id = frame_id // stride if stride > 0 else None
+        fm = mapping_by_frame.get(frame_id)
         candidates.append(
-            _Candidate(frame_id=frame_id, view_id=view_id, source_path=path)
+            _Candidate(
+                frame_id=frame_id,
+                view_id=view_id,
+                source_path=path,
+                visible_object_ids=tuple(getattr(fm, "visible_object_ids", ()) or ()),
+                covered_grids=tuple(getattr(fm, "covered_grids", ()) or ()),
+                grid_bounds=getattr(fm, "grid_bounds", None),
+                source=str(getattr(fm, "source", "") or ""),
+            )
         )
     return candidates
 
@@ -339,6 +387,10 @@ def _downsize_selected(
                 image_path=downsize_rgb_for_view(
                     cand.source_path, destination, max_size=max_size
                 ),
+                visible_object_ids=cand.visible_object_ids,
+                covered_grids=cand.covered_grids,
+                grid_bounds=cand.grid_bounds,
+                source=cand.source,
             )
         )
     return hits
@@ -361,10 +413,12 @@ def _build_contact_sheet(
 # ----- view/frame mapping + seen-state helpers --------------------------------
 
 
-def _view_by_frame(result: Any) -> dict[int, int]:
+def _mappings_by_frame(result: Any) -> tuple[dict[int, int], dict[int, Any]]:
     metadata = getattr(result, "metadata", None)
     mappings = getattr(metadata, "frame_mappings", []) if metadata is not None else []
-    return {fm.resolved_frame_id: fm.resolved_view_id for fm in mappings}
+    view_by_frame = {fm.resolved_frame_id: fm.resolved_view_id for fm in mappings}
+    mapping_by_frame = {fm.resolved_frame_id: fm for fm in mappings}
+    return view_by_frame, mapping_by_frame
 
 
 def _stride(selector: Any) -> int:

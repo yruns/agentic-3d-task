@@ -54,11 +54,13 @@ class QueryParser:
         *,
         model: str | None = None,
         temperature: float = 0.0,
+        grid_context: str = "",
     ) -> None:
         self.scene_categories = list(scene_categories)
         self._client = llm_client
         self._model = model or llm_client.config.default_model
         self._temperature = temperature
+        self.grid_context = grid_context.strip()
 
     @property
     def model(self) -> str:
@@ -161,9 +163,13 @@ class QueryParser:
 
     def _build_prompt(self, query: str) -> str:
         categories = ", ".join(sorted(set(self.scene_categories)))
+        grid_section = (
+            f"SCENE GRID LAYOUT:\n{self.grid_context}\n\n" if self.grid_context else ""
+        )
         return (
             f"{get_system_prompt()}\n\n"
             f"SCENE CATEGORIES: [{categories}]\n\n"
+            f"{grid_section}"
             f"{get_few_shot_examples()}\n\n"
             f'Now parse this query:\nQuery: "{query}"\n\n'
             "Return ONLY the JSON object matching the HypothesisOutputV1 schema."
@@ -207,6 +213,9 @@ def parse_query(
     llm_client: LLMClient,
     *,
     model: str | None = None,
+    grid_context: str = "",
 ) -> HypothesisOutputV1:
     """Convenience wrapper: build a parser and parse a single query."""
-    return QueryParser(scene_categories, llm_client, model=model).parse(query)
+    return QueryParser(
+        scene_categories, llm_client, model=model, grid_context=grid_context
+    ).parse(query)
