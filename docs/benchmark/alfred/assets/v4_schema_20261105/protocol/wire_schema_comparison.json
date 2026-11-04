@@ -1,0 +1,17 @@
+{
+  "source_head": "f3f9da0f0dae8ecc7ff35f9910c9ef7aaf3ead2e",
+  "source_policy_sha256": "24cc564aa754e79bcbabc86668304981d040a92a3a330f462d2f871942ab59f5",
+  "wire_schema_sha256": "53b0a9383168505d6544388d27314e0eccdbc30c0f0efbd9269eb166c0dc08d6",
+  "pydantic_schema_sha256": "53b0a9383168505d6544388d27314e0eccdbc30c0f0efbd9269eb166c0dc08d6",
+  "schemas_equal": true,
+  "audited_tool_counts": [
+    0,
+    0
+  ],
+  "local_route": "native Responses; relay retained request body bytes; SDK schema equals Pydantic schema",
+  "adapter_source_evidence": {
+    "src/codex_adapter/application/gateway.py": "Responses branch forwards request.envelope.raw",
+    "src/codex_adapter/infrastructure/http_transport.py": "HTTP request uses content=payload"
+  },
+  "remote_implementation": "not inspected; cause inferred from controlled observed schema variants"
+}

@@ -144,7 +144,7 @@ class _FakeRuntime:
         decision = AlfredDecision.model_validate(
             {
                 "command": (
-                    {"kind": "motion", "action": "MoveAhead", "repeat": 2}
+                    {"kind": "motion", "motion_action": "MoveAhead", "repeat": 2}
                     if action
                     else {"kind": "stop"}
                 ),
@@ -156,7 +156,7 @@ class _FakeRuntime:
             task_name=task.task_name,
             outcome=cast(OutcomeT, decision),
             turn=CodexTurnResult(
-                final_response=decision.model_dump_json(),
+                final_response=decision.to_wire().model_dump_json(),
                 metadata=CodexTurnMetadata(input_tokens=12),
             ),
         )

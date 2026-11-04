@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -33,8 +33,38 @@ InteractionAction = Literal[
     "SliceObject",
 ]
 PrimitiveAction = MotionAction | InteractionAction
+WireOperation = Literal[
+    "MoveAhead",
+    "RotateLeft",
+    "RotateRight",
+    "LookUp",
+    "LookDown",
+    "PickupObject",
+    "PutObject",
+    "OpenObject",
+    "CloseObject",
+    "ToggleObjectOn",
+    "ToggleObjectOff",
+    "SliceObject",
+    "NavigateObject",
+    "NavigateCell",
+    "RetrieveObject",
+    "RetrieveCell",
+    "Stop",
+]
 NAVIGATION_ACTIONS = frozenset(
     {"MoveAhead", "RotateLeft", "RotateRight", "LookUp", "LookDown"}
+)
+INTERACTION_ACTIONS = frozenset(
+    {
+        "PickupObject",
+        "PutObject",
+        "OpenObject",
+        "CloseObject",
+        "ToggleObjectOn",
+        "ToggleObjectOff",
+        "SliceObject",
+    }
 )
 
 
@@ -62,7 +92,7 @@ class MotionCommand(_DecisionModel):
     """Execute a bounded sequence of one navigation primitive."""
 
     kind: Literal["motion"]
-    action: MotionAction
+    motion_action: MotionAction
     repeat: int = Field(ge=1, le=8)
 
 
@@ -70,7 +100,7 @@ class InteractionCommand(_DecisionModel):
     """Interact once using the target instance's current image mask."""
 
     kind: Literal["interact"]
-    action: InteractionAction
+    interaction_action: InteractionAction
     target: ObjectTarget
 
 
@@ -95,12 +125,11 @@ class StopCommand(_DecisionModel):
 
 
 class AlfredDecision(_DecisionModel):
-    """A command whose valid combinations are expressed in its wire JSON schema.
+    """Internal typed command used by execution; never the upstream wire schema.
 
-    Nested unions keep the schema root an object and expose all action/target
-    constraints to structured generation. The executor properties preserve its
-    existing dispatch interface without accepting or prioritizing contradictory
-    fields from the previous flat response format.
+    Conversion from :class:`AlfredWireDecision` selects one command and target
+    explicitly. These nested domain types protect the executor from invalid
+    combinations without depending on upstream support for schema unions.
     """
 
     command: (
@@ -123,8 +152,10 @@ class AlfredDecision(_DecisionModel):
     @property
     def action(self) -> PrimitiveAction | None:
         """Return a simulator primitive only for motion/interaction commands."""
-        if isinstance(self.command, (MotionCommand, InteractionCommand)):
-            return self.command.action
+        if isinstance(self.command, MotionCommand):
+            return self.command.motion_action
+        if isinstance(self.command, InteractionCommand):
+            return self.command.interaction_action
         return None
 
     @property
@@ -150,6 +181,105 @@ class AlfredDecision(_DecisionModel):
         """Only motion commands can request repeated primitives."""
         return self.command.repeat if isinstance(self.command, MotionCommand) else 1
 
+    def to_wire(self) -> AlfredWireDecision:
+        """Encode one command with canonical zeros for unused scalar parameters."""
+        operation: WireOperation
+        if isinstance(self.command, MotionCommand):
+            operation = self.command.motion_action
+        elif isinstance(self.command, InteractionCommand):
+            operation = self.command.interaction_action
+        elif isinstance(self.command, NavigateCommand):
+            operation = (
+                "NavigateObject"
+                if isinstance(self.command.target, ObjectTarget)
+                else "NavigateCell"
+            )
+        elif isinstance(self.command, RetrieveCommand):
+            operation = (
+                "RetrieveObject"
+                if isinstance(self.command.target, ObjectTarget)
+                else "RetrieveCell"
+            )
+        else:
+            operation = "Stop"
+        cell = self.cell
+        return AlfredWireDecision(
+            operation=operation,
+            object_id=self.object_id if self.object_id is not None else 0,
+            cell_x=cell[0] if cell is not None else 0,
+            cell_y=cell[1] if cell is not None else 0,
+            repeat=self.repeat,
+            rationale=self.rationale,
+            memory_note=self.memory_note,
+        )
+
+
+class AlfredWireDecision(_DecisionModel):
+    """Flat scalar wire contract for the registered provider's constrained decoder.
+
+    ``operation`` alone selects the applicable parameters. Object operations
+    consume object_id; cell operations consume cell_x/cell_y; motion operations
+    consume repeat. Other parameter values have no effect by this contract.
+    There are no nullable values, unions, references or const schema keywords.
+    """
+
+    operation: WireOperation
+    object_id: int = Field(ge=0)
+    cell_x: int
+    cell_y: int
+    repeat: int = Field(ge=1, le=8)
+    rationale: str = Field(min_length=1, max_length=1600)
+    memory_note: str = Field(max_length=2400)
+
+    def to_decision(self) -> AlfredDecision:
+        """Select exactly one domain command according to the declared operation."""
+        command: (
+            MotionCommand
+            | InteractionCommand
+            | NavigateCommand
+            | RetrieveCommand
+            | StopCommand
+        )
+        if self.operation in NAVIGATION_ACTIONS:
+            command = MotionCommand(
+                kind="motion",
+                motion_action=cast(MotionAction, self.operation),
+                repeat=self.repeat,
+            )
+        elif self.operation in INTERACTION_ACTIONS:
+            command = InteractionCommand(
+                kind="interact",
+                interaction_action=cast(InteractionAction, self.operation),
+                target=ObjectTarget(type="object", object_id=self.object_id),
+            )
+        elif self.operation == "NavigateObject":
+            command = NavigateCommand(
+                kind="navigate",
+                target=ObjectTarget(type="object", object_id=self.object_id),
+            )
+        elif self.operation == "NavigateCell":
+            command = NavigateCommand(
+                kind="navigate",
+                target=CellTarget(type="cell", cell=[self.cell_x, self.cell_y]),
+            )
+        elif self.operation == "RetrieveObject":
+            command = RetrieveCommand(
+                kind="retrieve",
+                target=ObjectTarget(type="object", object_id=self.object_id),
+            )
+        elif self.operation == "RetrieveCell":
+            command = RetrieveCommand(
+                kind="retrieve",
+                target=CellTarget(type="cell", cell=[self.cell_x, self.cell_y]),
+            )
+        elif self.operation == "Stop":
+            command = StopCommand(kind="stop")
+        else:
+            raise ValueError(f"unsupported ALFRED wire operation: {self.operation!r}")
+        return AlfredDecision(
+            command=command, rationale=self.rationale, memory_note=self.memory_note
+        )
+
 
 _PLAYBOOK = """You control an embodied ALFRED agent. Use only the supplied language,
 images, observed scene memory and action feedback. Detection labels and depth are
@@ -160,10 +290,14 @@ views (with frame identifiers). Historical images cannot supply a current mask.
 MoveAhead moves 0.25 m. RotateLeft/Right turn 90 degrees. LookUp/Down adjust pitch
 15 degrees. Positive camera horizon looks down. Repeat allows up to 8 navigation
 primitives; execution stops early on failure and updates memory at EVERY step.
-Choose exactly one command: motion (action, repeat), interact (action, object
-target), navigate (one target), retrieve (one target), or stop. A target is either
-{type:"object",object_id:N} or {type:"cell",cell:[x,y]}, never both. Only motion
-has repeat; interaction executes once. Do not include unused or null fields.
+Return flat JSON with operation, object_id, cell_x, cell_y, repeat, rationale,
+and memory_note. operation is one native action name, NavigateObject, NavigateCell,
+RetrieveObject, RetrieveCell, or Stop. Native interactions and *Object operations
+use object_id; *Cell operations use cell_x/cell_y. Motion actions alone use repeat;
+every other operation executes once. Set unused object/cell parameters to 0 and
+unused repeat to 1. The operation explicitly selects which parameters apply.
+Example: {"operation":"RotateLeft","object_id":0,"cell_x":0,"cell_y":0,
+"repeat":1,"rationale":"Inspect the left side","memory_note":"Continue search"}.
 For interactions use object_id from the CURRENT visible detections. A predicted
 mask from this exact pose is supplied to the official interaction interface.
 PutObject targets the destination receptacle, not the held item. Pick up a knife
@@ -210,13 +344,15 @@ class AlfredPolicyTask:
                 ensure_ascii=False,
                 allow_nan=False,
             ),
-            output_schema=AlfredDecision.model_json_schema(),
+            output_schema=AlfredWireDecision.model_json_schema(),
             image_paths=self.image_paths,
         )
 
     def parse_response(self, response_text: str) -> AlfredDecision:
         try:
-            return AlfredDecision.model_validate(extract_json_object(response_text))
+            return AlfredWireDecision.model_validate(
+                extract_json_object(response_text)
+            ).to_decision()
         except (ValueError, ValidationError) as exc:
             raise CodexResponseError(f"invalid ALFRED decision: {exc}") from exc
 

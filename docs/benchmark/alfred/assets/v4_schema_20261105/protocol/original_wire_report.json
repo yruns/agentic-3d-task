@@ -1,0 +1,47 @@
+{
+  "decision": {
+    "command": {
+      "kind": "stop"
+    },
+    "rationale": "Protocol test",
+    "memory_note": "Motion"
+  },
+  "metadata": {
+    "turn_id": "01a1a7c1-960e-7542-97e1-b8307defdb9c",
+    "status": "completed",
+    "duration_ms": 3725,
+    "usage": {
+      "last": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 2786,
+        "output_tokens": 43,
+        "reasoning_output_tokens": 12,
+        "total_tokens": 2829
+      },
+      "total": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 2786,
+        "output_tokens": 43,
+        "reasoning_output_tokens": 12,
+        "total_tokens": 2829
+      }
+    },
+    "input_tokens": 2786,
+    "cached_input_tokens": 0,
+    "reasoning_summary": null,
+    "run_home": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/actor_audit_home/runs/19e0baae9f4749149003eaa1161f89ec",
+    "attempts": [
+      {
+        "turn_id": "01a1a7c1-960e-7542-97e1-b8307defdb9c",
+        "status": "completed",
+        "duration_ms": 3725,
+        "has_final_response": true,
+        "adapter_session_id": "ed1fc321-5673-4b5b-a408-0b906912d55e"
+      }
+    ]
+  },
+  "kind": "unscored synthetic SDK structured-output and tool-isolation check",
+  "source_status": "uncommitted development code; not a benchmark evaluation"
+}

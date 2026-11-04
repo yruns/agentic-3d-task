@@ -1,0 +1,69 @@
+{
+  "command_name": "navigate_cell",
+  "expected": {
+    "command": {
+      "kind": "navigate",
+      "target": {
+        "type": "cell",
+        "cell": [
+          2,
+          -1
+        ]
+      }
+    },
+    "rationale": "Protocol test",
+    "memory_note": "navigate_cell"
+  },
+  "actual": {
+    "command": {
+      "kind": "navigate",
+      "target": {
+        "cell": [
+          2,
+          -1
+        ],
+        "type": "cell"
+      }
+    },
+    "memory_note": "navigate_cell",
+    "rationale": "Protocol test"
+  },
+  "command_matches": true,
+  "metadata": {
+    "turn_id": "01a1a7c5-0e32-7610-88b8-78b066f46757",
+    "status": "completed",
+    "duration_ms": 4991,
+    "usage": {
+      "last": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 2295,
+        "output_tokens": 54,
+        "reasoning_output_tokens": 10,
+        "total_tokens": 2349
+      },
+      "total": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 2295,
+        "output_tokens": 54,
+        "reasoning_output_tokens": 10,
+        "total_tokens": 2349
+      }
+    },
+    "input_tokens": 2295,
+    "cached_input_tokens": 0,
+    "reasoning_summary": null,
+    "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/63aa0d5dd458447288fd0b539090c5ac",
+    "attempts": [
+      {
+        "turn_id": "01a1a7c5-0e32-7610-88b8-78b066f46757",
+        "status": "completed",
+        "duration_ms": 4991,
+        "has_final_response": true,
+        "adapter_session_id": "345528e5-784e-4875-88e4-4a71eaf471f3"
+      }
+    ]
+  },
+  "parsed_action": null
+}

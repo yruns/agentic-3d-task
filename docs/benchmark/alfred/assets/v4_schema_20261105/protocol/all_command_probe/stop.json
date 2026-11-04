@@ -1,0 +1,55 @@
+{
+  "command_name": "stop",
+  "expected": {
+    "command": {
+      "kind": "stop"
+    },
+    "rationale": "Protocol test",
+    "memory_note": "stop"
+  },
+  "actual": {
+    "command": {
+      "kind": "stop"
+    },
+    "memory_note": "stop",
+    "rationale": "Protocol test"
+  },
+  "command_matches": true,
+  "metadata": {
+    "turn_id": "01a1a7c5-2318-7fd2-a2c3-c96220580784",
+    "status": "completed",
+    "duration_ms": 2086,
+    "usage": {
+      "last": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 2275,
+        "output_tokens": 40,
+        "reasoning_output_tokens": 9,
+        "total_tokens": 2315
+      },
+      "total": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 2275,
+        "output_tokens": 40,
+        "reasoning_output_tokens": 9,
+        "total_tokens": 2315
+      }
+    },
+    "input_tokens": 2275,
+    "cached_input_tokens": 0,
+    "reasoning_summary": null,
+    "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/81d1c54fa85f4e2eaecd171d6707fea8",
+    "attempts": [
+      {
+        "turn_id": "01a1a7c5-2318-7fd2-a2c3-c96220580784",
+        "status": "completed",
+        "duration_ms": 2086,
+        "has_final_response": true,
+        "adapter_session_id": "783a2c17-fc17-4649-a96d-00f3651e129e"
+      }
+    ]
+  },
+  "parsed_action": null
+}

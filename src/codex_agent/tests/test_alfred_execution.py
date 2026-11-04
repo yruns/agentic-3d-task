@@ -124,7 +124,7 @@ class FakeRuntime:
         assert isinstance(task, AlfredPolicyTask)
         self.tasks.append(task)
         decision = next(self.decisions)
-        response = decision.model_dump_json()
+        response = decision.to_wire().model_dump_json()
         return CodexTaskResult(
             task_name=task.task_name,
             outcome=task.parse_response(response),
@@ -189,7 +189,7 @@ def test_repeated_actions_integrate_every_intermediate_observation(
     executor = _executor(
         tmp_path,
         [
-            _decision({"kind": "motion", "action": "MoveAhead", "repeat": 3}),
+            _decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 3}),
             _decision(),
         ],
     )
@@ -209,11 +209,11 @@ def test_interaction_uses_reobserved_mask_after_movement(tmp_path: Path) -> None
     executor = _executor(
         tmp_path,
         [
-            _decision({"kind": "motion", "action": "MoveAhead", "repeat": 1}),
+            _decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 1}),
             _decision(
                 {
                     "kind": "interact",
-                    "action": "PickupObject",
+                    "interaction_action": "PickupObject",
                     "target": {"type": "object", "object_id": 0},
                 }
             ),
@@ -245,11 +245,11 @@ def test_historical_target_without_current_mask_cannot_be_interacted_with(
     executor = _executor(
         tmp_path,
         [
-            _decision({"kind": "motion", "action": "MoveAhead", "repeat": 1}),
+            _decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 1}),
             _decision(
                 {
                     "kind": "interact",
-                    "action": "PickupObject",
+                    "interaction_action": "PickupObject",
                     "target": {"type": "object", "object_id": 0},
                 }
             ),
@@ -285,7 +285,7 @@ def test_stop_uses_no_simulator_action_and_actor_never_reads_terminal_truth(
 def test_action_budget_interrupts_repeat_before_extra_step(tmp_path: Path) -> None:
     executor = _executor(
         tmp_path,
-        [_decision({"kind": "motion", "action": "MoveAhead", "repeat": 8})],
+        [_decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 8})],
         config=ExecutionConfig(max_actions=2),
     )
     outcome = _run(executor)
@@ -299,7 +299,7 @@ def test_failure_budget_stops_repetition_and_preserves_failed_observation(
 ) -> None:
     executor = _executor(
         tmp_path,
-        [_decision({"kind": "motion", "action": "MoveAhead", "repeat": 8})],
+        [_decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 8})],
         config=ExecutionConfig(max_failures=1),
         successes=[False],
     )
@@ -316,7 +316,7 @@ def test_failed_westward_move_marks_attempted_cell_without_float_drift(
 ) -> None:
     executor = _executor(
         tmp_path,
-        [_decision({"kind": "motion", "action": "MoveAhead", "repeat": 1})],
+        [_decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 1})],
         config=ExecutionConfig(max_failures=1),
         successes=[False],
         yaw_degrees=270.0,
@@ -330,7 +330,7 @@ def test_action_budget_reached_on_last_decision_reports_action_limit(
 ) -> None:
     executor = _executor(
         tmp_path,
-        [_decision({"kind": "motion", "action": "MoveAhead", "repeat": 8})],
+        [_decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 8})],
         config=ExecutionConfig(max_actions=1, max_decisions=1),
     )
     outcome = _run(executor)
@@ -342,7 +342,7 @@ def test_retrieval_uses_only_seen_frames_and_does_not_move(tmp_path: Path) -> No
     executor = _executor(
         tmp_path,
         [
-            _decision({"kind": "motion", "action": "MoveAhead", "repeat": 1}),
+            _decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 1}),
             _decision(
                 {"kind": "retrieve", "target": {"type": "object", "object_id": 0}}
             ),
@@ -383,7 +383,11 @@ def test_retrieval_does_not_duplicate_the_current_rgb_attachment(
 def test_repeated_retrieval_waits_for_new_observations_without_forcing_actions(
     tmp_path: Path,
 ) -> None:
-    move: dict[str, object] = {"kind": "motion", "action": "MoveAhead", "repeat": 1}
+    move: dict[str, object] = {
+        "kind": "motion",
+        "motion_action": "MoveAhead",
+        "repeat": 1,
+    }
     retrieve: dict[str, object] = {
         "kind": "retrieve",
         "target": {"type": "object", "object_id": 0},

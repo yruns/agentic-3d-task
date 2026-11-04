@@ -9,7 +9,11 @@ from pydantic import ValidationError
 
 from codex_agent.alfred.dataset import AlfredInstruction
 from codex_agent.alfred.odometry import ActionOdometry, camera_intrinsics
-from codex_agent.alfred.policy import AlfredDecision, AlfredPolicyTask
+from codex_agent.alfred.policy import (
+    AlfredDecision,
+    AlfredPolicyTask,
+    AlfredWireDecision,
+)
 
 
 def _decision(command: dict[str, object]) -> AlfredDecision:
@@ -22,13 +26,13 @@ def _decision(command: dict[str, object]) -> AlfredDecision:
     "command,expected",
     [
         (
-            {"kind": "motion", "action": "MoveAhead", "repeat": 3},
+            {"kind": "motion", "motion_action": "MoveAhead", "repeat": 3},
             ("act", "MoveAhead", None, None, 3),
         ),
         (
             {
                 "kind": "interact",
-                "action": "PickupObject",
+                "interaction_action": "PickupObject",
                 "target": {"type": "object", "object_id": 2},
             },
             ("act", "PickupObject", 2, None, 1),
@@ -63,6 +67,7 @@ def test_commands_preserve_executor_interface(
         decision.cell,
         decision.repeat,
     ) == expected
+    assert decision.to_wire().to_decision() == decision
 
 
 @pytest.mark.parametrize(
@@ -70,24 +75,24 @@ def test_commands_preserve_executor_interface(
     [
         {
             "kind": "interact",
-            "action": "PickupObject",
+            "interaction_action": "PickupObject",
             "target": {"type": "object", "object_id": 2},
             "repeat": 2,
         },
         {
             "kind": "motion",
-            "action": "MoveAhead",
+            "motion_action": "MoveAhead",
             "target": {"type": "object", "object_id": 2},
             "repeat": 1,
         },
         {
             "kind": "interact",
-            "action": "MoveAhead",
+            "interaction_action": "MoveAhead",
             "target": {"type": "object", "object_id": 2},
         },
         {
             "kind": "interact",
-            "action": "PickupObject",
+            "interaction_action": "PickupObject",
             "target": {"type": "cell", "cell": [1, 2]},
         },
         {
@@ -123,7 +128,7 @@ def test_real_dual_target_navigation_failure_is_not_silently_reinterpreted() -> 
         AlfredDecision.model_validate(failed_response)
 
 
-def test_wire_schema_encodes_mutual_exclusion_without_hidden_cross_field_rules() -> (
+def test_domain_schema_encodes_mutual_exclusion_without_hidden_cross_field_rules() -> (
     None
 ):
     schema = AlfredDecision.model_json_schema()
@@ -139,6 +144,146 @@ def test_wire_schema_encodes_mutual_exclusion_without_hidden_cross_field_rules()
     encoded = json.dumps(schema)
     for unsupported in ("prefixItems", "discriminator", "oneOf", "if", "then"):
         assert f'"{unsupported}":' not in encoded
+
+
+def test_action_field_names_do_not_collide_across_union_branches() -> None:
+    definitions = AlfredDecision.model_json_schema()["$defs"]
+    motion = definitions["MotionCommand"]["properties"]
+    interaction = definitions["InteractionCommand"]["properties"]
+    assert "action" not in motion and "action" not in interaction
+    assert "interaction_action" not in motion
+    assert "motion_action" not in interaction
+    assert set(motion["motion_action"]["enum"]) == {
+        "MoveAhead",
+        "RotateLeft",
+        "RotateRight",
+        "LookUp",
+        "LookDown",
+    }
+    assert set(motion["motion_action"]["enum"]).isdisjoint(
+        interaction["interaction_action"]["enum"]
+    )
+
+
+def test_legacy_shared_action_field_is_not_silently_translated() -> None:
+    with pytest.raises(ValidationError):
+        _decision({"kind": "motion", "action": "RotateLeft", "repeat": 1})
+
+
+def _wire(**updates: object) -> AlfredWireDecision:
+    return AlfredWireDecision.model_validate(
+        {
+            "operation": "Stop",
+            "object_id": 0,
+            "cell_x": 0,
+            "cell_y": 0,
+            "repeat": 1,
+            "rationale": "Protocol test",
+            "memory_note": "Test",
+            **updates,
+        }
+    )
+
+
+def test_actor_wire_schema_is_flat_and_has_no_union_or_reference_keywords(
+    tmp_path: Path,
+) -> None:
+    task = AlfredPolicyTask(AlfredInstruction("Test", ()), {}, ())
+    schema = dict(task.build_turn_request().output_schema)
+    assert schema == AlfredWireDecision.model_json_schema()
+    assert schema["type"] == "object"
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == set(schema["properties"])
+    assert len(schema["properties"]["operation"]["enum"]) == 17
+    for field in schema["properties"].values():
+        assert field["type"] in {"string", "integer"}
+    encoded = json.dumps(schema)
+    for unsupported in ("anyOf", "oneOf", "$ref", "$defs", "const"):
+        assert f'"{unsupported}":' not in encoded
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        "MoveAhead",
+        "RotateLeft",
+        "RotateRight",
+        "LookUp",
+        "LookDown",
+        "PickupObject",
+        "PutObject",
+        "OpenObject",
+        "CloseObject",
+        "ToggleObjectOn",
+        "ToggleObjectOff",
+        "SliceObject",
+        "NavigateObject",
+        "NavigateCell",
+        "RetrieveObject",
+        "RetrieveCell",
+        "Stop",
+    ],
+)
+def test_all_wire_operations_round_trip_without_changing_selected_command(
+    operation: str,
+) -> None:
+    wire = _wire(operation=operation, object_id=22, cell_x=5, cell_y=-5, repeat=3)
+    decision = wire.to_decision()
+    canonical = decision.to_wire()
+    assert canonical.operation == operation
+    assert canonical.to_decision() == decision
+    assert canonical.rationale == wire.rationale
+    assert canonical.memory_note == wire.memory_note
+
+
+@pytest.mark.parametrize(
+    "operation,expected",
+    [
+        ("NavigateObject", ("navigate", None, 22, None, 1)),
+        ("NavigateCell", ("navigate", None, None, [5, -5], 1)),
+        ("RetrieveObject", ("retrieve", None, 22, None, 1)),
+        ("RetrieveCell", ("retrieve", None, None, [5, -5], 1)),
+        ("PickupObject", ("act", "PickupObject", 22, None, 1)),
+        ("RotateLeft", ("act", "RotateLeft", None, None, 7)),
+        ("Stop", ("stop", None, None, None, 1)),
+    ],
+)
+def test_operation_explicitly_selects_parameters_and_ignores_unused_fields(
+    operation: str, expected: tuple[object, ...]
+) -> None:
+    decision = _wire(
+        operation=operation, object_id=22, cell_x=5, cell_y=-5, repeat=7
+    ).to_decision()
+    assert (
+        decision.kind,
+        decision.action,
+        decision.object_id,
+        decision.cell,
+        decision.repeat,
+    ) == expected
+    canonical = decision.to_wire()
+    if decision.object_id is None:
+        assert canonical.object_id == 0
+    if decision.cell is None:
+        assert (canonical.cell_x, canonical.cell_y) == (0, 0)
+
+
+@pytest.mark.parametrize(
+    "updates",
+    [
+        {"operation": "act"},
+        {"object_id": True},
+        {"cell_x": 1.5},
+        {"repeat": "2"},
+        {"repeat": 0},
+        {"repeat": 9},
+    ],
+)
+def test_flat_wire_rejects_unknown_operations_and_value_coercion(
+    updates: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        _wire(**updates)
 
 
 @pytest.mark.parametrize(
@@ -166,15 +311,8 @@ def test_policy_uses_only_language_and_supplied_observations(tmp_path: Path) -> 
     assert "Put a mug away" in request.prompt
     assert "Private step" not in request.prompt
     assert "traj_data" not in request.prompt
-    assert task.is_valid_response(
-        json.dumps(
-            {
-                "command": {"kind": "stop"},
-                "rationale": "done",
-                "memory_note": "",
-            }
-        )
-    )
+    assert task.is_valid_response(_wire().model_dump_json())
+    assert not task.is_valid_response(_decision({"kind": "stop"}).model_dump_json())
     assert not task.is_valid_response('{"kind":"stop"}')
 
 

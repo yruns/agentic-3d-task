@@ -1,0 +1,10 @@
+{
+  "stop_reason": "policy_stop",
+  "actions": 0,
+  "failures": 0,
+  "decisions": 3,
+  "input_tokens": 13545,
+  "output_tokens": 1647,
+  "perception_seconds": 2.8624428026378155,
+  "policy_seconds": 43.22883368656039
+}

@@ -63,8 +63,11 @@ task-level effectiveness.
 Actor retrieval excludes the attached current frame and historical frames
 already returned in the episode. Exhausted evidence produces an explicit
 request to obtain a new observation, without substituting an automatic action.
-The decision schema uses nested command alternatives and a single object or
-grid target, so contradictory target fields cannot be generated together.
+The internal command selects one object or grid target. Its provider wire
+format uses one explicit operation enum and required scalar parameters; the
+operation determines which parameters apply. This avoids the configured
+provider's demonstrated problems with nested schema alternatives, while
+retaining typed internal commands and the original raw response for audit.
 
 Perception imports the published [FILM architectures](https://github.com/soyeonm/FILM)
 from the external checkout, rather than vendoring their implementation. It uses
