@@ -1,0 +1,89 @@
+{
+  "id": "01a1a162-123b-7be3-b8a9-3bc3cf1b89b0",
+  "status": "completed",
+  "error": null,
+  "started_at": 1793708921,
+  "completed_at": 1793708926,
+  "duration_ms": 4776,
+  "final_response": "```json\n{\n  \"marker\": \"context-bcf1a1eb15ab\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-80b1f4be8ba4\",\n  \"beta_receipt\": \"receipt-7c605eda8df3\"\n}\n```",
+  "items": [
+    {
+      "clientId": null,
+      "content": [
+        {
+          "text": "Verify by calling lookup_record for alpha exactly once more, wait for its result, then repeat the SAME JSON using the ORIGINAL marker, sum, alpha_receipt and beta_receipt from our conversation. Use no other tools.",
+          "text_elements": [],
+          "type": "text"
+        }
+      ],
+      "id": "01a1a162-1244-74f0-95b9-d79cb087eb30",
+      "type": "userMessage"
+    },
+    {
+      "content": [],
+      "id": "rs_10ebf79a2cd1af1483352638",
+      "summary": [],
+      "type": "reasoning"
+    },
+    {
+      "arguments": {
+        "name": "alpha"
+      },
+      "contentItems": [
+        {
+          "text": "{\"name\": \"alpha\", \"value\": 137, \"receipt\": \"receipt-80b1f4be8ba4\"}",
+          "type": "inputText"
+        }
+      ],
+      "durationMs": 2,
+      "id": "call_a6a5204fe0e2f72d94e44ea9900d2cd3_0",
+      "namespace": null,
+      "status": "completed",
+      "success": true,
+      "tool": "lookup_record",
+      "type": "dynamicToolCall"
+    },
+    {
+      "content": [],
+      "id": "rs_7bbf2e5bac28bfc63065ab4e",
+      "summary": [],
+      "type": "reasoning"
+    },
+    {
+      "delivery": null,
+      "id": "msg_1f883d6293f4941bc3c54c30",
+      "memoryCitation": null,
+      "phase": null,
+      "questions": null,
+      "text": "```json\n{\n  \"marker\": \"context-bcf1a1eb15ab\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-80b1f4be8ba4\",\n  \"beta_receipt\": \"receipt-7c605eda8df3\"\n}\n```",
+      "type": "agentMessage"
+    }
+  ],
+  "usage": {
+    "last": {
+      "cacheWriteInputTokens": 0,
+      "cachedInputTokens": 0,
+      "inputTokens": 795,
+      "outputTokens": 83,
+      "reasoningOutputTokens": 6,
+      "totalTokens": 878
+    },
+    "modelContextWindow": null,
+    "total": {
+      "cacheWriteInputTokens": 0,
+      "cachedInputTokens": 0,
+      "inputTokens": 2648,
+      "outputTokens": 507,
+      "reasoningOutputTokens": 305,
+      "totalTokens": 3155
+    }
+  },
+  "answer": {
+    "marker": "context-bcf1a1eb15ab",
+    "sum": 348,
+    "alpha_receipt": "receipt-80b1f4be8ba4",
+    "beta_receipt": "receipt-7c605eda8df3"
+  },
+  "answer_format": "markdown_json",
+  "answer_matches_expected": true
+}

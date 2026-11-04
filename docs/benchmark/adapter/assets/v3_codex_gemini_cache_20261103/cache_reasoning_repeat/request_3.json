@@ -1,0 +1,44 @@
+{
+  "label": "full_state_repeat_2",
+  "headers": {
+    "Content-Type": "application/json",
+    "X-TT-LOGID": "gemini_cache_20261103_d7e66e673a10_3",
+    "extra": "{\"session_id\": \"gemini_cache_20261103_d7e66e673a10\", \"chat_run_id\": \"gemini_cache_20261103_d7e66e673a10\", \"source\": \"cache_diagnostic\"}"
+  },
+  "body": {
+    "model": "gemini-3.8-flash",
+    "stream": false,
+    "max_tokens": 128,
+    "messages": [
+      {
+        "role": "user",
+        "content": "Solve the base-10 alphametic CROSS + ROADS = DANGER. Different letters are different digits; leading letters are nonzero. Do not assume a memorized answer: check column constraints and verify the solution carefully internally. Use no tools or code. Output only one valid digit mapping and its arithmetic check, with no reasoning text."
+      },
+      {
+        "role": "assistant",
+        "content": "C = 9, R = 6, O = 2, S = 3, A = 5, D = 1, N = 8, G = 7, E = 4\n\n  9 6 2 3 3\n+ 6 2 5 1 3\n-----------\n1 5 8 7 4 6",
+        "reasoning_content": "",
+        "signature": {
+          "redacted_state": true,
+          "length": 18104,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601"
+        },
+        "multimodal_contents": [
+          {
+            "type": "text",
+            "text": "C = 9, R = 6, O = 2, S = 3, A = 5, D = 1, N = 8, G = 7, E = 4\n\n  9 6 2 3 3\n+ 6 2 5 1 3\n-----------\n1 5 8 7 4 6",
+            "signature": {
+              "redacted_state": true,
+              "length": 18104,
+              "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Acknowledge the previous solution with OK only. Do not redo the calculation."
+      }
+    ]
+  }
+}

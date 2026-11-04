@@ -1,0 +1,22 @@
+{
+  "turn_number": 5,
+  "method": "item/completed",
+  "payload": {
+    "completedAtMs": 1793709204226,
+    "item": {
+      "clientId": null,
+      "content": [
+        {
+          "text": "Acknowledge the preceding solution with OK only; do not redo the calculation.",
+          "text_elements": [],
+          "type": "text"
+        }
+      ],
+      "id": "01a1a166-6301-7453-8c2c-0cc1b778e2f4",
+      "type": "userMessage"
+    },
+    "threadId": "01a1a165-a1a2-7e21-8f6b-80fc5da96c99",
+    "turnId": "01a1a166-62f5-7d00-931d-2a878ce598a2"
+  },
+  "state_fields": []
+}

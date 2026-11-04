@@ -1,0 +1,29 @@
+{
+  "session_id": "gemini_sdk_cache_20261103_6e3e39fb40d9",
+  "http_status": 200,
+  "control_response": {
+    "upstream_status": 200,
+    "raw_usage": {
+      "completion_tokens": 1,
+      "prompt_tokens": 553,
+      "total_tokens": 554,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "traffic_type": "PROVISIONED_THROUGHPUT",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 553
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 1
+        }
+      ]
+    }
+  },
+  "source_sha256": "233b3d38d18c33f1209c347f9865d7311df1365f6fa76d7bd86b59a032667ea9"
+}

@@ -1,0 +1,22 @@
+{
+  "turn_number": 1,
+  "method": "item/completed",
+  "payload": {
+    "completedAtMs": 1793709520202,
+    "item": {
+      "clientId": null,
+      "content": [
+        {
+          "text": "Solve the base-10 alphametic CROSS + ROADS = DANGER. Different letters are different digits; leading letters are nonzero. Do not assume a memorized answer: check column constraints and verify the solution carefully internally. Use no tools or code. Output only one valid digit mapping and its arithmetic check, with no reasoning text.",
+          "text_elements": [],
+          "type": "text"
+        }
+      ],
+      "id": "01a1a16b-3549-72b0-ae41-b9218e25328b",
+      "type": "userMessage"
+    },
+    "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+    "turnId": "01a1a16b-352b-77e2-9be2-9fb85e32f9d6"
+  },
+  "state_fields": []
+}

@@ -1,0 +1,89 @@
+{
+  "id": "01a1a162-9887-70c2-8566-fd0e9689b75f",
+  "status": "completed",
+  "error": null,
+  "started_at": 1793708955,
+  "completed_at": 1793708961,
+  "duration_ms": 5882,
+  "final_response": "{\n  \"marker\": \"context-2145a5a712ce\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-2e654647d04e\",\n  \"beta_receipt\": \"receipt-0d3bc7eff8ca\"\n}",
+  "items": [
+    {
+      "clientId": null,
+      "content": [
+        {
+          "text": "Verify by calling lookup_record for alpha exactly once more, wait for its result, then repeat the SAME JSON using the ORIGINAL marker, sum, alpha_receipt and beta_receipt from our conversation. Use no other tools.",
+          "text_elements": [],
+          "type": "text"
+        }
+      ],
+      "id": "01a1a162-9892-7f51-a7a0-257a2433433a",
+      "type": "userMessage"
+    },
+    {
+      "content": [],
+      "id": "rs_0543c2335922227da2b0c772",
+      "summary": [],
+      "type": "reasoning"
+    },
+    {
+      "arguments": {
+        "name": "alpha"
+      },
+      "contentItems": [
+        {
+          "text": "{\"name\": \"alpha\", \"value\": 137, \"receipt\": \"receipt-2e654647d04e\"}",
+          "type": "inputText"
+        }
+      ],
+      "durationMs": 2,
+      "id": "call_483aff48b3638020487826f21933406f_0",
+      "namespace": null,
+      "status": "completed",
+      "success": true,
+      "tool": "lookup_record",
+      "type": "dynamicToolCall"
+    },
+    {
+      "content": [],
+      "id": "rs_222dbfd586fc5598ce9e8b9b",
+      "summary": [],
+      "type": "reasoning"
+    },
+    {
+      "delivery": null,
+      "id": "msg_ab9c3ebface9b257b738690c",
+      "memoryCitation": null,
+      "phase": null,
+      "questions": null,
+      "text": "{\n  \"marker\": \"context-2145a5a712ce\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-2e654647d04e\",\n  \"beta_receipt\": \"receipt-0d3bc7eff8ca\"\n}",
+      "type": "agentMessage"
+    }
+  ],
+  "usage": {
+    "last": {
+      "cacheWriteInputTokens": 0,
+      "cachedInputTokens": 0,
+      "inputTokens": 1467,
+      "outputTokens": 99,
+      "reasoningOutputTokens": 24,
+      "totalTokens": 1566
+    },
+    "modelContextWindow": null,
+    "total": {
+      "cacheWriteInputTokens": 0,
+      "cachedInputTokens": 0,
+      "inputTokens": 5323,
+      "outputTokens": 1073,
+      "reasoningOutputTokens": 875,
+      "totalTokens": 6396
+    }
+  },
+  "answer": {
+    "marker": "context-2145a5a712ce",
+    "sum": 348,
+    "alpha_receipt": "receipt-2e654647d04e",
+    "beta_receipt": "receipt-0d3bc7eff8ca"
+  },
+  "answer_format": "plain",
+  "answer_matches_expected": true
+}

@@ -4,8 +4,24 @@ This chapter collects engineering notes for the Codex Agent runtime and its
 tool-using NR3D/OpenEQA/SceneFunc3D workflows. These are design and investigation records,
 not generated API documentation.
 
+## Current Operations
+
+- [Multi-Protocol Adapter](adapter.md): active `codex_adapter` setup, explicit
+  registration, durable session/AK bindings, state preservation and capability
+  limits. The investigation notes below preserve older experiments rather than
+  replacing the current operational guide.
+
 ## Core Notes
 
+- [Codex–Gemini State Replay and Cache](../benchmark/adapter/v3_codex_gemini_cache_20261103.md):
+  real SDK dynamic tools and signature-preserving experimental bridge, actual
+  cache hits, matched accounting controls, and retained failures/negative results.
+- [Gemini Tool/Signature Protocol Probe](../benchmark/adapter/v2_gemini_tool_state_20261103.md):
+  signature replay and targeted controls, image-input transport, and the confirmed
+  GPT Responses-only routing policy; this earlier record tested direct HTTP only.
+- [ModelHub Tool/State Protocol Probe](../benchmark/adapter/v1_modelhub_tool_state_20261103.md):
+  2026-11-03 direct Chat/Responses tool loops, encrypted-state replay, and
+  corruption/removal controls; separate from SDK/adapter integration validation.
 - [Keyframe Selector Shared Foundation Review](keyframe_shared_foundation_review_20261003.md):
   deferred architecture gap between the thesis's shared evidence foundation and
   the three tasks' current retrieval paths, with code evidence and follow-up criteria.

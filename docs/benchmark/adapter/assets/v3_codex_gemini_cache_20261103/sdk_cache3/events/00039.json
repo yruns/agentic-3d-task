@@ -1,0 +1,19 @@
+{
+  "turn_number": 3,
+  "method": "item/started",
+  "payload": {
+    "item": {
+      "delivery": null,
+      "id": "msg_fe39bf63b00b791cd106ddcc",
+      "memoryCitation": null,
+      "phase": null,
+      "questions": null,
+      "text": "",
+      "type": "agentMessage"
+    },
+    "startedAtMs": 1793709589944,
+    "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+    "turnId": "01a1a16b-e809-7aa2-b666-8a2c9f84e767"
+  },
+  "state_fields": []
+}

@@ -1,0 +1,30 @@
+{
+  "turn_number": 10,
+  "method": "rawResponseItem/completed",
+  "payload": {
+    "params": {
+      "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+      "turnId": "01a1a16c-c3db-7df0-9de5-ce61a163c609",
+      "item": {
+        "type": "message",
+        "status": "completed",
+        "id": "msg_cc000454e2bc565ca4bf3d43",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "OK",
+            "annotations": []
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a1a16c-c3db-7df0-9de5-ce61a163c609",
+          "content_item_kinds": [
+            "unknown"
+          ]
+        }
+      }
+    }
+  },
+  "state_fields": []
+}

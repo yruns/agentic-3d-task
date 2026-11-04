@@ -1,0 +1,8 @@
+{
+  "error_type": "InvalidRequestError",
+  "message": "JSON-RPC error -32600: Not initialized",
+  "stderr_tail": [
+    "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/gemini-sdk-probe-3u42h6v9/codex_home\"))",
+    "\u001b[2m2026-11-03T12:25:29.302114Z\u001b[0m \u001b[33m WARN\u001b[0m \u001b[2mcodex_app_server_transport::transport::remote_control::websocket\u001b[0m\u001b[2m:\u001b[0m app-server remote control websocket loop stopped before client name was ready \u001b[3mremote_control_url\u001b[0m\u001b[2m=\u001b[0mhttps://chatgpt.com/backend-api/ \u001b[3minstallation_id\u001b[0m\u001b[2m=\u001b[0mc5ad11f6-b5ef-436e-8109-6d292a027b97 \u001b[3mserver_name\u001b[0m\u001b[2m=\u001b[0mabc \u001b[3mshutdown_requested\u001b[0m\u001b[2m=\u001b[0mtrue"
+  ]
+}

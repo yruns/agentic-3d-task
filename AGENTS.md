@@ -1,127 +1,130 @@
-# AGENTS.md
+# Repository Instructions
 
-Operating rules for any AI coding agent working in this repository.
+`AGENTS.md` is the single source of agent instructions. `CLAUDE.md` must remain a
+relative symlink to `AGENTS.md`; edit this file only.
 
-This file is binding. Read it before writing or changing code. It works
-together with:
+## Current code
 
-- [`docs/python_code_agent_quality_guide.md`](docs/python_code_agent_quality_guide.md)
-  — the **mandatory Python coding standard** for this project.
-- [`CLAUDE.md`](CLAUDE.md) — environment, package management, tmux for
-  long-running jobs, GPU rules, and benchmark process documentation.
+- `src/keyframe/`: prepared-scene query parsing, object grounding, keyframe/BEV
+  retrieval. Entry: `KeyframeSelector` in `keyframe_selector.py`.
+- `src/codex_agent/`: Codex SDK runtime, NR3D/OpenEQA/SceneFunc3D tasks, tools,
+  evaluation, and `cli/run_*.py` entry points.
+- `src/codex_adapter/`: explicitly registered Responses gateway with GPT native
+  forwarding, Gemini Chat codec, and durable session/AK bindings. Not local LLM
+  inference. The old `codex_modelhub_adapter/` implementation is retired.
+- Trust current source and `pyproject.toml` over archived module names and paths.
 
-## 1. Python coding standard (MANDATORY)
+## Environment and assets
 
-All Python code produced or modified in this repo **must** comply with
-[`docs/python_code_agent_quality_guide.md`](docs/python_code_agent_quality_guide.md).
-Treat that document as the source of truth for naming, structure, function/class
-design, typing, input validation, exceptions, logging, configuration, and tests.
-
-Every code change must be **strictly checked against that standard before you
-claim it is done.** Self-review against the guide's §15 review checklist is not
-optional.
-
-### Non-negotiable rules (enforced here)
-
-These mirror the guide's §13 ban list and this repo's existing conventions:
-
-- **Strong typing.** Every function/method parameter and return value is fully
-  type-annotated. No `Any`. No bare `dict` / `Dict` / `list` to model a real
-  object — use `dataclass(frozen=True)`, `TypedDict`, `Enum`/`Literal`, or a
-  Pydantic v2 model. Keep `Any` and untyped `dict` only at deserialization
-  boundaries, and convert to a concrete type immediately.
-- **Minimize `Optional` parameters.** Prefer empty collections / default
-  objects over `None`; keep `T | None` only where "absent" is a real domain
-  state.
-- No mutable default arguments. No bare `except:`. No swallowing exceptions
-  into fake success.
-- No business logic inside CLI `main` / API handlers / ORM models.
-- No global implicit initialization of heavy clients; inject dependencies.
-- No scattered `os.environ` reads in business code; centralize config.
-- No catch-all `utils.py`; name modules by capability/domain.
-- Never treat external input (HTTP, CLI, env, files, DB, MQ, third-party API,
-  LLM/tool output) as trusted — validate at the boundary (Pydantic v2 / argparse).
-- Never log secrets, tokens, passwords, or full private data.
-- Never claim completion based on manual inspection alone — run the gate below.
-
-## 2. Mandatory quality gate (run before claiming done)
-
-Activate the project environment first (see `CLAUDE.md` §Package Management):
+On Linux, use the existing `agentic3d` conda environment:
 
 ```bash
-# macOS (Darwin): uv + .venv
-source .venv/bin/activate
-
-# Linux (Ubuntu): conda
-# source ~/miniconda3/etc/profile.d/conda.sh && conda activate conceptgraph
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate agentic3d
+scripts/link_agentic3d_assets.sh
 ```
 
-Then run, and confirm each passes, on the code you touched:
+- Shared models/sources: `/home/ysh/Models/agentic3d`, linked through ignored
+  `external/models` and `external/third_party`. Do not vendor weights into Git.
+- Do not recreate Linux `.venv` / `.venv-agents` or modify the legacy
+  `conceptgraph` environment for current work. macOS uses `uv` / `.venv`.
+- **Never use physical GPU 1.** Check GPU availability with `nvidia-smi` before
+  launching GPU jobs; the environment defaults to physical GPU 0.
+- Run downloads, installs, model services, evaluations, data preparation, and
+  large test suites inside **tmux**. Do not stop unrelated sessions/processes.
+- Exact versions, SDK/CLI compatibility, and service commands:
+  [environment guide](docs/agentic3d_environment.md).
+
+## Data on this machine
+
+Verified on this Linux host on **2026-11-03**; check existence before reuse on
+another machine. `/home/ysh/Datasets` points to `/data1/ysh/Datasets`.
+Use the imported **processed_v1** packages for current evaluations, not the older
+raw/processed copies below. `source scripts/datasets/processed_v1.sh` exports
+validated paths for explicit CLI arguments (it does not start an evaluation).
+See [dataset locations](docs/dataset_locations.md) for commands and verification.
+
+| Data | Local path |
+|---|---|
+| NR3D current data-root + proposal packs | `/home/ysh/Datasets/nr3d/processed_v1/scannet/` |
+| NR3D current full/pilot IDs | `/home/ysh/Datasets/nr3d/processed_v1/folds/` (`full_test_sample_ids.json`: 8584; `strat600_sample_ids.json`: 600) |
+| OpenEQA current data-root | `/home/ysh/Datasets/open-eqa/processed_v1/scannet/` |
+| OpenEQA current questions / pilot IDs | `/home/ysh/Datasets/open-eqa/processed_v1/open-eqa-v0.json` / `folds/` (1079 ScanNet Qs; pilot300) |
+| NR3D original annotations/splits | `/home/ysh/Datasets/nr3d/raw/` (`nr3d.csv`, `train_scans.txt`, `test_scans.txt`) |
+| NR3D extracted frames + ConceptGraph | `/home/ysh/Datasets/nr3d/scannet/<scene>/` (`raw/` contains RGB/depth/poses) |
+| NR3D instance/segmentation metadata | `/home/ysh/Datasets/nr3d/scannet_aux/` |
+| ScanNet source `.sens` and meshes | `/home/ysh/Datasets/ScanNet/scans/` |
+| OpenEQA official questions | `/home/ysh/Datasets/open-eqa/data/open-eqa-v0.json` |
+| OpenEQA episode frames | `/home/ysh/Datasets/open-eqa/data/frames/` (`scannet-v0/`, `hm3d-v0/`) |
+| OpenEQA prepared ConceptGraph scenes | `/home/ysh/Datasets/OpenEQA/scannet/<clip>/conceptgraph/` |
+
+The current checkout has **no `data/` directory**. Uppercase `OpenEQA` holds
+prepared outputs; lowercase `open-eqa` holds the official dataset checkout.
+The **old** `nr3d/scannet` lacks `pack_nr3d_v9_catalog_first`; the imported
+`nr3d/processed_v1/scannet` includes it. The 8584 full fold is not the historical
+7805-sample filtered fold. OpenEQA has 926 nonfinite poses across 13 clips;
+see the dataset guide before pose-dependent tools (source data was not patched).
+After import, the data disk has only ~40 GB free; check capacity before new
+outputs/caches. No `SceneFuncVal-CG` package was found in these roots; do not
+reuse other-machine NAS paths without verification.
+
+## Runtime prerequisites
+
+- Before Codex agent runs, configure/start the adapter and verify
+  `curl -fsS http://127.0.0.1:8787/health`. SDK startup alone does not verify
+  upstream credentials. Runtime settings: `src/codex_agent/config.py` and
+  `.codex-home/config.toml`.
+- GPT-family agent requests must use Responses end to end. Do not route GPT
+  models through Chat Completions, translate them to Chat, or fall back to Chat.
+  Preserve completed Chat probes as historical evidence, not supported routes.
+- Query parsing/judging reads `configs/llm.toml` (`KEYFRAME_LLM_CONFIG` override).
+  SceneFunc3D requires a backend TOML and running MolmoPoint/SAM2 sidecars; use
+  `scripts/scenefunc3d/serve_local_agentic3d.sh` for the combined local service.
+- Datasets are not bundled. Verify input paths/formats; old absolute paths in
+  scene metadata are provenance, not runnable defaults. SceneFunc3D annotation
+  point IDs refer to **`raw/mesh.ply`**, not the ConceptGraph mesh.
+- Never log or commit API keys, private `.env`/upstream TOMLs, or credentials.
+
+## Changes and verification
+
+- Follow the [Python quality guide](docs/python_code_agent_quality_guide.md),
+  including its review checklist. Read relevant code/tests first, keep changes
+  focused, use typed/validated boundaries, and add regression tests for fixes.
+- Keep heavy/optional model imports lazy. Required dependency, checkpoint, or
+  data failures must be explicit; no silent backend substitution or fake evidence.
+- Use **Black**, not `ruff format`. For Python changes, run the relevant tests
+  and these gates in the activated environment (full suites in tmux):
 
 ```bash
-ruff check src/                       # lint + import order (guide §11: `ruff check`)
-black src/                            # formatting (this repo's formatter; guide's `ruff format` maps to black here)
-mypy src/                             # static type check; must report no issues
-PYTHONPATH=src pytest src/keyframe/tests -q   # tests must pass
+ruff check src/
+black --check src/
+mypy src/
+pytest src/ -q
+pytest tests/codex_adapter/ --cov=codex_adapter --cov-branch --cov-fail-under=80
 ```
 
-Notes:
+- `pytest src/` does not include `tests/codex_adapter/`; run both suites. The
+  active adapter setup is documented in `docs/codex_agent/adapter.md`. Do not
+  use archived benchmark launchers as the current service entrypoint. For docs-only changes, validate
+  links/content; run `mkdocs build` when changing the documentation site.
+  Keep `docs/` indexes and `mkdocs.yml` navigation aligned when adding pages.
+- Report changes, actual verification results, and anything not tested.
+  Commit/push only when the user authorizes it.
 
-- This project formats with **black** (configured in `pyproject.toml` and
-  `CLAUDE.md`), not `ruff format`. Use `black --check src/` in CI-style checks.
-- Tests need `PYTHONPATH=src` (or the configured `pythonpath = ["src"]`).
-- If a tool or test genuinely cannot run, say so explicitly and state the risk
-  — do not silently skip it.
+## Benchmark discipline
 
-## 3. Workflow
-
-Follow the guide's §12 workflow:
-
-1. **Before coding** — understand the existing structure, dependencies, tests,
-   and the naming / error-handling / layering style already in the package you
-   are editing. Keep changes small and focused; do not opportunistically
-   refactor unrelated modules.
-2. **While coding** — prefer adding/adjusting a minimal regression test first
-   (explain if TDD does not fit); reuse existing helpers and abstractions; do
-   not add dependencies unless clearly justified.
-3. **After coding** — run the §2 gate, then report: which files changed and
-   why, which verification commands ran and their result, anything not run and
-   why, and remaining risks or follow-ups.
-
-## 4. Repository-specific reminders
-
-- **Secrets:** real LLM endpoints/keys live in `configs/llm.toml`, which is
-  gitignored. Keep `configs/llm.example.toml` (placeholders) tracked. Never
-  commit real AKs or paste them into docs, logs, or commits (see `CLAUDE.md`).
-- **Optional dependencies:** heavy/vision deps (`opencv-python`, `pillow`,
-  `plyfile`, `torch`, `open-clip-torch`) are optional extras. Keep
-  `import keyframe` working without them — lazy-import optional deps inside the
-  functions that need them.
-- **Long-running tasks** (training, evaluation, batch processing, large test
-  suites, data prep) must run inside `tmux` — see `CLAUDE.md` §Long-Running
-  Tasks.
-- **ModelHub adapter preflight:** before starting project workflows that use
-  the Codex Agent SDK or benchmark CLIs, first check the local adapter health:
-  `curl -sf http://127.0.0.1:8787/health`. If the service is not listening or
-  the health check fails, start it from the repo-local adapter directory before
-  launching the run:
-
-  ```bash
-  cd codex_modelhub_adapter
-  python3 -m uvicorn adapter.app:app --host 127.0.0.1 --port 8787
-  ```
-
-  For long benchmark runs, keep this adapter process in `tmux`. Do not proceed
-  to `codex_agent.cli.run_*` commands while this health check is down; runtime
-  preflight will fail before a Codex turn. Never commit adapter `.env` or
-  upstream TOML files.
-- **Documentation organization:** project documentation under `docs/` is managed
-  as a MkDocs Material site (`mkdocs.yml`) while keeping Markdown as the single
-  source of truth. Agents should continue reading/editing the source `.md` files
-  directly; humans can browse the rendered site. When adding or reorganizing
-  `docs/` content, update the relevant chapter index page and `mkdocs.yml`
-  navigation in the same change. Top-level `README.md`, `AGENTS.md`, and
-  `CLAUDE.md` are operational entrypoints and are intentionally not part of the
-  MkDocs navigation.
-- **Benchmark runs** must leave a durable process record under
-  `docs/benchmark/<name>/` — see `CLAUDE.md` §Benchmark Process Documentation.
+- Before any evaluation, require a clean tracked working tree and record branch,
+  HEAD SHA, and executed-code SHA (including worktree drift). Obtain commit
+  authorization if needed; do not run on undocumented dirty code.
+- Use frozen, matched folds from the benchmark records (NR3D: canonical
+  strat600); verify the sample-ID file exists. Do not invent ad-hoc comparison
+  subsets. Label reproductions with `REPRO_<YYYYMMDD>_<source-run-id>`.
+- Every run, including partial/negative results, needs a new dated version record
+  under `docs/benchmark/<name>/`: exact command/config, code/fold/model/judge,
+  artifact locations, metrics, comparison, and caveats. Do not overwrite history.
+- Preserve per-sample/tool logs and ingest runs into the benchmark SQLite DB.
+  OpenEQA uses `scripts/ingest_openeqa_run.py` and
+  `docs/benchmark/openeqa/runs.sqlite`; verify/provide ingestion for other tracks.
+- Update the benchmark timeline, existing leaderboard, and site navigation.
+  Process records must not live only in `tmp/`, outputs, or commit messages.
+  See the [benchmark archive](docs/benchmark/index.md).

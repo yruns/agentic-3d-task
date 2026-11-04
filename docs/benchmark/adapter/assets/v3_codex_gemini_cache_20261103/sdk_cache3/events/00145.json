@@ -1,0 +1,29 @@
+{
+  "turn_number": 11,
+  "method": "rawResponseItem/completed",
+  "payload": {
+    "params": {
+      "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+      "turnId": "01a1a16c-dd4a-7302-9610-8674d48377e2",
+      "item": {
+        "type": "message",
+        "id": "msg_01a1a16c-dd55-7f62-b8db-4c11f5c40cd3",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Acknowledge the preceding solution with OK only; do not redo the calculation."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a1a16c-dd4a-7302-9610-8674d48377e2",
+          "create_time": 1793709628.7571468,
+          "content_item_kinds": [
+            "user.text"
+          ]
+        }
+      }
+    }
+  },
+  "state_fields": []
+}

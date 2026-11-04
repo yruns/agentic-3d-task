@@ -226,6 +226,7 @@ def _install(
     agent_config = CodexAgentConfig(
         project_root=tmp_path,
         codex_home=codex_home,
+        model_provider="modelhub_adapter",
         sandbox=sandbox,
         sandbox_network_access=sandbox_network_access,
         restrict_skills_to_project=restrict_skills_to_project,

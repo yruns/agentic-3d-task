@@ -1,0 +1,13 @@
+{
+  "credential_scan": "passed",
+  "files_scanned": 422,
+  "source_and_artifact_checksums": "passed",
+  "gemini_runs": 3,
+  "gemini_requests": 17,
+  "gemini_tools": 7,
+  "black_check": "passed: 3 archived Python files",
+  "ruff_check": "passed: ingestion script",
+  "mkdocs_build": "passed with pre-existing site warnings",
+  "production_code_changed": false,
+  "gpt_responses_only_rule": "persisted in AGENTS.md"
+}

@@ -303,6 +303,22 @@ class _Sam2ArgumentParser(argparse.ArgumentParser):
         return parsed_args
 
 
+def _official_sam2_config_name(config_path: Path, build_module: ModuleType) -> str:
+    """Translate an installed SAM2 YAML path into its Hydra package name."""
+    module_file = _require_module_attribute(build_module, "__file__")
+    if not isinstance(module_file, str):
+        raise RuntimeError("sam2.build_sam.__file__ must be a filesystem path")
+    package_root = Path(module_file).resolve().parent
+    try:
+        return config_path.resolve().relative_to(package_root).as_posix()
+    except ValueError as exc:
+        raise RuntimeError(
+            "Official SAM2 config_path must be inside the installed sam2 package: "
+            f"config_path={config_path}; package_root={package_root}. "
+            "Use the YAML under sam2/configs/ in the shared SAM2 source checkout."
+        ) from exc
+
+
 class OfficialSam2Runner:
     """SAM2 runner backed by the official facebookresearch/sam2 package.
 
@@ -347,7 +363,7 @@ class OfficialSam2Runner:
             _require_module_attribute(predictor_module, "SAM2ImagePredictor"),
         )
         model = build_sam2(
-            str(self._config_path),
+            _official_sam2_config_name(self._config_path, build_sam_module),
             str(self._checkpoint_path),
             device=device,
         )
@@ -939,14 +955,19 @@ def _validate_mask_batch(
         )
     if masks_array.dtype == np.bool_:
         return cast(NDArray[np.bool_], masks_array)
-    if not np.issubdtype(masks_array.dtype, np.integer):
+    # The official predictor converts its already-thresholded bool masks to
+    # float32 for NumPy. Accept exact 0/1 values, never threshold soft logits.
+    if not (
+        np.issubdtype(masks_array.dtype, np.integer)
+        or np.issubdtype(masks_array.dtype, np.floating)
+    ):
         raise SamInvalidOutputError(
-            "SAM2 predictor masks must be binary bool or integer 0/1 arrays"
+            "SAM2 predictor masks must be binary bool or numeric 0/1 arrays"
         )
     unique_values = np.unique(masks_array)
     if not bool(np.all((unique_values == 0) | (unique_values == 1))):
         raise SamInvalidOutputError(
-            "SAM2 predictor masks must be binary bool or integer 0/1 arrays"
+            "SAM2 predictor masks must be binary bool or numeric 0/1 arrays"
         )
     return cast(NDArray[np.bool_], masks_array.astype(np.bool_, copy=False))
 

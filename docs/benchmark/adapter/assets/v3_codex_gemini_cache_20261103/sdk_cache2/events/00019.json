@@ -1,0 +1,22 @@
+{
+  "turn_number": 2,
+  "method": "item/started",
+  "payload": {
+    "item": {
+      "clientId": null,
+      "content": [
+        {
+          "text": "Solve a different base-10 alphametic, DONALD + GERALD = ROBERT. Different letters are distinct digits and leading letters are nonzero. Verify all column constraints internally without tools or code. Output only a valid digit mapping and arithmetic check, no reasoning text.",
+          "text_elements": [],
+          "type": "text"
+        }
+      ],
+      "id": "01a1a168-e0d4-76d0-920e-994340be1724",
+      "type": "userMessage"
+    },
+    "startedAtMs": 1793709367509,
+    "threadId": "01a1a168-65a7-7561-a5c8-a3309863c558",
+    "turnId": "01a1a168-e0c8-78d3-96ab-961fc0ed0a5b"
+  },
+  "state_fields": []
+}

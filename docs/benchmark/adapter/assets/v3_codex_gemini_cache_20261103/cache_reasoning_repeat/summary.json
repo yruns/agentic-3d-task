@@ -1,0 +1,926 @@
+{
+  "run_id": "gemini_cache_20261103_d7e66e673a10",
+  "case": "reasoning",
+  "endpoint": "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl",
+  "model": "gemini-3.8-flash",
+  "session_id": "gemini_cache_20261103_d7e66e673a10",
+  "same_ak": true,
+  "result": "completed",
+  "requests": [
+    {
+      "index": 1,
+      "label": "short_prompt_reasoning_seed",
+      "logid": "gemini_cache_20261103_d7e66e673a10_1",
+      "body_sha256": "7f3a54d5153092649b35207bd484b245b9ddabebf7d4dd3518ce6b927b0a01f5",
+      "input_state_fields": [],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 81,
+        "prompt_tokens": 68,
+        "total_tokens": 8012,
+        "reasoning_tokens": 7863,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 68
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 81
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        },
+        {
+          "path": "$.usage.reasoning_tokens",
+          "type": "int",
+          "nonempty": true,
+          "sha256": "386b16ae2cd20cd9999a5fc06b5116d3a27154f734c540b6c314d53edd3f8a21",
+          "length": null,
+          "opaque_name": false
+        }
+      ],
+      "finish_reason": "stop",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 52.188
+    },
+    {
+      "index": 2,
+      "label": "full_state_repeat_1",
+      "logid": "gemini_cache_20261103_d7e66e673a10_2",
+      "body_sha256": "53211d6f063b1ab35a031fa60144f6837743ec63c580d6e4cb59ead77497db5f",
+      "input_state_fields": [
+        {
+          "path": "$.messages[1].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[1].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[1].multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        }
+      ],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 1,
+        "prompt_tokens": 165,
+        "total_tokens": 289,
+        "reasoning_tokens": 123,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 165
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "96dfbbe4ff94bf416c5e5c05d6db1b09332076b950978d113be68ae92cddd0ac",
+          "length": 472,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "96dfbbe4ff94bf416c5e5c05d6db1b09332076b950978d113be68ae92cddd0ac",
+          "length": 472,
+          "opaque_name": true
+        },
+        {
+          "path": "$.usage.reasoning_tokens",
+          "type": "int",
+          "nonempty": true,
+          "sha256": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+          "length": null,
+          "opaque_name": false
+        }
+      ],
+      "finish_reason": "length",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 2.609
+    },
+    {
+      "index": 3,
+      "label": "full_state_repeat_2",
+      "logid": "gemini_cache_20261103_d7e66e673a10_3",
+      "body_sha256": "53211d6f063b1ab35a031fa60144f6837743ec63c580d6e4cb59ead77497db5f",
+      "input_state_fields": [
+        {
+          "path": "$.messages[1].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[1].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[1].multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        }
+      ],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 1,
+        "prompt_tokens": 8028,
+        "total_tokens": 8029,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 8028
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "2c90c536847c6e2f944bb86306673ee52096a4bee12fbe74090202967b0ea782",
+          "length": 116,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "2c90c536847c6e2f944bb86306673ee52096a4bee12fbe74090202967b0ea782",
+          "length": 116,
+          "opaque_name": true
+        }
+      ],
+      "finish_reason": "stop",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 2.455
+    },
+    {
+      "index": 4,
+      "label": "full_state_repeat_3",
+      "logid": "gemini_cache_20261103_d7e66e673a10_4",
+      "body_sha256": "53211d6f063b1ab35a031fa60144f6837743ec63c580d6e4cb59ead77497db5f",
+      "input_state_fields": [
+        {
+          "path": "$.messages[1].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[1].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[1].multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        }
+      ],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 1,
+        "prompt_tokens": 8028,
+        "total_tokens": 8029,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "PROVISIONED_THROUGHPUT",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 8028
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "c7b36e111fc5a483edf40cbce11057a85d9c4e02b313bee3bbf898d79b523d00",
+          "length": 116,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "c7b36e111fc5a483edf40cbce11057a85d9c4e02b313bee3bbf898d79b523d00",
+          "length": 116,
+          "opaque_name": true
+        }
+      ],
+      "finish_reason": "stop",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 3.263
+    },
+    {
+      "index": 5,
+      "label": "full_state_repeat_4",
+      "logid": "gemini_cache_20261103_d7e66e673a10_5",
+      "body_sha256": "53211d6f063b1ab35a031fa60144f6837743ec63c580d6e4cb59ead77497db5f",
+      "input_state_fields": [
+        {
+          "path": "$.messages[1].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[1].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[1].multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        }
+      ],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 1,
+        "prompt_tokens": 8028,
+        "total_tokens": 8029,
+        "cache_read_input_tokens": 4072,
+        "prompt_tokens_details": {
+          "cached_tokens": 4072
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 8028
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1
+          }
+        ],
+        "cached_tokens_details": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 4072
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "6c28d6a4631efe2f60484261c9457357a631b58253eab7dc3186036990c6257f",
+          "length": 116,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "6c28d6a4631efe2f60484261c9457357a631b58253eab7dc3186036990c6257f",
+          "length": 116,
+          "opaque_name": true
+        }
+      ],
+      "finish_reason": "stop",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 2.152
+    },
+    {
+      "index": 6,
+      "label": "full_state_repeat_5",
+      "logid": "gemini_cache_20261103_d7e66e673a10_6",
+      "body_sha256": "53211d6f063b1ab35a031fa60144f6837743ec63c580d6e4cb59ead77497db5f",
+      "input_state_fields": [
+        {
+          "path": "$.messages[1].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[1].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[1].multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        }
+      ],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 1,
+        "prompt_tokens": 8028,
+        "total_tokens": 8029,
+        "cache_read_input_tokens": 4072,
+        "prompt_tokens_details": {
+          "cached_tokens": 4072
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 8028
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1
+          }
+        ],
+        "cached_tokens_details": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 4072
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "d406b5a825dc79718a9f77075fd628c8354dc48817913df3fbf19ecbbcc460a1",
+          "length": 116,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "d406b5a825dc79718a9f77075fd628c8354dc48817913df3fbf19ecbbcc460a1",
+          "length": 116,
+          "opaque_name": true
+        }
+      ],
+      "finish_reason": "stop",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 2.793
+    },
+    {
+      "index": 7,
+      "label": "full_state_repeat_6",
+      "logid": "gemini_cache_20261103_d7e66e673a10_7",
+      "body_sha256": "53211d6f063b1ab35a031fa60144f6837743ec63c580d6e4cb59ead77497db5f",
+      "input_state_fields": [
+        {
+          "path": "$.messages[1].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[1].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[1].multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        }
+      ],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 1,
+        "prompt_tokens": 8028,
+        "total_tokens": 8029,
+        "cache_read_input_tokens": 4072,
+        "prompt_tokens_details": {
+          "cached_tokens": 4072
+        },
+        "traffic_type": "PROVISIONED_THROUGHPUT",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 8028
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1
+          }
+        ],
+        "cached_tokens_details": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 4072
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "8b95d3135b47b925ca62a03ccb6120860453b8a2f7afd6fedf8f9b260b08196e",
+          "length": 116,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "8b95d3135b47b925ca62a03ccb6120860453b8a2f7afd6fedf8f9b260b08196e",
+          "length": 116,
+          "opaque_name": true
+        }
+      ],
+      "finish_reason": "stop",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 2.379
+    },
+    {
+      "index": 8,
+      "label": "full_state_repeat_7",
+      "logid": "gemini_cache_20261103_d7e66e673a10_8",
+      "body_sha256": "53211d6f063b1ab35a031fa60144f6837743ec63c580d6e4cb59ead77497db5f",
+      "input_state_fields": [
+        {
+          "path": "$.messages[1].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[1].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[1].multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        }
+      ],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 1,
+        "prompt_tokens": 8028,
+        "total_tokens": 8029,
+        "cache_read_input_tokens": 4072,
+        "prompt_tokens_details": {
+          "cached_tokens": 4072
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 8028
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1
+          }
+        ],
+        "cached_tokens_details": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 4072
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "82ab45e4439a056b2479532519ce6bd5d48560374e6ea47e19f1cb3dee709836",
+          "length": 116,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "82ab45e4439a056b2479532519ce6bd5d48560374e6ea47e19f1cb3dee709836",
+          "length": 116,
+          "opaque_name": true
+        }
+      ],
+      "finish_reason": "stop",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 14.449
+    },
+    {
+      "index": 9,
+      "label": "full_state_repeat_8",
+      "logid": "gemini_cache_20261103_d7e66e673a10_9",
+      "body_sha256": "53211d6f063b1ab35a031fa60144f6837743ec63c580d6e4cb59ead77497db5f",
+      "input_state_fields": [
+        {
+          "path": "$.messages[1].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[1].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[1].multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "17d3aba4396d2ced2ed6a5916e7d8737933a0705acc050a5b8073e85c8e9f601",
+          "length": 18104,
+          "opaque_name": true
+        }
+      ],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 1,
+        "prompt_tokens": 8028,
+        "total_tokens": 8029,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 8028
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "47b7d68de1f4a1c4e13d16117bb7ccba3e00e33d23e2eb2c4594a4d0c1105652",
+          "length": 116,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "47b7d68de1f4a1c4e13d16117bb7ccba3e00e33d23e2eb2c4594a4d0c1105652",
+          "length": 116,
+          "opaque_name": true
+        }
+      ],
+      "finish_reason": "stop",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 2.91
+    },
+    {
+      "index": 10,
+      "label": "without_signatures_control",
+      "logid": "gemini_cache_20261103_d7e66e673a10_10",
+      "body_sha256": "f34c7828548f18ef8b13f31bb2d1c9c12211aedffcf91b3aa1bf9742eed3bf8a",
+      "input_state_fields": [
+        {
+          "path": "$.messages[1].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        }
+      ],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 1,
+        "prompt_tokens": 165,
+        "total_tokens": 166,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 165
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "bc8fdede87abf8990ec9c05167beebe440d09f2d88d20ef0dd9102539d6c4355",
+          "length": 116,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "bc8fdede87abf8990ec9c05167beebe440d09f2d88d20ef0dd9102539d6c4355",
+          "length": 116,
+          "opaque_name": true
+        }
+      ],
+      "finish_reason": "stop",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 4.362
+    },
+    {
+      "index": 11,
+      "label": "visible_history_only_accounting",
+      "logid": "gemini_cache_20261103_d7e66e673a10_11",
+      "body_sha256": "ce995c1e3d51469fcf798558798fae8d5d1e37b64a9f4aa23852661194321a55",
+      "input_state_fields": [],
+      "http_status": 200,
+      "usage": {
+        "completion_tokens": 1,
+        "prompt_tokens": 165,
+        "total_tokens": 166,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 165
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1
+          }
+        ]
+      },
+      "error": null,
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "99a124b150c60e1b21fcf73ae35ea4dcd6ff8979c847cbdb1e458ecc012400fb",
+          "length": 116,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "99a124b150c60e1b21fcf73ae35ea4dcd6ff8979c847cbdb1e458ecc012400fb",
+          "length": 116,
+          "opaque_name": true
+        }
+      ],
+      "finish_reason": "stop",
+      "response_model": "gemini-3.8-flash",
+      "elapsed_s": 5.056
+    }
+  ],
+  "head": "255b091849c0bafeef8f5e494d022a7750eefa91",
+  "tracked_drift": false,
+  "worktree": "/home/ysh/codebase/agentic-3d-task/tmp/gemini_codex_cache_worktree_20261103",
+  "source_sha256": {
+    "cache_probe.py": "505ce2f105bb72fddd7a894e1a704141f712ed769028a68e53026eae28b42cfc",
+    "probe_support.py": "db454076251200a577b615f657fdde4e99e1aa2390ec991aa2113f63afd51e4d"
+  },
+  "scope": "Direct HTTP cache controls; this is not the Codex SDK integration run",
+  "repeats": 8,
+  "repeat_delay_seconds": 2.0,
+  "seed_message_sha256": "cac4cac90fb14a01920593044a18cbe9bac574f6c9b297b26e53415e70af6213"
+}

@@ -1,0 +1,47 @@
+{
+  "headers": {
+    "Content-Type": "application/json",
+    "X-TT-LOGID": "gemini_tool_state_20261103_30b3c01a3c_1",
+    "extra": "{\"session_id\": \"gemini_tool_state_20261103_30b3c01a3c\", \"chat_run_id\": \"gemini_tool_state_20261103_30b3c01a3c\", \"source\": \"codex_adapter_protocol_probe\"}"
+  },
+  "body": {
+    "model": "gemini-3.8-flash",
+    "stream": false,
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are testing a tool protocol. Always use lookup_record to obtain the requested records. First call alpha, wait for its result, then call beta, wait for its result, then return only JSON with marker, sum, alpha_receipt, beta_receipt. Never invent tool results. Do not call both tools in the same response. Preserve the user's marker exactly."
+      },
+      {
+        "role": "user",
+        "content": "Fetch records alpha and beta, add their values, and report their receipts. The marker is context-cf9cdf0d0851."
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "lookup_record",
+          "description": "Look up one record and return its numeric value and unique receipt.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": [
+                  "alpha",
+                  "beta"
+                ]
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    ]
+  }
+}

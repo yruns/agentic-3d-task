@@ -1,0 +1,22 @@
+
+[33m │  [1mMaterial for MkDocs reaches end of life on May 5, 2027.[0m
+[33m │[0m  Critical fixes and security updates continue until that date.
+[33m │[0m
+[33m │[0m  Zensical is its maintained successor, built by the same team.
+[33m │[0m  Try it alongside MkDocs with your existing mkdocs.yml:
+[33m │[0m  [36m[4mhttps://zensical.org/docs/compatibility/mkdocs/migration/[0m
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+INFO    -  Cleaning site directory
+INFO    -  Building documentation to directory: /home/ysh/codebase/agentic-3d-task/tmp/gemini_codex_cache_site_20261103
+WARNING -  A reference to 'benchmark/scenefunc_molmo_sam3d/leaderboard.md' is included in the 'nav' configuration, which is not found in the documentation files.
+INFO    -  Doc file 'benchmark/openeqa/v4_failure_trace_analysis_20260612.md' contains an unrecognized relative link 'assets/v4_failure_traces/', it was left as is.
+INFO    -  Doc file 'benchmark/scenefunc_molmo_sam3d/v7_semi_online_pipeline_20260702.md' contains a link to 'superpowers/plans/2026-07-02-scenefunc3d-anchor-multiview-pipeline-phase2b.md' which is excluded from the built site.
+INFO    -  Doc file 'benchmark/scenefunc_molmo_sam3d/v7_semi_online_pipeline_20260702.md' contains a link to 'superpowers/specs/2026-07-02-scenefunc3d-anchor-multiview-fusion-design.md' which is excluded from the built site.
+INFO    -  Doc file 'benchmark/scenefunc_molmo_sam3d/v8_seed_confirmation_online_20260703.md' contains a link to 'superpowers/plans/2026-07-02-scenefunc3d-seed-confirmation-contract-phase2c.md' which is excluded from the built site.
+INFO    -  Doc file 'benchmark/scenefunc_molmo_sam3d/v8_seed_confirmation_online_20260703.md' contains a link to 'superpowers/plans/2026-07-02-scenefunc3d-anchor-multiview-pipeline-phase2b.md' which is excluded from the built site.
+INFO    -  Doc file 'benchmark/scenefunc_molmo_sam3d/v8_seed_confirmation_online_20260703.md' contains a link to 'superpowers/specs/2026-07-02-scenefunc3d-anchor-multiview-fusion-design.md' which is excluded from the built site.
+INFO    -  Doc file 'benchmark/nr3d/v2_codex_tools_grounding_strat600_20260609.md' contains a link '../../codex_agent/skill_loop_and_reasoning_dropped_20260609.md#resolution-landed--verified--2026-06-09', but the doc 'codex_agent/skill_loop_and_reasoning_dropped_20260609.md' does not contain an anchor '#resolution-landed--verified--2026-06-09'.
+INFO    -  Doc file 'benchmark/nr3d/v3_codex_tools_loopfix_strat600_20260609.md' contains a link '../../codex_agent/skill_loop_and_reasoning_dropped_20260609.md#resolution-landed--verified--2026-06-09', but the doc 'codex_agent/skill_loop_and_reasoning_dropped_20260609.md' does not contain an anchor '#resolution-landed--verified--2026-06-09'.
+INFO    -  Documentation built in 1.18 seconds

@@ -139,8 +139,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--reasoning-effort",
         default=None,
-        choices=["minimal", "low", "medium", "high"],
-        help="Model reasoning effort. Default: medium (config default).",
+        choices=["provider-default", "minimal", "low", "medium", "high"],
+        help="Model reasoning effort. Default: medium (config default). Use "
+        "provider-default for providers without reasoning-effort support.",
     )
     parser.add_argument(
         "--reasoning-summary",
@@ -316,6 +317,7 @@ def _resolve_reasoning_effort(
 
 def _as_reasoning_effort(value: str) -> ReasoningEffort:
     efforts: dict[str, ReasoningEffort] = {
+        "provider-default": "provider-default",
         "minimal": "minimal",
         "low": "low",
         "medium": "medium",

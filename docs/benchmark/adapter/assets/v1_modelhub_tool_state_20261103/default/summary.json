@@ -1,0 +1,43 @@
+{
+  "run_id": "modelhub_tool_state_20261103_27322bc382",
+  "timestamp": "2026-11-03T18:56:00.159404+08:00",
+  "branch": "feat/upgrade_codex_adapter",
+  "head": "255b091849c0bafeef8f5e494d022a7750eefa91",
+  "tracked_drift": false,
+  "executed_probe_sha256": "5da798d0355415681edc7a9885f276dd465cfb56d7ec8e111eb49dc303dff337",
+  "endpoint_without_credentials": "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl",
+  "model": "gpt-6-luna",
+  "stream": false,
+  "credential_source": "Explicit user curl from this chat; loaded in memory only",
+  "same_credential_all_requests": true,
+  "session_id": "modelhub_tool_state_20261103_27322bc382",
+  "effort": "omitted: provider default",
+  "max_tokens": 1600,
+  "requests": [
+    {
+      "index": 1,
+      "logid": "modelhub_tool_state_20261103_27322bc382_1",
+      "request_state_fields": [],
+      "assistant_replay_hashes": [],
+      "http_status": 403,
+      "elapsed_s": 0.65,
+      "response_fields": [
+        "$.error",
+        "$.error.message",
+        "$.error.code"
+      ],
+      "response_state_fields": [],
+      "usage": null,
+      "response_model": null
+    }
+  ],
+  "tool_executions": [],
+  "result": "upstream_http_failure",
+  "expected": {
+    "marker": "context-9f44aa5c38d0",
+    "sum": 348,
+    "alpha_receipt": "receipt-c985e15ed8f5",
+    "beta_receipt": "receipt-69fa93f35ae4"
+  },
+  "scope": "Direct HTTP protocol smoke; no Codex SDK, adapter, dataset or benchmark scoring"
+}

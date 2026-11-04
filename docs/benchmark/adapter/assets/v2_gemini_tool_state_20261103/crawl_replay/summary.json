@@ -1,0 +1,1150 @@
+{
+  "run_id": "gemini_tool_state_20261103_62c046f0d2",
+  "timestamp": "2026-11-03T20:08:56.963734+08:00",
+  "branch": "",
+  "head": "255b091849c0bafeef8f5e494d022a7750eefa91",
+  "tracked_drift": false,
+  "worktree": "/home/ysh/codebase/agentic-3d-task/tmp/gemini_state_probe_worktree_20261103",
+  "executed_probe_sha256": "db454076251200a577b615f657fdde4e99e1aa2390ec991aa2113f63afd51e4d",
+  "endpoint_without_credentials": "https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/v2/crawl",
+  "protocol": "legacy_chat",
+  "model": "gemini-3.8-flash",
+  "stream": false,
+  "input_modalities": [
+    "text"
+  ],
+  "credential_source": "Explicit user curl from this chat; loaded in memory only",
+  "same_credential_all_requests": true,
+  "session_id": "gemini_tool_state_20261103_62c046f0d2",
+  "effort": "omitted: provider default",
+  "max_tokens": 4096,
+  "requests": [
+    {
+      "index": 1,
+      "logid": "gemini_tool_state_20261103_62c046f0d2_1",
+      "request_state_fields": [],
+      "assistant_replay_hashes": [],
+      "output_replay_hashes": [],
+      "outputs_present_in_request": true,
+      "http_status": 200,
+      "elapsed_s": 2.8,
+      "response_fields": [
+        "$.object",
+        "$.model",
+        "$.choices",
+        "$.choices[0].finish_reason",
+        "$.choices[0].native_finish_reason",
+        "$.choices[0].message",
+        "$.choices[0].message.role",
+        "$.choices[0].message.content",
+        "$.choices[0].message.reasoning_content",
+        "$.choices[0].message.signature",
+        "$.choices[0].message.tool_calls",
+        "$.choices[0].message.tool_calls[0].index",
+        "$.choices[0].message.tool_calls[0].id",
+        "$.choices[0].message.tool_calls[0].type",
+        "$.choices[0].message.tool_calls[0].function",
+        "$.choices[0].message.tool_calls[0].function.name",
+        "$.choices[0].message.tool_calls[0].function.arguments",
+        "$.choices[0].message.tool_calls[0].signature",
+        "$.choices[0].groundingMetadata",
+        "$.usage",
+        "$.usage.completion_tokens",
+        "$.usage.prompt_tokens",
+        "$.usage.total_tokens",
+        "$.usage.reasoning_tokens",
+        "$.usage.prompt_tokens_details",
+        "$.usage.prompt_tokens_details.cached_tokens",
+        "$.usage.traffic_type",
+        "$.usage.promptTokensDetails",
+        "$.usage.promptTokensDetails[0].modality",
+        "$.usage.promptTokensDetails[0].tokenCount",
+        "$.usage.candidatesTokensDetails",
+        "$.usage.candidatesTokensDetails[0].modality",
+        "$.usage.candidatesTokensDetails[0].tokenCount"
+      ],
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.usage.reasoning_tokens",
+          "type": "int",
+          "nonempty": true,
+          "sha256": "d80eae6e96d148b3b2abbbc6760077b66c4ea071f847dab573d507a32c4d99a5",
+          "length": null,
+          "opaque_name": false
+        }
+      ],
+      "usage": {
+        "completion_tokens": 16,
+        "prompt_tokens": 139,
+        "total_tokens": 292,
+        "reasoning_tokens": 137,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 139
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 16
+          }
+        ]
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "tool_calls",
+      "assistant_message_sha256": "54ad15b5af655c36dd208ad6b3329e60b19366e7d16f2242b6b7ae45597b244c",
+      "assistant_message_fields": [
+        "role",
+        "content",
+        "reasoning_content",
+        "signature",
+        "tool_calls"
+      ],
+      "output_item_hashes": [
+        "54ad15b5af655c36dd208ad6b3329e60b19366e7d16f2242b6b7ae45597b244c"
+      ]
+    },
+    {
+      "index": 2,
+      "logid": "gemini_tool_state_20261103_62c046f0d2_2",
+      "request_state_fields": [
+        {
+          "path": "$.messages[2].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[2].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[2].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        }
+      ],
+      "assistant_replay_hashes": [
+        "54ad15b5af655c36dd208ad6b3329e60b19366e7d16f2242b6b7ae45597b244c"
+      ],
+      "output_replay_hashes": [
+        "54ad15b5af655c36dd208ad6b3329e60b19366e7d16f2242b6b7ae45597b244c"
+      ],
+      "outputs_present_in_request": true,
+      "http_status": 200,
+      "elapsed_s": 2.346,
+      "response_fields": [
+        "$.object",
+        "$.model",
+        "$.choices",
+        "$.choices[0].finish_reason",
+        "$.choices[0].native_finish_reason",
+        "$.choices[0].message",
+        "$.choices[0].message.role",
+        "$.choices[0].message.content",
+        "$.choices[0].message.reasoning_content",
+        "$.choices[0].message.signature",
+        "$.choices[0].message.tool_calls",
+        "$.choices[0].message.tool_calls[0].index",
+        "$.choices[0].message.tool_calls[0].id",
+        "$.choices[0].message.tool_calls[0].type",
+        "$.choices[0].message.tool_calls[0].function",
+        "$.choices[0].message.tool_calls[0].function.name",
+        "$.choices[0].message.tool_calls[0].function.arguments",
+        "$.choices[0].message.tool_calls[0].signature",
+        "$.choices[0].groundingMetadata",
+        "$.usage",
+        "$.usage.completion_tokens",
+        "$.usage.prompt_tokens",
+        "$.usage.total_tokens",
+        "$.usage.reasoning_tokens",
+        "$.usage.prompt_tokens_details",
+        "$.usage.prompt_tokens_details.cached_tokens",
+        "$.usage.traffic_type",
+        "$.usage.promptTokensDetails",
+        "$.usage.promptTokensDetails[0].modality",
+        "$.usage.promptTokensDetails[0].tokenCount",
+        "$.usage.candidatesTokensDetails",
+        "$.usage.candidatesTokensDetails[0].modality",
+        "$.usage.candidatesTokensDetails[0].tokenCount"
+      ],
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "5b720228ab00cd1afb3ec4448e74b381a6a3f112c445ce3c656cd08002992866",
+          "length": 260,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "5b720228ab00cd1afb3ec4448e74b381a6a3f112c445ce3c656cd08002992866",
+          "length": 260,
+          "opaque_name": true
+        },
+        {
+          "path": "$.usage.reasoning_tokens",
+          "type": "int",
+          "nonempty": true,
+          "sha256": "aea92132c4cbeb263e6ac2bf6c183b5d81737f179f21efdc5863739672f0f470",
+          "length": null,
+          "opaque_name": false
+        }
+      ],
+      "usage": {
+        "completion_tokens": 16,
+        "prompt_tokens": 312,
+        "total_tokens": 366,
+        "reasoning_tokens": 38,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "PROVISIONED_THROUGHPUT",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 312
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 16
+          }
+        ]
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "tool_calls",
+      "assistant_message_sha256": "2a073cbe14681785f25d83036327d034dc7aa7a540e89b6fc827942bf9c998d3",
+      "assistant_message_fields": [
+        "role",
+        "content",
+        "reasoning_content",
+        "signature",
+        "tool_calls"
+      ],
+      "output_item_hashes": [
+        "2a073cbe14681785f25d83036327d034dc7aa7a540e89b6fc827942bf9c998d3"
+      ]
+    },
+    {
+      "index": 3,
+      "logid": "gemini_tool_state_20261103_62c046f0d2_3",
+      "request_state_fields": [
+        {
+          "path": "$.messages[2].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[2].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[2].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[4].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[4].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "5b720228ab00cd1afb3ec4448e74b381a6a3f112c445ce3c656cd08002992866",
+          "length": 260,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[4].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "5b720228ab00cd1afb3ec4448e74b381a6a3f112c445ce3c656cd08002992866",
+          "length": 260,
+          "opaque_name": true
+        }
+      ],
+      "assistant_replay_hashes": [
+        "54ad15b5af655c36dd208ad6b3329e60b19366e7d16f2242b6b7ae45597b244c",
+        "2a073cbe14681785f25d83036327d034dc7aa7a540e89b6fc827942bf9c998d3"
+      ],
+      "output_replay_hashes": [
+        "54ad15b5af655c36dd208ad6b3329e60b19366e7d16f2242b6b7ae45597b244c",
+        "2a073cbe14681785f25d83036327d034dc7aa7a540e89b6fc827942bf9c998d3"
+      ],
+      "outputs_present_in_request": true,
+      "http_status": 200,
+      "elapsed_s": 3.352,
+      "response_fields": [
+        "$.object",
+        "$.model",
+        "$.choices",
+        "$.choices[0].finish_reason",
+        "$.choices[0].native_finish_reason",
+        "$.choices[0].message",
+        "$.choices[0].message.role",
+        "$.choices[0].message.content",
+        "$.choices[0].message.reasoning_content",
+        "$.choices[0].message.signature",
+        "$.choices[0].message.multimodal_contents",
+        "$.choices[0].message.multimodal_contents[0].type",
+        "$.choices[0].message.multimodal_contents[0].text",
+        "$.choices[0].message.multimodal_contents[0].signature",
+        "$.choices[0].groundingMetadata",
+        "$.usage",
+        "$.usage.completion_tokens",
+        "$.usage.prompt_tokens",
+        "$.usage.total_tokens",
+        "$.usage.reasoning_tokens",
+        "$.usage.prompt_tokens_details",
+        "$.usage.prompt_tokens_details.cached_tokens",
+        "$.usage.traffic_type",
+        "$.usage.promptTokensDetails",
+        "$.usage.promptTokensDetails[0].modality",
+        "$.usage.promptTokensDetails[0].tokenCount",
+        "$.usage.candidatesTokensDetails",
+        "$.usage.candidatesTokensDetails[0].modality",
+        "$.usage.candidatesTokensDetails[0].tokenCount"
+      ],
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "c0e67bbc9c5a18e567afa3256c34509dc44cfb5e74390bf1709dee894112bb4f",
+          "length": 584,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "c0e67bbc9c5a18e567afa3256c34509dc44cfb5e74390bf1709dee894112bb4f",
+          "length": 584,
+          "opaque_name": true
+        },
+        {
+          "path": "$.usage.reasoning_tokens",
+          "type": "int",
+          "nonempty": true,
+          "sha256": "ff2ccb6ba423d356bd549ed4bfb76e96976a0dcde05a09996a1cdb9f83422ec4",
+          "length": null,
+          "opaque_name": false
+        }
+      ],
+      "usage": {
+        "completion_tokens": 75,
+        "prompt_tokens": 386,
+        "total_tokens": 620,
+        "reasoning_tokens": 159,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 386
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 75
+          }
+        ]
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "assistant_message_sha256": "95ed95f4f3f1c737d527d3c81c60a8026662767fd3872397a9b68ecf7b740d2a",
+      "assistant_message_fields": [
+        "role",
+        "content",
+        "reasoning_content",
+        "signature",
+        "multimodal_contents"
+      ],
+      "output_item_hashes": [
+        "95ed95f4f3f1c737d527d3c81c60a8026662767fd3872397a9b68ecf7b740d2a"
+      ]
+    },
+    {
+      "index": 4,
+      "logid": "gemini_tool_state_20261103_62c046f0d2_4",
+      "request_state_fields": [
+        {
+          "path": "$.messages[2].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[2].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[2].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[4].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[4].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "5b720228ab00cd1afb3ec4448e74b381a6a3f112c445ce3c656cd08002992866",
+          "length": 260,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[4].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "5b720228ab00cd1afb3ec4448e74b381a6a3f112c445ce3c656cd08002992866",
+          "length": 260,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[6].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[6].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "c0e67bbc9c5a18e567afa3256c34509dc44cfb5e74390bf1709dee894112bb4f",
+          "length": 584,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[6].multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "c0e67bbc9c5a18e567afa3256c34509dc44cfb5e74390bf1709dee894112bb4f",
+          "length": 584,
+          "opaque_name": true
+        }
+      ],
+      "assistant_replay_hashes": [
+        "54ad15b5af655c36dd208ad6b3329e60b19366e7d16f2242b6b7ae45597b244c",
+        "2a073cbe14681785f25d83036327d034dc7aa7a540e89b6fc827942bf9c998d3",
+        "95ed95f4f3f1c737d527d3c81c60a8026662767fd3872397a9b68ecf7b740d2a"
+      ],
+      "output_replay_hashes": [
+        "54ad15b5af655c36dd208ad6b3329e60b19366e7d16f2242b6b7ae45597b244c",
+        "2a073cbe14681785f25d83036327d034dc7aa7a540e89b6fc827942bf9c998d3",
+        "95ed95f4f3f1c737d527d3c81c60a8026662767fd3872397a9b68ecf7b740d2a"
+      ],
+      "outputs_present_in_request": true,
+      "http_status": 200,
+      "elapsed_s": 2.34,
+      "response_fields": [
+        "$.object",
+        "$.model",
+        "$.choices",
+        "$.choices[0].finish_reason",
+        "$.choices[0].native_finish_reason",
+        "$.choices[0].message",
+        "$.choices[0].message.role",
+        "$.choices[0].message.content",
+        "$.choices[0].message.reasoning_content",
+        "$.choices[0].message.signature",
+        "$.choices[0].message.tool_calls",
+        "$.choices[0].message.tool_calls[0].index",
+        "$.choices[0].message.tool_calls[0].id",
+        "$.choices[0].message.tool_calls[0].type",
+        "$.choices[0].message.tool_calls[0].function",
+        "$.choices[0].message.tool_calls[0].function.name",
+        "$.choices[0].message.tool_calls[0].function.arguments",
+        "$.choices[0].message.tool_calls[0].signature",
+        "$.choices[0].groundingMetadata",
+        "$.usage",
+        "$.usage.completion_tokens",
+        "$.usage.prompt_tokens",
+        "$.usage.total_tokens",
+        "$.usage.reasoning_tokens",
+        "$.usage.prompt_tokens_details",
+        "$.usage.prompt_tokens_details.cached_tokens",
+        "$.usage.traffic_type",
+        "$.usage.promptTokensDetails",
+        "$.usage.promptTokensDetails[0].modality",
+        "$.usage.promptTokensDetails[0].tokenCount",
+        "$.usage.candidatesTokensDetails",
+        "$.usage.candidatesTokensDetails[0].modality",
+        "$.usage.candidatesTokensDetails[0].tokenCount"
+      ],
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "ff1570cd173ce66a280de3e105be35f3bfae10f7364a940b0de6b8c0180b42a7",
+          "length": 464,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "ff1570cd173ce66a280de3e105be35f3bfae10f7364a940b0de6b8c0180b42a7",
+          "length": 464,
+          "opaque_name": true
+        },
+        {
+          "path": "$.usage.reasoning_tokens",
+          "type": "int",
+          "nonempty": true,
+          "sha256": "a68b412c4282555f15546cf6e1fc42893b7e07f271557ceb021821098dd66c1b",
+          "length": null,
+          "opaque_name": false
+        }
+      ],
+      "usage": {
+        "completion_tokens": 16,
+        "prompt_tokens": 665,
+        "total_tokens": 745,
+        "reasoning_tokens": 64,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "PROVISIONED_THROUGHPUT",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 665
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 16
+          }
+        ]
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "tool_calls",
+      "assistant_message_sha256": "2f96fb036e55ce579cc7bba2e07e5d437baa944ea80db6a7c03d89d9c85dcc9c",
+      "assistant_message_fields": [
+        "role",
+        "content",
+        "reasoning_content",
+        "signature",
+        "tool_calls"
+      ],
+      "output_item_hashes": [
+        "2f96fb036e55ce579cc7bba2e07e5d437baa944ea80db6a7c03d89d9c85dcc9c"
+      ]
+    },
+    {
+      "index": 5,
+      "logid": "gemini_tool_state_20261103_62c046f0d2_5",
+      "request_state_fields": [
+        {
+          "path": "$.messages[2].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[2].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[2].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[4].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[4].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "5b720228ab00cd1afb3ec4448e74b381a6a3f112c445ce3c656cd08002992866",
+          "length": 260,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[4].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "5b720228ab00cd1afb3ec4448e74b381a6a3f112c445ce3c656cd08002992866",
+          "length": 260,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[6].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[6].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "c0e67bbc9c5a18e567afa3256c34509dc44cfb5e74390bf1709dee894112bb4f",
+          "length": 584,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[6].multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "c0e67bbc9c5a18e567afa3256c34509dc44cfb5e74390bf1709dee894112bb4f",
+          "length": 584,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[8].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[8].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "ff1570cd173ce66a280de3e105be35f3bfae10f7364a940b0de6b8c0180b42a7",
+          "length": 464,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[8].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "ff1570cd173ce66a280de3e105be35f3bfae10f7364a940b0de6b8c0180b42a7",
+          "length": 464,
+          "opaque_name": true
+        }
+      ],
+      "assistant_replay_hashes": [
+        "54ad15b5af655c36dd208ad6b3329e60b19366e7d16f2242b6b7ae45597b244c",
+        "2a073cbe14681785f25d83036327d034dc7aa7a540e89b6fc827942bf9c998d3",
+        "95ed95f4f3f1c737d527d3c81c60a8026662767fd3872397a9b68ecf7b740d2a",
+        "2f96fb036e55ce579cc7bba2e07e5d437baa944ea80db6a7c03d89d9c85dcc9c"
+      ],
+      "output_replay_hashes": [
+        "54ad15b5af655c36dd208ad6b3329e60b19366e7d16f2242b6b7ae45597b244c",
+        "2a073cbe14681785f25d83036327d034dc7aa7a540e89b6fc827942bf9c998d3",
+        "95ed95f4f3f1c737d527d3c81c60a8026662767fd3872397a9b68ecf7b740d2a",
+        "2f96fb036e55ce579cc7bba2e07e5d437baa944ea80db6a7c03d89d9c85dcc9c"
+      ],
+      "outputs_present_in_request": true,
+      "http_status": 200,
+      "elapsed_s": 1.805,
+      "response_fields": [
+        "$.object",
+        "$.model",
+        "$.choices",
+        "$.choices[0].finish_reason",
+        "$.choices[0].native_finish_reason",
+        "$.choices[0].message",
+        "$.choices[0].message.role",
+        "$.choices[0].message.content",
+        "$.choices[0].message.reasoning_content",
+        "$.choices[0].message.signature",
+        "$.choices[0].message.multimodal_contents",
+        "$.choices[0].message.multimodal_contents[0].type",
+        "$.choices[0].message.multimodal_contents[0].text",
+        "$.choices[0].message.multimodal_contents[0].signature",
+        "$.choices[0].groundingMetadata",
+        "$.usage",
+        "$.usage.completion_tokens",
+        "$.usage.prompt_tokens",
+        "$.usage.total_tokens",
+        "$.usage.prompt_tokens_details",
+        "$.usage.prompt_tokens_details.cached_tokens",
+        "$.usage.traffic_type",
+        "$.usage.promptTokensDetails",
+        "$.usage.promptTokensDetails[0].modality",
+        "$.usage.promptTokensDetails[0].tokenCount",
+        "$.usage.candidatesTokensDetails",
+        "$.usage.candidatesTokensDetails[0].modality",
+        "$.usage.candidatesTokensDetails[0].tokenCount"
+      ],
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "85e8fdb276cc9a9dec5493b3fb34ad7a6ffa1f67e8ac0fe5d8f53698d308c8f2",
+          "length": 116,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.multimodal_contents[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "85e8fdb276cc9a9dec5493b3fb34ad7a6ffa1f67e8ac0fe5d8f53698d308c8f2",
+          "length": 116,
+          "opaque_name": true
+        }
+      ],
+      "usage": {
+        "completion_tokens": 75,
+        "prompt_tokens": 367,
+        "total_tokens": 442,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 367
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 75
+          }
+        ]
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "assistant_message_sha256": "47d2d3cb1d0d51a5f6de2ee7d5cef9fef57eae69125735038e1d0391a8423690",
+      "assistant_message_fields": [
+        "role",
+        "content",
+        "reasoning_content",
+        "signature",
+        "multimodal_contents"
+      ],
+      "output_item_hashes": [
+        "47d2d3cb1d0d51a5f6de2ee7d5cef9fef57eae69125735038e1d0391a8423690"
+      ]
+    }
+  ],
+  "tool_executions": [
+    {
+      "round": 1,
+      "id": "",
+      "result": {
+        "name": "alpha",
+        "value": 137,
+        "receipt": "receipt-243ebc3e1e13"
+      }
+    },
+    {
+      "round": 2,
+      "id": "",
+      "result": {
+        "name": "beta",
+        "value": 211,
+        "receipt": "receipt-68ee3c7c93f4"
+      }
+    },
+    {
+      "round": 4,
+      "id": "",
+      "result": {
+        "name": "alpha",
+        "value": 137,
+        "receipt": "receipt-243ebc3e1e13"
+      }
+    }
+  ],
+  "result": "passed",
+  "expected": {
+    "marker": "context-eb254362cac6",
+    "sum": 348,
+    "alpha_receipt": "receipt-243ebc3e1e13",
+    "beta_receipt": "receipt-68ee3c7c93f4"
+  },
+  "scope": "Direct HTTP protocol smoke; no Codex SDK, adapter, dataset or benchmark scoring",
+  "control_base_request_index": 2,
+  "final_answer_format": "plain",
+  "final_answer": {
+    "marker": "context-eb254362cac6",
+    "sum": 348,
+    "alpha_receipt": "receipt-243ebc3e1e13",
+    "beta_receipt": "receipt-68ee3c7c93f4"
+  },
+  "answer_matches_expected": true,
+  "tool_order_correct": true,
+  "opaque_state_observed": true,
+  "replay_hashes_match": true,
+  "initial_chain_passed": true,
+  "controls": [
+    {
+      "mode": "corrupt_message_only",
+      "http_status": 200,
+      "elapsed_s": 2.262,
+      "error": null,
+      "usage": {
+        "completion_tokens": 16,
+        "prompt_tokens": 312,
+        "total_tokens": 332,
+        "reasoning_tokens": 4,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "traffic_type": "PROVISIONED_THROUGHPUT",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 312
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 16
+          }
+        ]
+      },
+      "request_state_fields": [
+        {
+          "path": "$.messages[2].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[2].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "1cb8df7dcd9a32def0a9b24d66fcaebbe10b56956281319ea34b7cf662515150",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[2].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        }
+      ],
+      "response_state_fields": [
+        {
+          "path": "$.choices[0].message.reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.choices[0].message.signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "916228eefd5bd1aed5241957288ebc84b55914a4a9ac4f8b36da53f8f2328ba3",
+          "length": 136,
+          "opaque_name": true
+        },
+        {
+          "path": "$.choices[0].message.tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "916228eefd5bd1aed5241957288ebc84b55914a4a9ac4f8b36da53f8f2328ba3",
+          "length": 136,
+          "opaque_name": true
+        },
+        {
+          "path": "$.usage.reasoning_tokens",
+          "type": "int",
+          "nonempty": true,
+          "sha256": "4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
+          "length": null,
+          "opaque_name": false
+        }
+      ],
+      "touched_state_fields": [
+        {
+          "path": [
+            "messages",
+            2,
+            "signature"
+          ],
+          "length": 804,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5"
+        }
+      ]
+    },
+    {
+      "mode": "corrupt_tool_only",
+      "http_status": 400,
+      "elapsed_s": 0.671,
+      "error": {
+        "message": "400: Invalid thought signature.",
+        "code": "-4003"
+      },
+      "usage": null,
+      "request_state_fields": [
+        {
+          "path": "$.messages[2].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[2].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[2].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "1cb8df7dcd9a32def0a9b24d66fcaebbe10b56956281319ea34b7cf662515150",
+          "length": 804,
+          "opaque_name": true
+        }
+      ],
+      "response_state_fields": [],
+      "touched_state_fields": [
+        {
+          "path": [
+            "messages",
+            2,
+            "tool_calls",
+            0,
+            "signature"
+          ],
+          "length": 804,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5"
+        }
+      ]
+    },
+    {
+      "mode": "corrupt_all_copies",
+      "http_status": 400,
+      "elapsed_s": 0.611,
+      "error": {
+        "message": "400: Invalid thought signature.",
+        "code": "-4003"
+      },
+      "usage": null,
+      "request_state_fields": [
+        {
+          "path": "$.messages[2].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        },
+        {
+          "path": "$.messages[2].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "1cb8df7dcd9a32def0a9b24d66fcaebbe10b56956281319ea34b7cf662515150",
+          "length": 804,
+          "opaque_name": true
+        },
+        {
+          "path": "$.messages[2].tool_calls[0].signature",
+          "type": "str",
+          "nonempty": true,
+          "sha256": "1cb8df7dcd9a32def0a9b24d66fcaebbe10b56956281319ea34b7cf662515150",
+          "length": 804,
+          "opaque_name": true
+        }
+      ],
+      "response_state_fields": [],
+      "touched_state_fields": [
+        {
+          "path": [
+            "messages",
+            2,
+            "tool_calls",
+            0,
+            "signature"
+          ],
+          "length": 804,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5"
+        },
+        {
+          "path": [
+            "messages",
+            2,
+            "signature"
+          ],
+          "length": 804,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5"
+        }
+      ]
+    },
+    {
+      "mode": "remove_all",
+      "http_status": 400,
+      "elapsed_s": 0.963,
+      "error": {
+        "message": "上一轮模型对话中返回的signature字段必须按原样回传，具体请参考：[https://bytedance.larkoffice.com/wiki/XlkuwCfY6i1KCkkiMLZc5zCXnib] 中的signature字段",
+        "code": "-4003"
+      },
+      "usage": null,
+      "request_state_fields": [
+        {
+          "path": "$.messages[2].reasoning_content",
+          "type": "str",
+          "nonempty": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "length": 0,
+          "opaque_name": false
+        }
+      ],
+      "response_state_fields": [],
+      "touched_state_fields": [
+        {
+          "path": [
+            "messages",
+            2,
+            "tool_calls",
+            0,
+            "signature"
+          ],
+          "length": 804,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5"
+        },
+        {
+          "path": [
+            "messages",
+            2,
+            "signature"
+          ],
+          "length": 804,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5"
+        }
+      ]
+    }
+  ]
+}

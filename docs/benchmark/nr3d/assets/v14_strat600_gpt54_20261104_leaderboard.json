@@ -1,0 +1,53 @@
+{
+  "fold": "v9_3_strat600",
+  "n": 600,
+  "metric": "oriented_3d_iou@0.25",
+  "slices": {
+    "Overall": {
+      "n": 600,
+      "correct": 509,
+      "acc": 0.8483333333333334
+    },
+    "Easy": {
+      "n": 290,
+      "correct": 256,
+      "acc": 0.8827586206896552
+    },
+    "Hard": {
+      "n": 310,
+      "correct": 253,
+      "acc": 0.8161290322580645
+    },
+    "View-Dep": {
+      "n": 211,
+      "correct": 169,
+      "acc": 0.8009478672985783
+    },
+    "View-Indep": {
+      "n": 389,
+      "correct": 340,
+      "acc": 0.8740359897172236
+    }
+  },
+  "mean_iou": 0.8502756285927231,
+  "cache_hit_rate": 0.9783333333333334,
+  "mean_cache_ratio": 0.8793635532134331,
+  "status": {
+    "completed": 599,
+    "failed": 1
+  },
+  "with_reasoning_summary": 549,
+  "reasoning_summary_rate": 0.915,
+  "latency_s": {
+    "median": 88.987,
+    "p90": 188.559,
+    "max": 583.365
+  },
+  "top_errors": [
+    {
+      "sample_id": "scannet/scene0169_00::26::28815",
+      "error": "",
+      "summary": "Frame 123 confirms proposal #12 is a large wood credenza, not the smaller cabinet. Frame 60 shows the only other cabinet-labeled proposal, #26, is actually a black drafting chair rather than a cabinet. So the described smaller cabinet is not represented as a valid standalone proposal in the pool."
+    }
+  ]
+}

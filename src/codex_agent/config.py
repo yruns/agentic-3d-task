@@ -1,9 +1,9 @@
 """Runtime configuration for :class:`codex_agent.runtime.CodexAgentRuntime`.
 
 The Codex Agent SDK talks to the model through a Codex *model provider* that is
-configured in ``$CODEX_HOME/config.toml`` (for this repository, a local
-ModelHub adapter). API keys therefore live inside that adapter, **not** in this
-config object — keeping secrets out of the Python process and out of git.
+configured in ``$CODEX_HOME/config.toml`` (by default, ``codex_adapter``).
+Upstream API keys live only in the adapter registry, never in client headers.
+An optional local adapter token is distinct from those upstream credentials.
 
 All environment-variable reads are centralized in :meth:`CodexAgentConfig.from_env`
 so business code never reaches into ``os.environ`` directly.
@@ -11,15 +11,18 @@ so business code never reaches into ``os.environ`` directly.
 
 from __future__ import annotations
 
+import math
 import os
-from dataclasses import dataclass
+import re
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TypedDict
 
 from .errors import CodexConfigError
 
 SandboxMode = Literal["read_only", "workspace_write", "full_access"]
-ReasoningEffort = Literal["", "minimal", "low", "medium", "high"]
+ReasoningEffort = Literal["", "provider-default", "minimal", "low", "medium", "high"]
 #: Reasoning-summary verbosity. ``""`` means "do not request a summary" (the
 #: model/provider default governs); the others map to the Codex SDK's
 #: ``ReasoningSummary`` (``none`` explicitly disables summaries upstream).
@@ -29,7 +32,7 @@ _VALID_SANDBOX_MODES: frozenset[str] = frozenset(
     {"read_only", "workspace_write", "full_access"}
 )
 _VALID_REASONING_EFFORTS: frozenset[str] = frozenset(
-    {"", "minimal", "low", "medium", "high"}
+    {"", "provider-default", "minimal", "low", "medium", "high"}
 )
 _VALID_REASONING_SUMMARIES: frozenset[str] = frozenset(
     {"", "auto", "concise", "detailed", "none"}
@@ -39,7 +42,7 @@ _VALID_REASONING_SUMMARIES: frozenset[str] = frozenset(
 DEFAULT_PROJECT_ROOT: Path = Path(__file__).resolve().parents[2]
 DEFAULT_CODEX_HOME: Path = DEFAULT_PROJECT_ROOT / ".codex-home"
 DEFAULT_CODEX_MODEL = "gpt-5.4-2026-03-05"
-DEFAULT_CODEX_MODEL_PROVIDER = "modelhub_adapter"
+DEFAULT_CODEX_MODEL_PROVIDER = "codex_adapter"
 DEFAULT_PREFIX_CACHE_SESSION_ID = "codex_agent"
 #: Default reasoning effort when neither the CLI nor the environment overrides
 #: it. ``medium`` is a deliberate, reproducible default; an empty string would
@@ -87,16 +90,16 @@ class CodexAgentConfig:
             (needed by ``keyframe_selector``, which calls the parsing LLM).
         reasoning_effort: Reasoning effort passed to the model per turn (via the
             SDK ``effort`` argument, not a ``config.toml`` override). Defaults to
-            ``medium`` (:data:`DEFAULT_REASONING_EFFORT`); set ``""`` to instead
-            follow the model's own default.
+            ``medium`` (:data:`DEFAULT_REASONING_EFFORT`); set ``""`` or
+            ``"provider-default"`` explicitly to use the provider's own default.
         reasoning_summary: Reasoning-summary verbosity passed to the model per
             turn (via the SDK ``summary`` argument). ``""`` requests nothing
             (provider default); ``auto`` / ``concise`` / ``detailed`` ask the
             model to emit a human-readable summary of its reasoning, which the
             runtime captures into the turn metadata for tracing/debugging.
-        enable_prefix_cache: Send ModelHub prefix-cache + log-id headers so the
-            adapter can reuse the prompt prefix across turns.
-        prefix_cache_session_id: Stable session id used for prefix caching.
+        enable_prefix_cache: Enable legacy ModelHub cache/log headers. The new
+            adapter owns cache policy; its routing UUID is always sent.
+        prefix_cache_session_id: Legacy trace label, never a routing identity.
         turn_timeout_s: Wall-clock budget for one agentic turn. ``0`` disables
             the budget; a positive value interrupts a turn that exceeds it so a
             runaway tool loop cannot stall the run, after which a finalization
@@ -131,6 +134,9 @@ class CodexAgentConfig:
             per-turn run home. This is off by default because the ModelHub
             adapter path keeps secrets outside Codex run homes; enable it only
             for explicit runs that use the standard Codex ``openai`` provider.
+        adapter_token: Optional raw local ``CODEX_ADAPTER_TOKEN``, excluded from
+            repr and converted into a Bearer header by the runtime. Not an
+            upstream model API key.
     """
 
     project_root: Path = DEFAULT_PROJECT_ROOT
@@ -150,47 +156,12 @@ class CodexAgentConfig:
     restrict_skills_to_project: bool = True
     keep_run_home: bool = False
     copy_auth_file: bool = False
+    adapter_token: str = field(default="", repr=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "project_root", Path(self.project_root))
         object.__setattr__(self, "codex_home", Path(self.codex_home))
-        if not self.model:
-            raise CodexConfigError("model must be a non-empty string")
-        if not self.model_provider:
-            raise CodexConfigError("model_provider must be a non-empty string")
-        if self.reasoning_effort not in _VALID_REASONING_EFFORTS:
-            raise CodexConfigError(
-                f"reasoning_effort={self.reasoning_effort!r} is invalid; expected "
-                f"one of {sorted(_VALID_REASONING_EFFORTS)}"
-            )
-        if self.reasoning_summary not in _VALID_REASONING_SUMMARIES:
-            raise CodexConfigError(
-                f"reasoning_summary={self.reasoning_summary!r} is invalid; expected "
-                f"one of {sorted(_VALID_REASONING_SUMMARIES)}"
-            )
-        if self.turn_timeout_s < 0:
-            raise CodexConfigError(
-                f"turn_timeout_s must be non-negative, got {self.turn_timeout_s}"
-            )
-        if self.max_tool_calls < 0:
-            raise CodexConfigError(
-                f"max_tool_calls must be non-negative, got {self.max_tool_calls}"
-            )
-        if self.max_repeated_tool_calls < 0:
-            raise CodexConfigError(
-                "max_repeated_tool_calls must be non-negative, got "
-                f"{self.max_repeated_tool_calls}"
-            )
-        if self.model_context_window < 0:
-            raise CodexConfigError(
-                "model_context_window must be non-negative, got "
-                f"{self.model_context_window}"
-            )
-        if self.sandbox not in _VALID_SANDBOX_MODES:
-            raise CodexConfigError(
-                f"sandbox={self.sandbox!r} is invalid; "
-                f"expected one of {sorted(_VALID_SANDBOX_MODES)}"
-            )
+        _validate_config(self)
         object.__setattr__(
             self,
             "prefix_cache_session_id",
@@ -220,49 +191,110 @@ class CodexAgentConfig:
         return cls(
             project_root=resolved_root,
             codex_home=resolved_home,
-            model=os.environ.get("CODEX_AGENT_MODEL", DEFAULT_CODEX_MODEL),
-            model_provider=os.environ.get(
-                "CODEX_AGENT_MODEL_PROVIDER", DEFAULT_CODEX_MODEL_PROVIDER
-            ),
-            sandbox=_sandbox_from_env(os.environ.get("CODEX_AGENT_SANDBOX")),
-            sandbox_network_access=_env_bool(
-                os.environ.get("CODEX_AGENT_SANDBOX_NETWORK"), default=False
-            ),
-            reasoning_effort=_reasoning_effort_from_env(
-                os.environ.get("CODEX_AGENT_REASONING_EFFORT"),
-                default=DEFAULT_REASONING_EFFORT,
-            ),
-            reasoning_summary=_reasoning_summary_from_env(
-                os.environ.get("CODEX_AGENT_REASONING_SUMMARY")
-            ),
-            enable_prefix_cache=_env_bool(
-                os.environ.get("CODEX_AGENT_ENABLE_PREFIX_CACHE"), default=True
-            ),
-            prefix_cache_session_id=os.environ.get(
-                "CODEX_AGENT_PREFIX_CACHE_SESSION_ID",
-                DEFAULT_PREFIX_CACHE_SESSION_ID,
-            ),
-            turn_timeout_s=_env_float(
-                os.environ.get("CODEX_AGENT_TURN_TIMEOUT_S"), default=0.0
-            ),
-            max_tool_calls=_env_int(
-                os.environ.get("CODEX_AGENT_MAX_TOOL_CALLS"), default=0
-            ),
-            max_repeated_tool_calls=_env_int(
-                os.environ.get("CODEX_AGENT_MAX_REPEATED_TOOL_CALLS"), default=0
-            ),
-            model_context_window=_env_int(
-                os.environ.get("CODEX_AGENT_MODEL_CONTEXT_WINDOW"), default=0
-            ),
-            restrict_skills_to_project=_env_bool(
-                os.environ.get("CODEX_AGENT_RESTRICT_SKILLS"), default=True
-            ),
-            keep_run_home=_env_bool(
-                os.environ.get("CODEX_AGENT_KEEP_RUN_HOME"), default=False
-            ),
-            copy_auth_file=_env_bool(
-                os.environ.get("CODEX_AGENT_COPY_AUTH"), default=False
-            ),
+            **_runtime_environment(os.environ),
+            **_provider_environment(os.environ),
+        )
+
+
+class _RuntimeEnvironment(TypedDict):
+    sandbox: SandboxMode
+    sandbox_network_access: bool
+    turn_timeout_s: float
+    max_tool_calls: int
+    max_repeated_tool_calls: int
+    model_context_window: int
+    restrict_skills_to_project: bool
+    keep_run_home: bool
+    copy_auth_file: bool
+
+
+class _ProviderEnvironment(TypedDict):
+    model: str
+    model_provider: str
+    reasoning_effort: ReasoningEffort
+    reasoning_summary: ReasoningSummary
+    enable_prefix_cache: bool
+    prefix_cache_session_id: str
+    adapter_token: str
+
+
+def _runtime_environment(env: Mapping[str, str]) -> _RuntimeEnvironment:
+    return {
+        "sandbox": _sandbox_from_env(env.get("CODEX_AGENT_SANDBOX")),
+        "sandbox_network_access": _env_bool(
+            env.get("CODEX_AGENT_SANDBOX_NETWORK"), default=False
+        ),
+        "turn_timeout_s": _env_float(
+            env.get("CODEX_AGENT_TURN_TIMEOUT_S"), default=0.0
+        ),
+        "max_tool_calls": _env_int(env.get("CODEX_AGENT_MAX_TOOL_CALLS"), default=0),
+        "max_repeated_tool_calls": _env_int(
+            env.get("CODEX_AGENT_MAX_REPEATED_TOOL_CALLS"), default=0
+        ),
+        "model_context_window": _env_int(
+            env.get("CODEX_AGENT_MODEL_CONTEXT_WINDOW"), default=0
+        ),
+        "restrict_skills_to_project": _env_bool(
+            env.get("CODEX_AGENT_RESTRICT_SKILLS"), default=True
+        ),
+        "keep_run_home": _env_bool(env.get("CODEX_AGENT_KEEP_RUN_HOME"), default=False),
+        "copy_auth_file": _env_bool(env.get("CODEX_AGENT_COPY_AUTH"), default=False),
+    }
+
+
+def _provider_environment(env: Mapping[str, str]) -> _ProviderEnvironment:
+    return {
+        "model": env.get("CODEX_AGENT_MODEL", DEFAULT_CODEX_MODEL),
+        "model_provider": env.get(
+            "CODEX_AGENT_MODEL_PROVIDER", DEFAULT_CODEX_MODEL_PROVIDER
+        ),
+        "reasoning_effort": _reasoning_effort_from_env(
+            env.get("CODEX_AGENT_REASONING_EFFORT"), default=DEFAULT_REASONING_EFFORT
+        ),
+        "reasoning_summary": _reasoning_summary_from_env(
+            env.get("CODEX_AGENT_REASONING_SUMMARY")
+        ),
+        "enable_prefix_cache": _env_bool(
+            env.get("CODEX_AGENT_ENABLE_PREFIX_CACHE"), default=True
+        ),
+        "prefix_cache_session_id": env.get(
+            "CODEX_AGENT_PREFIX_CACHE_SESSION_ID", DEFAULT_PREFIX_CACHE_SESSION_ID
+        ),
+        "adapter_token": env.get("CODEX_ADAPTER_TOKEN", ""),
+    }
+
+
+def _validate_config(config: CodexAgentConfig) -> None:
+    for name, value in (
+        ("model", config.model),
+        ("model_provider", config.model_provider),
+    ):
+        if not isinstance(value, str) or not value.strip():
+            raise CodexConfigError(f"{name} must be a non-empty string")
+    for name, value, allowed in (
+        ("sandbox", config.sandbox, _VALID_SANDBOX_MODES),
+        ("reasoning_effort", config.reasoning_effort, _VALID_REASONING_EFFORTS),
+        ("reasoning_summary", config.reasoning_summary, _VALID_REASONING_SUMMARIES),
+    ):
+        if value not in allowed:
+            raise CodexConfigError(
+                f"{name}={value!r} is invalid; expected one of {sorted(allowed)}"
+            )
+    for numeric_name, numeric_value in (
+        ("turn_timeout_s", config.turn_timeout_s),
+        ("max_tool_calls", config.max_tool_calls),
+        ("max_repeated_tool_calls", config.max_repeated_tool_calls),
+        ("model_context_window", config.model_context_window),
+    ):
+        if numeric_value < 0 or not math.isfinite(numeric_value):
+            raise CodexConfigError(
+                f"{numeric_name} must be finite and non-negative, got {numeric_value}"
+            )
+    if config.adapter_token and not re.fullmatch(
+        r"[A-Za-z0-9._~+/-]+=*", config.adapter_token
+    ):
+        raise CodexConfigError(
+            "adapter_token must be a raw Bearer token without whitespace or a Bearer prefix"
         )
 
 
@@ -289,7 +321,7 @@ def _sandbox_from_env(raw: str | None) -> SandboxMode:
 def _reasoning_effort_from_env(
     raw: str | None, *, default: ReasoningEffort = ""
 ) -> ReasoningEffort:
-    if raw is None or not raw.strip():
+    if raw is None:
         return default
     normalized = raw.strip().lower()
     if normalized not in _VALID_REASONING_EFFORTS:

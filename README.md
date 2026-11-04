@@ -55,7 +55,7 @@ src/
     ├── cli/                  # python -m codex_agent.cli.run_*
     └── tests/
 
-codex_modelhub_adapter/       # Project-local Codex SDK -> internal ModelHub adapter
+src/codex_adapter/           # Stateful Codex Responses gateway and provider codecs
 configs/llm.example.toml      # Placeholder LLM config; real configs are gitignored
 docs/                         # Markdown source for the MkDocs Material site
 docs/benchmark/               # Durable NR3D / OpenEQA run records and assets
@@ -85,9 +85,11 @@ uv pip install -e ".[dev,vision,clip]"
 uv pip install -e ".[dev,vision,codex]"
 ```
 
-On Linux, use the `conceptgraph` conda environment described in `CLAUDE.md`.
-Do not recreate a project `.venv` on Linux unless the environment instructions
-change.
+On Linux, use the `agentic3d` conda environment and the shared models/sources
+under `/home/ysh/Models/agentic3d`. See
+[`docs/agentic3d_environment.md`](docs/agentic3d_environment.md) for activation,
+asset links, pinned versions, and native model-service commands. The older
+`conceptgraph` environment is preserved. Do not recreate a project `.venv` on Linux.
 
 ## Quick Start: Keyframe Retrieval
 
@@ -125,12 +127,17 @@ NR3D runs ask the Codex agent to select one proposal id from a prepared scene
 proposal pool. Ground-truth target ids, categories, and boxes are not included
 in the prompt.
 
+On the configured Linux host, use the imported `processed_v1` canonical pilot
+(see [dataset locations](docs/dataset_locations.md) for prerequisites and full folds).
+Run evaluations in tmux after recording the clean code revision.
+
 ```bash
+source scripts/datasets/processed_v1.sh
 python -m codex_agent.cli.run_nr3d \
-  --sample-ids /path/to/nr3d_sample_ids.json \
-  --data-root /path/to/data/nr3d/scannet \
+  --sample-ids "$NR3D_PILOT_SAMPLE_IDS" \
+  --data-root "$NR3D_DATA_ROOT" \
+  --pack-name "$NR3D_PACK_NAME" \
   --output-dir tmp/nr3d_run \
-  --limit 10 \
   --workers 1 \
   --tools \
   --reasoning-summary auto
@@ -147,11 +154,12 @@ agent must fetch all visual evidence through scene tools such as
 `keyframe_selector`, `view_frame`, `view_crop`, `view_bev`, and `list_objects`.
 
 ```bash
+source scripts/datasets/processed_v1.sh
 python -m codex_agent.cli.run_openeqa \
-  --questions /path/to/data/open-eqa-v0.json \
-  --data-root /path/to/data/OpenEQA/scannet \
+  --questions "$OPENEQA_QUESTIONS" \
+  --data-root "$OPENEQA_DATA_ROOT" \
+  --question-ids "$OPENEQA_PILOT_QUESTION_IDS" \
   --output-dir tmp/openeqa_run \
-  --limit 10 \
   --workers 1
 ```
 
@@ -159,41 +167,49 @@ Add `--no-judge` when you only want predictions and do not want to call the
 LLM-as-judge. With judging enabled, the runner writes checkpoints,
 `summary.json`, and `predictions.json`.
 
-## Codex ModelHub Adapter
+## Codex Multi-Protocol Adapter
 
-The `codex_agent` runtime uses the Codex Agent SDK. In this repository, Codex
-is normally pointed at the project-local adapter under
-`codex_modelhub_adapter/`, which exposes OpenAI-compatible endpoints:
+The active gateway is `src/codex_adapter/`, using the root project's `adapter`
+extra and lock file. It supports native GPT Responses and a dedicated Gemini
+Chat codec with authenticated, encrypted persistent state. Codex still sees a
+Responses provider and executes the tools itself.
 
-```text
-POST /v1/responses
-POST /v1/responses/compact
-GET  /health
-```
+Models must be registered exactly. Each model contains multiple upstreams, each
+with its own URL, direct AK, and weight. New sessions select one complete
+upstream, then retain that URL/AK binding across turns and restarts.
+Unknown models fail without fallback; rate limits never trigger account
+failover. Stable affinity and intact history preserve cache eligibility, not a
+guarantee that the upstream will report a cache hit.
 
-Start the adapter in a separate terminal when running Codex-based benchmarks:
-
-```bash
-cd codex_modelhub_adapter
-uv sync --python 3.12
-set -a
-source .env
-set +a
-uv run uvicorn adapter.app:app --host 127.0.0.1 --port 8787
-```
-
-Initialize the project-local Codex home once per checkout:
+Copy `configs/codex_adapter.example.toml` to the ignored private configuration,
+fill each upstream's `ak` directly, and protect the file with owner-only
+permissions. Upstream AKs are not read from environment variables. Run
+installation and service commands inside tmux, using the existing environment.
 
 ```bash
-scripts/codex_agent/bootstrap_codex_home.sh
+python -m codex_adapter check --config configs/codex_adapter.toml
 ```
 
-This writes `.codex-home/config.toml` with the local adapter provider only. It
-does not write ModelHub credentials; real credentials stay in the adapter's
-gitignored `.env` or upstream TOML file.
+```bash
+python -m codex_adapter init-state --config configs/codex_adapter.toml
+```
 
-Real ModelHub AKs and upstream pools are private and gitignored. Keep them out
-of docs, logs, commits, and benchmark records.
+```bash
+python -m codex_adapter serve --config configs/codex_adapter.toml
+```
+
+For a fresh Codex home:
+
+```bash
+scripts/codex_agent/bootstrap_codex_home.sh --model gpt-5.4-2026-03-05
+```
+
+See the [adapter operations and capability guide](docs/codex_agent/adapter.md)
+for installation, model registration, authentication, state recovery, Gemini's
+buffered SSE and unsupported compact, and local verification. Gemini schema/image
+capability declarations require upstream verification before task use. The old
+`codex_modelhub_adapter/` implementation is retired; archived benchmark commands
+are not current launch instructions. Never commit or log AKs or opaque state.
 
 ## Benchmarks
 
@@ -273,10 +289,16 @@ explicitly with the remaining risk.
 
 ## Data Notes
 
-Large benchmark assets are local-only and gitignored. Paths such as
-`data/open-eqa-v0.json`, `data/OpenEQA/scannet/`, and
-`data/nr3d/scannet/` are expected to be prepared separately and will not appear
-after a fresh clone.
+On the current Linux host, use the shared `/home/ysh/Datasets` root instead of
+another project's checkout. See [Local Dataset Locations](docs/dataset_locations.md)
+for current `nr3d/processed_v1` and `open-eqa/processed_v1` packages, full/pilot
+folds, and original NR3D/OpenEQA/ScanNet data. Use
+`source scripts/datasets/processed_v1.sh` before the examples above; the generic
+CLIs still require explicit data/fold arguments.
+
+Large benchmark assets are local-only and not bundled. A fresh clone has no
+`data/` directory; do not silently use old project-relative data paths or mix
+original annotations with a different processed package's sample IDs.
 
 Prepared scenes may contain provenance paths from the machine that generated
 them. Treat those paths as metadata, not as runnable local paths.

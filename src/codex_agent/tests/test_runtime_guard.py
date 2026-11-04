@@ -17,7 +17,6 @@ from typing import Any
 import pytest
 from openai_codex import CodexConfig, TurnResult
 from openai_codex.generated.v2_all import (
-    AbsolutePathBuf,
     AgentMessageThreadItem,
     CommandExecutionStatus,
     CommandExecutionThreadItem,
@@ -25,6 +24,7 @@ from openai_codex.generated.v2_all import (
     DynamicToolCallThreadItem,
     ImageViewThreadItem,
     ItemCompletedNotification,
+    LegacyAppPathString,
     McpToolCallStatus,
     McpToolCallThreadItem,
     MessagePhase,
@@ -62,7 +62,7 @@ def _cmd(command: str) -> ThreadItem:
         root=CommandExecutionThreadItem(
             command=command,
             command_actions=[],
-            cwd=AbsolutePathBuf("/tmp"),
+            cwd=LegacyAppPathString("/tmp"),
             id="cmd",
             status=CommandExecutionStatus.completed,
             type="commandExecution",
@@ -72,7 +72,9 @@ def _cmd(command: str) -> ThreadItem:
 
 def _image(path: str) -> ThreadItem:
     return ThreadItem(
-        root=ImageViewThreadItem(id="img", path=AbsolutePathBuf(path), type="imageView")
+        root=ImageViewThreadItem(
+            id="img", path=LegacyAppPathString(path), type="imageView"
+        )
     )
 
 
@@ -259,6 +261,7 @@ def _runtime(
     agent_config = CodexAgentConfig(
         project_root=tmp_path,
         codex_home=codex_home,
+        model_provider="modelhub_adapter",
         restrict_skills_to_project=False,
         enable_prefix_cache=False,
         **config_kwargs,

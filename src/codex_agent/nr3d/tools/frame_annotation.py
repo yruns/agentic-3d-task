@@ -11,6 +11,8 @@ lazily by the dispatcher only when the tool is invoked.
 
 from __future__ import annotations
 
+import os
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -113,7 +115,14 @@ def mark_frame_with_bbox(
     out_dir.mkdir(parents=True, exist_ok=True)
     ids_token = "_".join(str(p.proposal_id) for p in ordered)
     out_path = out_dir / f"{scene.scene_id}_frame_{args.frame_id}_ids_{ids_token}.png"
-    Image.fromarray(rendered).save(out_path, format="PNG")
+    tmp_path = out_path.with_name(
+        f".{out_path.stem}.{os.getpid()}.{threading.get_ident()}{out_path.suffix}"
+    )
+    try:
+        Image.fromarray(rendered).save(tmp_path, format="PNG")
+        tmp_path.replace(out_path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
     return MarkFrameResult(
         frame_id=args.frame_id,

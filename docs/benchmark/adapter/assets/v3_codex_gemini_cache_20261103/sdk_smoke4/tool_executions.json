@@ -1,0 +1,47 @@
+[
+  {
+    "turn_number": 1,
+    "thread_id": "01a1a161-e92e-7c60-8c3d-f99d86e0f6d2",
+    "turn_id": "01a1a161-e945-7640-969c-eb0e52f52bac",
+    "call_id": "call_e9754f6f3eb255505f7b1ea066f12181_0",
+    "tool": "lookup_record",
+    "arguments": {
+      "name": "alpha"
+    },
+    "result": {
+      "name": "alpha",
+      "value": 137,
+      "receipt": "receipt-80b1f4be8ba4"
+    }
+  },
+  {
+    "turn_number": 1,
+    "thread_id": "01a1a161-e92e-7c60-8c3d-f99d86e0f6d2",
+    "turn_id": "01a1a161-e945-7640-969c-eb0e52f52bac",
+    "call_id": "call_64bc7a49e855ee0ea9ccbc086ef71cc5_0",
+    "tool": "lookup_record",
+    "arguments": {
+      "name": "beta"
+    },
+    "result": {
+      "name": "beta",
+      "value": 211,
+      "receipt": "receipt-7c605eda8df3"
+    }
+  },
+  {
+    "turn_number": 2,
+    "thread_id": "01a1a161-e92e-7c60-8c3d-f99d86e0f6d2",
+    "turn_id": "01a1a162-123b-7be3-b8a9-3bc3cf1b89b0",
+    "call_id": "call_a6a5204fe0e2f72d94e44ea9900d2cd3_0",
+    "tool": "lookup_record",
+    "arguments": {
+      "name": "alpha"
+    },
+    "result": {
+      "name": "alpha",
+      "value": 137,
+      "receipt": "receipt-80b1f4be8ba4"
+    }
+  }
+]

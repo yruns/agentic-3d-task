@@ -1,0 +1,16 @@
+{
+  "turn_number": 3,
+  "method": "item/completed",
+  "payload": {
+    "completedAtMs": 1793709589940,
+    "item": {
+      "content": [],
+      "id": "rs_049207253cd2ca7c34d9ac37",
+      "summary": [],
+      "type": "reasoning"
+    },
+    "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+    "turnId": "01a1a16b-e809-7aa2-b666-8a2c9f84e767"
+  },
+  "state_fields": []
+}

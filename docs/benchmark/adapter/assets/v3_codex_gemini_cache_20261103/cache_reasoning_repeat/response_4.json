@@ -1,0 +1,53 @@
+{
+  "object": "chat.completion",
+  "model": "gemini-3.8-flash",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "native_finish_reason": "STOP",
+      "message": {
+        "role": "assistant",
+        "content": "OK",
+        "reasoning_content": "",
+        "signature": {
+          "redacted_state": true,
+          "length": 116,
+          "sha256": "c7b36e111fc5a483edf40cbce11057a85d9c4e02b313bee3bbf898d79b523d00"
+        },
+        "multimodal_contents": [
+          {
+            "type": "text",
+            "text": "OK",
+            "signature": {
+              "redacted_state": true,
+              "length": 116,
+              "sha256": "c7b36e111fc5a483edf40cbce11057a85d9c4e02b313bee3bbf898d79b523d00"
+            }
+          }
+        ]
+      },
+      "groundingMetadata": null
+    }
+  ],
+  "usage": {
+    "completion_tokens": 1,
+    "prompt_tokens": 8028,
+    "total_tokens": 8029,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "traffic_type": "PROVISIONED_THROUGHPUT",
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 8028
+      }
+    ],
+    "candidatesTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 1
+      }
+    ]
+  }
+}

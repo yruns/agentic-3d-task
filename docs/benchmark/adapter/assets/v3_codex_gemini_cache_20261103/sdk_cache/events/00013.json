@@ -1,0 +1,30 @@
+{
+  "turn_number": 1,
+  "method": "rawResponseItem/completed",
+  "payload": {
+    "params": {
+      "threadId": "01a1a165-a1a2-7e21-8f6b-80fc5da96c99",
+      "turnId": "01a1a165-a1bb-7893-b7ec-04aeba167a8b",
+      "item": {
+        "type": "message",
+        "status": "completed",
+        "id": "msg_5e446f86722aeb24f985b828",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "C = 9, R = 6, O = 2, S = 3, A = 5, D = 1, N = 8, G = 7, E = 4\n\n  96233 (CROSS)\n+ 62513 (ROADS)\n-------\n 158746 (DANGER)",
+            "annotations": []
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a1a165-a1bb-7893-b7ec-04aeba167a8b",
+          "content_item_kinds": [
+            "unknown"
+          ]
+        }
+      }
+    }
+  },
+  "state_fields": []
+}

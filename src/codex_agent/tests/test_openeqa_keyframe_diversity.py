@@ -180,6 +180,11 @@ def test_cross_call_dedup_returns_new_views(
     second_ids = {f.frame_id for f in second.frames}
     assert first_ids == {0, 1, 2}
     assert second_ids.isdisjoint(first_ids)
+    assert first.contact_sheet_path is not None
+    assert second.contact_sheet_path is not None
+    assert first.contact_sheet_path != second.contact_sheet_path
+    assert first.contact_sheet_path.exists()
+    assert second.contact_sheet_path.exists()
 
 
 def test_view_frame_emits_contact_sheet(
@@ -191,3 +196,15 @@ def test_view_frame_emits_contact_sheet(
     payload = result.to_payload()
     assert "contact_sheet" in payload
     assert Path(payload["contact_sheet"]).exists()
+
+
+def test_view_frame_distinct_batches_use_unique_contact_sheet_paths(
+    tool_scene: OpenEqaToolScene, tmp_path: Path
+) -> None:
+    first = view_frame(tool_scene, ViewFrameArgs(frame_ids=[0, 4]), out_dir=tmp_path)
+    second = view_frame(tool_scene, ViewFrameArgs(frame_ids=[2, 8]), out_dir=tmp_path)
+    assert first.contact_sheet_path is not None
+    assert second.contact_sheet_path is not None
+    assert first.contact_sheet_path != second.contact_sheet_path
+    assert first.contact_sheet_path.exists()
+    assert second.contact_sheet_path.exists()

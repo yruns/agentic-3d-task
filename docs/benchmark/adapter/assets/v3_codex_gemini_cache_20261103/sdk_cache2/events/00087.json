@@ -1,0 +1,29 @@
+{
+  "turn_number": 6,
+  "method": "turn/completed",
+  "payload": {
+    "threadId": "01a1a168-65a7-7561-a5c8-a3309863c558",
+    "turn": {
+      "completedAt": 1793709397,
+      "durationMs": 2572,
+      "error": null,
+      "id": "01a1a169-4db8-7121-be5a-bde844559859",
+      "items": [
+        {
+          "delivery": null,
+          "id": "msg_38779229987da88ff7198fc9",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "OK",
+          "type": "agentMessage"
+        }
+      ],
+      "itemsView": "summary",
+      "rootTurnId": "01a1a169-4db8-7121-be5a-bde844559859",
+      "startedAt": 1793709395,
+      "status": "completed"
+    }
+  },
+  "state_fields": []
+}

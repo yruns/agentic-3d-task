@@ -106,10 +106,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--reasoning-effort",
         default=None,
-        choices=["minimal", "low", "medium", "high"],
+        choices=["provider-default", "minimal", "low", "medium", "high"],
         help="Model reasoning effort. Default: medium (a real accuracy win for "
         "spatial grounding). Lower is faster per call but hurts accuracy; "
-        "overridable here or via CODEX_AGENT_REASONING_EFFORT.",
+        "overridable here or via CODEX_AGENT_REASONING_EFFORT. Use "
+        "provider-default for providers without reasoning-effort support.",
     )
     parser.add_argument(
         "--reasoning-summary",
@@ -269,6 +270,7 @@ def _resolve_reasoning_effort(
 
 def _as_reasoning_effort(value: str) -> ReasoningEffort:
     efforts: dict[str, ReasoningEffort] = {
+        "provider-default": "provider-default",
         "minimal": "minimal",
         "low": "low",
         "medium": "medium",

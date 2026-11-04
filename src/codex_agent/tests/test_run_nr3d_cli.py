@@ -72,6 +72,30 @@ def test_build_config_explicit_reasoning_effort_overrides() -> None:
     assert config.reasoning_effort == "high"
 
 
+def test_build_config_accepts_explicit_provider_default_reasoning() -> None:
+    config = _build_config(
+        model="gemini-test",
+        sandbox=None,
+        tools=True,
+        turn_timeout=None,
+        reasoning_effort="provider-default",
+    )
+    assert config.reasoning_effort == "provider-default"
+    args = run_nr3d.build_arg_parser().parse_args(
+        [
+            "--data-root",
+            "/tmp/data",
+            "--sample-ids",
+            "/tmp/ids.json",
+            "--output-dir",
+            "/tmp/out",
+            "--reasoning-effort",
+            "provider-default",
+        ]
+    )
+    assert args.reasoning_effort == "provider-default"
+
+
 def test_build_config_reasoning_effort_env_overrides_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

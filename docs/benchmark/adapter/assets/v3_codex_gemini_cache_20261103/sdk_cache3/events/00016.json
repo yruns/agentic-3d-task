@@ -1,0 +1,29 @@
+{
+  "turn_number": 1,
+  "method": "turn/completed",
+  "payload": {
+    "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+    "turn": {
+      "completedAt": 1793709542,
+      "durationMs": 22543,
+      "error": null,
+      "id": "01a1a16b-352b-77e2-9be2-9fb85e32f9d6",
+      "items": [
+        {
+          "delivery": null,
+          "id": "msg_4eafdde7e622aa9827282323",
+          "memoryCitation": null,
+          "phase": null,
+          "questions": null,
+          "text": "C = 9, R = 6, O = 2, S = 3, A = 5, D = 1, N = 8, G = 7, E = 4\n\n  96233 (CROSS)\n+ 62513 (ROADS)\n-------\n 158746 (DANGER)",
+          "type": "agentMessage"
+        }
+      ],
+      "itemsView": "summary",
+      "rootTurnId": "01a1a16b-352b-77e2-9be2-9fb85e32f9d6",
+      "startedAt": 1793709520,
+      "status": "completed"
+    }
+  },
+  "state_fields": []
+}

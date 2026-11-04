@@ -1,0 +1,55 @@
+{
+  "object": "chat.completion",
+  "model": "gemini-3.8-flash",
+  "choices": [
+    {
+      "finish_reason": "length",
+      "native_finish_reason": "MAX_TOKENS",
+      "finishMessage": "模型达到了请求中max_tokens上限",
+      "message": {
+        "role": "assistant",
+        "content": "OK",
+        "reasoning_content": "",
+        "signature": {
+          "redacted_state": true,
+          "length": 472,
+          "sha256": "96dfbbe4ff94bf416c5e5c05d6db1b09332076b950978d113be68ae92cddd0ac"
+        },
+        "multimodal_contents": [
+          {
+            "type": "text",
+            "text": "OK",
+            "signature": {
+              "redacted_state": true,
+              "length": 472,
+              "sha256": "96dfbbe4ff94bf416c5e5c05d6db1b09332076b950978d113be68ae92cddd0ac"
+            }
+          }
+        ]
+      },
+      "groundingMetadata": null
+    }
+  ],
+  "usage": {
+    "completion_tokens": 1,
+    "prompt_tokens": 165,
+    "total_tokens": 289,
+    "reasoning_tokens": 123,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "traffic_type": "ON_DEMAND",
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 165
+      }
+    ],
+    "candidatesTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 1
+      }
+    ]
+  }
+}

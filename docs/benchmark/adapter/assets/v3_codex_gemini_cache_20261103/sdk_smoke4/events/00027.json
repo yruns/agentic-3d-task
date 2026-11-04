@@ -1,0 +1,23 @@
+{
+  "turn_number": 2,
+  "method": "item/started",
+  "payload": {
+    "item": {
+      "arguments": {
+        "name": "alpha"
+      },
+      "contentItems": null,
+      "durationMs": null,
+      "id": "call_a6a5204fe0e2f72d94e44ea9900d2cd3_0",
+      "namespace": null,
+      "status": "inProgress",
+      "success": null,
+      "tool": "lookup_record",
+      "type": "dynamicToolCall"
+    },
+    "startedAtMs": 1793708923671,
+    "threadId": "01a1a161-e92e-7c60-8c3d-f99d86e0f6d2",
+    "turnId": "01a1a162-123b-7be3-b8a9-3bc3cf1b89b0"
+  },
+  "state_fields": []
+}

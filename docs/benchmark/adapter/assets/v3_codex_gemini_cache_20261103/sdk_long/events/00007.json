@@ -1,0 +1,28 @@
+{
+  "turn_number": 1,
+  "method": "item/completed",
+  "payload": {
+    "completedAtMs": 1793708948907,
+    "item": {
+      "arguments": {
+        "name": "alpha"
+      },
+      "contentItems": [
+        {
+          "text": "{\"name\": \"alpha\", \"value\": 137, \"receipt\": \"receipt-2e654647d04e\"}",
+          "type": "inputText"
+        }
+      ],
+      "durationMs": 2,
+      "id": "call_23b282486b7fd02cae76ea8810fa4faa_0",
+      "namespace": null,
+      "status": "completed",
+      "success": true,
+      "tool": "lookup_record",
+      "type": "dynamicToolCall"
+    },
+    "threadId": "01a1a162-644a-79a0-9e28-4fb7795b77d4",
+    "turnId": "01a1a162-6463-7f71-8bbc-c6252c81a732"
+  },
+  "state_fields": []
+}

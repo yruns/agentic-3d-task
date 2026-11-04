@@ -1,0 +1,43 @@
+{
+  "models": [
+    {
+      "slug": "gemini-3.8-flash",
+      "display_name": "Gemini protocol probe",
+      "description": null,
+      "supported_reasoning_levels": [],
+      "shell_type": "disabled",
+      "visibility": "list",
+      "supported_in_api": true,
+      "priority": 1,
+      "upgrade": null,
+      "model_messages": {
+        "instructions_template": "Follow the user task exactly. Work internally; do not print reasoning."
+      },
+      "include_skills_usage_instructions": false,
+      "include_plugin_usage_instructions": false,
+      "include_apps_usage_instructions": false,
+      "supports_reasoning_summary_parameter": false,
+      "default_reasoning_summary": {
+        "redacted_state": true,
+        "length": 4,
+        "sha256": "140bedbf9c3f6d56a9846d2ba7088798683f4da0c248231336e6a05679e4fdfe"
+      },
+      "support_verbosity": false,
+      "default_verbosity": null,
+      "apply_patch_tool_type": null,
+      "truncation_policy": {
+        "mode": "bytes",
+        "limit": 10000
+      },
+      "supports_image_detail_original": false,
+      "context_window": null,
+      "max_context_window": null,
+      "auto_compact_token_limit": null,
+      "effective_context_window_percent": 95,
+      "experimental_supported_tools": [],
+      "node_repl_disabled": true,
+      "tool_mode": "direct",
+      "multi_agent_version": "disabled"
+    }
+  ]
+}

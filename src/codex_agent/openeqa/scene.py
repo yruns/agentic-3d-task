@@ -17,7 +17,9 @@ at the machine that generated the assets).
 
 from __future__ import annotations
 
+import os
 import re
+import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -130,16 +132,23 @@ def downsize_rgb_for_view(
         ) from exc
 
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with Image.open(source) as image:
-        rgb = image.convert("RGB")
-        width, height = rgb.size
-        longest = max(width, height)
-        if longest > max_size:
-            scale = max_size / longest
-            rgb = rgb.resize(
-                (max(1, round(width * scale)), max(1, round(height * scale)))
-            )
-        rgb.save(destination, format="JPEG", quality=jpeg_quality)
+    tmp_path = destination.with_name(
+        f".{destination.stem}.{os.getpid()}.{threading.get_ident()}{destination.suffix}"
+    )
+    try:
+        with Image.open(source) as image:
+            rgb = image.convert("RGB")
+            width, height = rgb.size
+            longest = max(width, height)
+            if longest > max_size:
+                scale = max_size / longest
+                rgb = rgb.resize(
+                    (max(1, round(width * scale)), max(1, round(height * scale)))
+                )
+            rgb.save(tmp_path, format="JPEG", quality=jpeg_quality)
+        tmp_path.replace(destination)
+    finally:
+        tmp_path.unlink(missing_ok=True)
     return destination
 
 

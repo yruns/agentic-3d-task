@@ -1,0 +1,62 @@
+{
+  "id": "01a1a16c-61a0-7031-8394-888e97af37b4",
+  "status": "completed",
+  "error": null,
+  "started_at": 1793709597,
+  "completed_at": 1793709600,
+  "duration_ms": 3141,
+  "final_response": "OK",
+  "items": [
+    {
+      "clientId": null,
+      "content": [
+        {
+          "text": "Acknowledge the preceding solution with OK only; do not redo the calculation.",
+          "text_elements": [],
+          "type": "text"
+        }
+      ],
+      "id": "01a1a16c-61a9-7830-9046-b723ff1861c9",
+      "type": "userMessage"
+    },
+    {
+      "content": [],
+      "id": "rs_01d45d1e32a5376c8fe5e175",
+      "summary": [],
+      "type": "reasoning"
+    },
+    {
+      "delivery": null,
+      "id": "msg_5982b8cc292ec36a4e4a0478",
+      "memoryCitation": null,
+      "phase": null,
+      "questions": null,
+      "text": "OK",
+      "type": "agentMessage"
+    }
+  ],
+  "usage": {
+    "last": {
+      "cacheWriteInputTokens": 0,
+      "cachedInputTokens": 4051,
+      "inputTokens": 8468,
+      "outputTokens": 29,
+      "reasoningOutputTokens": 28,
+      "totalTokens": 8497
+    },
+    "modelContextWindow": null,
+    "total": {
+      "cacheWriteInputTokens": 0,
+      "cachedInputTokens": 4051,
+      "inputTokens": 26361,
+      "outputTokens": 8154,
+      "reasoningOutputTokens": 7900,
+      "totalTokens": 34515
+    }
+  },
+  "turn_number": 5,
+  "kind": "acknowledgement",
+  "completed_with_answer": true,
+  "acknowledgement_is_ok": true,
+  "elapsed_s": 3.15
+}

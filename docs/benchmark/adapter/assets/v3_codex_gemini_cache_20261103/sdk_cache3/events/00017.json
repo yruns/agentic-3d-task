@@ -1,0 +1,19 @@
+{
+  "turn_number": 2,
+  "method": "turn/started",
+  "payload": {
+    "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+    "turn": {
+      "completedAt": null,
+      "durationMs": null,
+      "error": null,
+      "id": "01a1a16b-9519-7fd2-aa22-b18d2b09a244",
+      "items": [],
+      "itemsView": "notLoaded",
+      "rootTurnId": "01a1a16b-9519-7fd2-aa22-b18d2b09a244",
+      "startedAt": 1793709544,
+      "status": "inProgress"
+    }
+  },
+  "state_fields": []
+}

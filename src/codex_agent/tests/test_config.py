@@ -14,7 +14,7 @@ from codex_agent.errors import CodexConfigError
 def test_defaults_are_usable() -> None:
     config = CodexAgentConfig()
     assert config.model
-    assert config.model_provider
+    assert config.model_provider == "codex_adapter"
     assert config.sandbox == "read_only"
     assert config.enable_prefix_cache is True
     assert config.copy_auth_file is False
@@ -88,6 +88,29 @@ def test_from_env_rejects_non_integer_cap(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setenv("CODEX_AGENT_MAX_TOOL_CALLS", "lots")
     with pytest.raises(CodexConfigError):
         CodexAgentConfig.from_env()
+
+
+@pytest.mark.parametrize("value", ["", "provider-default"])
+def test_explicit_provider_default_effort_is_preserved(
+    value: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CODEX_AGENT_REASONING_EFFORT", value)
+    assert CodexAgentConfig.from_env().reasoning_effort == value
+
+
+def test_adapter_token_is_private_and_centralized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CODEX_ADAPTER_TOKEN", "fake-local-token")
+    config = CodexAgentConfig.from_env()
+    assert config.adapter_token == "fake-local-token"
+    assert "fake-local-token" not in repr(config)
+
+
+@pytest.mark.parametrize("value", ["Bearer already-prefixed", "bad\\r\\nheader"])
+def test_adapter_token_rejects_non_raw_header_values(value: str) -> None:
+    with pytest.raises(CodexConfigError, match="adapter_token"):
+        CodexAgentConfig(adapter_token=value)
 
 
 def test_session_id_sanitization() -> None:

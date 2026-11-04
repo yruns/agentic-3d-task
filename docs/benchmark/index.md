@@ -6,14 +6,14 @@ and other assets stay beside the records that cite them.
 
 ## Benchmarks
 
-- [GOAT-Bench Timeline](goat_bench/README.md): SCOPE reproduction preparation,
-  continuous multimodal navigation, and exact episode/protocol records.
 - [NR3D Timeline](nr3d/README.md): visual grounding evaluations, stage-1
   keyframe coverage, tool-loop runs, and reasoning-path ablations.
 - [OpenEQA Timeline](openeqa/README.md): embodied QA evaluations, no-frame
   redesign runs, judge notes, and failure trace analysis.
 - [SceneFunc Molmo SAM3D Timeline](scenefunc_molmo_sam3d/README.md):
   SceneFuncVal-CG small-object Molmo/SAM/3D-lifting feasibility checks.
+- [Adapter Protocol Diagnostics](adapter/README.md): direct HTTP tool/history
+  and opaque-state checks, archived separately from task accuracy leaderboards.
 
 ## Process Rules
 
@@ -25,5 +25,31 @@ When adding a new evaluation record:
    be preserved with the result.
 4. Update `mkdocs.yml` so the new record appears in the web navigation.
 
-For OpenEQA, per-run data is also ingested into `openeqa/runs.sqlite` when the
-run produces durable sample/tool-call records.
+Per-run data is ingested into the benchmark's local SQLite database:
+`openeqa/runs.sqlite` via `scripts/ingest_openeqa_run.py`, and `nr3d/runs.sqlite`
+via `scripts/ingest_nr3d_run.py`. Keep durable summaries/traces alongside the
+version records so the ignored databases can be rebuilt.
+Adapter protocol probes use `adapter/runs.sqlite`, rebuilt from their durable
+assets with the version's `ingest.py`.
+
+Latest SDK/protocol diagnostic:
+[v3 Codex–Gemini state/cache](adapter/v3_codex_gemini_cache_20261103.md)
+— 65 upstream requests, six dynamic tools, 34 completed SDK turns. The isolated
+SDK bridge preserved native signed state and observed cache hits; an exact
+accounting control supports a 3,315-token historical reasoning/state cache lower
+bound. Failed and zero-cache runs remain archived. Production adapter source is
+unchanged; GPT remains native Responses-only.
+
+Latest canonical pilot evaluations (2026-11-04, code `0635b65`):
+- [NR3D v14 `strat600` (`gpt-5.4` vs `gemini-3.8-flash`)](nr3d/v14_strat600_gpt54_vs_gemini38flash_20261104.md)
+  — `gemini-3.8-flash` reaches **91.50% Acc@0.25 (549/600)** and **89.57% View-Dep**;
+  `gpt-5.4-2026-03-05` reaches **84.83% (509/600)** and **80.09% View-Dep**.
+- [OpenEQA v5 `pilot300` (`gpt-5.4` vs `gemini-3.8-flash`)](openeqa/v5_pilot300_gpt54_vs_gemini38flash_20261104.md)
+  — `gemini-3.8-flash` reaches **MNAS = 78.92 (300/300)**; `gpt-5.4-2026-03-05`
+  reaches **MNAS = 69.25 (300/300)** (+4.33 over v4 on the matched 300-question
+  fold).
+
+Latest local API validation:
+[v13 office Responses NR3D smoke10](nr3d/v13_office_responses_smoke10_20261103.md)
+— 10/10 completed, 8/10 correct, catalog + BEV without extra NR3D tools;
+a connectivity diagnostic, not a strat600 leaderboard result.

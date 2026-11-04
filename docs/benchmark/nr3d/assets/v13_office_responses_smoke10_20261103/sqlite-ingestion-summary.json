@@ -1,0 +1,12 @@
+{
+  "run_id": "v13_office_responses_smoke10_20261103",
+  "samples": 10,
+  "mean_iou": 0.8000000000000002,
+  "acc_025": 0.8,
+  "acc_050": 0.8,
+  "llm_calls": 15,
+  "prompt_tokens": 296022,
+  "cached_tokens": 140160,
+  "completion_tokens": 8705,
+  "tool_calls": 5
+}

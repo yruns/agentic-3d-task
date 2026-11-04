@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import threading
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from pathlib import Path
@@ -303,10 +305,23 @@ class OpenEqaSceneBEVBuilder:
             markers, camera_xy, highlight_ids=highlight_ids, config=self.config
         )
         bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(str(output_path), bgr)
-        output_path.with_suffix(".view.json").write_text(
-            json.dumps(view.to_payload()), encoding="utf-8"
+        tmp_path = output_path.with_name(
+            f".{output_path.stem}.{os.getpid()}.{threading.get_ident()}{output_path.suffix}"
         )
+        try:
+            cv2.imwrite(str(tmp_path), bgr)
+            tmp_path.replace(output_path)
+        finally:
+            tmp_path.unlink(missing_ok=True)
+        view_path = output_path.with_suffix(".view.json")
+        tmp_view = view_path.with_name(
+            f".{view_path.stem}.{os.getpid()}.{threading.get_ident()}{view_path.suffix}"
+        )
+        try:
+            tmp_view.write_text(json.dumps(view.to_payload()), encoding="utf-8")
+            tmp_view.replace(view_path)
+        finally:
+            tmp_view.unlink(missing_ok=True)
         if use_cache:
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(cache_path), bgr)

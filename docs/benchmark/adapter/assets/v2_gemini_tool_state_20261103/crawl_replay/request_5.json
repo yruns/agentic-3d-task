@@ -1,0 +1,165 @@
+{
+  "headers": {
+    "Content-Type": "application/json",
+    "X-TT-LOGID": "gemini_tool_state_20261103_62c046f0d2_5",
+    "extra": "{\"session_id\": \"gemini_tool_state_20261103_62c046f0d2\", \"chat_run_id\": \"gemini_tool_state_20261103_62c046f0d2\", \"source\": \"codex_adapter_protocol_probe\"}"
+  },
+  "body": {
+    "model": "gemini-3.8-flash",
+    "stream": false,
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are testing a tool protocol. Always use lookup_record to obtain the requested records. First call alpha, wait for its result, then call beta, wait for its result, then return only JSON with marker, sum, alpha_receipt, beta_receipt. Never invent tool results. Do not call both tools in the same response. Preserve the user's marker exactly."
+      },
+      {
+        "role": "user",
+        "content": "Fetch records alpha and beta, add their values, and report their receipts. The marker is context-eb254362cac6."
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "",
+        "signature": {
+          "redacted_state": true,
+          "length": 804,
+          "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5"
+        },
+        "tool_calls": [
+          {
+            "index": 0,
+            "id": "",
+            "type": "function",
+            "function": {
+              "name": "lookup_record",
+              "arguments": "{\"name\":\"alpha\"}"
+            },
+            "signature": {
+              "redacted_state": true,
+              "length": 804,
+              "sha256": "fe3654fd9ee7be57754a3e3e4c0c5663de6ba50f69074259a3107175900ed1b5"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "",
+        "content": "{\"name\": \"alpha\", \"value\": 137, \"receipt\": \"receipt-243ebc3e1e13\"}"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "",
+        "signature": {
+          "redacted_state": true,
+          "length": 260,
+          "sha256": "5b720228ab00cd1afb3ec4448e74b381a6a3f112c445ce3c656cd08002992866"
+        },
+        "tool_calls": [
+          {
+            "index": 0,
+            "id": "",
+            "type": "function",
+            "function": {
+              "name": "lookup_record",
+              "arguments": "{\"name\":\"beta\"}"
+            },
+            "signature": {
+              "redacted_state": true,
+              "length": 260,
+              "sha256": "5b720228ab00cd1afb3ec4448e74b381a6a3f112c445ce3c656cd08002992866"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "",
+        "content": "{\"name\": \"beta\", \"value\": 211, \"receipt\": \"receipt-68ee3c7c93f4\"}"
+      },
+      {
+        "role": "assistant",
+        "content": "{\n  \"marker\": \"context-eb254362cac6\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-243ebc3e1e13\",\n  \"beta_receipt\": \"receipt-68ee3c7c93f4\"\n}",
+        "reasoning_content": "",
+        "signature": {
+          "redacted_state": true,
+          "length": 584,
+          "sha256": "c0e67bbc9c5a18e567afa3256c34509dc44cfb5e74390bf1709dee894112bb4f"
+        },
+        "multimodal_contents": [
+          {
+            "type": "text",
+            "text": "{\n  \"marker\": \"context-eb254362cac6\",\n  \"sum\": 348,\n  \"alpha_receipt\": \"receipt-243ebc3e1e13\",\n  \"beta_receipt\": \"receipt-68ee3c7c93f4\"\n}",
+            "signature": {
+              "redacted_state": true,
+              "length": 584,
+              "sha256": "c0e67bbc9c5a18e567afa3256c34509dc44cfb5e74390bf1709dee894112bb4f"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Now verify by calling lookup_record for alpha once more. After the tool returns, repeat the same final JSON with the ORIGINAL marker, sum, alpha_receipt and beta_receipt from our conversation. Do not invent receipts."
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "",
+        "signature": {
+          "redacted_state": true,
+          "length": 464,
+          "sha256": "ff1570cd173ce66a280de3e105be35f3bfae10f7364a940b0de6b8c0180b42a7"
+        },
+        "tool_calls": [
+          {
+            "index": 0,
+            "id": "",
+            "type": "function",
+            "function": {
+              "name": "lookup_record",
+              "arguments": "{\"name\":\"alpha\"}"
+            },
+            "signature": {
+              "redacted_state": true,
+              "length": 464,
+              "sha256": "ff1570cd173ce66a280de3e105be35f3bfae10f7364a940b0de6b8c0180b42a7"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "",
+        "content": "{\"name\": \"alpha\", \"value\": 137, \"receipt\": \"receipt-243ebc3e1e13\"}"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "lookup_record",
+          "description": "Look up one record and return its numeric value and unique receipt.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": [
+                  "alpha",
+                  "beta"
+                ]
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "message": "上一轮模型对话中返回的signature字段必须按原样回传，具体请参考：[https://bytedance.larkoffice.com/wiki/XlkuwCfY6i1KCkkiMLZc5zCXnib] 中的signature字段",
+    "code": "-4003"
+  }
+}

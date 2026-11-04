@@ -1,0 +1,34 @@
+{
+  "turn_number": 3,
+  "method": "rawResponseItem/completed",
+  "payload": {
+    "params": {
+      "threadId": "01a1a168-65a7-7561-a5c8-a3309863c558",
+      "turnId": "01a1a169-1271-70b2-9ce9-01db24883ddf",
+      "item": {
+        "type": "reasoning",
+        "id": "rs_cf436cb74add9effa898547e",
+        "summary": [],
+        "content": null,
+        "encrypted_content": {
+          "redacted_state": true,
+          "length": 117,
+          "sha256": "9479790e5c0d3593ed5c289e2649ea05ac436c0b12cf2ea2f438dd5d66cc5b29"
+        },
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a1a169-1271-70b2-9ce9-01db24883ddf"
+        }
+      }
+    }
+  },
+  "state_fields": [
+    {
+      "path": "$.payload.params.item.encrypted_content",
+      "type": "str",
+      "nonempty": true,
+      "sha256": "9479790e5c0d3593ed5c289e2649ea05ac436c0b12cf2ea2f438dd5d66cc5b29",
+      "length": 117,
+      "opaque_name": true
+    }
+  ]
+}

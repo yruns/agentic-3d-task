@@ -1,0 +1,45 @@
+{
+  "turn_number": 5,
+  "method": "thread/tokenUsage/updated",
+  "payload": {
+    "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+    "tokenUsage": {
+      "last": {
+        "cacheWriteInputTokens": 0,
+        "cachedInputTokens": 4051,
+        "inputTokens": 8468,
+        "outputTokens": 29,
+        "reasoningOutputTokens": 28,
+        "totalTokens": 8497
+      },
+      "modelContextWindow": null,
+      "total": {
+        "cacheWriteInputTokens": 0,
+        "cachedInputTokens": 4051,
+        "inputTokens": 26361,
+        "outputTokens": 8154,
+        "reasoningOutputTokens": 7900,
+        "totalTokens": 34515
+      }
+    },
+    "turnId": "01a1a16c-61a0-7031-8394-888e97af37b4"
+  },
+  "state_fields": [
+    {
+      "path": "$.payload.tokenUsage.last.reasoningOutputTokens",
+      "type": "int",
+      "nonempty": true,
+      "sha256": "59e19706d51d39f66711c2653cd7eb1291c94d9b55eb14bda74ce4dc636d015a",
+      "length": null,
+      "opaque_name": false
+    },
+    {
+      "path": "$.payload.tokenUsage.total.reasoningOutputTokens",
+      "type": "int",
+      "nonempty": true,
+      "sha256": "22191a9215264bb24037d3fa2e7d1516c97813abb7aa0a417e5a157910fb0af7",
+      "length": null,
+      "opaque_name": false
+    }
+  ]
+}

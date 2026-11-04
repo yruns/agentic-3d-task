@@ -1,0 +1,29 @@
+{
+  "turn_number": 3,
+  "method": "rawResponseItem/completed",
+  "payload": {
+    "params": {
+      "threadId": "01a1a16b-3510-7391-a5e4-e7c550ea3ee2",
+      "turnId": "01a1a16b-e809-7aa2-b666-8a2c9f84e767",
+      "item": {
+        "type": "message",
+        "id": "msg_01a1a16b-e814-7452-b293-d0c8b38525ba",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Solve the base-10 alphametic SATURN + URANUS = PLANETS. All distinct letters have distinct digits, with no leading zero. Verify the column carries carefully internally without tools or code, then output only one valid digit mapping and the arithmetic check. Do not output reasoning text."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a1a16b-e809-7aa2-b666-8a2c9f84e767",
+          "create_time": 1793709565.9721348,
+          "content_item_kinds": [
+            "user.text"
+          ]
+        }
+      }
+    }
+  },
+  "state_fields": []
+}

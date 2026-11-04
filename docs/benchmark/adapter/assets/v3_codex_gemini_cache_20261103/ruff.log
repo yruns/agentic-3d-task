@@ -1,0 +1,152 @@
+I001 [*] Import block is un-sorted or un-formatted
+  --> cache_probe.py:3:1
+   |
+ 1 |   """Direct ModelHub cache controls, kept separate from the real Codex chain."""
+ 2 |
+ 3 | / from __future__ import annotations
+ 4 | |
+ 5 | | import argparse
+ 6 | | import copy
+ 7 | | import hashlib
+ 8 | | import json
+ 9 | | import logging
+10 | | import subprocess
+11 | | import time
+12 | | import uuid
+13 | | from pathlib import Path
+14 | | from typing import Any
+15 | |
+16 | | import httpx
+17 | |
+18 | | from probe_support import credential, digest, save, state_fields
+   | |________________________________________________________________^
+19 |
+20 |   ROOT = Path(__file__).resolve().parents[2]
+   |
+help: Organize imports
+   |
+16 | import httpx
+   -
+17 | from probe_support import credential, digest, save, state_fields
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> sdk_cache_driver.py:8:1
+   |
+ 6 |   """
+ 7 |
+ 8 | / from __future__ import annotations
+ 9 | |
+10 | | import argparse
+11 | | import hashlib
+12 | | import json
+13 | | import logging
+14 | | import tempfile
+15 | | import time
+16 | | import uuid
+17 | | from collections.abc import Iterator
+18 | | from datetime import datetime, timedelta, timezone
+19 | | from pathlib import Path
+20 | | from typing import Any
+21 | | from urllib.parse import urlparse
+22 | |
+23 | | from openai_codex import CodexConfig, Thread
+24 | | from openai_codex._run import _collect_turn_result
+25 | | from openai_codex.client import CodexClient
+26 | | from openai_codex.models import Notification
+27 | |
+28 | | from cache_probe import PUZZLE
+29 | | from probe_support import credential, save, state_fields
+30 | | from sdk_driver import (
+31 | |     MODEL,
+32 | |     PROVIDER,
+33 | |     ROOT,
+34 | |     config_toml,
+35 | |     json_value,
+36 | |     model_catalog,
+37 | |     provenance,
+38 | | )
+   | |_^
+39 |
+40 |   BASE_INSTRUCTIONS = (
+   |
+help: Organize imports
+   |
+22 |
+23 + from cache_probe import PUZZLE
+24 | from openai_codex import CodexConfig, Thread
+25 | from openai_codex._run import _collect_turn_result
+26 | from openai_codex.client import CodexClient
+27 | from openai_codex.models import Notification
+   -
+   - from cache_probe import PUZZLE
+28 | from probe_support import credential, save, state_fields
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> sdk_driver.py:7:1
+   |
+ 5 |   """
+ 6 |
+ 7 | / from __future__ import annotations
+ 8 | |
+ 9 | | import argparse
+10 | | import dataclasses
+11 | | import hashlib
+12 | | import importlib.metadata
+13 | | import json
+14 | | import logging
+15 | | import re
+16 | | import subprocess
+17 | | import tempfile
+18 | | import time
+19 | | import uuid
+20 | | from collections.abc import Iterator
+21 | | from datetime import datetime, timedelta, timezone
+22 | | from enum import Enum
+23 | | from pathlib import Path
+24 | | from typing import Any
+25 | | from urllib.parse import urlparse
+26 | |
+27 | | import openai_codex
+28 | | from openai_codex import CodexConfig, Thread
+29 | | from openai_codex._run import _collect_turn_result
+30 | | from openai_codex.client import CodexClient
+31 | | from openai_codex.models import Notification
+32 | | from pydantic import BaseModel
+33 | |
+34 | | from probe_support import credential, digest, save, state_fields
+   | |________________________________________________________________^
+35 |
+36 |   ROOT = Path(__file__).resolve().parents[2]
+   |
+help: Organize imports
+   |
+31 | from openai_codex.models import Notification
+   - from pydantic import BaseModel
+   -
+32 | from probe_support import credential, digest, save, state_fields
+33 + from pydantic import BaseModel
+34 |
+   |
+
+F401 [*] `probe_support.digest` imported but unused
+  --> sdk_driver.py:34:39
+   |
+32 | from pydantic import BaseModel
+33 |
+34 | from probe_support import credential, digest, save, state_fields
+   |                                       ^^^^^^
+35 |
+36 | ROOT = Path(__file__).resolve().parents[2]
+   |
+help: Remove unused import: `probe_support.digest`
+   |
+33 |
+   - from probe_support import credential, digest, save, state_fields
+34 + from probe_support import credential, save, state_fields
+35 |
+   |
+
+Found 4 errors.
+[*] 4 fixable with `--fix`.

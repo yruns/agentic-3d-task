@@ -120,7 +120,8 @@ def _contact_sheet(
     if len(frames) < 2:
         return None
     tiles = [(f"frame {frame.frame_id}", frame.image_path) for frame in frames]
-    destination = out_dir / f"{tool_scene.clip_id}_frame_sheet.jpg"
+    ids_token = "_".join(f"{frame.frame_id:06d}" for frame in frames)
+    destination = out_dir / f"{tool_scene.clip_id}_frame_sheet_{ids_token}.jpg"
     try:
         return compose_contact_sheet(tiles, destination)
     except Exception:  # a sheet is a convenience; never fail the tool over it

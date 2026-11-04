@@ -110,3 +110,10 @@ configs/scenefunc3d_sidecar_headers.toml
 # (Defense-in-depth; codex_modelhub_adapter/.gitignore already ignores these.)
 **/.modelhub_upstreams.toml
 codex_modelhub_adapter/.env
+# Preserve ignored private files left in the retired directory after removal.
+codex_modelhub_adapter/
+
+# Active adapter configuration and encrypted local state remain private.
+configs/codex_adapter.toml
+.codex-adapter/
+**/codex_adapter.local.toml

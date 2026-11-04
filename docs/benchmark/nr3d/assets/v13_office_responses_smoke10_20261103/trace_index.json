@@ -1,0 +1,62 @@
+[
+  {
+    "sample_id": "scannet/scene0207_00::20::12189",
+    "path": "traces/d170ff6fcb8a.jsonl.gz",
+    "source_run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/89fabad5e7c84cc6a1b4e425f0f89053",
+    "sha256_uncompressed": "b11dff43907e8d23565cfb044821c1b884c0a8d81ce3c4e670ab2be8a2a104f5"
+  },
+  {
+    "sample_id": "scannet/scene0426_00::22::9868",
+    "path": "traces/4a210a3dd770.jsonl.gz",
+    "source_run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/3eea306edce442feb94f4746ad8dac66",
+    "sha256_uncompressed": "bb2a8ccfa19501ba747a480341d295d2ce46cded6886c707b474425e6b2865cf"
+  },
+  {
+    "sample_id": "scannet/scene0221_00::47::4274",
+    "path": "traces/759b68481d1b.jsonl.gz",
+    "source_run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/1a70d4ba9d4044038d254826c46fca91",
+    "sha256_uncompressed": "244a35910dd666ed3c5de57f52abaf03cb2c74c6dfcd6f6975e247dd26288357"
+  },
+  {
+    "sample_id": "scannet/scene0246_00::5::12312",
+    "path": "traces/34776e3522fb.jsonl.gz",
+    "source_run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/fd4ee0497a9b40ee8a2d113ece8344b7",
+    "sha256_uncompressed": "d1c3ed6b7bd4f8cb9e7f339ad12fb97af51e1b5061f731edc74b3dd54929db1d"
+  },
+  {
+    "sample_id": "scannet/scene0462_00::6::40854",
+    "path": "traces/b81c2886135e.jsonl.gz",
+    "source_run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/9f683eb3377b4e37a218aaae7d1f92a5",
+    "sha256_uncompressed": "fad252d79235c54bf3f14a1072ff61ae37dc6ed90210262f090e111459c151f6"
+  },
+  {
+    "sample_id": "scannet/scene0699_00::26::40486",
+    "path": "traces/7a660205f42c.jsonl.gz",
+    "source_run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/ada897154c7142899ca372dfc1532229",
+    "sha256_uncompressed": "fa16ab59276c24b7040d45b87f4eeb625a300d45fd3e8041a1a559a3697c1dd4"
+  },
+  {
+    "sample_id": "scannet/scene0500_00::25::13471",
+    "path": "traces/abe7afd8745d.jsonl.gz",
+    "source_run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/33b347c7970841b685a0d9ea8d1478f4",
+    "sha256_uncompressed": "12525ee4cdb0f43418d99e15be046e42ce9242d7e90326ed331bd39e0fb54bc3"
+  },
+  {
+    "sample_id": "scannet/scene0591_00::14::19171",
+    "path": "traces/81bd2dfb9eab.jsonl.gz",
+    "source_run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/06e992cd2cdf4aca94aff6792f396f24",
+    "sha256_uncompressed": "49a33aa8ecc35c6b873e8870211b1595d9f6d725ef1018aaef2ab0208a8af4b4"
+  },
+  {
+    "sample_id": "scannet/scene0653_00::18::29686",
+    "path": "traces/d2612e3df381.jsonl.gz",
+    "source_run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/c44ca984966346429175b6b445c09fdd",
+    "sha256_uncompressed": "409082ff85743a07e54572ff5f3212b3a05d0004c1ae3557d9bdcb93cd964427"
+  },
+  {
+    "sample_id": "scannet/scene0608_00::9::17679",
+    "path": "traces/e6fbb0b0ed7f.jsonl.gz",
+    "source_run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/3d0ad05abb034d4689abbd22fcf9e553",
+    "sha256_uncompressed": "c1b33008aab10cb5b8a5801fc2b5d9b7dfb42c335942ea757696007bb11341cc"
+  }
+]

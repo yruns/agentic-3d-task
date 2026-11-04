@@ -96,6 +96,24 @@ def test_build_config_explicit_sandbox_override(
     assert config.sandbox == "read_only"
 
 
+def test_build_config_accepts_explicit_provider_default_reasoning() -> None:
+    config = _build_config(model="gemini-test", reasoning_effort="provider-default")
+    assert config.reasoning_effort == "provider-default"
+    args = run_openeqa.build_arg_parser().parse_args(
+        [
+            "--data-root",
+            "/tmp/data",
+            "--questions",
+            "/tmp/questions.json",
+            "--output-dir",
+            "/tmp/out",
+            "--reasoning-effort",
+            "provider-default",
+        ]
+    )
+    assert args.reasoning_effort == "provider-default"
+
+
 def test_as_reasoning_effort_invalid_raises() -> None:
     with pytest.raises(ValueError):
         run_openeqa._as_reasoning_effort("turbo")

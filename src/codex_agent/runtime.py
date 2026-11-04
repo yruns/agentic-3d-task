@@ -5,7 +5,7 @@ nothing about any particular task:
 
 * isolating ``CODEX_HOME`` per turn (the Codex app-server keeps SQLite state in
   ``CODEX_HOME``; sharing one home across thread workers races its migrations),
-* wiring ModelHub prefix-cache + log-id headers for prompt-prefix reuse,
+* assigning a fresh adapter routing UUID to each independent SDK thread,
 * attaching skills / prompt / images and requesting a structured answer,
 * issuing a single finalization re-ask when the answer is unusable.
 
@@ -17,7 +17,6 @@ task families later.
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import threading
 import time
@@ -61,7 +60,7 @@ from openai_codex.generated.v2_all import (
 )
 from openai_codex.models import Notification
 
-from .config import CodexAgentConfig, sanitize_session_id
+from .config import CodexAgentConfig
 from .errors import CodexConfigError, CodexTurnError
 from .models import (
     CodexTaskResult,
@@ -69,11 +68,17 @@ from .models import (
     CodexTurnRequest,
     CodexTurnResult,
 )
+from .provider_catalog import prepare_provider_catalog
+from .provider_environment import (
+    ISOLATED_HOME_DIRNAME as _ISOLATED_HOME_DIRNAME,
+)
+from .provider_environment import (
+    MODELHUB_EXTRA_HEADER_ENV,
+    MODELHUB_LOGID_ENV,
+    build_provider_overrides,
+    build_turn_environment,
+)
 from .tasks.base import CodexTask, OutcomeT_co
-
-#: Env vars the Codex config provider reads for ModelHub prefix-cache headers.
-MODELHUB_EXTRA_HEADER_ENV = "CODEX_AGENT_MODELHUB_EXTRA_HEADER"
-MODELHUB_LOGID_ENV = "CODEX_AGENT_MODELHUB_LOGID"
 
 #: Files copied from the base ``CODEX_HOME`` into each per-turn run home.
 _RUN_HOME_SEED_FILES: tuple[str, ...] = (
@@ -87,10 +92,6 @@ _PRESERVED_RUN_HOME_PRUNE_FILE_PATTERNS: tuple[str, ...] = (
     "*.sqlite-wal",
     "*.sqlite-shm",
 )
-
-#: Sub-directory of each run home used as an isolated ``HOME`` so the Codex
-#: app-server does not discover user/global skills under the real home.
-_ISOLATED_HOME_DIRNAME = ".home"
 
 #: Bundled ``.system`` skills the Codex app-server installs into every run home.
 #: They are irrelevant to focused task agents and are disabled (via the
@@ -206,92 +207,89 @@ class CodexAgentRuntime:
         response_validator: Callable[[str], bool] | None = None,
         max_finalization_retries: int = 1,
     ) -> CodexTurnResult:
-        """Run one Codex turn and return its raw final response + metadata.
+        """Run one independent SDK thread, sharing its UUID across all attempts.
 
-        Args:
-            request: The prompt, attachments, and output schema for the turn.
-            response_validator: Optional predicate; when it rejects the model's
-                answer, the runtime issues a finalization re-ask on the same
-                thread (so prior context is retained).
-            max_finalization_retries: Maximum number of finalization re-asks.
-
-        Raises:
-            CodexConfigError: Invalid arguments or missing attachments.
-            CodexTurnError: The turn completed without a final response.
+        Capability/configuration failures are rejected before SDK startup. Tool
+        continuations and finalization keep one routing identity even when the
+        adapter cache is disabled; another run_turn always gets a fresh UUID.
         """
         if max_finalization_retries < 0:
             raise CodexConfigError("max_finalization_retries must be non-negative")
         self._validate_request(request)
         run_home = self._prepare_run_home()
-        attempts: list[TurnResult | _GuardedTurnResult] = []
+        session_id = str(uuid.uuid4())
         try:
+            catalog_overrides = prepare_provider_catalog(self.config, run_home, request)
             with Codex(
                 config=CodexConfig(
-                    config_overrides=self._build_config_overrides(),
+                    config_overrides=self._build_config_overrides() + catalog_overrides,
                     cwd=str(self.config.project_root),
-                    env=self._build_turn_env(run_home),
+                    env=self._build_turn_env(run_home, session_id=session_id),
                 )
             ) as client:
-                if self.config.restrict_skills_to_project:
-                    self._disable_ambient_system_skills(client)
-                # The sandbox *mode* (read_only / workspace_write) is set once on
-                # the thread. We deliberately do NOT pass a per-turn ``sandbox``
-                # override below: the SDK builds that override from the enum with
-                # all fields defaulted (``network_access=False``), which silently
-                # overrides ``sandbox_workspace_write.network_access=true`` from
-                # config.toml. Omitting it lets the session config govern, so
-                # tool turns that shell out (e.g. keyframe_selector's parsing LLM
-                # call) actually reach the network. See _build_config_overrides.
-                thread = client.thread_start(
-                    model=self.config.model,
-                    model_provider=self.config.model_provider,
-                    sandbox=self._sandbox(),
-                    cwd=str(self.config.project_root),
+                attempts = self._run_thread(
+                    client,
+                    request,
+                    response_validator=response_validator,
+                    max_finalization_retries=max_finalization_retries,
                 )
-                output_schema = dict(request.output_schema)
-                result = self._run_turn_bounded(
-                    thread,
-                    self._build_turn_input(request),
-                    output_schema=output_schema,
-                )
-                attempts.append(result)
-                retries = 0
-                while (
-                    response_validator is not None
-                    and retries < max_finalization_retries
-                    and not self._response_ok(result.final_response, response_validator)
-                ):
-                    logger.info(
-                        "codex turn response unusable; finalization re-ask {}/{}",
-                        retries + 1,
-                        max_finalization_retries,
-                    )
-                    result = self._run_turn_bounded(
-                        thread,
-                        [
-                            TextInput(
-                                self._finalization_prompt(
-                                    result.final_response, output_schema
-                                )
-                            )
-                        ],
-                        output_schema=output_schema,
-                    )
-                    attempts.append(result)
-                    retries += 1
         finally:
             self._cleanup_run_home(run_home)
-
-        final_response = result.final_response
-        if final_response is None:
+        result = attempts[-1]
+        if result.final_response is None:
             raise CodexTurnError(
                 "Codex turn completed without a final_response; "
                 f"status={_status_str(result.status)} error={result.error!r}"
             )
         return CodexTurnResult(
-            final_response=str(final_response),
-            metadata=self._build_metadata(result, attempts, run_home),
+            final_response=str(result.final_response),
+            metadata=self._build_metadata(
+                result, attempts, run_home, session_id=session_id
+            ),
         )
+
+    def _run_thread(
+        self,
+        client: Codex,
+        request: CodexTurnRequest,
+        *,
+        response_validator: Callable[[str], bool] | None,
+        max_finalization_retries: int,
+    ) -> list[TurnResult | _GuardedTurnResult]:
+        if self.config.restrict_skills_to_project:
+            self._disable_ambient_system_skills(client)
+        # Set sandbox mode once. A per-turn SDK Sandbox enum would silently
+        # replace the configured network-access grant with its default False.
+        thread = client.thread_start(
+            model=self.config.model,
+            model_provider=self.config.model_provider,
+            sandbox=self._sandbox(),
+            cwd=str(self.config.project_root),
+        )
+        schema = dict(request.output_schema)
+        attempts = [
+            self._run_turn_bounded(
+                thread, self._build_turn_input(request), output_schema=schema
+            )
+        ]
+        for retry in range(max_finalization_retries):
+            result = attempts[-1]
+            if response_validator is None or self._response_ok(
+                result.final_response, response_validator
+            ):
+                break
+            logger.info(
+                "codex turn response unusable; finalization re-ask {}/{}",
+                retry + 1,
+                max_finalization_retries,
+            )
+            prompt = self._finalization_prompt(result.final_response, schema)
+            attempts.append(
+                self._run_turn_bounded(
+                    thread, [TextInput(prompt)], output_schema=schema
+                )
+            )
+        return attempts
 
     def _run_turn_bounded(
         self,
@@ -300,27 +298,11 @@ class CodexAgentRuntime:
         *,
         output_schema: Mapping[str, Any],
     ) -> TurnResult | _GuardedTurnResult:
-        """Run one turn, bounding it against runaway tool loops.
+        """Run normally or stream/interrupt when tool or time limits are set.
 
-        Codex's app-server silently *windows* the model's context once large
-        images enter it — older tool outputs and images are dropped — so a
-        "lost" model can no longer see its own recent actions and re-runs its
-        default orientation action (e.g. re-reading a skill file) indefinitely
-        (see ``docs/codex_agent/skill_loop_and_reasoning_dropped_20260609.md``).
-
-        When no bound is configured this is a plain blocking ``thread.run``. When
-        a tool-call cap (:attr:`CodexAgentConfig.max_tool_calls` /
-        ``max_repeated_tool_calls``) or a wall-clock budget
-        (``turn_timeout_s``) is set, the turn is streamed and interrupted the
-        moment a bound is crossed. The (partial) result is returned; the
-        caller's finalization re-ask then collects a usable answer from the
-        evidence already gathered.
-
-        Neither call passes a per-turn ``sandbox``: doing so makes the SDK send a
-        ``WorkspaceWriteSandboxPolicy`` built from the enum with everything
-        defaulted (``network_access=False``), which overrides the session's
-        config-level network grant. The thread's sandbox mode (set in
-        :meth:`run_turn`) plus config.toml already define the policy.
+        Context windowing can make agents repeat evidence-gathering tools. A
+        bounded partial result still permits finalization on the same thread.
+        Sandbox policy stays on the thread to preserve its network-access grant.
         """
         cwd = str(self.config.project_root)
         schema = dict(output_schema)
@@ -509,59 +491,17 @@ class CodexAgentRuntime:
             return
         _remove_tree_best_effort(run_home)
 
-    def _build_turn_env(self, run_home: Path) -> dict[str, str]:
-        env: dict[str, str] = {"CODEX_HOME": str(run_home)}
-        if self.config.restrict_skills_to_project:
-            # Isolate HOME so the app-server cannot discover user/global skills
-            # (``~/.agents/skills``, ``~/.codex/superpowers``); only the project's
-            # own repo skills remain. Merged onto os.environ by the SDK, so PATH
-            # / PYTHONPATH and other inherited vars are preserved.
-            env["HOME"] = str(run_home / _ISOLATED_HOME_DIRNAME)
-        if not self.config.enable_prefix_cache:
-            return env
-        chat_run_id = sanitize_session_id(
-            f"{self.config.prefix_cache_session_id}_{uuid.uuid4().hex[:12]}"
-        )
-        extra = {
-            "session_id": self.config.prefix_cache_session_id,
-            "source": "codex_agent_sdk",
-            "chat_run_id": chat_run_id,
-        }
-        env[MODELHUB_EXTRA_HEADER_ENV] = json.dumps(
-            extra, ensure_ascii=False, separators=(",", ":")
-        )
-        env[MODELHUB_LOGID_ENV] = f"codexsdk_{chat_run_id}_{int(time.time() * 1000)}"
-        return env
+    def _build_turn_env(
+        self, run_home: Path, *, session_id: str | None = None
+    ) -> dict[str, str]:
+        return build_turn_environment(self.config, run_home, session_id=session_id)
 
     def _build_config_overrides(self) -> tuple[str, ...]:
-        # Focused task agents must not inherit the repo's AGENTS.md (coding-agent
-        # rules) — injecting it makes the model behave like a coding agent and
-        # loop re-reading project docs instead of solving the task.
-        overrides: list[str] = ["project_doc_max_bytes=0"]
-        if self.config.enable_prefix_cache:
-            provider_key = (
-                f"model_providers.{_toml_key_part(self.config.model_provider)}"
-            )
-            overrides.append(
-                f"{provider_key}.env_http_headers.extra="
-                f"{_toml_literal(MODELHUB_EXTRA_HEADER_ENV)}"
-            )
-            overrides.append(
-                f"{provider_key}.env_http_headers.X-TT-LOGID="
-                f"{_toml_literal(MODELHUB_LOGID_ENV)}"
-            )
-        if (
-            self.config.sandbox == "workspace_write"
-            and self.config.sandbox_network_access
-        ):
-            overrides.append("sandbox_workspace_write.network_access=true")
-        if self.config.model_context_window > 0:
-            overrides.append(f"model_context_window={self.config.model_context_window}")
-        return tuple(overrides)
+        return build_provider_overrides(self.config)
 
     def _effort(self) -> ReasoningEffort | None:
         """Per-turn reasoning effort, or ``None`` to use the model's default."""
-        if not self.config.reasoning_effort:
+        if self.config.reasoning_effort in {"", "provider-default"}:
             return None
         return ReasoningEffort(self.config.reasoning_effort)
 
@@ -624,6 +564,8 @@ class CodexAgentRuntime:
         result: TurnResult | _GuardedTurnResult,
         attempts: Sequence[TurnResult | _GuardedTurnResult],
         run_home: Path,
+        *,
+        session_id: str,
     ) -> CodexTurnMetadata:
         input_tokens, cached_input_tokens = _extract_token_counts(result.usage)
         return CodexTurnMetadata(
@@ -641,6 +583,7 @@ class CodexAgentRuntime:
                     "status": _status_str(item.status),
                     "duration_ms": item.duration_ms,
                     "has_final_response": bool(item.final_response),
+                    "adapter_session_id": session_id,
                 }
                 for item in attempts
             ),
@@ -834,16 +777,6 @@ def _truncate(value: str, max_chars: int) -> str:
     if len(normalized) <= max_chars:
         return normalized
     return normalized[: max_chars - 3] + "..."
-
-
-def _toml_literal(value: str) -> str:
-    return json.dumps(value, ensure_ascii=False)
-
-
-def _toml_key_part(value: str) -> str:
-    if re.fullmatch(r"[A-Za-z0-9_-]+", value):
-        return value
-    return json.dumps(value, ensure_ascii=False)
 
 
 __all__ = [

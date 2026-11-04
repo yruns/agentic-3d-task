@@ -1,0 +1,22 @@
+{
+  "turn_number": 1,
+  "method": "item/started",
+  "payload": {
+    "item": {
+      "clientId": null,
+      "content": [
+        {
+          "text": "The original marker is context-bcf1a1eb15ab. First call lookup_record for alpha, wait for its result, then call lookup_record for beta and wait for its result. Do not call both together. Return only a JSON object with marker (the original marker), sum (sum of the two returned values), alpha_receipt and beta_receipt (exact tool receipts). Do not invent receipts. Use no other tools.",
+          "text_elements": [],
+          "type": "text"
+        }
+      ],
+      "id": "01a1a161-e96b-7682-8ab0-3e902958044e",
+      "type": "userMessage"
+    },
+    "startedAtMs": 1793708910956,
+    "threadId": "01a1a161-e92e-7c60-8c3d-f99d86e0f6d2",
+    "turnId": "01a1a161-e945-7640-969c-eb0e52f52bac"
+  },
+  "state_fields": []
+}

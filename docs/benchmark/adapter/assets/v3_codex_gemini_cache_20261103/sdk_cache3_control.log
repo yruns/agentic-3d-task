@@ -1,0 +1,1 @@
+{"http_status": 200, "usage": {"completion_tokens": 1, "prompt_tokens": 698, "total_tokens": 699, "prompt_tokens_details": {"cached_tokens": 0}, "traffic_type": "ON_DEMAND", "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 698}], "candidatesTokensDetails": [{"modality": "TEXT", "tokenCount": 1}]}}
