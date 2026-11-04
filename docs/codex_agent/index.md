@@ -6,6 +6,8 @@ not generated API documentation.
 
 ## Current Operations
 
+- [ALFRED Incremental Execution](alfred.md): predicted depth and instance masks,
+  online object/view/grid memory, simulator integration, and validation protocol.
 - [Multi-Protocol Adapter](adapter.md): active `codex_adapter` setup, explicit
   registration, durable session/AK bindings, state preservation and capability
   limits. The investigation notes below preserve older experiments rather than

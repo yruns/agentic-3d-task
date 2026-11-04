@@ -1,0 +1,44 @@
+{
+  "kind": "unscored_synthetic_actor_tool_audit",
+  "model": "gpt-5.4-2026-03-05",
+  "reasoning_effort": "low",
+  "status": "completed",
+  "duration_ms": 6611,
+  "usage": {
+    "last": {
+      "cache_write_input_tokens": 0,
+      "cached_input_tokens": 0,
+      "input_tokens": 2203,
+      "output_tokens": 90,
+      "reasoning_output_tokens": 10,
+      "total_tokens": 2293
+    },
+    "total": {
+      "cache_write_input_tokens": 0,
+      "cached_input_tokens": 0,
+      "input_tokens": 2203,
+      "output_tokens": 90,
+      "reasoning_output_tokens": 10,
+      "total_tokens": 2293
+    }
+  },
+  "wire_audit": [
+    {
+      "model": "gpt-5.4-2026-03-05",
+      "tool_names": [],
+      "tool_count": 0,
+      "route": "native Responses raw-byte relay"
+    }
+  ],
+  "decision": {
+    "kind": "stop",
+    "action": null,
+    "object_id": null,
+    "cell": null,
+    "repeat": 1,
+    "rationale": "The goal explicitly says this is a protocol check on a synthetic image and to return kind stop with null action/object_id/cell and repeat 1.",
+    "memory_note": "Protocol check synthetic observation; stopping immediately as instructed."
+  },
+  "scored_episodes": 0,
+  "source_state": "uncommitted development source; diagnostic, not benchmark evaluation"
+}

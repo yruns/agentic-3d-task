@@ -1,0 +1,7 @@
+{
+  "vertical_fov_degrees": 60.0,
+  "initial_camera_height_m": 1.57605648,
+  "camera_offset_above_agent_origin_m": 0.6750000800000001,
+  "source": "isolated calibration only; no actor access; floor plane convention y=0",
+  "scoring": "not run"
+}

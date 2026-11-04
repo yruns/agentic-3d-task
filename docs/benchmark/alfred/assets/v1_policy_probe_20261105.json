@@ -1,0 +1,27 @@
+{
+  "kind": "unscored synthetic SDK structured-output and tool-isolation check",
+  "source_status": "uncommitted development code; not a benchmark evaluation",
+  "model": "gpt-5.4",
+  "reasoning_effort": "low",
+  "status": "completed",
+  "duration_ms": 4786,
+  "usage": {
+    "cache_write_input_tokens": 0,
+    "cached_input_tokens": 0,
+    "input_tokens": 6441,
+    "output_tokens": 92,
+    "reasoning_output_tokens": 11,
+    "total_tokens": 6533
+  },
+  "decision": {
+    "kind": "stop",
+    "action": null,
+    "object_id": null,
+    "cell": null,
+    "repeat": 1,
+    "rationale": "The instruction explicitly says this is a protocol check on a synthetic image and to return kind stop now with null action/object_id/cell and repeat 1.",
+    "memory_note": "Synthetic protocol check only; stopping immediately as instructed."
+  },
+  "scored_episodes": 0,
+  "note": "Synthetic input and explicit Stop instruction verify schema/tool isolation, not autonomous task execution."
+}
