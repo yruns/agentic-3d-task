@@ -20,12 +20,13 @@ from codex_agent.alfred.perception import (
     PerceptionRuntimeStats,
     ScenePerceptionConfig,
 )
-from codex_agent.alfred.policy import AlfredDecision
+from codex_agent.alfred.policy import AlfredEpisodeTurnOutcome, AlfredPolicyTask
 from codex_agent.alfred.simulator import (
     SimulatorConfig,
     SimulatorObservation,
     SimulatorScore,
 )
+from codex_agent.alfred.tools.__main__ import call_episode_server
 from codex_agent.cli import run_alfred
 from codex_agent.config import CodexAgentConfig
 from codex_agent.evaluation import alfred_runner
@@ -43,7 +44,7 @@ class _FakePerception(FakePerception):
 
     def __init__(self, config: ScenePerceptionConfig, *, log_path: Path) -> None:
         type(self).instances += 1
-        super().__init__(visible_frames=set())
+        super().__init__(include_sink_and_faucet=False)
 
     def __enter__(self) -> _FakePerception:
         return self
@@ -124,7 +125,7 @@ class _FakeSimulator:
         return self._observation(self.steps != 2)
 
     def score(self) -> SimulatorScore:
-        assert self.steps == 2  # Includes the failed second primitive.
+        assert self.steps == 2
         type(self).score_calls += 1
         return SimulatorScore(
             success=self.index == 1,
@@ -149,29 +150,32 @@ class _FakeSimulator:
 
 class _FakeRuntime:
     def __init__(self, config: CodexAgentConfig) -> None:
-        assert config.project_root.name == "actor"
+        assert config.sandbox == "workspace_write"
+        assert config.sandbox_network_access is True
         self.calls = 0
 
     def execute(self, task: CodexTask[OutcomeT]) -> CodexTaskResult[OutcomeT]:
         self.calls += 1
-        action = self.calls % 2 == 1
-        decision = AlfredDecision.model_validate(
-            {
-                "command": (
-                    {"kind": "motion", "motion_action": "MoveAhead", "repeat": 2}
-                    if action
-                    else {"kind": "stop"}
-                ),
-                "rationale": "test external policy",
-                "memory_note": "",
-            }
+        assert isinstance(task, AlfredPolicyTask)
+        episode_dir = task.episode_dir
+        # Trigger 2 primitive steps via scan_surroundings (which stops on failed step 2)
+        call_episode_server(episode_dir, "scan_surroundings", {"pitches": [30.0]})
+        call_episode_server(
+            episode_dir, "finish_episode", {"summary": "Finished test episode"}
+        )
+        outcome = AlfredEpisodeTurnOutcome(
+            status="completed",
+            summary="Completed test turn",
+            completed_subgoals=["scan"],
         )
         return CodexTaskResult(
             task_name=task.task_name,
-            outcome=cast(OutcomeT, decision),
+            outcome=cast(OutcomeT, outcome),
             turn=CodexTurnResult(
-                final_response=decision.to_wire().model_dump_json(),
-                metadata=CodexTurnMetadata(input_tokens=12),
+                final_response=outcome.model_dump_json(),
+                metadata=CodexTurnMetadata(
+                    usage={"total": {"input_tokens": 120, "output_tokens": 30}}
+                ),
             ),
         )
 
@@ -222,7 +226,7 @@ def run_config(
         runtime=CodexAgentConfig(
             project_root=source, codex_home=source / ".codex-home"
         ),
-        execution=ExecutionConfig(max_actions=5, max_decisions=4),
+        execution=ExecutionConfig(max_actions=2, max_decisions=4, initial_scan=False),
         command=("python", "-m", "codex_agent.cli.run_alfred"),
         shard_index=0,
         num_shards=7,

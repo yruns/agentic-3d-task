@@ -153,11 +153,13 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
     runtime = AlfredPolicyRuntime(
         replace(
             config.runtime,
-            project_root=actor_dir,
-            sandbox="read_only",
-            sandbox_network_access=False,
+            project_root=config.output_dir,
+            sandbox="workspace_write",
+            sandbox_network_access=True,
             restrict_skills_to_project=True,
             keep_run_home=True,
+            max_tool_calls=config.execution.max_decisions,
+            max_repeated_tool_calls=4,
         )
     )
     attempts: list[EpisodeAttempt] = []

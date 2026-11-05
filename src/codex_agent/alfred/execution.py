@@ -1,4 +1,12 @@
-"""Closed-loop episode execution; simulator truth stays outside policy inputs."""
+"""Closed-loop episode execution driven by a single interactive Codex turn.
+
+``EpisodeExecutor`` owns the simulator connection, perception worker, and
+:class:`IncrementalSceneMemory`. Before starting the Codex turn, it performs an
+automatic initial panoramic scan to populate the 3D object catalog and 5cm
+occupancy grid, starts an in-process :class:`EpisodeToolServer`, and launches a
+single :class:`AlfredPolicyTask` turn where Codex orchestrates high-level macro
+tools and receives compact ``SceneDelta`` updates.
+"""
 
 from __future__ import annotations
 
@@ -14,13 +22,15 @@ import numpy as np
 from codex_agent.tasks.base import CodexExecutor
 
 from .dataset import AlfredInstruction
-from .exploration import exploration_feedback, next_exploration_action
+from .delta import format_visible_objects_now
+from .episode_server import EpisodeToolServer
+from .exploration import suggest_frontiers
 from .geometry import Detection, Observation
-from .memory import IncrementalSceneMemory, MemoryConfig
-from .navigation import next_navigation_action
+from .macro_controller import MacroActionController
+from .memory import IncrementalSceneMemory, MappingConfig, MemoryConfig
 from .odometry import ActionOdometry, camera_intrinsics
 from .perception import PerceptionObservation
-from .policy import NAVIGATION_ACTIONS, AlfredDecision, AlfredPolicyTask
+from .policy import NAVIGATION_ACTIONS, AlfredPolicyTask
 from .provenance import file_sha256
 from .simulator import SimulatorObservation
 from .spatial_map import SpatialMap, SpatialMapConfig
@@ -42,14 +52,15 @@ class ImagePerception(Protocol):
 
 @dataclass(frozen=True)
 class ExecutionConfig:
-    """Explicit action, failure, model and image budgets for one episode."""
+    """Explicit action, failure, tool-call, and navigation budgets for one episode."""
 
     max_actions: int = 1000
     max_failures: int = 10
-    max_decisions: int = 120
-    navigation_chunk: int = 12
+    max_decisions: int = 40
+    navigation_chunk: int = 32
     retrieved_images: int = 3
     use_step_instructions: bool = False
+    initial_scan: bool = True
 
     def __post_init__(self) -> None:
         for name in (
@@ -81,7 +92,7 @@ class ExecutionOutcome:
 
 
 class EpisodeExecutor:
-    """Own the mutable memory and observation state for one sequential episode."""
+    """Own the mutable memory, macro controller, and tool server for one episode."""
 
     def __init__(
         self,
@@ -100,50 +111,109 @@ class EpisodeExecutor:
         self.output_dir = output_dir
         self.config = config
         self.memory = IncrementalSceneMemory(
-            output_dir / "memory", memory_config, spatial_map=SpatialMap(spatial_config)
+            output_dir / "memory",
+            memory_config
+            or MemoryConfig(mapping=MappingConfig(max_bbox_area_ratio=1.0)),
+            spatial_map=SpatialMap(spatial_config),
         )
         self.odometry = ActionOdometry()
+        self.macro = MacroActionController(self)
         self.actions = 0
         self.failures = 0
         self.decisions = 0
-        self.input_tokens = 0
-        self.output_tokens = 0
+        self.input_tokens: int = 0
+        self.output_tokens: int = 0
         self._usage_complete = True
         self.perception_seconds = 0.0
         self.policy_seconds = 0.0
-        self._feedback = "Initial observation."
-        self._note = ""
+        self.finish_requested = False
+        self.finish_summary = ""
         self._recent_actions: list[dict[str, object]] = []
-        self._retrieved: tuple[Path, ...] = ()
-        self._retrieved_ids: list[int] = []
-        self._delivered_history_ids: set[int] = set()
         self._current: SimulatorObservation | None = None
         self._predicted: PerceptionObservation | None = None
+
+    @property
+    def current_observation(self) -> SimulatorObservation:
+        if self._current is None:
+            raise RuntimeError("No observation has been integrated yet.")
+        return self._current
+
+    def can_step(self) -> bool:
+        """Return whether action and failure budgets still permit a simulator step."""
+        return (
+            not self.finish_requested
+            and self.actions < self.config.max_actions
+            and self.failures < self.config.max_failures
+        )
 
     def run(
         self, instruction: AlfredInstruction, initial: SimulatorObservation
     ) -> ExecutionOutcome:
-        """Observe, decide, act and reobserve until stop or a recorded budget limit."""
+        """Perform initial scan, start tool server, and run a single Codex turn."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._observe(initial)
-        reason = "decision_budget"
-        for _ in range(self.config.max_decisions):
-            if self.actions >= self.config.max_actions:
-                reason = "action_budget"
-                break
-            if self.failures >= self.config.max_failures:
-                reason = "failure_budget"
-                break
-            decision = self._decide(instruction)
-            if decision.kind == "stop":
-                reason = "policy_stop"
-                break
-            self._dispatch(decision)
-        if reason != "policy_stop":
-            if self.actions >= self.config.max_actions:
-                reason = "action_budget"
-            elif self.failures >= self.config.max_failures:
-                reason = "failure_budget"
+        if self.config.initial_scan and self.can_step():
+            self.macro.scan_surroundings(pitches=(30.0,))
+
+        initial_rgb, initial_bev = self.render_latest_artifacts(prefix="initial")
+        initial_context = self._build_initial_context()
+        task = AlfredPolicyTask(
+            instruction=instruction,
+            episode_dir=self.output_dir,
+            initial_context=initial_context,
+            image_paths=(initial_rgb, initial_bev),
+            use_step_instructions=self.config.use_step_instructions,
+        )
+
+        decisions_dir = self.output_dir / "decisions" / "0001"
+        decisions_dir.mkdir(parents=True, exist_ok=True)
+        request = task.build_turn_request()
+        write_json(
+            decisions_dir / "request.json",
+            {
+                "prompt": request.prompt,
+                "images": [str(path) for path in request.image_paths],
+            },
+        )
+
+        started = time.monotonic()
+        with EpisodeToolServer(self):
+            result = self.runtime.execute(task)
+        self.policy_seconds += time.monotonic() - started
+
+        if self.decisions == 0:
+            self.decisions = 1
+
+        usage = result.turn.metadata.usage
+        totals = usage.get("total") if usage else None
+        if (
+            isinstance(totals, dict)
+            and isinstance(totals.get("input_tokens"), int)
+            and isinstance(totals.get("output_tokens"), int)
+        ):
+            self.input_tokens += totals["input_tokens"]
+            self.output_tokens += totals["output_tokens"]
+        else:
+            self._usage_complete = False
+
+        write_json(
+            decisions_dir / "response.json",
+            {
+                "decision": result.outcome.model_dump(mode="json"),
+                "metadata": result.turn.metadata.as_dict(),
+                "raw_response": result.turn.final_response,
+            },
+        )
+
+        if self.finish_requested or result.outcome.status == "completed":
+            reason = "policy_stop"
+        elif self.actions >= self.config.max_actions:
+            reason = "action_budget"
+        elif self.failures >= self.config.max_failures:
+            reason = "failure_budget"
+        else:
+            reason = "decision_budget"
+
         write_json(self.output_dir / "memory.json", self.memory.snapshot())
         self.memory.render_bev(self.output_dir / "final_bev.png")
         return ExecutionOutcome(
@@ -156,6 +226,65 @@ class EpisodeExecutor:
             self.perception_seconds,
             self.policy_seconds,
         )
+
+    def _build_initial_context(self) -> dict[str, object]:
+        obs = self.current_observation
+        agent_pos = self.memory.agent_position or (0.0, 0.0, 0.0)
+        agent_region = self.memory.world_to_region(agent_pos[0], agent_pos[1])
+        region_layout: dict[str, list[str]] = {}
+        catalog: list[dict[str, object]] = []
+        for obj_id, node in sorted(self.memory.objects.items()):
+            reg = self.memory.world_to_region(
+                float(node.centroid[0]), float(node.centroid[1])
+            )
+            reg_key = f"[{reg[0]}, {reg[1]}]"
+            region_layout.setdefault(reg_key, []).append(f"#{obj_id} {node.category}")
+            dist_m = round(
+                float(np.linalg.norm(node.centroid - np.asarray(agent_pos))), 2
+            )
+            recent_frames = [
+                v.frame_id for v in node.views if v.frame_id > node.stale_through_frame
+            ][-3:]
+            catalog.append(
+                {
+                    "object_id": obj_id,
+                    "category": node.category,
+                    "region": list(reg),
+                    "distance_m": dist_m,
+                    "centroid": [round(float(v), 2) for v in node.centroid],
+                    "provisional": node.provisional,
+                    "best_frames": recent_frames,
+                }
+            )
+        frontiers = [
+            {
+                "region": list(c.region),
+                "world_xy": [
+                    round(c.world_position[0], 2),
+                    round(c.world_position[1], 2),
+                ],
+                "path_cost_m": round(c.path_cost_m, 2),
+                "info_gain_m2": round(c.information_gain_m2, 2),
+            }
+            for c in suggest_frontiers(self.memory, limit=5)
+        ]
+        return {
+            "agent_state": {
+                "position_xy": [round(agent_pos[0], 3), round(agent_pos[1], 3)],
+                "region": list(agent_region),
+                "yaw_degrees": round(obs.yaw_degrees, 1),
+                "horizon_degrees": round(obs.horizon_degrees, 1),
+                "held_object": None,
+            },
+            "scene_region_layout": region_layout,
+            "object_catalog": catalog,
+            "visible_objects_now": format_visible_objects_now(self.memory),
+            "top_frontiers": frontiers,
+            "budget": {
+                "remaining_actions": self.config.max_actions - self.actions,
+                "remaining_failures": self.config.max_failures - self.failures,
+            },
+        }
 
     def _observe(self, observation: SimulatorObservation) -> None:
         started = time.monotonic()
@@ -207,129 +336,8 @@ class EpisodeExecutor:
             },
         )
 
-    def _decide(self, instruction: AlfredInstruction) -> AlfredDecision:
-        assert self._current is not None and self._predicted is not None
-        self.decisions += 1
-        directory = self.output_dir / "decisions" / f"{self.decisions:04d}"
-        directory.mkdir(parents=True)
-        current_rgb = self._annotate_current(directory / "current.png")
-        bev = self.memory.render_bev(directory / "bev.png")
-        snapshot = self.memory.snapshot()
-        context: dict[str, object] = {
-            "scene_memory": snapshot,
-            "exploration": exploration_feedback(self.memory),
-            "yaw_degrees": self._current.yaw_degrees,
-            "horizon_degrees": self._current.horizon_degrees,
-            "feedback": self._feedback,
-            "previous_note": self._note,
-            "recent_actions": self._recent_actions[-12:],
-            "retrieved_frame_ids": self._retrieved_ids,
-            "remaining_actions": self.config.max_actions - self.actions,
-            "remaining_decisions": self.config.max_decisions - self.decisions,
-        }
-        task = AlfredPolicyTask(
-            instruction,
-            context,
-            (current_rgb, bev, *self._retrieved),
-            self.config.use_step_instructions,
-        )
-        request = task.build_turn_request()
-        write_json(
-            directory / "request.json",
-            {
-                "prompt": request.prompt,
-                "images": [str(path) for path in request.image_paths],
-            },
-        )
-        started = time.monotonic()
-        result = self.runtime.execute(task)
-        self.policy_seconds += time.monotonic() - started
-        usage = result.turn.metadata.usage
-        totals = usage.get("total") if usage else None
-        if (
-            isinstance(totals, dict)
-            and isinstance(totals.get("input_tokens"), int)
-            and isinstance(totals.get("output_tokens"), int)
-        ):
-            self.input_tokens += totals["input_tokens"]
-            self.output_tokens += totals["output_tokens"]
-        else:
-            self._usage_complete = False
-        write_json(
-            directory / "response.json",
-            {
-                "decision": result.outcome.model_dump(mode="json"),
-                "metadata": result.turn.metadata.as_dict(),
-                "raw_response": result.turn.final_response,
-            },
-        )
-        self._note = result.outcome.memory_note
-        self._retrieved, self._retrieved_ids = (), []
-        return result.outcome
-
-    def _dispatch(self, decision: AlfredDecision) -> None:
-        if decision.kind == "explore":
-            for _ in range(self.config.navigation_chunk):
-                assert self._current is not None
-                action, feedback = next_exploration_action(
-                    self.memory,
-                    yaw_degrees=self._current.yaw_degrees,
-                    horizon_degrees=self._current.horizon_degrees,
-                )
-                self._feedback = feedback
-                if action is None or not self._step(action, object_id=None):
-                    break
-            return
-        if decision.object_id is not None:
-            try:
-                canonical_id = self.memory.resolve_object_id(decision.object_id)
-            except KeyError:
-                self._feedback = "Rejected command: object ID has never been observed."
-                return
-        else:
-            canonical_id = None
-        cell = (
-            (decision.cell[0], decision.cell[1]) if decision.cell is not None else None
-        )
-        if decision.kind == "retrieve":
-            assert self._current is not None
-            frames = self.memory.retrieve_frames(
-                object_ids=() if canonical_id is None else (canonical_id,),
-                cells=() if cell is None else (cell,),
-                limit=self.config.retrieved_images,
-                exclude_frame_ids=tuple(
-                    self._delivered_history_ids | {self._current.frame_id}
-                ),
-            )
-            self._retrieved = tuple(frame.rgb_path for frame in frames)
-            self._retrieved_ids = [frame.frame_id for frame in frames]
-            self._delivered_history_ids.update(self._retrieved_ids)
-            self._feedback = (
-                f"Retrieved observed frames {self._retrieved_ids}; no action performed."
-                if frames
-                else "No additional historical views; obtain a new observation by moving/adjusting camera."
-            )
-            return
-        if decision.kind == "navigate":
-            for _ in range(self.config.navigation_chunk):
-                assert self._current is not None
-                action, feedback = next_navigation_action(
-                    self.memory,
-                    yaw_degrees=self._current.yaw_degrees,
-                    horizon_degrees=self._current.horizon_degrees,
-                    object_id=canonical_id,
-                    cell=cell,
-                )
-                self._feedback = feedback
-                if action is None or not self._step(action, object_id=None):
-                    break
-            return
-        assert decision.action is not None
-        for _ in range(decision.repeat):
-            if not self._step(decision.action, object_id=canonical_id):
-                break
-
-    def _step(self, action: str, *, object_id: int | None) -> bool:
+    def step_primitive(self, action: str, *, object_id: int | None) -> bool:
+        """Execute one primitive simulator action and integrate the resulting frame."""
         assert self._current is not None and self._predicted is not None
         if (
             self.actions >= self.config.max_actions
@@ -342,19 +350,16 @@ class EpisodeExecutor:
         if (action == "LookDown" and horizon >= 60 - 1e-3) or (
             action == "LookUp" and horizon <= -30 + 1e-3
         ):
-            self._feedback = "Camera pitch limit reached; select another action."
             return False
         if action not in NAVIGATION_ACTIONS:
-            indices = [
-                index
-                for index, identity in self.memory.current_detection_objects.items()
-                if identity == object_id
-            ]
-            if not indices:
-                self._feedback = "Rejected interaction: target has no mask in the current observation."
+            if object_id is None:
                 return False
-            detection_index = indices[0]
-            mask = self.memory.current_detection_masks[detection_index]
+            mask_selection = self.memory.select_interaction_mask(
+                object_id, action=action
+            )
+            if mask_selection is None:
+                return False
+            detection_index, mask, mask_source = mask_selection
             mask_path = (
                 self.output_dir / "interaction_masks" / f"{self.actions + 1:06d}.npy"
             )
@@ -363,7 +368,7 @@ class EpisodeExecutor:
             mask_record = {
                 "path": str(mask_path),
                 "sha256": file_sha256(mask_path),
-                "source": "current_mapping_mask",
+                "source": mask_source,
                 "source_detection_index": detection_index,
             }
         previous = self._current
@@ -391,7 +396,6 @@ class EpisodeExecutor:
         }
         append_jsonl(self.output_dir / "actions.jsonl", record)
         self._recent_actions.append(record)
-        self._feedback = json.dumps(record)
         self._observe(observation)
         if action == "MoveAhead" and not observation.last_action_success:
             yaw = math.radians(previous.yaw_degrees)
@@ -402,6 +406,17 @@ class EpisodeExecutor:
             self.memory.record_collision(cell)
         return observation.last_action_success
 
+    def render_latest_artifacts(self, *, prefix: str = "step") -> tuple[Path, Path]:
+        """Render annotated current RGB and current BEV under tool_artifacts/."""
+        artifacts_dir = self.output_dir / "tool_artifacts"
+        artifacts_dir.mkdir(parents=True, exist_ok=True)
+        fid = self.memory._latest_frame_id
+        rgb_out = artifacts_dir / f"{prefix}_f{fid:04d}_rgb.png"
+        bev_out = artifacts_dir / f"{prefix}_f{fid:04d}_bev.png"
+        self._annotate_current(rgb_out)
+        self.memory.render_bev(bev_out)
+        return rgb_out.resolve(), bev_out.resolve()
+
     def _annotate_current(self, path: Path) -> Path:
         from PIL import Image, ImageDraw
 
@@ -410,16 +425,18 @@ class EpisodeExecutor:
             image = source.convert("RGB").resize((600, 600))
         drawing = ImageDraw.Draw(image)
         for index, identity in self.memory.current_detection_objects.items():
+            resolved = self.memory.resolve_object_id(identity)
             item = self._predicted.detections[index]
             box = tuple(float(coordinate) * 2 for coordinate in item.bbox_xyxy)
             drawing.rectangle(box, outline="yellow", width=2)
             drawing.text(
                 (box[0], box[1]),
-                f"{identity}: {item.category}",
+                f"#{resolved}: {item.category}",
                 fill="black",
                 stroke_width=1,
                 stroke_fill="yellow",
             )
+        path.parent.mkdir(parents=True, exist_ok=True)
         image.save(path)
         return path
 

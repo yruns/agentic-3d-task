@@ -111,6 +111,9 @@ class IncrementalSceneMemory:
         self.view_to_grids: dict[int, set[GridCell]] = {}
         self.current_detection_objects: dict[int, int] = {}
         self.current_detection_masks: dict[int, np.ndarray] = {}
+        self.current_raw_detection_masks: dict[int, np.ndarray] = {}
+        self.current_detection_boxes: dict[int, tuple[float, float, float, float]] = {}
+        self.current_detection_confidences: dict[int, float] = {}
         self.rejected_detection_reasons: dict[int, str] = {}
         self.suppressed_detection_indices: dict[int, int] = {}
         self.agent_position: tuple[float, float, float] | None = None
@@ -157,6 +160,9 @@ class IncrementalSceneMemory:
         self._feature_dimension = dimension
         self.current_detection_objects = {}
         self.current_detection_masks = {}
+        self.current_raw_detection_masks = {}
+        self.current_detection_boxes = {}
+        self.current_detection_confidences = {}
         self.suppressed_detection_indices = {}
         effective_masks, self.rejected_detection_reasons = mapping_masks(
             observation.detections, self.config.mapping
@@ -191,6 +197,13 @@ class IncrementalSceneMemory:
             del node.views[: -self.config.max_object_views]
             self.current_detection_objects[region.index] = node.object_id
             self.current_detection_masks[region.index] = effective_masks[region.index]
+            self.current_raw_detection_masks[region.index] = observation.detections[
+                region.index
+            ].mask
+            self.current_detection_boxes[region.index] = region.box_xyxy
+            self.current_detection_confidences[region.index] = (
+                region.detection.confidence
+            )
             self.object_to_views.setdefault(node.object_id, set()).add(
                 observation.frame_id
             )
@@ -200,6 +213,15 @@ class IncrementalSceneMemory:
                     self.current_detection_objects[representative]
                 )
                 self.current_detection_masks[duplicate] = effective_masks[duplicate]
+                self.current_raw_detection_masks[duplicate] = observation.detections[
+                    duplicate
+                ].mask
+                self.current_detection_boxes[duplicate] = observation.detections[
+                    duplicate
+                ].bbox_xyxy
+                self.current_detection_confidences[duplicate] = observation.detections[
+                    duplicate
+                ].confidence
         held_mask = np.zeros(observation.depth_m.shape, dtype=bool)
         for index, object_id in self.current_detection_objects.items():
             if object_id == self.held_object_id:
@@ -540,6 +562,71 @@ class IncrementalSceneMemory:
                 "alias": right,
             }
         )
+
+    def select_interaction_mask(
+        self,
+        object_id: int,
+        *,
+        action: str,
+        allow_spatial_fallback: bool = True,
+    ) -> tuple[int, np.ndarray, str] | None:
+        """Select the best current-frame binary mask for ``object_id`` and ``action``.
+
+        For ``OpenObject`` / ``CloseObject``, returns the unsubtracted raw SAM
+        mask so container doors are not hollowed out by contained child masks.
+        For ``PutObject``, returns the child-subtracted effective mask so placement
+        targets empty receptacle surface rather than items already sitting on it.
+        """
+        resolved_id = self.resolve_object_id(object_id)
+        direct_indices = [
+            idx
+            for idx, identity in self.current_detection_objects.items()
+            if self.resolve_object_id(identity) == resolved_id
+        ]
+        chosen_idx: int | None = None
+        mask_source = "current_mapping_mask"
+
+        if direct_indices:
+            chosen_idx = max(
+                direct_indices,
+                key=lambda idx: (
+                    int(self.current_detection_masks[idx].sum()),
+                    self.current_detection_confidences.get(idx, 0.0),
+                    -idx,
+                ),
+            )
+        elif allow_spatial_fallback and resolved_id in self.objects:
+            target_node = self.objects[resolved_id]
+            fallback_candidates: list[tuple[float, int]] = []
+            for idx, identity in self.current_detection_objects.items():
+                cand_id = self.resolve_object_id(identity)
+                if cand_id not in self.objects:
+                    continue
+                cand_node = self.objects[cand_id]
+                dist = float(np.linalg.norm(cand_node.centroid - target_node.centroid))
+                if dist <= 0.42:
+                    fallback_candidates.append((dist, idx))
+            if fallback_candidates:
+                fallback_candidates.sort(key=lambda item: (item[0], item[1]))
+                chosen_idx = fallback_candidates[0][1]
+                mask_source = "current_spatial_fallback_mask"
+
+        if chosen_idx is None:
+            return None
+
+        eff_mask = self.current_detection_masks[chosen_idx]
+        raw_mask = self.current_raw_detection_masks.get(chosen_idx, eff_mask)
+        if action in {"OpenObject", "CloseObject"} and int(raw_mask.sum()) > int(
+            eff_mask.sum()
+        ):
+            return chosen_idx, raw_mask, "current_raw_sam_mask"
+        if (
+            action == "PutObject"
+            and int(eff_mask.sum()) < 64
+            and int(raw_mask.sum()) >= 64
+        ):
+            return chosen_idx, raw_mask, "current_raw_sam_mask"
+        return chosen_idx, eff_mask, mask_source
 
     def record_interaction(
         self, action: str, object_id: int | None, *, success: bool

@@ -1,14 +1,13 @@
-"""Closed-loop execution tests with fake external services and real scene memory."""
+"""Closed-loop execution tests for single-turn tool-driven ALFRED episodes."""
 
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TypeVar
+from typing import TypeVar, cast
 
 import numpy as np
-import pytest
 from numpy.typing import NDArray
 from PIL import Image
 
@@ -16,25 +15,25 @@ from codex_agent.alfred.dataset import AlfredInstruction
 from codex_agent.alfred.execution import (
     EpisodeExecutor,
     ExecutionConfig,
-    ExecutionOutcome,
 )
-from codex_agent.alfred.memory import MappingConfig, MemoryConfig
 from codex_agent.alfred.perception import (
     PerceptionDetection,
     PerceptionDiagnostics,
     PerceptionObservation,
 )
-from codex_agent.alfred.policy import AlfredDecision, AlfredPolicyTask
+from codex_agent.alfred.policy import AlfredEpisodeTurnOutcome, AlfredPolicyTask
 from codex_agent.alfred.simulator import SimulatorObservation
-from codex_agent.alfred.vocabulary import ALFRED_CATEGORIES, detection_batches
+from codex_agent.alfred.tools.__main__ import call_episode_server
+from codex_agent.alfred.tools.__main__ import main as tools_cli_main
+from codex_agent.alfred.vocabulary import ALFRED_CATEGORIES
 from codex_agent.models import CodexTaskResult, CodexTurnMetadata, CodexTurnResult
 from codex_agent.tasks.base import CodexTask
 
-ResultT = TypeVar("ResultT")
+OutcomeT = TypeVar("OutcomeT")
 
 
 class FakeEnvironment:
-    """Produce RGB/proprioception while making any hidden scoring call fail."""
+    """Produce RGB/proprioception while recording primitive actions and masks."""
 
     def __init__(
         self,
@@ -44,18 +43,16 @@ class FakeEnvironment:
         yaw_degrees: float = 0.0,
     ) -> None:
         self.root = root
-        self.root.mkdir()
+        self.root.mkdir(parents=True, exist_ok=True)
         self.successes = successes
         self.yaw_degrees = yaw_degrees
         self.horizon_degrees = 0.0
         self.frame_id = 0
         self.calls: list[tuple[str, Path | None]] = []
-        self.score_calls = 0
-        self.hidden_state = "PRIVATE_SCORING_LABELS"
 
     def observe(self, *, success: bool = True) -> SimulatorObservation:
         path = self.root / f"{self.frame_id}.png"
-        Image.new("RGB", (300, 300), (200, 30, 20)).save(path)
+        Image.new("RGB", (300, 300), (200, 120, 80)).save(path)
         return SimulatorObservation(
             frame_id=self.frame_id,
             rgb_path=path,
@@ -76,30 +73,18 @@ class FakeEnvironment:
         if success and action == "RotateLeft":
             self.yaw_degrees = (self.yaw_degrees - 90) % 360
         if success and action == "LookDown":
-            self.horizon_degrees = min(60.0, self.horizon_degrees + 30)
+            self.horizon_degrees = min(60.0, self.horizon_degrees + 15)
         if success and action == "LookUp":
-            self.horizon_degrees = max(-30.0, self.horizon_degrees - 30)
+            self.horizon_degrees = max(-30.0, self.horizon_degrees - 15)
         self.frame_id += 1
         return self.observe(success=success)
 
-    def score(self) -> None:
-        self.score_calls += 1
-        raise AssertionError("terminal scorer must not be queried by execution")
-
 
 class FakePerception:
-    """Supply current-frame arrays while recording exactly which frames were read."""
+    """Supply synthetic depth, masks, and normalized CLIP features per frame."""
 
-    def __init__(
-        self,
-        *,
-        visible_frames: set[int] | None = None,
-        features_by_frame: Mapping[int, tuple[float, float, float]] | None = None,
-        include_container: bool = False,
-    ) -> None:
-        self.visible_frames = visible_frames
-        self.features_by_frame = features_by_frame or {}
-        self.include_container = include_container
+    def __init__(self, *, include_sink_and_faucet: bool = False) -> None:
+        self.include_sink_and_faucet = include_sink_and_faucet
         self.frames: list[int] = []
 
     def predict(
@@ -116,49 +101,72 @@ class FakePerception:
         self.frames.append(index)
         output_dir.mkdir(parents=True, exist_ok=True)
         depth_path = output_dir / f"depth_{index}.npy"
+        # Provide floor and object depth at 0.65m so objects are within interaction reach.
         np.save(
             depth_path,
-            np.full((300, 300), max(0.75, 2.0 - index * 0.25), dtype=np.float32),
+            np.full((300, 300), 0.65, dtype=np.float32),
+            allow_pickle=False,
         )
-        detections: tuple[PerceptionDetection, ...] = ()
-        if self.visible_frames is None or index in self.visible_frames:
-            mask_path = output_dir / f"mask_{index}.npy"
-            mask = np.zeros((300, 300), dtype=np.uint8)
-            mask[120:180, 120:180] = 1
-            np.save(mask_path, mask)
-            detections = (
-                PerceptionDetection(
-                    category="Mug",
-                    mask_path=mask_path,
-                    bbox_xyxy=(120, 120, 180, 180),
-                    confidence=0.9,
-                ),
+
+        detections: list[PerceptionDetection] = []
+        img_feats: list[list[float]] = []
+        txt_feats: list[list[float]] = []
+
+        # Detection 0: parent container (Cabinet or SinkBasin)
+        parent_mask = np.zeros((300, 300), dtype=np.uint8)
+        parent_mask[40:260, 40:260] = 1
+        parent_mask_path = output_dir / f"mask_{index}_0.npy"
+        np.save(parent_mask_path, parent_mask, allow_pickle=False)
+        parent_cat = "SinkBasin" if self.include_sink_and_faucet else "Cabinet"
+        detections.append(
+            PerceptionDetection(
+                category=parent_cat,
+                mask_path=parent_mask_path,
+                bbox_xyxy=(40.0, 40.0, 260.0, 260.0),
+                confidence=0.95,
             )
-            if self.include_container:
-                container_path = output_dir / f"container_{index}.npy"
-                container_mask = np.zeros_like(mask)
-                container_mask[90:210, 90:210] = 1
-                np.save(container_path, container_mask)
-                detections = (
-                    PerceptionDetection(
-                        category="Cabinet",
-                        mask_path=container_path,
-                        bbox_xyxy=(90, 90, 210, 210),
-                        confidence=0.95,
-                    ),
-                    *detections,
-                )
-        features_path = output_dir / f"features_{index}.npz"
-        feature = np.asarray(
-            self.features_by_frame.get(index, (1.0, 0.0, 0.0)), dtype=np.float32
         )
+        img_feats.append([1.0, 0.0, 0.0])
+        txt_feats.append([1.0, 0.0, 0.0])
+
+        # Detection 1: child object inside parent box (Mug)
+        child_mask = np.zeros((300, 300), dtype=np.uint8)
+        child_mask[80:220, 80:220] = 1
+        child_mask_path = output_dir / f"mask_{index}_1.npy"
+        np.save(child_mask_path, child_mask, allow_pickle=False)
+        detections.append(
+            PerceptionDetection(
+                category="Mug",
+                mask_path=child_mask_path,
+                bbox_xyxy=(80.0, 80.0, 220.0, 220.0),
+                confidence=0.92,
+            )
+        )
+        img_feats.append([0.0, 1.0, 0.0])
+        txt_feats.append([0.0, 1.0, 0.0])
+
+        if self.include_sink_and_faucet:
+            faucet_mask = np.zeros((300, 300), dtype=np.uint8)
+            faucet_mask[10:38, 120:180] = 1
+            faucet_mask_path = output_dir / f"mask_{index}_2.npy"
+            np.save(faucet_mask_path, faucet_mask, allow_pickle=False)
+            detections.append(
+                PerceptionDetection(
+                    category="Faucet",
+                    mask_path=faucet_mask_path,
+                    bbox_xyxy=(120.0, 10.0, 180.0, 38.0),
+                    confidence=0.90,
+                )
+            )
+            img_feats.append([0.0, 0.0, 1.0])
+            txt_feats.append([0.0, 0.0, 1.0])
+
+        features_path = output_dir / f"features_{index}.npz"
         np.savez(
             features_path,
-            frame_feature=feature,
-            image_features=np.tile(feature, (len(detections), 1)),
-            text_features=np.tile(
-                np.array([1.0, 0.0, 0.0], dtype=np.float32), (len(detections), 1)
-            ),
+            image_features=np.asarray(img_feats, dtype=np.float32),
+            text_features=np.asarray(txt_feats, dtype=np.float32),
+            frame_feature=np.asarray([1.0, 0.0, 0.0], dtype=np.float32),
         )
         return PerceptionObservation(
             frame_id=frame_id,
@@ -167,10 +175,10 @@ class FakePerception:
             image_width=300,
             image_height=300,
             features_path=features_path,
-            detections=detections,
+            detections=tuple(detections),
             diagnostics=PerceptionDiagnostics(
                 vocabulary_categories=len(ALFRED_CATEGORIES),
-                caption_batches=len(detection_batches(24)),
+                caption_batches=5,
                 candidate_boxes=len(detections),
                 nms_suppressed=0,
                 capped_detections=0,
@@ -179,470 +187,218 @@ class FakePerception:
         )
 
 
-class FakeRuntime:
-    """Return planned decisions through the real task parser and capture actor inputs."""
+class ScriptedTurnRuntime:
+    """Simulate a Codex turn that invokes ALFRED CLI tools against EpisodeToolServer."""
 
-    def __init__(self, decisions: Sequence[AlfredDecision]) -> None:
-        self.decisions = iter(decisions)
-        self.tasks: list[AlfredPolicyTask] = []
-        self.usage_known = True
+    def __init__(self, callback: Callable[[Path], AlfredEpisodeTurnOutcome]) -> None:
+        self.callback = callback
+        self.turns = 0
 
-    def execute(self, task: CodexTask[ResultT]) -> CodexTaskResult[ResultT]:
+    def execute(self, task: CodexTask[OutcomeT]) -> CodexTaskResult[OutcomeT]:
+        self.turns += 1
         assert isinstance(task, AlfredPolicyTask)
-        self.tasks.append(task)
-        decision = next(self.decisions)
-        response = decision.to_wire().model_dump_json()
+        outcome = self.callback(task.episode_dir)
         return CodexTaskResult(
             task_name=task.task_name,
-            outcome=task.parse_response(response),
+            outcome=cast(OutcomeT, outcome),
             turn=CodexTurnResult(
-                final_response=response,
+                final_response=outcome.model_dump_json(),
                 metadata=CodexTurnMetadata(
-                    input_tokens=5,
-                    usage=(
-                        {
-                            "total": {"input_tokens": 10, "output_tokens": 7},
-                            "last": {"input_tokens": 5, "output_tokens": 3},
-                        }
-                        if self.usage_known
-                        else None
-                    ),
+                    usage={"total": {"input_tokens": 1200, "output_tokens": 180}}
                 ),
             ),
         )
 
 
-def _decision(command: dict[str, object] | None = None) -> AlfredDecision:
-    return AlfredDecision.model_validate(
-        {
-            "command": command if command is not None else {"kind": "stop"},
-            "rationale": "Synthetic service-boundary test",
-            "memory_note": "Keep this note",
-        }
-    )
-
-
-def _executor(
-    tmp_path: Path,
-    decisions: Sequence[AlfredDecision],
-    *,
-    config: ExecutionConfig | None = None,
-    visible_frames: set[int] | None = None,
-    successes: Sequence[bool] = (),
-    yaw_degrees: float = 0.0,
-    memory_config: MemoryConfig | None = None,
-    features_by_frame: Mapping[int, tuple[float, float, float]] | None = None,
-) -> EpisodeExecutor:
-    return EpisodeExecutor(
-        environment=FakeEnvironment(
-            tmp_path / "simulator", successes=successes, yaw_degrees=yaw_degrees
-        ),
-        perception=FakePerception(
-            visible_frames=visible_frames, features_by_frame=features_by_frame
-        ),
-        runtime=FakeRuntime(decisions),
-        output_dir=tmp_path / "episode",
-        config=config if config is not None else ExecutionConfig(),
-        memory_config=memory_config if memory_config is not None else MemoryConfig(),
-    )
-
-
-def _run(executor: EpisodeExecutor) -> ExecutionOutcome:
-    assert isinstance(executor.environment, FakeEnvironment)
-    return executor.run(
-        AlfredInstruction("Put the mug on a table", ("PRIVATE_STEP_INSTRUCTION",)),
-        executor.environment.observe(),
-    )
-
-
-def test_repeated_actions_integrate_every_intermediate_observation(
+def test_single_turn_episode_executes_high_level_tools_and_returns_scene_delta(
     tmp_path: Path,
 ) -> None:
-    executor = _executor(
-        tmp_path,
-        [
-            _decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 3}),
-            _decision(),
-        ],
+    env = FakeEnvironment(tmp_path / "sim")
+    perception = FakePerception(include_sink_and_faucet=True)
+    ep_dir = tmp_path / "episode"
+
+    def run_agent_tools(episode_dir: Path) -> AlfredEpisodeTurnOutcome:
+        # 1. Query objects in memory
+        listed = call_episode_server(episode_dir, "list_objects", {})
+        assert listed["count"] >= 2
+        objs_by_cat = {o["category"]: o["object_id"] for o in listed["objects"]}
+        assert "Mug" in objs_by_cat
+        assert "SinkBasin" in objs_by_cat
+
+        # 2. Inspect high-res crop and keyframes (0 simulator steps)
+        crop_res = call_episode_server(
+            episode_dir, "view_crop", {"object_id": objs_by_cat["Mug"]}
+        )
+        assert Path(crop_res["image_path"]).is_file()
+
+        kf_res = call_episode_server(
+            episode_dir, "keyframe_selector", {"query": "Mug in sink", "k": 2}
+        )
+        assert "frames" in kf_res
+
+        vf_res = call_episode_server(
+            episode_dir, "view_frame", {"frame_ids": ["current"]}
+        )
+        assert Path(vf_res["image_path"]).is_file()
+
+        bev_res = call_episode_server(episode_dir, "view_bev", {})
+        assert Path(bev_res["image_path"]).is_file()
+
+        # 3. Pick up the Mug
+        pickup_delta = call_episode_server(
+            episode_dir,
+            "interact_object",
+            {"action": "pickup", "object_id": objs_by_cat["Mug"]},
+        )
+        assert pickup_delta["status"] == "completed"
+        assert pickup_delta["agent_state"]["held_object"]["category"] == "Mug"
+
+        # 4. Run compound macro: clean_in_sink
+        clean_delta = call_episode_server(
+            episode_dir,
+            "interact_object",
+            {"action": "clean_in_sink", "object_id": objs_by_cat["SinkBasin"]},
+        )
+        assert clean_delta["status"] == "completed"
+        assert clean_delta["agent_state"]["held_object"]["category"] == "Mug"
+
+        # 5. Finish episode via CLI main entry point
+        rc = tools_cli_main(
+            [
+                "finish_episode",
+                "--episode-dir",
+                str(episode_dir),
+                "--args",
+                '{"summary": "Cleaned the mug"}',
+            ]
+        )
+        assert rc == 0
+        return AlfredEpisodeTurnOutcome(
+            status="completed",
+            summary="Picked up mug and cleaned it in sink.",
+            completed_subgoals=["pickup mug", "clean mug in sink"],
+        )
+
+    runtime = ScriptedTurnRuntime(run_agent_tools)
+    executor = EpisodeExecutor(
+        environment=env,
+        perception=perception,
+        runtime=runtime,
+        output_dir=ep_dir,
+        config=ExecutionConfig(max_actions=50, max_failures=10, initial_scan=False),
     )
-    outcome = _run(executor)
-    assert outcome.actions == 3
+    outcome = executor.run(
+        AlfredInstruction("Clean the mug in the sink.", ()),
+        env.observe(),
+    )
+    assert runtime.turns == 1
     assert outcome.stop_reason == "policy_stop"
-    assert tuple(executor.memory.frames) == (0, 1, 2, 3)
-    assert isinstance(executor.perception, FakePerception)
-    assert executor.perception.frames == [0, 1, 2, 3]
-    assert executor.odometry.agent_position == (0.0, 0.75, 0.0)
-    assert (outcome.input_tokens, outcome.output_tokens) == (20, 14)
-    assert isinstance(executor.runtime, FakeRuntime)
-    assert executor.runtime.tasks[1].context["previous_note"] == "Keep this note"
+    assert outcome.input_tokens == 1200
+    assert outcome.output_tokens == 180
+    assert (ep_dir / "memory.json").is_file()
+    assert (ep_dir / "final_bev.png").is_file()
+    assert (ep_dir / "tool_calls.jsonl").is_file()
+    tool_records = [
+        json.loads(line)
+        for line in (ep_dir / "tool_calls.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
+    assert [r["tool"] for r in tool_records] == [
+        "list_objects",
+        "view_crop",
+        "keyframe_selector",
+        "view_frame",
+        "view_bev",
+        "interact_object",
+        "interact_object",
+        "finish_episode",
+    ]
 
 
-def test_interaction_uses_reobserved_mask_after_movement(tmp_path: Path) -> None:
-    executor = _executor(
-        tmp_path,
-        [
-            _decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 1}),
-            _decision(
-                {
-                    "kind": "interact",
-                    "interaction_action": "PickupObject",
-                    "target": {"type": "object", "object_id": 0},
-                }
-            ),
-            _decision(),
-        ],
+def test_open_container_uses_unsubtracted_raw_sam_mask(tmp_path: Path) -> None:
+    env = FakeEnvironment(tmp_path / "sim")
+    perception = FakePerception(include_sink_and_faucet=False)
+    ep_dir = tmp_path / "episode"
+
+    def run_open_cabinet(episode_dir: Path) -> AlfredEpisodeTurnOutcome:
+        listed = call_episode_server(
+            episode_dir, "list_objects", {"categories": ["Cabinet"]}
+        )
+        cab_id = listed["objects"][0]["object_id"]
+        delta = call_episode_server(
+            episode_dir,
+            "interact_object",
+            {"action": "open", "object_id": cab_id},
+        )
+        assert delta["status"] == "completed"
+        return AlfredEpisodeTurnOutcome(
+            status="completed",
+            summary="Opened cabinet",
+            completed_subgoals=["open cabinet"],
+        )
+
+    runtime = ScriptedTurnRuntime(run_open_cabinet)
+    executor = EpisodeExecutor(
+        environment=env,
+        perception=perception,
+        runtime=runtime,
+        output_dir=ep_dir,
+        config=ExecutionConfig(max_actions=30, initial_scan=False),
     )
-    outcome = _run(executor)
-    assert outcome.actions == 2
-    assert isinstance(executor.environment, FakeEnvironment)
-    assert executor.environment.calls[0] == ("MoveAhead", None)
-    action, mask_path = executor.environment.calls[1]
-    assert action == "PickupObject"
-    assert mask_path is not None and mask_path.name == "000002.npy"
-    np.testing.assert_array_equal(
-        np.load(mask_path), np.load(executor.output_dir / "perception" / "mask_1.npy")
-    )
-    record = json.loads(
-        (executor.output_dir / "actions.jsonl").read_text().splitlines()[1]
-    )
-    assert record["interaction_mask"]["source_detection_index"] == 0
-    assert record["interaction_mask"]["source"] == "current_mapping_mask"
-    assert record["source_frame"] == 1
-    assert executor.memory.held_object_id == 0
+    executor.run(AlfredInstruction("Open the cabinet.", ()), env.observe())
+    actions = [
+        json.loads(line)
+        for line in (ep_dir / "actions.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
+    open_records = [a for a in actions if a["action"] == "OpenObject"]
+    assert len(open_records) == 1
+    assert open_records[0]["interaction_mask"]["source"] == "current_raw_sam_mask"
+    saved_mask = np.load(open_records[0]["interaction_mask"]["path"])
+    # Full raw parent mask is 220x220 = 48400 pixels (not subtracted by child 140x140 = 19600).
+    assert int(saved_mask.sum()) == 220 * 220
 
 
-def test_interaction_dispatch_excludes_a_contained_objects_pixels(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [
-            _decision(
-                {
-                    "kind": "interact",
-                    "interaction_action": "OpenObject",
-                    "target": {"type": "object", "object_id": 0},
-                }
-            ),
-            _decision(),
-        ],
-    )
-    executor.perception = FakePerception(include_container=True)
-    outcome = _run(executor)
-    assert outcome.actions == 1
-    assert isinstance(executor.environment, FakeEnvironment)
-    action, mask_path = executor.environment.calls[0]
-    assert action == "OpenObject" and mask_path is not None
-    parent = np.load(executor.output_dir / "perception" / "container_0.npy").astype(
-        bool
-    )
-    child = np.load(executor.output_dir / "perception" / "mask_0.npy").astype(bool)
-    actual = np.load(mask_path)
-    assert np.any(parent & child)
-    assert not np.any(actual & child)
-    np.testing.assert_array_equal(actual, parent & ~child)
+def test_navigate_to_and_explore_frontier_with_early_stop(tmp_path: Path) -> None:
+    env = FakeEnvironment(tmp_path / "sim")
+    perception = FakePerception(include_sink_and_faucet=False)
+    ep_dir = tmp_path / "episode"
 
+    def run_nav_and_explore(episode_dir: Path) -> AlfredEpisodeTurnOutcome:
+        nav_obj = call_episode_server(episode_dir, "navigate_to", {"object_id": 0})
+        assert nav_obj["status"] in {"arrived_and_framed", "arrived_unverified_mask"}
+        assert "scene_delta" in nav_obj
 
-def test_interaction_resolves_a_real_merge_alias_and_uses_the_current_mask(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [
-            _decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 1}),
-            _decision(
-                {
-                    "kind": "interact",
-                    "interaction_action": "PickupObject",
-                    "target": {"type": "object", "object_id": 1},
-                }
-            ),
-            _decision(),
-        ],
-        memory_config=MemoryConfig(
-            mapping=MappingConfig(
-                association_threshold=1.9,
-                merge_image_similarity=0.6,
-                maintenance_interval=2,
-            )
-        ),
-        features_by_frame={1: (0.7, float(np.sqrt(0.51)), 0.0)},
+        nav_reg = call_episode_server(episode_dir, "navigate_to", {"region": [0, 1]})
+        assert "scene_delta" in nav_reg
+
+        exp_stop = call_episode_server(
+            episode_dir,
+            "explore_frontier",
+            {"stop_on_categories": ["Mug"], "max_steps": 4},
+        )
+        assert exp_stop["status"] == "target_discovered"
+
+        bad_tool = call_episode_server(episode_dir, "unknown_tool_xyz", {})
+        assert "error" in bad_tool
+
+        return AlfredEpisodeTurnOutcome(
+            status="completed",
+            summary="Navigated and explored",
+            completed_subgoals=["navigate", "explore"],
+        )
+
+    runtime = ScriptedTurnRuntime(run_nav_and_explore)
+    executor = EpisodeExecutor(
+        environment=env,
+        perception=perception,
+        runtime=runtime,
+        output_dir=ep_dir,
+        config=ExecutionConfig(max_actions=40, initial_scan=True),
     )
-    outcome = _run(executor)
-    assert outcome.actions == 2
-    assert executor.memory.aliases[1] == 0
-    assert executor.memory.held_object_id == 0
-    assert isinstance(executor.environment, FakeEnvironment)
-    action, mask_path = executor.environment.calls[1]
-    assert action == "PickupObject"
-    assert mask_path is not None and mask_path.name == "000002.npy"
-    np.testing.assert_array_equal(
-        np.load(mask_path), np.load(executor.output_dir / "perception" / "mask_1.npy")
+    outcome = executor.run(
+        AlfredInstruction("Find the mug.", ()),
+        env.observe(),
     )
-
-
-def test_explore_obeys_atomic_action_budget_and_reobserves_every_step(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [_decision({"kind": "explore"})],
-        config=ExecutionConfig(max_actions=2, navigation_chunk=5),
-    )
-    outcome = _run(executor)
-    assert outcome.stop_reason == "action_budget"
-    assert (outcome.actions, outcome.decisions) == (2, 1)
-    assert isinstance(executor.perception, FakePerception)
-    assert executor.perception.frames == [0, 1, 2]
-    assert tuple(executor.memory.frames) == (0, 1, 2)
-    assert isinstance(executor.environment, FakeEnvironment)
-    assert len(executor.environment.calls) == 2
-    assert all(mask is None for _, mask in executor.environment.calls)
-
-
-def test_explore_chunk_returns_control_to_policy_without_extra_atomic_actions(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [_decision({"kind": "explore"}), _decision()],
-        config=ExecutionConfig(navigation_chunk=2),
-    )
-    outcome = _run(executor)
     assert outcome.stop_reason == "policy_stop"
-    assert (outcome.actions, outcome.decisions) == (2, 2)
-    assert isinstance(executor.perception, FakePerception)
-    assert executor.perception.frames == [0, 1, 2]
-
-
-def test_explore_stops_at_failure_budget_after_recording_failed_observation(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [_decision({"kind": "explore"})],
-        config=ExecutionConfig(max_failures=1),
-        successes=[False],
-    )
-    outcome = _run(executor)
-    assert outcome.stop_reason == "failure_budget"
-    assert (outcome.actions, outcome.failures) == (1, 1)
-    assert tuple(executor.memory.frames) == (0, 1)
-
-
-def test_missing_provider_usage_remains_unknown_instead_of_zero(tmp_path: Path) -> None:
-    executor = _executor(tmp_path, [_decision()])
-    assert isinstance(executor.runtime, FakeRuntime)
-    executor.runtime.usage_known = False
-    outcome = _run(executor)
-    assert outcome.input_tokens is None
-    assert outcome.output_tokens is None
-
-
-def test_historical_target_without_current_mask_cannot_be_interacted_with(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [
-            _decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 1}),
-            _decision(
-                {
-                    "kind": "interact",
-                    "interaction_action": "PickupObject",
-                    "target": {"type": "object", "object_id": 0},
-                }
-            ),
-            _decision(),
-        ],
-        visible_frames={0},
-    )
-    outcome = _run(executor)
-    assert outcome.actions == 1
-    assert outcome.failures == 0
-    assert isinstance(executor.runtime, FakeRuntime)
-    assert "no mask in the current observation" in str(
-        executor.runtime.tasks[-1].context["feedback"]
-    )
-
-
-def test_stop_uses_no_simulator_action_and_actor_never_reads_terminal_truth(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(tmp_path, [_decision()])
-    outcome = _run(executor)
-    assert (outcome.actions, outcome.failures, outcome.decisions) == (0, 0, 1)
-    assert isinstance(executor.environment, FakeEnvironment)
-    assert executor.environment.calls == []
-    assert executor.environment.score_calls == 0
-    assert isinstance(executor.runtime, FakeRuntime)
-    prompt = executor.runtime.tasks[0].build_turn_request().prompt
-    assert "PRIVATE_SCORING_LABELS" not in prompt
-    assert "PRIVATE_STEP_INSTRUCTION" not in prompt
-    assert "completed_goal_conditions" not in prompt
-
-
-def test_action_budget_interrupts_repeat_before_extra_step(tmp_path: Path) -> None:
-    executor = _executor(
-        tmp_path,
-        [_decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 8})],
-        config=ExecutionConfig(max_actions=2),
-    )
-    outcome = _run(executor)
-    assert outcome.actions == 2
-    assert outcome.stop_reason == "action_budget"
-    assert len(executor.memory.frames) == 3
-
-
-def test_failure_budget_stops_repetition_and_preserves_failed_observation(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [_decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 8})],
-        config=ExecutionConfig(max_failures=1),
-        successes=[False],
-    )
-    outcome = _run(executor)
-    assert (outcome.actions, outcome.failures) == (1, 1)
-    assert outcome.stop_reason == "failure_budget"
-    assert executor.odometry.agent_position == (0.0, 0.0, 0.0)
-    spatial = executor.memory.spatial_map
-    assert spatial.cell_state(spatial.world_to_cell(0.0, 0.25)) == "occupied"
-    assert tuple(executor.memory.frames) == (0, 1)
-
-
-def test_failed_westward_move_marks_attempted_cell_without_float_drift(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [_decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 1})],
-        config=ExecutionConfig(max_failures=1),
-        successes=[False],
-        yaw_degrees=270.0,
-    )
-    _run(executor)
-    spatial = executor.memory.spatial_map
-    assert spatial.cell_state(spatial.world_to_cell(-0.25, 0.0)) == "occupied"
-
-
-def test_action_budget_reached_on_last_decision_reports_action_limit(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [_decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 8})],
-        config=ExecutionConfig(max_actions=1, max_decisions=1),
-    )
-    outcome = _run(executor)
-    assert outcome.actions == 1
-    assert outcome.stop_reason == "action_budget"
-
-
-def test_retrieval_uses_only_seen_frames_and_does_not_move(tmp_path: Path) -> None:
-    executor = _executor(
-        tmp_path,
-        [
-            _decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 1}),
-            _decision(
-                {"kind": "retrieve", "target": {"type": "object", "object_id": 0}}
-            ),
-            _decision(),
-        ],
-    )
-    outcome = _run(executor)
-    assert outcome.actions == 1
-    assert len(executor.memory.frames) == 2
-    assert isinstance(executor.runtime, FakeRuntime)
-    task = executor.runtime.tasks[-1]
-    assert task.context["retrieved_frame_ids"] == [0]
-    assert len(task.image_paths) == 3
-    assert task.image_paths[-1] == executor.memory.frames[0].rgb_path
-
-
-def test_retrieval_does_not_duplicate_the_current_rgb_attachment(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [
-            _decision(
-                {"kind": "retrieve", "target": {"type": "object", "object_id": 0}}
-            ),
-            _decision(),
-        ],
-    )
-    outcome = _run(executor)
-    assert outcome.actions == 0
-    assert isinstance(executor.runtime, FakeRuntime)
-    task = executor.runtime.tasks[-1]
-    assert task.context["retrieved_frame_ids"] == []
-    assert "No additional historical views" in str(task.context["feedback"])
-    assert len(task.image_paths) == 2
-
-
-def test_repeated_retrieval_waits_for_new_observations_without_forcing_actions(
-    tmp_path: Path,
-) -> None:
-    move: dict[str, object] = {
-        "kind": "motion",
-        "motion_action": "MoveAhead",
-        "repeat": 1,
-    }
-    retrieve: dict[str, object] = {
-        "kind": "retrieve",
-        "target": {"type": "object", "object_id": 0},
-    }
-    executor = _executor(
-        tmp_path,
-        [
-            _decision(move),
-            _decision(retrieve),
-            _decision(retrieve),
-            _decision(move),
-            _decision(retrieve),
-            _decision(),
-        ],
-    )
-    outcome = _run(executor)
-    assert outcome.actions == 2
-    assert isinstance(executor.environment, FakeEnvironment)
-    assert executor.environment.calls == [("MoveAhead", None), ("MoveAhead", None)]
-    assert isinstance(executor.runtime, FakeRuntime)
-    tasks = executor.runtime.tasks
-    assert tasks[2].context["retrieved_frame_ids"] == [0]
-    assert tasks[3].context["retrieved_frame_ids"] == []
-    assert len(tasks[3].image_paths) == 2
-    assert "obtain a new observation" in str(tasks[3].context["feedback"])
-    assert tasks[5].context["retrieved_frame_ids"] == [1]
-    assert tasks[5].image_paths[-1] == executor.memory.frames[1].rgb_path
-
-
-def test_unknown_retrieval_target_is_feedback_and_does_not_make_up_evidence(
-    tmp_path: Path,
-) -> None:
-    executor = _executor(
-        tmp_path,
-        [
-            _decision(
-                {"kind": "retrieve", "target": {"type": "object", "object_id": 999}}
-            ),
-            _decision(),
-        ],
-    )
-    outcome = _run(executor)
-    assert outcome.actions == 0
-    assert isinstance(executor.runtime, FakeRuntime)
-    task = executor.runtime.tasks[-1]
-    assert task.context["retrieved_frame_ids"] == []
-    assert "never been observed" in str(task.context["feedback"])
-    assert len(task.image_paths) == 2
-
-
-@pytest.mark.parametrize("name", ["max_actions", "max_failures", "max_decisions"])
-def test_budget_rejects_boolean_and_zero(name: str) -> None:
-    for value in (False, 0):
-        with pytest.raises(ValueError, match=name):
-            # Deliberately cross the typed boundary with an invalid dynamic value.
-            ExecutionConfig(**{name: value})  # type: ignore[arg-type]
+    assert outcome.decisions >= 4

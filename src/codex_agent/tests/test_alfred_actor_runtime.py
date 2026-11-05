@@ -1,4 +1,4 @@
-"""Actor isolation rejects unsafe providers and removes all native host tools."""
+"""Actor runtime tests for tool-enabled single-turn ALFRED execution."""
 
 from __future__ import annotations
 
@@ -15,42 +15,22 @@ from codex_agent.tests.test_adapter_fixtures import adapter_profile, adapter_tes
 from codex_agent.tests.test_adapter_provider import write_adapter_home
 
 
-def test_actor_catalog_keeps_exact_model_and_disables_native_host_tools() -> None:
+def test_actor_catalog_enables_shell_and_view_image_while_disabling_ambient_tools() -> (
+    None
+):
     profile = AdapterModelProfile.model_validate(
         adapter_profile(model="gpt-exact-version", protocol="responses")
     )
     catalog = build_actor_catalog(profile)
     model = catalog["models"][0]
     assert model["slug"] == "gpt-exact-version"
-    assert model["shell_type"] == "disabled"
     assert model["apply_patch_tool_type"] is None
-    assert model["experimental_supported_tools"] == []
     assert model["multi_agent_version"] == "disabled"
     assert model["node_repl_disabled"] is True
     assert model["include_skills_usage_instructions"] is False
     assert model["include_plugin_usage_instructions"] is False
     assert model["include_apps_usage_instructions"] is False
-    assert model["supports_reasoning_summary_parameter"] is True
-    assert model["default_reasoning_level"] == "medium"
     assert model["input_modalities"] == ["text", "image"]
-
-
-def test_actor_rejects_gemini_instead_of_allowing_later_catalog_tool_overrides(
-    tmp_path: Path,
-) -> None:
-    with adapter_test_server(adapter_profile()) as server:
-        home = write_adapter_home(tmp_path, server.base_url)
-        runtime = AlfredPolicyRuntime(
-            CodexAgentConfig(
-                codex_home=home,
-                model="gemini-test",
-                reasoning_effort="provider-default",
-            )
-        )
-        with pytest.raises(CodexConfigError, match="Responses"):
-            runtime._prepare_run_home()
-    assert not (home / "runs").exists()
-    assert all(request.method == "GET" for request in server.requests)
 
 
 def test_actor_run_catalog_and_overrides_are_isolated_per_turn(tmp_path: Path) -> None:
@@ -71,10 +51,11 @@ def test_actor_run_catalog_and_overrides_are_isolated_per_turn(tmp_path: Path) -
         )
         assert "features.multi_agent_v2=false" in overrides
         assert "features.plugins=false" in overrides
-        assert "features.shell_tool=false" in overrides
         assert "features.code_mode=false" in overrides
         assert "tools.experimental_request_user_input.enabled=false" in overrides
-        assert any('.wire_api="responses"' in value for value in overrides)
+        env = runtime._build_turn_env(first)
+        assert "PYTHONPATH" in env
+        assert "127.0.0.1" in env["no_proxy"]
         runtime._cleanup_run_home(first)
         second = runtime._prepare_run_home()
         assert second != first

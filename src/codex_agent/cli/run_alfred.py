@@ -83,11 +83,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--max-actions", type=_positive_int, default=1000)
     parser.add_argument("--max-failures", type=_positive_int, default=10)
-    parser.add_argument("--max-decisions", type=_positive_int, default=120)
-    parser.add_argument("--navigation-chunk", type=_positive_int, default=12)
+    parser.add_argument("--max-decisions", type=_positive_int, default=40)
+    parser.add_argument("--navigation-chunk", type=_positive_int, default=32)
     parser.add_argument("--retrieved-images", type=_positive_int, default=3)
     parser.add_argument("--worker-timeout", type=float, default=120.0)
-    parser.add_argument("--turn-timeout", type=float, default=300.0)
+    parser.add_argument("--turn-timeout", type=float, default=900.0)
     parser.add_argument(
         "--use-step-instructions",
         action="store_true",
@@ -128,14 +128,17 @@ def main(argv: list[str] | None = None) -> int:
     output_dir = args.output_dir.absolute()
     scene = load_scene_settings(args.scene_config)
     runtime = CodexAgentConfig.from_env(project_root=DEFAULT_PROJECT_ROOT)
+    resolved_model = args.model or runtime.model
+    if args.reasoning_effort is not None:
+        resolved_effort = cast(ReasoningEffort, args.reasoning_effort)
+    elif resolved_model.lower().startswith("gemini"):
+        resolved_effort = "provider-default"
+    else:
+        resolved_effort = runtime.reasoning_effort
     runtime = replace(
         runtime,
-        model=args.model or runtime.model,
-        reasoning_effort=(
-            cast(ReasoningEffort, args.reasoning_effort)
-            if args.reasoning_effort is not None
-            else runtime.reasoning_effort
-        ),
+        model=resolved_model,
+        reasoning_effort=resolved_effort,
         turn_timeout_s=args.turn_timeout,
     )
     config = AlfredRunConfig(
