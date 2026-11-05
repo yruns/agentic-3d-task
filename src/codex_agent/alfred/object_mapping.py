@@ -43,6 +43,12 @@ class MappingConfig:
     reacquire_similarity: float = 0.75
     reacquire_margin_m: float = 0.6
     held_max_camera_distance_m: float = 1.0
+    association_distance_m: float = 0.025
+    envelope_margin_m: float = 0.0
+    min_clip_similarity: float = 0.0
+    erode_mask_pixels: int = 0
+    depth_trim_quantile: float = 0.0
+    same_category_bonus: float = 0.0
 
     def __post_init__(self) -> None:
         integer_fields = {
@@ -53,6 +59,7 @@ class MappingConfig:
             "confirmation_observations",
             "min_mask_pixels",
         }
+        nonneg_integer_fields = {"erode_mask_pixels"}
         unit_fields = {
             "merge_overlap_threshold",
             "merge_image_similarity",
@@ -64,6 +71,10 @@ class MappingConfig:
             "max_bbox_area_ratio",
             "contained_child_fraction",
             "contained_parent_fraction",
+            "envelope_margin_m",
+            "min_clip_similarity",
+            "depth_trim_quantile",
+            "same_category_bonus",
         }
         for item in fields(self):
             value = getattr(self, item.name)
@@ -71,6 +82,11 @@ class MappingConfig:
                 if type(value) is not int or value < 1:
                     raise ValueError(
                         f"{item.name} must be a positive integer, got {value!r}"
+                    )
+            elif item.name in nonneg_integer_fields:
+                if type(value) is not int or value < 0:
+                    raise ValueError(
+                        f"{item.name} must be a nonnegative integer, got {value!r}"
                     )
             elif (
                 isinstance(value, bool)
@@ -125,6 +141,19 @@ def mapping_masks(
             rejected[index] = "background_category"
         elif (x2 - x1) * (y2 - y1) > config.max_bbox_area_ratio * detection.mask.size:
             rejected[index] = "detector_bbox_area_above_threshold"
+        elif (
+            config.min_clip_similarity > 0
+            and detection.category.endswith("Sliced")
+            and detection.confidence < 0.50
+        ):
+            rejected[index] = "unverified_sliced_category"
+        elif (
+            config.min_clip_similarity > 0
+            and detection.confidence < 0.45
+            and feature_cosine(detection.image_feature, detection.text_feature)
+            < config.min_clip_similarity
+        ):
+            rejected[index] = "clip_similarity_below_threshold"
         else:
             retained[index] = detection.mask.copy()
     for parent in retained:
@@ -271,6 +300,26 @@ def process_cloud(
     )
 
 
+_KDTREE_CACHE: dict[tuple[int, int, float, float], cKDTree] = {}
+
+
+def _cached_kdtree(points: FloatArray) -> cKDTree:
+    key = (
+        id(points),
+        len(points),
+        float(points[0, 0]),
+        float(points[-1, -1]),
+    )
+    tree = _KDTREE_CACHE.get(key)
+    if tree is not None:
+        return tree
+    tree = cKDTree(points)
+    if len(_KDTREE_CACHE) > 2048:
+        _KDTREE_CACHE.clear()
+    _KDTREE_CACHE[key] = tree
+    return tree
+
+
 def point_overlap(
     observed: FloatArray, existing: FloatArray, distance_m: float
 ) -> float:
@@ -294,19 +343,24 @@ def point_overlap(
         existing.min(axis=0) > observed.max(axis=0) + distance_m
     ):
         return 0.0
-    distances, _ = cKDTree(existing).query(
+    distances, _ = _cached_kdtree(existing).query(
         observed, k=1, distance_upper_bound=distance_m
     )
     return float(np.count_nonzero(np.isfinite(distances)) / len(observed))
 
 
 _ENVELOPE_CACHE: dict[
-    tuple[int, int, float, float], tuple[FloatArray, FloatArray, FloatArray]
+    tuple[int, int, float, float],
+    tuple[FloatArray, FloatArray, FloatArray, FloatArray, FloatArray],
 ] = {}
 
 
-def _oriented_envelope(points: FloatArray) -> tuple[FloatArray, FloatArray, FloatArray]:
+def _oriented_envelope(
+    points: FloatArray,
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray, FloatArray]:
     """Fit hull-PCA axes, using deterministic PCA for degenerate point sets."""
+    if points.ndim != 2 or points.shape[1:] != (3,) or not len(points):
+        raise ValueError("oriented envelopes require nonempty finite Nx3 clouds")
     key = (
         id(points),
         len(points),
@@ -316,49 +370,67 @@ def _oriented_envelope(points: FloatArray) -> tuple[FloatArray, FloatArray, Floa
     cached = _ENVELOPE_CACHE.get(key)
     if cached is not None:
         return cached
-    support = points
-    if len(points) >= 4 and np.linalg.matrix_rank(points - points.mean(axis=0)) == 3:
+    if not np.isfinite(points).all():
+        raise ValueError("oriented envelopes require nonempty finite Nx3 clouds")
+    aabb_min = points.min(axis=0)
+    aabb_max = points.max(axis=0)
+    hull_input = bound_rows(points, 512) if len(points) > 512 else points
+    support = hull_input
+    if (
+        len(hull_input) >= 4
+        and np.linalg.matrix_rank(hull_input - hull_input.mean(axis=0)) == 3
+    ):
         try:
-            support = points[ConvexHull(points).vertices]
+            support = hull_input[ConvexHull(hull_input).vertices]
         except QhullError:
             # A numerically degenerate hull has no reliable 3D volume. PCA still
             # yields a conservative envelope without perturbing measured points.
-            support = points
+            support = hull_input
     centered = support - support.mean(axis=0)
     _, axes = np.linalg.eigh(centered.T @ centered / max(1, len(support)))
     axes = axes[:, ::-1]
     coordinates = points @ axes
     minimum, maximum = coordinates.min(axis=0), coordinates.max(axis=0)
-    result = axes @ ((minimum + maximum) / 2), axes, (maximum - minimum) / 2
+    result = (
+        aabb_min,
+        aabb_max,
+        axes @ ((minimum + maximum) / 2),
+        axes,
+        (maximum - minimum) / 2,
+    )
     if len(_ENVELOPE_CACHE) > 2048:
         _ENVELOPE_CACHE.clear()
     _ENVELOPE_CACHE[key] = result
     return result
 
 
-def oriented_envelopes_overlap(first: FloatArray, second: FloatArray) -> bool:
+def oriented_envelopes_overlap(
+    first: FloatArray, second: FloatArray, *, margin_m: float = 0.0
+) -> bool:
     """Check PCA oriented boxes using the separating-axis theorem, without jitter.
 
     Zero-thickness boxes remain usable for planar detections. Contact within
-    numerical tolerance is a candidate; final point-neighbor support still gates
+    numerical tolerance (plus optional ``margin_m`` expansion for monocular
+    depth shells) is a candidate; final point-neighbor support still gates
     association. This does not claim bitwise equivalence to legacy 3D IoU.
     """
-    for points in (first, second):
-        if (
-            points.ndim != 2
-            or points.shape[1:] != (3,)
-            or not len(points)
-            or not np.isfinite(points).all()
-        ):
-            raise ValueError("oriented envelopes require nonempty finite Nx3 clouds")
-    # Fast AABB rejection: if the axis-aligned bounding boxes of the two point
-    # clouds are disjoint, their tighter convex-hull OBBs cannot overlap.
-    if np.any(first.min(axis=0) > second.max(axis=0) + 1e-9) or np.any(
-        second.min(axis=0) > first.max(axis=0) + 1e-9
+    if not math.isfinite(margin_m) or margin_m < 0:
+        raise ValueError("margin_m must be finite and nonnegative")
+    f_min, f_max, first_center, first_axes, first_extent = _oriented_envelope(first)
+    s_min, s_max, second_center, second_axes, second_extent = _oriented_envelope(second)
+    # Fast AABB rejection using cached bounds.
+    tol = margin_m + 1e-9
+    if (
+        f_min[0] > s_max[0] + tol
+        or f_min[1] > s_max[1] + tol
+        or f_min[2] > s_max[2] + tol
+        or s_min[0] > f_max[0] + tol
+        or s_min[1] > f_max[1] + tol
+        or s_min[2] > f_max[2] + tol
     ):
         return False
-    first_center, first_axes, first_extent = _oriented_envelope(first)
-    second_center, second_axes, second_extent = _oriented_envelope(second)
+    f_ext = first_extent + margin_m
+    s_ext = second_extent + margin_m
     axes = [first_axes[:, axis] for axis in range(3)] + [
         second_axes[:, axis] for axis in range(3)
     ]
@@ -373,8 +445,8 @@ def oriented_envelopes_overlap(first: FloatArray, second: FloatArray) -> bool:
         if length <= 1e-12:
             continue
         direction = axis / length
-        first_radius = float(np.abs(first_axes.T @ direction) @ first_extent)
-        second_radius = float(np.abs(second_axes.T @ direction) @ second_extent)
+        first_radius = float(np.abs(first_axes.T @ direction) @ f_ext)
+        second_radius = float(np.abs(second_axes.T @ direction) @ s_ext)
         if abs(float(offset @ direction)) > first_radius + second_radius + 1e-9:
             return False
     return True

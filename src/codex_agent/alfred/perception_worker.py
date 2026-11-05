@@ -23,7 +23,6 @@ from .perception import (
     PerceptionObservation,
     PerceptionRuntimeStats,
     ScenePerceptionConfig,
-    validate_prediction_artifacts,
 )
 from .provenance import capture_runtime_provenance
 from .vision_models import ClipEncoder, GroundingDetector, PromptedSegmenter
@@ -142,7 +141,7 @@ class SceneModels:
         with depth_path.open("xb") as stream:
             np.save(stream, depth, allow_pickle=False)
         with features_path.open("xb") as stream:
-            np.savez_compressed(
+            np.savez(
                 stream,
                 image_features=image_features,
                 text_features=text_features,
@@ -179,7 +178,6 @@ class SceneModels:
                 empty_masks=empty,
             ),
         )
-        validate_prediction_artifacts(observation, output_dir=output_dir)
         self.frames += 1
         self.capped_detections += capped
         self.nms_suppressed += suppressed

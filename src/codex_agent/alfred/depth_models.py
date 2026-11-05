@@ -156,7 +156,7 @@ class DA3MetricDepth:
             meters = canonical_depth_to_meters(canonical[0], cameras[0].cpu().numpy())
             del raw, prediction
         resized = cv2.resize(
-            meters, (rgb.shape[1], rgb.shape[0]), interpolation=cv2.INTER_LINEAR
+            meters, (rgb.shape[1], rgb.shape[0]), interpolation=cv2.INTER_NEAREST
         )
         return np.asarray(resized, dtype=np.float32)
 

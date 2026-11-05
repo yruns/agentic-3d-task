@@ -106,3 +106,41 @@ def test_depth_visibility_rejects_hidden_outside_and_behind_camera_points() -> N
         tolerance_m=0.1,
     )
     assert mask.tolist() == [True, False, False, False]
+
+
+def test_oriented_envelope_margin_and_clip_gate() -> None:
+    from codex_agent.alfred.object_mapping import (
+        MappingConfig,
+        mapping_masks,
+        oriented_envelopes_overlap,
+    )
+
+    slab1 = np.array(
+        [[0.0, 0.0, 0.0], [0.2, 0.0, 0.0], [0.0, 0.2, 0.0], [0.2, 0.2, 0.01]]
+    )
+    slab2 = slab1 + np.array([0.0, 0.0, 0.06])
+    assert not oriented_envelopes_overlap(slab1, slab2, margin_m=0.0)
+    assert oriented_envelopes_overlap(slab1, slab2, margin_m=0.08)
+
+    det_good = Detection(
+        "Mug",
+        np.ones((6, 6), bool),
+        0.30,
+        np.array([1.0, 0.0]),
+        np.array([0.25, np.sqrt(1 - 0.25**2)]),
+        bbox_xyxy=(0, 0, 6, 6),
+    )
+    det_bad_clip = Detection(
+        "Mug",
+        np.ones((6, 6), bool),
+        0.30,
+        np.array([1.0, 0.0]),
+        np.array([0.05, np.sqrt(1 - 0.05**2)]),
+        bbox_xyxy=(0, 0, 6, 6),
+    )
+    retained, rejected = mapping_masks(
+        (det_good, det_bad_clip),
+        MappingConfig(min_clip_similarity=0.18, max_bbox_area_ratio=1.0),
+    )
+    assert set(retained) == {0}
+    assert rejected == {1: "clip_similarity_below_threshold"}

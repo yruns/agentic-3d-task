@@ -265,16 +265,29 @@ class IncrementalSceneMemory:
         rgb: np.ndarray,
         effective_masks: dict[int, np.ndarray],
     ) -> list[MappedDetection]:
+        from scipy.ndimage import binary_erosion
+
         projected: list[MappedDetection] = []
         ordered = sorted(
             enumerate(observation.detections),
             key=lambda item: (-item[1].confidence, item[0]),
         )
+        erode_iters = self.config.mapping.erode_mask_pixels
+        trim_q = self.config.mapping.depth_trim_quantile
         for index, detection in ordered:
             if index not in effective_masks:
                 continue
+            geom_mask = effective_masks[index]
+            if erode_iters > 0 and int(geom_mask.sum()) >= 64:
+                eroded = np.asarray(
+                    binary_erosion(geom_mask, iterations=erode_iters), dtype=bool
+                )
+                if int(eroded.sum()) >= max(
+                    20, self.config.mapping.min_detection_points
+                ):
+                    geom_mask = eroded
             valid = (
-                effective_masks[index]
+                geom_mask
                 & (observation.depth_m > 0)
                 & (observation.depth_m <= self.config.max_depth_m)
             )
@@ -284,6 +297,16 @@ class IncrementalSceneMemory:
                     "insufficient_valid_depth_after_subtraction"
                 )
                 continue
+            if trim_q > 0 and len(rows) >= 24:
+                depths = observation.depth_m[rows, cols]
+                low_d, high_d = np.percentile(depths, [2.0, (1.0 - trim_q) * 100.0])
+                inliers = (depths >= low_d) & (depths <= high_d)
+                if (
+                    int(np.count_nonzero(inliers))
+                    >= self.config.mapping.min_detection_points
+                ):
+                    rows = rows[inliers]
+                    cols = cols[inliers]
             duplicate = next(
                 (
                     region.index
@@ -352,13 +375,13 @@ class IncrementalSceneMemory:
     ) -> float | None:
         if node.state == "sliced":
             return None
-        image_similarity = feature_cosine(
-            region.detection.image_feature, node.image_feature
-        )
-        text_similarity = feature_cosine(
-            region.detection.text_feature, node.text_feature
-        )
         if not node.geometry_valid:
+            image_similarity = feature_cosine(
+                region.detection.image_feature, node.image_feature
+            )
+            text_similarity = feature_cosine(
+                region.detection.text_feature, node.text_feature
+            )
             semantic_score = 0.75 * image_similarity + 0.25 * text_similarity
             if semantic_score < self.config.mapping.reacquire_similarity:
                 return None
@@ -383,21 +406,38 @@ class IncrementalSceneMemory:
                 if np.linalg.norm(gap) <= self.config.mapping.reacquire_margin_m
                 else None
             )
-        if not oriented_envelopes_overlap(region.points, node.points):
+        margin = self.config.mapping.envelope_margin_m
+        if not oriented_envelopes_overlap(region.points, node.points, margin_m=margin):
             return None
-        overlap = point_overlap(
-            region.points, node.points, self.config.mapping.voxel_size_m
+        dist = self.config.mapping.association_distance_m
+        if margin > 0:
+            overlap = max(
+                point_overlap(region.points, node.points, dist),
+                point_overlap(node.points, region.points, dist),
+            )
+        else:
+            overlap = point_overlap(region.points, node.points, dist)
+        if overlap <= 0:
+            return None
+        image_similarity = feature_cosine(
+            region.detection.image_feature, node.image_feature
         )
         score = association_similarity(
             overlap,
             image_similarity,
             self.config.mapping.phys_bias,
         )
-        return (
-            score
-            if overlap > 0 and score >= self.config.mapping.association_threshold
-            else None
-        )
+        bonus = self.config.mapping.same_category_bonus
+        if bonus > 0:
+            if region.detection.category == node.category:
+                score += bonus
+            else:
+                text_similarity = feature_cosine(
+                    region.detection.text_feature, node.text_feature
+                )
+                if text_similarity < 0.82:
+                    score -= 1.5 * bonus
+        return score if score >= self.config.mapping.association_threshold else None
 
     def _fuse_observation(
         self, node: ObjectMemory, region: MappedDetection, frame_id: int
@@ -448,8 +488,11 @@ class IncrementalSceneMemory:
         Identities observed as separate detections in the same frame cannot be
         merged. Low-support objects remain explicitly provisional, not erased.
         """
+        cutoff = self._latest_frame_id - self.config.mapping.maintenance_interval
         for node in self.objects.values():
-            if node.geometry_valid:
+            if node.geometry_valid and (
+                self._latest_frame_id < 0 or node.last_seen >= cutoff
+            ):
                 node.points, node.colors = process_cloud(
                     node.points, node.colors, self.config.mapping, denoise=True
                 )
@@ -475,18 +518,18 @@ class IncrementalSceneMemory:
     def _merge_candidates(self) -> list[tuple[float, int, int]]:
         candidates: list[tuple[float, int, int]] = []
         ids = sorted(key for key, node in self.objects.items() if node.geometry_valid)
+        margin = self.config.mapping.envelope_margin_m
+        dist = self.config.mapping.association_distance_m
         for position, left_id in enumerate(ids):
             for right_id in ids[position + 1 :]:
                 left, right = self.objects[left_id], self.objects[right_id]
-                if not oriented_envelopes_overlap(left.points, right.points):
+                if not oriented_envelopes_overlap(
+                    left.points, right.points, margin_m=margin
+                ):
                     continue
                 overlap = max(
-                    point_overlap(
-                        left.points, right.points, self.config.mapping.voxel_size_m
-                    ),
-                    point_overlap(
-                        right.points, left.points, self.config.mapping.voxel_size_m
-                    ),
+                    point_overlap(left.points, right.points, dist),
+                    point_overlap(right.points, left.points, dist),
                 )
                 if overlap > self.config.mapping.merge_overlap_threshold:
                     candidates.append((overlap, left_id, right_id))
@@ -927,7 +970,7 @@ class IncrementalSceneMemory:
             raise FileExistsError(f"observation artifact already exists: {path}")
         detections = observation.detections
         dimension = len(observation.frame_feature)
-        np.savez_compressed(
+        np.savez(
             path,
             depth_m=observation.depth_m.astype(np.float32),
             intrinsics=observation.intrinsics,
@@ -965,7 +1008,7 @@ class IncrementalSceneMemory:
         effective_path = frame.geometry_path.with_suffix(".mapping.npz")
         indices = sorted(self.current_detection_masks)
         with effective_path.open("xb") as stream:
-            np.savez_compressed(
+            np.savez(
                 stream,
                 detection_indices=np.array(indices, dtype=np.int64),
                 masks=(

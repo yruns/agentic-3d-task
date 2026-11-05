@@ -250,3 +250,22 @@ def test_released_dino_training_entries_are_verified_before_strict_loading() -> 
         grounding_inference_state(
             state, labelbook_size=2000, hidden_dim=256, max_positions=512
         )
+
+
+def test_require_all_span_tokens_prevents_modifier_token_stealing() -> None:
+    # Token 1 ("apple") is 0.45; token 3 ("sliced") is 0.80 but token 4 ("apple") is 0.01.
+    probabilities = np.array([[0.95, 0.45, 0.0, 0.80, 0.01]], dtype=np.float64)
+    boxes = np.array([[0.5, 0.5, 0.4, 0.5]])
+    result = decode_grounded_boxes(
+        probabilities,
+        boxes,
+        ("Apple", "AppleSliced"),
+        ((1,), (3, 4)),
+        image_size=(100, 80),
+        box_threshold=0.25,
+        text_threshold=0.25,
+        require_all_span_tokens=True,
+    )
+    assert len(result) == 1
+    assert result[0].category == "Apple"
+    assert result[0].confidence == pytest.approx(0.45)

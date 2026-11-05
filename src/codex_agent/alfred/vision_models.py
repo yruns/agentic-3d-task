@@ -137,12 +137,17 @@ def decode_grounded_boxes(
     image_size: tuple[int, int],
     box_threshold: float,
     text_threshold: float,
+    require_all_span_tokens: bool = False,
 ) -> tuple[GroundedBox, ...]:
     """Preserve upstream max-token scoring while binding exact category spans.
 
     GroundingDINO's box confidence is the maximum over the complete token row;
     both thresholds use strict greater-than comparisons. Only label binding
     differs from substring phrase matching, which confuses sliced/base labels.
+    When ``require_all_span_tokens=True``, compound phrases require support
+    across all constituent tokens and report the matched span score as box
+    confidence to prevent modifier tokens (e.g. ``sliced``) or punctuation from
+    inflating unrelated false positives.
     """
     if (
         logits.ndim != 2
@@ -161,15 +166,32 @@ def decode_grounded_boxes(
         )
     if any(not span or min(span) < 0 or max(span) >= logits.shape[1] for span in spans):
         raise ValueError("category tokens exceed GroundingDINO output length")
-    scores = np.stack([logits[:, list(span)].max(axis=1) for span in spans], axis=1)
+    if require_all_span_tokens:
+        span_scores: list[NDArray[np.floating[Any]]] = []
+        for cat, span in zip(categories, spans, strict=True):
+            sub = logits[:, list(span)]
+            if len(span) == 1:
+                span_scores.append(sub[:, 0])
+            else:
+                min_tok = sub.min(axis=1)
+                mean_tok = sub.mean(axis=1)
+                max_tok = sub.max(axis=1)
+                min_req = 0.16 if cat.endswith("Sliced") else 0.10
+                combined = np.where(
+                    min_tok >= min_req, 0.5 * mean_tok + 0.5 * max_tok, 0.0
+                )
+                span_scores.append(combined)
+        scores = np.stack(span_scores, axis=1)
+    else:
+        scores = np.stack([logits[:, list(span)].max(axis=1) for span in spans], axis=1)
     width, height = image_size
     result: list[GroundedBox] = []
     for index, category_index in enumerate(scores.argmax(axis=1)):
-        confidence = float(logits[index].max())
-        if (
-            confidence <= box_threshold
-            or float(scores[index, category_index]) <= text_threshold
-        ):
+        span_conf = float(scores[index, category_index])
+        confidence = (
+            span_conf if require_all_span_tokens else float(logits[index].max())
+        )
+        if confidence <= box_threshold or span_conf <= text_threshold:
             continue
         cx, cy, bw, bh = boxes[index]
         x1, x2 = (cx - bw / 2) * width, (cx + bw / 2) * width
@@ -235,6 +257,8 @@ class GroundingDetector:
         options = slconfig.SLConfig.fromfile(str(config.dino_config))
         options.device = "cpu"
         options.text_encoder_type = str(config.dino_text_encoder_dir)
+        options.use_checkpoint = False
+        options.use_transformer_ckpt = False
         self.model: Any = models.build_model(options)
         state = torch.load(
             str(config.dino_checkpoint), map_location="cpu", weights_only=True
@@ -255,29 +279,134 @@ class GroundingDetector:
             ]
         )
         self.config = config
+        self._batch_specs: list[
+            tuple[tuple[str, ...], str, tuple[tuple[int, ...], ...]]
+        ] = []
+        for categories in detection_batches(self.config.caption_batch_size):
+            phrases = tuple(category_prompt(category) for category in categories)
+            caption = ". ".join(phrases) + "."
+            tokenized = self.model.tokenizer(caption, return_offsets_mapping=True)
+            if len(tokenized["input_ids"]) > self.model.max_text_len:
+                raise ValueError(
+                    "fixed vocabulary batch exceeds detector token limit; reduce caption_batch_size"
+                )
+            spans = token_spans_for_categories(
+                caption, phrases, tokenized["offset_mapping"]
+            )
+            self._batch_specs.append((categories, caption, spans))
+        self._cached_text_dict: dict[str, Any] | None = None
+
+    def _ensure_cached_text_dict(self, model: Any) -> dict[str, Any]:
+        if self._cached_text_dict is not None:
+            return {k: v.clone() for k, v in self._cached_text_dict.items()}
+        bertwarper = importlib.import_module(
+            "groundingdino.models.GroundingDINO.bertwarper"
+        )
+        captions = [spec[1] for spec in self._batch_specs]
+        tokenized = model.tokenizer(
+            captions, padding="longest", return_tensors="pt"
+        ).to(self.config.device)
+        (
+            text_self_attention_masks,
+            position_ids,
+            _,
+        ) = bertwarper.generate_masks_with_special_tokens_and_transfer_map(
+            tokenized, model.specical_tokens, model.tokenizer
+        )
+        if text_self_attention_masks.shape[1] > model.max_text_len:
+            text_self_attention_masks = text_self_attention_masks[
+                :, : model.max_text_len, : model.max_text_len
+            ]
+            position_ids = position_ids[:, : model.max_text_len]
+            tokenized["input_ids"] = tokenized["input_ids"][:, : model.max_text_len]
+            tokenized["attention_mask"] = tokenized["attention_mask"][
+                :, : model.max_text_len
+            ]
+            tokenized["token_type_ids"] = tokenized["token_type_ids"][
+                :, : model.max_text_len
+            ]
+        if model.sub_sentence_present:
+            tokenized_for_encoder = {
+                k: v for k, v in tokenized.items() if k != "attention_mask"
+            }
+            tokenized_for_encoder["attention_mask"] = text_self_attention_masks
+            tokenized_for_encoder["position_ids"] = position_ids
+        else:
+            tokenized_for_encoder = tokenized
+        bert_output = model.bert(**tokenized_for_encoder)
+        encoded_text = model.feat_map(bert_output["last_hidden_state"])
+        text_token_mask = tokenized.attention_mask.bool()
+        if encoded_text.shape[1] > model.max_text_len:
+            encoded_text = encoded_text[:, : model.max_text_len, :]
+            text_token_mask = text_token_mask[:, : model.max_text_len]
+            position_ids = position_ids[:, : model.max_text_len]
+            text_self_attention_masks = text_self_attention_masks[
+                :, : model.max_text_len, : model.max_text_len
+            ]
+        self._cached_text_dict = {
+            "encoded_text": encoded_text.detach(),
+            "text_token_mask": text_token_mask.detach(),
+            "position_ids": position_ids.detach(),
+            "text_self_attention_masks": text_self_attention_masks.detach(),
+        }
+        return {k: v.clone() for k, v in self._cached_text_dict.items()}
 
     def predict(
         self, rgb: NDArray[np.uint8]
     ) -> tuple[tuple[GroundedBox, ...], int, int, int]:
+        torch = importlib.import_module("torch")
+        F = importlib.import_module("torch.nn.functional")
+        misc = importlib.import_module("groundingdino.util.misc")
         image_module = importlib.import_module("PIL.Image")
         tensor, _ = self.transform(image_module.fromarray(rgb), None)
         predictions: list[GroundedBox] = []
-        with active_model(self.model, self.config.device) as model:
+        with (
+            torch.no_grad(),
+            active_model(self.model, self.config.device) as model,
+        ):
             image = tensor[None].to(self.config.device)
-            for categories in detection_batches(self.config.caption_batch_size):
-                phrases = tuple(category_prompt(category) for category in categories)
-                caption = ". ".join(phrases) + "."
-                tokenized = model.tokenizer(caption, return_offsets_mapping=True)
-                if len(tokenized["input_ids"]) > model.max_text_len:
-                    raise ValueError(
-                        "fixed vocabulary batch exceeds detector token limit; reduce caption_batch_size"
+            samples = misc.nested_tensor_from_tensor_list(image)
+            features, poss = model.backbone(samples)
+            srcs: list[Any] = []
+            masks: list[Any] = []
+            for level, feat in enumerate(features):
+                src, mask = feat.decompose()
+                srcs.append(model.input_proj[level](src))
+                masks.append(mask)
+            if model.num_feature_levels > len(srcs):
+                len_srcs = len(srcs)
+                for level in range(len_srcs, model.num_feature_levels):
+                    if level == len_srcs:
+                        src = model.input_proj[level](features[-1].tensors)
+                    else:
+                        src = model.input_proj[level](srcs[-1])
+                    m = samples.mask
+                    mask = F.interpolate(m[None].float(), size=src.shape[-2:]).to(
+                        torch.bool
+                    )[0]
+                    pos_l = model.backbone[1](misc.NestedTensor(src, mask)).to(
+                        src.dtype
                     )
-                spans = token_spans_for_categories(
-                    caption, phrases, tokenized["offset_mapping"]
-                )
-                output = model(image, captions=[caption])
-                logits = output["pred_logits"][0].sigmoid().float().cpu().numpy()
-                boxes = output["pred_boxes"][0].float().cpu().numpy()
+                    srcs.append(src)
+                    masks.append(mask)
+                    poss.append(pos_l)
+            bs = len(self._batch_specs)
+            srcs_b = [s.expand(bs, -1, -1, -1).contiguous() for s in srcs]
+            masks_b = [m.expand(bs, -1, -1).contiguous() for m in masks]
+            poss_b = [p.expand(bs, -1, -1, -1).contiguous() for p in poss]
+            text_dict = self._ensure_cached_text_dict(model)
+            hs, reference, _, _, _ = model.transformer(
+                srcs_b, masks_b, None, poss_b, None, None, text_dict
+            )
+            last_coord = (
+                model.bbox_embed[-1](hs[-1]) + misc.inverse_sigmoid(reference[-2])
+            ).sigmoid()
+            last_class = model.class_embed[-1](hs[-1], text_dict).sigmoid()
+            logits_all = last_class.detach().float().cpu().numpy()
+            boxes_all = last_coord.detach().float().cpu().numpy()
+            for batch_idx, (categories, _, spans) in enumerate(self._batch_specs):
+                logits = logits_all[batch_idx, :, : logits_all.shape[2]]
+                boxes = boxes_all[batch_idx]
                 predictions.extend(
                     decode_grounded_boxes(
                         logits,
@@ -287,10 +416,10 @@ class GroundingDetector:
                         image_size=(rgb.shape[1], rgb.shape[0]),
                         box_threshold=self.config.box_threshold,
                         text_threshold=self.config.text_threshold,
+                        require_all_span_tokens=True,
                     )
                 )
-                del output
-            del image
+            del image, samples, features, poss, srcs, masks, hs, reference
         selected, suppressed, capped = suppress_boxes(
             predictions,
             iou_threshold=self.config.nms_iou_threshold,
@@ -315,29 +444,84 @@ class PromptedSegmenter:
     ) -> tuple[tuple[MaskedInstance, ...], int]:
         if not boxes:
             return (), 0
+        torch = importlib.import_module("torch")
         instances: list[MaskedInstance] = []
         empty_masks = 0
-        with active_model(self.model, self.device):
+        use_cuda_amp = self.device.startswith("cuda")
+        amp_dtype = (
+            torch.bfloat16
+            if use_cuda_amp and torch.cuda.is_bf16_supported()
+            else torch.float16
+        )
+        with (
+            torch.no_grad(),
+            active_model(self.model, self.device),
+            torch.autocast(
+                device_type=self.device.split(":")[0],
+                dtype=amp_dtype,
+                enabled=use_cuda_amp,
+            ),
+        ):
             try:
                 self.predictor.set_image(rgb, image_format="RGB")
-                for box in boxes:
-                    masks, qualities, _ = self.predictor.predict(
-                        box=np.asarray(box.xyxy, dtype=np.float32),
+                if hasattr(self.predictor, "predict_torch") and hasattr(
+                    self.predictor, "transform"
+                ):
+                    box_tensor = torch.as_tensor(
+                        [box.xyxy for box in boxes],
+                        dtype=torch.float32,
+                        device=self.device,
+                    )
+                    transformed_boxes = self.predictor.transform.apply_boxes_torch(
+                        box_tensor, rgb.shape[:2]
+                    )
+                    masks_t, qualities_t, _ = self.predictor.predict_torch(
+                        point_coords=None,
+                        point_labels=None,
+                        boxes=transformed_boxes,
                         multimask_output=True,
                     )
-                    if (
-                        masks.shape != (3, *rgb.shape[:2])
-                        or qualities.shape != (3,)
-                        or not np.isfinite(qualities).all()
-                    ):
-                        raise ValueError("SAM1 returned invalid mask shape or quality")
-                    mask = np.asarray(masks[int(np.argmax(qualities))], dtype=bool)
-                    if not mask.any():
-                        empty_masks += 1
-                        continue
-                    instances.append(
-                        MaskedInstance(box.category, mask, box.confidence, box.xyxy)
-                    )
+                    masks_np = masks_t.detach().cpu().numpy()
+                    qualities_np = qualities_t.detach().float().cpu().numpy()
+                    for idx, box in enumerate(boxes):
+                        masks = masks_np[idx]
+                        qualities = qualities_np[idx]
+                        if (
+                            masks.shape != (3, *rgb.shape[:2])
+                            or qualities.shape != (3,)
+                            or not np.isfinite(qualities).all()
+                        ):
+                            raise ValueError(
+                                "SAM1 returned invalid mask shape or quality"
+                            )
+                        mask = np.asarray(masks[int(np.argmax(qualities))], dtype=bool)
+                        if not mask.any():
+                            empty_masks += 1
+                            continue
+                        instances.append(
+                            MaskedInstance(box.category, mask, box.confidence, box.xyxy)
+                        )
+                else:
+                    for box in boxes:
+                        masks, qualities, _ = self.predictor.predict(
+                            box=np.asarray(box.xyxy, dtype=np.float32),
+                            multimask_output=True,
+                        )
+                        if (
+                            masks.shape != (3, *rgb.shape[:2])
+                            or qualities.shape != (3,)
+                            or not np.isfinite(qualities).all()
+                        ):
+                            raise ValueError(
+                                "SAM1 returned invalid mask shape or quality"
+                            )
+                        mask = np.asarray(masks[int(np.argmax(qualities))], dtype=bool)
+                        if not mask.any():
+                            empty_masks += 1
+                            continue
+                        instances.append(
+                            MaskedInstance(box.category, mask, box.confidence, box.xyxy)
+                        )
             finally:
                 self.predictor.reset_image()
         return tuple(instances), empty_masks
@@ -377,10 +561,24 @@ class ClipEncoder:
         for instance in instances:
             crops.append(padded_detection_crop(image, instance.bbox_xyxy))
         chunks: list[NDArray[np.float32]] = []
-        with active_model(self.model, self.device) as model:
-            for start in range(0, len(crops), 8):
+        use_cuda_amp = self.device.startswith("cuda")
+        amp_dtype = (
+            torch.bfloat16
+            if use_cuda_amp and torch.cuda.is_bf16_supported()
+            else torch.float16
+        )
+        with (
+            torch.no_grad(),
+            active_model(self.model, self.device) as model,
+            torch.autocast(
+                device_type=self.device.split(":")[0],
+                dtype=amp_dtype,
+                enabled=use_cuda_amp,
+            ),
+        ):
+            for start in range(0, len(crops), 32):
                 batch = torch.stack(
-                    [self.preprocess(crop) for crop in crops[start : start + 8]]
+                    [self.preprocess(crop) for crop in crops[start : start + 32]]
                 ).to(self.device)
                 encoded = model.encode_image(batch).float()
                 encoded = torch.nn.functional.normalize(encoded, dim=-1)

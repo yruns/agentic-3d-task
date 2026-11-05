@@ -122,3 +122,23 @@ def test_rejects_inconsistent_grid_scale_and_repeated_frames() -> None:
     spatial_map.update(wall_observation())
     with pytest.raises(ValueError, match="monotonically"):
         spatial_map.update(wall_observation())
+
+
+def test_adaptive_floor_calibration_marks_elevated_planar_floor_free() -> None:
+    pose = np.diag([1.0, -1.0, -1.0, 1.0])
+    pose[2, 3] = 2.0
+    # Simulate 8.5% monocular depth underestimation: camera at z=2.0m measures
+    # depth=1.83m on a flat floor, placing raw z at +0.17m (>0.12m obstacle threshold).
+    observation = Observation(
+        0,
+        Path("unused-rgb.png"),
+        np.full((81, 81), 1.83),
+        np.array([[20, 0, 40], [0, 20, 40], [0, 0, 1.0]]),
+        pose,
+        (0.0, 0.0, 0.0),
+        (),
+        np.array([1.0, 0.0]),
+    )
+    spatial_map = SpatialMap()
+    spatial_map.update(observation)
+    assert spatial_map.cell_state(spatial_map.world_to_cell(0.0, 0.5)) == "free"

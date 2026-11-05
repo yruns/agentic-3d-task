@@ -233,11 +233,14 @@ class SpatialMap:
         points = project_pixels(observation, rows, cols)
         # Reduce repeated measurements only after every valid pixel was projected.
         if len(points):
-            _, retained = np.unique(
-                np.floor(points / self.config.fine_cell_size_m).astype(np.int64),
-                axis=0,
-                return_index=True,
+            vcoords = np.floor(points / self.config.fine_cell_size_m).astype(np.int64)
+            vbias = 500_000
+            vkeys = (
+                ((vcoords[:, 0] + vbias) << 40)
+                | ((vcoords[:, 1] + vbias) << 20)
+                | (vcoords[:, 2] + vbias)
             )
+            _, retained = np.unique(vkeys, return_index=True)
             points = points[retained]
         seen, cleared, occupied = self._ray_evidence(
             observation.camera_to_world[:3, 3], points
@@ -284,12 +287,57 @@ class SpatialMap:
     def _ray_evidence(
         self, camera: NDArray[np.float64], points: NDArray[np.float64]
     ) -> tuple[set[GridCell], set[GridCell], set[GridCell]]:
-        seen: set[GridCell] = set()
-        clear: set[GridCell] = set()
-        occupied: set[GridCell] = set()
+        if not len(points):
+            return set(), set(), set()
         size = self.config.fine_cell_size_m
-        for start in range(0, len(points), 256):
-            endpoints = points[start : start + 256]
+        raw_heights = points[:, 2] - self.config.floor_height_m
+        # Adaptive local floor-plane calibration: when monocular depth (DA3)
+        # underestimates range by 8-20%, a flat horizontal floor plane appears
+        # elevated to z=+0.12..+0.25m. Detect a flat horizontal floor mode
+        # (tight p50-p10 height spread across >=100 low surface cells) so real
+        # floor is marked clear rather than false obstacle walls.
+        floor_offset = 0.0
+        low_heights = raw_heights[(raw_heights >= -0.20) & (raw_heights <= 0.30)]
+        if len(low_heights) >= 100:
+            p10, p20, p50 = np.percentile(low_heights, [10.0, 20.0, 50.0])
+            if (p50 - p10) <= 0.09 and -0.15 <= p20 <= 0.26:
+                floor_offset = float(p20)
+
+        adj_heights = raw_heights - floor_offset
+        end_cells = np.floor(np.round(points[:, :2] / size, 9)).astype(np.int64)
+        bias = 1_000_000
+
+        def _pack(cx: NDArray[np.int64], cy: NDArray[np.int64]) -> NDArray[np.int64]:
+            return ((cx + bias) << 32) | (cy + bias)
+
+        def _unpack_set(keys: NDArray[np.int64]) -> set[GridCell]:
+            if not len(keys):
+                return set()
+            unique_keys = np.unique(keys)
+            cx = (unique_keys >> 32) - bias
+            cy = (unique_keys & 0xFFFFFFFF) - bias
+            return set(zip(cx.tolist(), cy.tolist(), strict=True))
+
+        end_keys = _pack(end_cells[:, 0], end_cells[:, 1])
+        is_occ = (adj_heights >= self.config.obstacle_min_height_m) & (
+            adj_heights <= self.config.obstacle_max_height_m
+        )
+        is_floor = np.abs(adj_heights) <= self.config.floor_tolerance_m
+        occupied = _unpack_set(end_keys[is_occ])
+        floor_clear = _unpack_set(end_keys[is_floor])
+
+        # Deduplicate endpoints by (cell_x, cell_y, 10cm_height_bin) before ray
+        # marching; rays terminating in the same 5cm cell at the same height
+        # band traverse identical 2D grid cells.
+        h_bin = np.floor(adj_heights / 0.10).astype(np.int64)
+        dedup_keys = (end_keys << 8) ^ (h_bin & 0xFF)
+        _, unique_idx = np.unique(dedup_keys, return_index=True)
+        ray_points = points[unique_idx]
+
+        seen_keys_list: list[NDArray[np.int64]] = [end_keys]
+        clear_keys_list: list[NDArray[np.int64]] = []
+        for start in range(0, len(ray_points), 512):
+            endpoints = ray_points[start : start + 512]
             lengths = np.linalg.norm(endpoints - camera, axis=1)
             steps = max(2, math.ceil(float(lengths.max()) / (size * 0.5)))
             fractions = np.linspace(0, 1, steps, endpoint=False)
@@ -298,26 +346,18 @@ class SpatialMap:
                 + (endpoints[:, None, :] - camera) * fractions[None, :, None]
             )
             cells = np.floor(np.round(rays[..., :2] / size, 9)).astype(np.int64)
-            seen.update(
-                (int(x), int(y)) for x, y in np.unique(cells.reshape(-1, 2), axis=0)
-            )
-            heights = rays[..., 2] - self.config.floor_height_m
+            rkeys = _pack(cells[..., 0], cells[..., 1])
+            seen_keys_list.append(rkeys.ravel())
+            heights = (rays[..., 2] - self.config.floor_height_m) - floor_offset
             body = (heights >= self.config.obstacle_min_height_m) & (
                 heights <= self.config.obstacle_max_height_m
             )
-            clear.update((int(x), int(y)) for x, y in np.unique(cells[body], axis=0))
-            for endpoint in endpoints:
-                cell = self.world_to_cell(float(endpoint[0]), float(endpoint[1]))
-                seen.add(cell)
-                height = float(endpoint[2]) - self.config.floor_height_m
-                if (
-                    self.config.obstacle_min_height_m
-                    <= height
-                    <= self.config.obstacle_max_height_m
-                ):
-                    occupied.add(cell)
-                elif abs(height) <= self.config.floor_tolerance_m:
-                    clear.add(cell)
+            clear_keys_list.append(rkeys[body])
+
+        seen = _unpack_set(np.concatenate(seen_keys_list))
+        clear = (
+            _unpack_set(np.concatenate(clear_keys_list)) if clear_keys_list else set()
+        ) | floor_clear
         return seen, clear, occupied
 
     def _record_traversal(
