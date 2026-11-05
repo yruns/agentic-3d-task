@@ -77,6 +77,7 @@ nav:
           - v12 Macro Tools and 85 Categories Prefix5: benchmark/alfred/v12_macro_tools_85cats_prefix5_20261105.md
           - v13 Mapping and Perception Upgrade Prefix5: benchmark/alfred/v13_mapping_perception_upgrade_20261105.md
           - v14 Simulator GT Depth Prefix5: benchmark/alfred/v14_simulator_gt_depth_prefix5_20261105.md
+          - v15 Root-Cause Fixes Prefix5: benchmark/alfred/v15_root_cause_fixes_prefix5_20261106.md
       - Adapter Protocol Diagnostics:
           - Timeline: benchmark/adapter/README.md
           - v1 ModelHub Tool and State Probe: benchmark/adapter/v1_modelhub_tool_state_20261103.md
