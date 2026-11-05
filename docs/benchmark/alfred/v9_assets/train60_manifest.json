@@ -1,0 +1,3260 @@
+{
+  "schema_version": 1,
+  "split": "train",
+  "capture_protocol": "alfred_train_four_scenes_three_stations_five_pitches_v1",
+  "source_sha256": "9bbb8ab74c89b923885ada46d0d849cb0dece05f6c3cd1b8a2187d7b2a727e54",
+  "frames": [
+    {
+      "frame_id": "FloorPlan1_s0_p-30",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s0_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s0_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "2493e2334faa8eb95f24b2fb2083b33eedf2380ae9155ab737f32409fa8da123",
+      "gt_depth_sha256": "9e1af5bf929d9a165f637aae6e011266495286d4176389cf174770df4cff21e9",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          0.49999999999999994,
+          0.8660254037844387,
+          -1.25
+        ],
+        [
+          -1.0,
+          3.0616169978683824e-17,
+          5.3028761936245346e-17,
+          1.75
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s0_p+00",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s0_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s0_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "572f3ca7fdcc4bb08d96d2ac0fd22ce85b5c81dea83245a6d0e133354a4c5b37",
+      "gt_depth_sha256": "48a80cf1f03a3c99219b07c2a1546f79f680887b40504fcbf5bc2c633c56138a",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.0,
+          1.0,
+          -1.25
+        ],
+        [
+          -1.0,
+          -0.0,
+          6.123233995736766e-17,
+          1.75
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s0_p+30",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s0_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s0_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "3da66c04128fff7fdbc5838db7fd5147eca45dddddfa19a46d9e8dcc938a39a6",
+      "gt_depth_sha256": "61fa0a7c2f23a665058f1c47d83b8371958a5c1810370c6ba8ed2cae42dad1d2",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.5000000574369788,
+          0.866025370623181,
+          -1.25
+        ],
+        [
+          -1.0,
+          -3.061617349568444e-17,
+          5.302875990570394e-17,
+          1.75
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s0_p+45",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s0_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s0_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "a9cf07fe0071efcf7c356253a49f085b187a337cf60cf1ba701156f04ad03358",
+      "gt_depth_sha256": "2b31c1ed13c65cb63e32d9809a3b8484c6dd5121dc9a7d73bc03f98ec01899ec",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.7071068749807367,
+          0.707106687392346,
+          -1.25
+        ],
+        [
+          -1.0,
+          -4.329780855501234e-17,
+          4.329779706853623e-17,
+          1.75
+        ],
+        [
+          0.0,
+          -0.707106687392346,
+          -0.7071068749807367,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s0_p+60",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s0_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s0_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "83a5ba15358e922db7eaafa9ad2779c7bdcfcc1ddb7402338aac89e4c68ca509",
+      "gt_depth_sha256": "832944bb727366a94a0844db32d0d3fe7e59d69691c83b8587328358d44d91c1",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.8660254701069426,
+          0.49999988512603577,
+          -1.25
+        ],
+        [
+          -1.0,
+          -5.3028765997327454e-17,
+          3.06161629446822e-17,
+          1.75
+        ],
+        [
+          0.0,
+          -0.49999988512603577,
+          -0.8660254701069426,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s1_p-30",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s1_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s1_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "96d8307f4f6da779efcfd64e6dbc292ef74e85b184ee9ce8a0bd1ba78b6310e9",
+      "gt_depth_sha256": "539fe4f32d524680ebb26d456f7d3b8229f20488cf9d5ed4d0fc95fe26f0712f",
+      "camera_to_world": [
+        [
+          -1.0,
+          6.123233995736765e-17,
+          1.0605752387249069e-16,
+          -1.25
+        ],
+        [
+          -1.2246467991473532e-16,
+          -0.49999999999999994,
+          -0.8660254037844387,
+          1.25
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s1_p+00",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s1_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s1_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "b7488bbbc16a23b0e00d8f12b5dc29bcb4d3cbd2a44e3f20369bd670c172f7a0",
+      "gt_depth_sha256": "73aa02a286bad8a395f0e1ed7ebb6c0c2833bb969825424fda08467b535b78e6",
+      "camera_to_world": [
+        [
+          -1.0,
+          -0.0,
+          1.2246467991473532e-16,
+          -1.25
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.0,
+          -1.0,
+          1.25
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s1_p+30",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s1_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s1_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "1ed209f7aaf26273eb8f423b9ad99525085262dd39a951cd4e43b6db029ccc6b",
+      "gt_depth_sha256": "54c9e0faabacfaeafee38715cfa75652a752bbc7628449897214fd9d0227c911",
+      "camera_to_world": [
+        [
+          -1.0,
+          -6.123234699136889e-17,
+          1.0605751981140788e-16,
+          -1.25
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.5000000574369788,
+          -0.866025370623181,
+          1.25
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s1_p+45",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s1_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s1_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "37bafb5e5728beaa4443190d7e8e44c2bf5314802599a29af8230bb286cc1329",
+      "gt_depth_sha256": "11f83154fc15e28488e7a8049e857c2ad8a49dd2c0d0f7d5bc83153fe576ce1b",
+      "camera_to_world": [
+        [
+          -1.0,
+          -8.65956113667872e-17,
+          8.659559988031109e-17,
+          -1.25
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.7071068280836437,
+          -0.7071067342894483,
+          1.25
+        ],
+        [
+          0.0,
+          -0.7071067342894483,
+          -0.7071068280836437,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s1_p+60",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s1_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s1_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "40bd3216ecd8c3d8d9e8e147389a7d4b2a26b9e132c9126762153b102e40b0f4",
+      "gt_depth_sha256": "e795d625f5ea5e4c088820399c192bd6a4bb5bda0fe8169557bcab1efc43c927",
+      "camera_to_world": [
+        [
+          -1.0,
+          -1.0605751981140788e-16,
+          6.123234699136889e-17,
+          -1.25
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.866025370623181,
+          -0.5000000574369788,
+          1.25
+        ],
+        [
+          0.0,
+          -0.5000000574369788,
+          -0.866025370623181,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s2_p-30",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s2_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s2_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "6ed5a031724352dd2ab6ef7f9554792e2443bbe1cd16e84f0c4cda63a0a7a84d",
+      "gt_depth_sha256": "6d26f5b7bdbd05e47bfd484792d29ef2bbbf199f998e39cd552a8a681857c7d5",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          0.49999999999999994,
+          0.8660254037844387,
+          -0.75
+        ],
+        [
+          -1.0,
+          3.0616169978683824e-17,
+          5.3028761936245346e-17,
+          1.25
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s2_p+00",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s2_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s2_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "e406dac4ac2a027a438c22b6a4dfd42b7735f304b2f66fa3d19861af4ea27078",
+      "gt_depth_sha256": "9af6f94dfef79e7197f0430536b6b212a4f3ae4405ddeb385ef392b2972971fb",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.0,
+          1.0,
+          -0.75
+        ],
+        [
+          -1.0,
+          -0.0,
+          6.123233995736766e-17,
+          1.25
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s2_p+30",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s2_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s2_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "a8e5e5b7f7c104592f8ca34321250dd1f78821c60bc2f5dd7dde0bfb750540dc",
+      "gt_depth_sha256": "83f47190a4acc9deffed187905416e6f54e5d50758869569f714162d0521bd3a",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.5000000574369788,
+          0.866025370623181,
+          -0.75
+        ],
+        [
+          -1.0,
+          -3.061617349568444e-17,
+          5.302875990570394e-17,
+          1.25
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s2_p+45",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s2_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s2_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "8dee44396095b83c3d1b44fe9480da20f69186cfa96d6cf03c7c99d18e691d4f",
+      "gt_depth_sha256": "5e4cd47f137deef7f097a013e4755740e7d954f8045cfdf1d87b9097ebe8344f",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.7071068749807367,
+          0.707106687392346,
+          -0.75
+        ],
+        [
+          -1.0,
+          -4.329780855501234e-17,
+          4.329779706853623e-17,
+          1.25
+        ],
+        [
+          0.0,
+          -0.707106687392346,
+          -0.7071068749807367,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan1_s2_p+60",
+      "scene_id": "FloorPlan1",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s2_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/FloorPlan1_s2_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "2367ffc42f66f2447f84565c3aef4d8161993d8bd7946fd0fb18288e7af94dc5",
+      "gt_depth_sha256": "e1c050457b14d8dc0f4f363f7bc36f893773e158901cb00d9549092e12981a4c",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.8660254701069426,
+          0.49999988512603577,
+          -0.75
+        ],
+        [
+          -1.0,
+          -5.3028765997327454e-17,
+          3.06161629446822e-17,
+          1.25
+        ],
+        [
+          0.0,
+          -0.49999988512603577,
+          -0.8660254701069426,
+          1.5759995
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s0_p-30",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s0_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s0_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "fca4770eaa8b3a23a42252117db5d190ec737fa46bacacb43c68130436a69744",
+      "gt_depth_sha256": "424b084b416f4ee3471bc371d1493b3f4919a1e0b5275051bc79929bd3ab110a",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          0.49999999999999994,
+          0.8660254037844387,
+          -3.75
+        ],
+        [
+          -1.0,
+          3.0616169978683824e-17,
+          5.3028761936245346e-17,
+          0.25
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s0_p+00",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s0_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s0_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "6d71556e285173f46da880b660dfc365b5a1262110a4c5c5b845f18358fe7f15",
+      "gt_depth_sha256": "635325470d7eb294c9af1df7abfebd8ffeaaff1b586c3bb2b759211d17abba20",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.0,
+          1.0,
+          -3.75
+        ],
+        [
+          -1.0,
+          -0.0,
+          6.123233995736766e-17,
+          0.25
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s0_p+30",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s0_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s0_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "6933ccbf5dc361fc18cd014ce3c7abcf17725d28e5a16ac7a2f6197192153610",
+      "gt_depth_sha256": "a2920d3d284354e84df8806cb2de4c41769f984f937d62a459e21ba63c972c04",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.5000000574369788,
+          0.866025370623181,
+          -3.75
+        ],
+        [
+          -1.0,
+          -3.061617349568444e-17,
+          5.302875990570394e-17,
+          0.25
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s0_p+45",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s0_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s0_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "a96e680cd2dd8c8565a5c98b2b1a15b84d8a0f2a2ea224e986c5f7cfd93350a2",
+      "gt_depth_sha256": "9427824f880d775a833367380e49149b41cc2f168fd8fcf26bf13e916cb9d0c4",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.7071068749807367,
+          0.707106687392346,
+          -3.75
+        ],
+        [
+          -1.0,
+          -4.329780855501234e-17,
+          4.329779706853623e-17,
+          0.25
+        ],
+        [
+          0.0,
+          -0.707106687392346,
+          -0.7071068749807367,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s0_p+60",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s0_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s0_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "00997f7bf239856d044a77ba0398de5ac4e39592d2edba5513d44e4530569ca3",
+      "gt_depth_sha256": "2e1341e13577d7ddab1f3812b40027eb6597a9bb32d1731bce7e2e61aba51939",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.8660254701069426,
+          0.49999988512603577,
+          -3.75
+        ],
+        [
+          -1.0,
+          -5.3028765997327454e-17,
+          3.06161629446822e-17,
+          0.25
+        ],
+        [
+          0.0,
+          -0.49999988512603577,
+          -0.8660254701069426,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s1_p-30",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s1_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s1_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "4a22f4ebcd735ac8e128233b886b5dc39aed1811755f0b705a5e9e79836d359d",
+      "gt_depth_sha256": "1a40d159d67b5ddc89a7d5e5a83f9d921853ac8b3bd264ef65b75fb8da55ac45",
+      "camera_to_world": [
+        [
+          -1.0,
+          6.123233995736765e-17,
+          1.0605752387249069e-16,
+          -3.75
+        ],
+        [
+          -1.2246467991473532e-16,
+          -0.49999999999999994,
+          -0.8660254037844387,
+          0.0
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s1_p+00",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s1_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s1_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "2613a716e7ab77d1b68c7326138b7a01337d63dbc13ce0dc2ff41232ee1846dc",
+      "gt_depth_sha256": "3cc46a77dce9cbdfdcfb76e98aef5b0f9d18dce3de032d6e2b36441ccb4ecd97",
+      "camera_to_world": [
+        [
+          -1.0,
+          -0.0,
+          1.2246467991473532e-16,
+          -3.75
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.0,
+          -1.0,
+          0.0
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s1_p+30",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s1_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s1_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "dd9454f0bb8eaf60cfb057d6fe684cfd9f2bd310b2ddd05db6b883d6580b05b3",
+      "gt_depth_sha256": "d33e73af9628bc6448917bf44dadcf29c48db87209f165076df744dc3ce766de",
+      "camera_to_world": [
+        [
+          -1.0,
+          -6.123234699136889e-17,
+          1.0605751981140788e-16,
+          -3.75
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.5000000574369788,
+          -0.866025370623181,
+          0.0
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s1_p+45",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s1_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s1_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "db711c46e0fd221ce4506267a2a55316358a6373da0f3ba625e0b2f23dcd453a",
+      "gt_depth_sha256": "76245210d01214b5c8ba2918738c30c9b4fd6791a81242e0a98330459a571ddf",
+      "camera_to_world": [
+        [
+          -1.0,
+          -8.65956113667872e-17,
+          8.659559988031109e-17,
+          -3.75
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.7071068280836437,
+          -0.7071067342894483,
+          0.0
+        ],
+        [
+          0.0,
+          -0.7071067342894483,
+          -0.7071068280836437,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s1_p+60",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s1_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s1_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "c40f23eac36166aa7e448a5099b8189c3d68db02bfca77efe90c944eade8be53",
+      "gt_depth_sha256": "6259af7365280f82163e54ccb14bb58cf36cba29fb51a21366ce10b237945843",
+      "camera_to_world": [
+        [
+          -1.0,
+          -1.0605751981140788e-16,
+          6.123234699136889e-17,
+          -3.75
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.866025370623181,
+          -0.5000000574369788,
+          0.0
+        ],
+        [
+          0.0,
+          -0.5000000574369788,
+          -0.866025370623181,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s2_p-30",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s2_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s2_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "f46fa42fcf17aa796832dd8b22d32c3d7da7fc89634b738de0af2e7ee0c9303f",
+      "gt_depth_sha256": "9cfcce5d6499d9489d9b93e7b78d3dcbdac0c3118e89775e571a4dd4359960ac",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          0.49999999999999994,
+          0.8660254037844387,
+          -3.75
+        ],
+        [
+          -1.0,
+          3.0616169978683824e-17,
+          5.3028761936245346e-17,
+          0.0
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s2_p+00",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s2_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s2_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "23b560f1dce9fc39891cc738c42ba93eeea2edc20272da627998e9030facfdef",
+      "gt_depth_sha256": "b3da1fde5d4b355cbc23c1db8abd9da8f843beda2f3960062d97a92896a09e09",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.0,
+          1.0,
+          -3.75
+        ],
+        [
+          -1.0,
+          -0.0,
+          6.123233995736766e-17,
+          0.0
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s2_p+30",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s2_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s2_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "014776686b4f6a539be9c1d604372528f4a76a8f30154dcc6d2a0192a0b15cf0",
+      "gt_depth_sha256": "bc97960faed7d664da6da1b7ceac07fd1ca20a761830d2aa95bb72ea9416f9f3",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.5000000574369788,
+          0.866025370623181,
+          -3.75
+        ],
+        [
+          -1.0,
+          -3.061617349568444e-17,
+          5.302875990570394e-17,
+          0.0
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s2_p+45",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s2_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s2_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "bf0d614957c4a619716d0176698763c9ae042f9ad7239fcfe0b6f9cfcf130df5",
+      "gt_depth_sha256": "7176f8e8bd8cf6340e6e1f93838d6417e3f22b984b95b0c11fb6feefb54765b7",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.7071068749807367,
+          0.707106687392346,
+          -3.75
+        ],
+        [
+          -1.0,
+          -4.329780855501234e-17,
+          4.329779706853623e-17,
+          0.0
+        ],
+        [
+          0.0,
+          -0.707106687392346,
+          -0.7071068749807367,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan201_s2_p+60",
+      "scene_id": "FloorPlan201",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s2_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/FloorPlan201_s2_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "c8b5f9210872386207d324aa05b02badfed5d636e58b26d0e7f2ef7044454967",
+      "gt_depth_sha256": "738181f69d396ac70d4b344bdd2f12d384a52e95dfdb308e47f1319263ebb15c",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.8660254701069426,
+          0.49999988512603577,
+          -3.75
+        ],
+        [
+          -1.0,
+          -5.3028765997327454e-17,
+          3.06161629446822e-17,
+          0.0
+        ],
+        [
+          0.0,
+          -0.49999988512603577,
+          -0.8660254701069426,
+          1.57765675
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s0_p-30",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s0_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s0_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "904ceee39926be3bb4899bb24f90a207a23abc103219664af4b8521ac50f85f3",
+      "gt_depth_sha256": "690a0c43715f796880e89e47ce7d18833b137eb6b65f7ce1ce40e9f22bda7eb0",
+      "camera_to_world": [
+        [
+          -1.0,
+          6.123233995736765e-17,
+          1.0605752387249069e-16,
+          0.75
+        ],
+        [
+          -1.2246467991473532e-16,
+          -0.49999999999999994,
+          -0.8660254037844387,
+          -0.5
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s0_p+00",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s0_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s0_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "5af7f047f8a2f445c53b2022bed535193b7cbb9c0c4562887428e1ff8a2ca8fb",
+      "gt_depth_sha256": "407186faba0e441325bb08ae984889680b32b3e5e2c399a211dd381707a3226a",
+      "camera_to_world": [
+        [
+          -1.0,
+          -0.0,
+          1.2246467991473532e-16,
+          0.75
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.0,
+          -1.0,
+          -0.5
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s0_p+30",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s0_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s0_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "2e726b7a43b021902c4ba6e5f4490c87444b16d15f3b730ef652f2e320c742dc",
+      "gt_depth_sha256": "b70326e41eea84ccb34543f307baa90356b71d8948f4ecd1e6610939ff6cd577",
+      "camera_to_world": [
+        [
+          -1.0,
+          -6.123234699136889e-17,
+          1.0605751981140788e-16,
+          0.75
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.5000000574369788,
+          -0.866025370623181,
+          -0.5
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s0_p+45",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s0_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s0_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "17057250a5235e95cbfd3c77739a3ca417699a53949397c2946f486345cf32db",
+      "gt_depth_sha256": "aab97b97c9104c062086e1915f6a7e7e698b0182e8bd78a7574e631cb289f4f2",
+      "camera_to_world": [
+        [
+          -1.0,
+          -8.65956113667872e-17,
+          8.659559988031109e-17,
+          0.75
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.7071068280836437,
+          -0.7071067342894483,
+          -0.5
+        ],
+        [
+          0.0,
+          -0.7071067342894483,
+          -0.7071068280836437,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s0_p+60",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s0_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s0_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "b27d5f729820d483f1acdcffcdf1cc33f78f1a6d5079da87d761c42820243c75",
+      "gt_depth_sha256": "2a83b5f3dbc13af40f28dd7578e630052590e1e28a1a28718fa32306fdadfd53",
+      "camera_to_world": [
+        [
+          -1.0,
+          -1.0605751981140788e-16,
+          6.123234699136889e-17,
+          0.75
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.866025370623181,
+          -0.5000000574369788,
+          -0.5
+        ],
+        [
+          0.0,
+          -0.5000000574369788,
+          -0.866025370623181,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s1_p-30",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s1_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s1_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "d4c9254175792d1ba0f5a63a1e40c5e7d25dc93a3d9857a3447039666de20776",
+      "gt_depth_sha256": "06d95457c7063bb7f89b77f16c3abe429fe52f90344dedae92fc8e060f19f510",
+      "camera_to_world": [
+        [
+          -1.8369701987210297e-16,
+          -0.49999999999999994,
+          -0.8660254037844387,
+          0.25
+        ],
+        [
+          1.0,
+          -9.184850993605147e-17,
+          -1.5908628580873602e-16,
+          -0.5
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s1_p+00",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s1_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s1_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "91507762167d17da1e21b35c237dd9356d6bab4ca6bd93e30096acfb7eab6a14",
+      "gt_depth_sha256": "d8b5f97db1c9584b0e1fef1a52686e29c39a026dec2fc3591c92c9bcd8722102",
+      "camera_to_world": [
+        [
+          -1.8369701987210297e-16,
+          0.0,
+          -1.0,
+          0.25
+        ],
+        [
+          1.0,
+          0.0,
+          -1.8369701987210297e-16,
+          -0.5
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s1_p+30",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s1_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s1_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "d76d723f1de9eae5a5609c7bca789a9793ada592aac2c6260f3a371ab4272d48",
+      "gt_depth_sha256": "85aa0bf7ff8fb8df7b9d0a8a8a5abb51baec98279dd087ad67addc33726ffedb",
+      "camera_to_world": [
+        [
+          -1.8369701987210297e-16,
+          0.5000000574369788,
+          -0.866025370623181,
+          0.25
+        ],
+        [
+          1.0,
+          9.184852048705332e-17,
+          -1.590862797171118e-16,
+          -0.5
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s1_p+45",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s1_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s1_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "422de776d13274c362eb0acda66b98aea94dde09071080f7c12ccdee37198b77",
+      "gt_depth_sha256": "b35dc44b391382fc0d86c3454bc0b36d7e46eeca63fc568d7354125e55c1f520",
+      "camera_to_world": [
+        [
+          -1.8369701987210297e-16,
+          0.7071068749807367,
+          -0.707106687392346,
+          0.25
+        ],
+        [
+          1.0,
+          1.29893425665037e-16,
+          -1.2989339120560868e-16,
+          -0.5
+        ],
+        [
+          0.0,
+          -0.707106687392346,
+          -0.7071068749807367,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s1_p+60",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s1_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s1_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "b54f69d747b317a006acdf7c01b4f638cf66f7f514c19a151dd6d7e710132008",
+      "gt_depth_sha256": "ca9adea0f3eb4b9ab9bb8d67a265de35a00e9efdedfdb45d98bf6081211d6453",
+      "camera_to_world": [
+        [
+          -1.8369701987210297e-16,
+          0.8660254701069426,
+          -0.49999988512603577,
+          0.25
+        ],
+        [
+          1.0,
+          1.5908629799198236e-16,
+          -9.184848883404659e-17,
+          -0.5
+        ],
+        [
+          0.0,
+          -0.49999988512603577,
+          -0.8660254701069426,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s2_p-30",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s2_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s2_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "344f1a73e3359cc1fbfa8a014cadab9ee1b006128c73e2de6669b06aba956960",
+      "gt_depth_sha256": "3b35ff0fe659a4f761c04ca89ef0bd253d1d70c1b67aa6dd36ce21be38033856",
+      "camera_to_world": [
+        [
+          -1.0,
+          6.123233995736765e-17,
+          1.0605752387249069e-16,
+          0.25
+        ],
+        [
+          -1.2246467991473532e-16,
+          -0.49999999999999994,
+          -0.8660254037844387,
+          -1.0
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s2_p+00",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s2_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s2_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "b6d816d8bde9d727aaaa0d6eaa6faacca9760c613a801c34057c0f7f30b6083f",
+      "gt_depth_sha256": "8c96c521099caebc1e91f3fba507dfc4a21503bdf59f5122eab09fe67fc294c9",
+      "camera_to_world": [
+        [
+          -1.0,
+          -0.0,
+          1.2246467991473532e-16,
+          0.25
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.0,
+          -1.0,
+          -1.0
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s2_p+30",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s2_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s2_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "8351d6310266cbd4c91a74ac6b649b8e81ac7cb06fabf0d87a12dc743216227d",
+      "gt_depth_sha256": "30e22ffbf2b9eedae9cc2495a0b104318d64b11bc0b07ef4cb5794748bb8ccb5",
+      "camera_to_world": [
+        [
+          -1.0,
+          -6.123234699136889e-17,
+          1.0605751981140788e-16,
+          0.25
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.5000000574369788,
+          -0.866025370623181,
+          -1.0
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s2_p+45",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s2_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s2_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "c7965f3108c440a57b1d7310d4607a59a16a0ed3072d20924d8869a41ea356e5",
+      "gt_depth_sha256": "51728fe71befead134eeb0b5e9f2b3e56bdbe5b61f1112252cac89fe2777a97c",
+      "camera_to_world": [
+        [
+          -1.0,
+          -8.65956113667872e-17,
+          8.659559988031109e-17,
+          0.25
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.7071068280836437,
+          -0.7071067342894483,
+          -1.0
+        ],
+        [
+          0.0,
+          -0.7071067342894483,
+          -0.7071068280836437,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan301_s2_p+60",
+      "scene_id": "FloorPlan301",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s2_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/FloorPlan301_s2_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "e46c46fba7dffe32ba33e86be6e48635c403d73528fb6a405097339a2881ee47",
+      "gt_depth_sha256": "34121737ddc08899c813368eb571737fbd66671dba9bd36afeaae1b2f826638e",
+      "camera_to_world": [
+        [
+          -1.0,
+          -1.0605751981140788e-16,
+          6.123234699136889e-17,
+          0.25
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.866025370623181,
+          -0.5000000574369788,
+          -1.0
+        ],
+        [
+          0.0,
+          -0.5000000574369788,
+          -0.866025370623181,
+          1.57599926
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s0_p-30",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s0_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s0_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "6f724509b4e21968b83e513d03e6ff906870d676e7138968bbe192c6b59eecc5",
+      "gt_depth_sha256": "47b21b837e1f63f2ee2376356c6b37bf39572f1a5064e629f6c4145c0428e89f",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          0.49999999999999994,
+          0.8660254037844387,
+          -2.5
+        ],
+        [
+          -1.0,
+          3.0616169978683824e-17,
+          5.3028761936245346e-17,
+          3.25
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s0_p+00",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s0_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s0_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "b51d20691f696302507245bf5609684eede3167a036fdc8fdcec0aef1d5c16e4",
+      "gt_depth_sha256": "a2b2a68384fba3cfd291a186f00504cd283625e0142cbe1d04763a2fe7647c01",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.0,
+          1.0,
+          -2.5
+        ],
+        [
+          -1.0,
+          -0.0,
+          6.123233995736766e-17,
+          3.25
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s0_p+30",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s0_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s0_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "ed15d37ddcded65a2119ad41d4fc3f0d99fd14c6490468c760da2270e7167ad8",
+      "gt_depth_sha256": "02da553d70b09ad0145624ee3bc5a6ae6c40f8f88c77f712006756c8b3d44738",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.5000000574369788,
+          0.866025370623181,
+          -2.5
+        ],
+        [
+          -1.0,
+          -3.061617349568444e-17,
+          5.302875990570394e-17,
+          3.25
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s0_p+45",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s0_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s0_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "893c396f704b893d7425bcee48b0d04db746bf45a2305399ea94c659673a3d21",
+      "gt_depth_sha256": "938ca7081fa7ccaae928d8f054a361bdb90c20d3b2f89a1c175d574ad3df80cd",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.7071068749807367,
+          0.707106687392346,
+          -2.5
+        ],
+        [
+          -1.0,
+          -4.329780855501234e-17,
+          4.329779706853623e-17,
+          3.25
+        ],
+        [
+          0.0,
+          -0.707106687392346,
+          -0.7071068749807367,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s0_p+60",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s0_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s0_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "50b5a874d6d07bd8846817a62bebc57f7b9a031bdcc498ff937f117a628207c2",
+      "gt_depth_sha256": "97e9594a00e129ebdabfcd30242941e36d153695f1ccef833189b19be92d8d96",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.8660254701069426,
+          0.49999988512603577,
+          -2.5
+        ],
+        [
+          -1.0,
+          -5.3028765997327454e-17,
+          3.06161629446822e-17,
+          3.25
+        ],
+        [
+          0.0,
+          -0.49999988512603577,
+          -0.8660254701069426,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s1_p-30",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s1_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s1_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "43a6415bf16ada0ac5e4417dae8bb0001ee5c084994df7bee7591efcf8037079",
+      "gt_depth_sha256": "9f7713aaeb0d57c26060e265119e980314f9f17e7b8b78949dd89d8bba0f2091",
+      "camera_to_world": [
+        [
+          -1.0,
+          6.123233995736765e-17,
+          1.0605752387249069e-16,
+          -2.5
+        ],
+        [
+          -1.2246467991473532e-16,
+          -0.49999999999999994,
+          -0.8660254037844387,
+          2.75
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s1_p+00",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s1_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s1_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "c155edd3ec6b03ffb7c7e701de9f876edcf65ce9f89c0cd4e1127f360e7eb94f",
+      "gt_depth_sha256": "2100cfcf487c1bb239e43dca1518f711719a84c6f471e2166ea2dc69d4a4c867",
+      "camera_to_world": [
+        [
+          -1.0,
+          -0.0,
+          1.2246467991473532e-16,
+          -2.5
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.0,
+          -1.0,
+          2.75
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s1_p+30",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s1_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s1_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "152d5f3777ea3a0a0546e63046970959e4c8806094d36ff759bdda78e1a947f2",
+      "gt_depth_sha256": "b0a2c197bd084230c19bb0186afcdf55d88ffde24ef122879746c9aa261cd35f",
+      "camera_to_world": [
+        [
+          -1.0,
+          -6.123234699136889e-17,
+          1.0605751981140788e-16,
+          -2.5
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.5000000574369788,
+          -0.866025370623181,
+          2.75
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s1_p+45",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s1_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s1_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "26f780ea988a5652ed8fdc1b6600dbc6de9f5f5457bf5e84fe6419b842812a02",
+      "gt_depth_sha256": "87b09c65e1cdf5917be077f4a92c5a5e323affdf38a7bf7f5408def5d8e2b8f8",
+      "camera_to_world": [
+        [
+          -1.0,
+          -8.65956113667872e-17,
+          8.659559988031109e-17,
+          -2.5
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.7071068280836437,
+          -0.7071067342894483,
+          2.75
+        ],
+        [
+          0.0,
+          -0.7071067342894483,
+          -0.7071068280836437,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s1_p+60",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s1_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s1_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "8625d4be1322966646137a1e1436d2ed8c97964e9c06eaa135591e681e8b2a16",
+      "gt_depth_sha256": "aeaa5c5ff9ec1607a6b24703b9c063ec7a56e2692d6108770f2ba91354355898",
+      "camera_to_world": [
+        [
+          -1.0,
+          -1.0605751981140788e-16,
+          6.123234699136889e-17,
+          -2.5
+        ],
+        [
+          -1.2246467991473532e-16,
+          0.866025370623181,
+          -0.5000000574369788,
+          2.75
+        ],
+        [
+          0.0,
+          -0.5000000574369788,
+          -0.866025370623181,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s2_p-30",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s2_p-30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s2_p-30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": -30.0,
+      "rgb_sha256": "52b0b3d36d1ba5ca6d8e3d8ec9ad5222d754514d74043f3b7868ce3cc8a2bfed",
+      "gt_depth_sha256": "d56c2ce355f837371c09fb8a3a926bdd841a6fbb28fa16b7adbb03e4241aa0fe",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          0.49999999999999994,
+          0.8660254037844387,
+          -2.0
+        ],
+        [
+          -1.0,
+          3.0616169978683824e-17,
+          5.3028761936245346e-17,
+          2.75
+        ],
+        [
+          0.0,
+          -0.8660254037844387,
+          0.49999999999999994,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s2_p+00",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s2_p+00.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s2_p+00_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 0.0,
+      "rgb_sha256": "f8499762694e7a55f1553f93873cda324708ad80052cd914104d72dcd0d66956",
+      "gt_depth_sha256": "9f09e9fa1709e39eae8319a8885aafdcb020f29a1e9ecd7629b31b80c8398c39",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.0,
+          1.0,
+          -2.0
+        ],
+        [
+          -1.0,
+          -0.0,
+          6.123233995736766e-17,
+          2.75
+        ],
+        [
+          0.0,
+          -1.0,
+          -0.0,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s2_p+30",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s2_p+30.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s2_p+30_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 30.0,
+      "rgb_sha256": "2c0b6250afa8bd940a08b4630afdcf7ef0f49b228ce14badf40e638dc4e54045",
+      "gt_depth_sha256": "125267ab7408514eb2e1bf6ed1b104756102a2f806087a7403e2d0afd1754f04",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.5000000574369788,
+          0.866025370623181,
+          -2.0
+        ],
+        [
+          -1.0,
+          -3.061617349568444e-17,
+          5.302875990570394e-17,
+          2.75
+        ],
+        [
+          0.0,
+          -0.866025370623181,
+          -0.5000000574369788,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s2_p+45",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s2_p+45.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s2_p+45_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 45.0,
+      "rgb_sha256": "a38cf7d409f4492756460593117cf8901c4502e36a08750ccfba1aa9b32dfa62",
+      "gt_depth_sha256": "96937b06e63cb403fce334bb2a7d2aa7a9b3130214c90a97f7215f41cdfafdb7",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.7071068749807367,
+          0.707106687392346,
+          -2.0
+        ],
+        [
+          -1.0,
+          -4.329780855501234e-17,
+          4.329779706853623e-17,
+          2.75
+        ],
+        [
+          0.0,
+          -0.707106687392346,
+          -0.7071068749807367,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "frame_id": "FloorPlan401_s2_p+60",
+      "scene_id": "FloorPlan401",
+      "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s2_p+60.png",
+      "gt_depth_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/FloorPlan401_s2_p+60_depth_m.npy",
+      "intrinsics": [
+        [
+          259.8076211353316,
+          0.0,
+          149.5
+        ],
+        [
+          0.0,
+          259.8076211353316,
+          149.5
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "pitch_degrees": 60.0,
+      "rgb_sha256": "90755bb6c4cb17c8cd0515e00a4dadd2611dc590b38c3f352309a34ccf688159",
+      "gt_depth_sha256": "9f6c7f5fe290b8917624b675812669f171085f2805a4f642c1bb78e77b0f7a12",
+      "camera_to_world": [
+        [
+          6.123233995736766e-17,
+          -0.8660254701069426,
+          0.49999988512603577,
+          -2.0
+        ],
+        [
+          -1.0,
+          -5.3028765997327454e-17,
+          3.06161629446822e-17,
+          2.75
+        ],
+        [
+          0.0,
+          -0.49999988512603577,
+          -0.8660254701069426,
+          1.57661629
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    }
+  ],
+  "provenance": {
+    "plan_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/capture_plan_v1.json",
+    "plan_sha256": "e967c337607ac5f88629bb93f259b55ba722755f0f10036f0ebaa29867770e1a",
+    "code": {
+      "branch": "feat/alfred-benchmark",
+      "head_sha": "52b30b8c5c5fe532845b45c5c5e1f3753517eb8b",
+      "executed_code_sha256": "d4ccbe9f5e77a4e23844f3173720e13c1d8ef1aab20ced195dae3e0ec1b4ddec",
+      "tracked_worktree_drift": ""
+    },
+    "end_code": {
+      "branch": "feat/alfred-benchmark",
+      "head_sha": "52b30b8c5c5fe532845b45c5c5e1f3753517eb8b",
+      "executed_code_sha256": "d4ccbe9f5e77a4e23844f3173720e13c1d8ef1aab20ced195dae3e0ec1b4ddec",
+      "tracked_worktree_drift": ""
+    },
+    "sources": [
+      {
+        "name": "ai2thor_builds",
+        "path": "/home/ysh/codebase/FILM/.venv/lib/python3.8/site-packages/ai2thor/_builds.py",
+        "sha256": "72f27dcebbe00d4443642250105ef4b5bbf41696d225c1a53f87d2f1d85c68c9"
+      },
+      {
+        "name": "ai2thor_controller",
+        "path": "/home/ysh/codebase/FILM/.venv/lib/python3.8/site-packages/ai2thor/controller.py",
+        "sha256": "ef24b707c92ab4948e89da31b441ec20112602d09fb099695d8967481d45ea0a"
+      },
+      {
+        "name": "ai2thor_package",
+        "path": "/home/ysh/codebase/FILM/.venv/lib/python3.8/site-packages/ai2thor/__init__.py",
+        "sha256": "65440beea701d9f7f454322997e1c34c3d730c4216b1f841e95ee93cacf78e7d"
+      },
+      {
+        "name": "ai2thor_server",
+        "path": "/home/ysh/codebase/FILM/.venv/lib/python3.8/site-packages/ai2thor/server.py",
+        "sha256": "f673ee83eaa6fc1a382e0973118148cda060f1f3197a875d5145040764cb9796"
+      },
+      {
+        "name": "alfred_constants",
+        "path": "/data1/ysh/Datasets/FILM/alfred/gen/constants.py",
+        "sha256": "5664c7c163a67fc392ab1f44aa106a8111fb693047a644cc46f76ce627055ff9"
+      },
+      {
+        "name": "alfred_thor_env",
+        "path": "/data1/ysh/Datasets/FILM/alfred/env/thor_env.py",
+        "sha256": "74601fe71ec40e9121eec71d7a2252c5b340e8e6405ebbc1e8478cb9246ddb10"
+      },
+      {
+        "name": "unity_executable",
+        "path": "/data1/ysh/Datasets/FILM/ai2thor/thor-201909061227-Linux64",
+        "sha256": "329400f128d0c08126aa1409e931573b0e676e76395d2845e1338b2c38bf25ca"
+      }
+    ],
+    "trajectories": [
+      {
+        "task": "pick_heat_then_place_in_recep-Plate-None-CounterTop-1/trial_T20190909_115633_911483",
+        "scene_id": "FloorPlan1",
+        "trajectory_path": "/data1/ysh/Datasets/FILM/alfred/data/json_2.1.0/train/pick_heat_then_place_in_recep-Plate-None-CounterTop-1/trial_T20190909_115633_911483/traj_data.json",
+        "trajectory_sha256": "24c18bec746ae16639401bc2ced87cbfd576961ec0877b68975dbf7e25eef40b",
+        "selection_sha256": "0211ee019fd2119c64bafef83bc76c8e95570c764927b28545fa7bc95fbfc66f"
+      },
+      {
+        "task": "pick_and_place_with_movable_recep-Watch-Plate-CoffeeTable-201/trial_T20190909_051356_394008",
+        "scene_id": "FloorPlan201",
+        "trajectory_path": "/data1/ysh/Datasets/FILM/alfred/data/json_2.1.0/train/pick_and_place_with_movable_recep-Watch-Plate-CoffeeTable-201/trial_T20190909_051356_394008/traj_data.json",
+        "trajectory_sha256": "dfc483d2b4715b5b66c980d87abc75d8724d9a2a0db0cd9c32fc5f345a47a320",
+        "selection_sha256": "01414377d81a15285965146c16db21b0192584b2bf49e5c518760d2a298fb0c8"
+      },
+      {
+        "task": "pick_and_place_simple-TissueBox-None-Dresser-301/trial_T20190906_221500_723697",
+        "scene_id": "FloorPlan301",
+        "trajectory_path": "/data1/ysh/Datasets/FILM/alfred/data/json_2.1.0/train/pick_and_place_simple-TissueBox-None-Dresser-301/trial_T20190906_221500_723697/traj_data.json",
+        "trajectory_sha256": "503c6372a60afd5d994fe2799773a951d9cced3e4f2c98892e3ae9885990735b",
+        "selection_sha256": "00d039ec32b87d558166f5afe652e2f93423fd28fb28203e4edfb0c082f75c2d"
+      },
+      {
+        "task": "pick_and_place_simple-DishSponge-None-Cart-401/trial_T20190909_045729_956116",
+        "scene_id": "FloorPlan401",
+        "trajectory_path": "/data1/ysh/Datasets/FILM/alfred/data/json_2.1.0/train/pick_and_place_simple-DishSponge-None-Cart-401/trial_T20190909_045729_956116/traj_data.json",
+        "trajectory_sha256": "966579f6b07d67567b9c23c6649c5c6cb7db2ef3eb01b3ec89366eaffd542b55",
+        "selection_sha256": "0103196bc265db5a933688978113f6fb43b4a2ef850c5aa69afb208991cc7159"
+      }
+    ],
+    "depth_units": "meters_from_ai2thor_2.1_mm_div_1000",
+    "depth_saturation_m": 5.0,
+    "saturated_pixels_are_not_unbounded_true_depth": true,
+    "resolution": [
+      300,
+      300
+    ],
+    "vertical_fov_degrees": 60.0,
+    "station_actions": [
+      [],
+      [
+        "RotateRight",
+        "MoveAhead",
+        "MoveAhead"
+      ],
+      [
+        "RotateLeft",
+        "MoveAhead",
+        "MoveAhead"
+      ]
+    ],
+    "pitches_degrees": [
+      -30,
+      0,
+      30,
+      45,
+      60
+    ],
+    "navigation_pitch_degrees": 0,
+    "action_receipts": [
+      {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan1/actions.jsonl",
+        "sha256": "d40bd88e51e751468e8190aa003cd43a0f15690b42a12959fb2a0d46e50fd83d"
+      },
+      {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan201/actions.jsonl",
+        "sha256": "1f9a4ad0eb52dfbf810e6a2197716aa3edf1efe77e0ae6100c6e4604120b3a6d"
+      },
+      {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan301/actions.jsonl",
+        "sha256": "d7a0f59c7a206008db7ef8fcf07d3b2c18443579e235d9ec01622e87d1558178"
+      },
+      {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/FloorPlan401/actions.jsonl",
+        "sha256": "3ef15a1c0a7994c62f86f3255742c95ff46651b69d7eb9de75143e4ba4aa429d"
+      }
+    ],
+    "learned_checkpoints": {},
+    "ground_truth_scope": "offline_depth_calibration_only; never actor input"
+  }
+}

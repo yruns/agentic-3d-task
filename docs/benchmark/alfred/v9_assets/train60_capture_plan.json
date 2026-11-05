@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "split": "train",
+  "capture_protocol": "alfred_train_four_scenes_three_stations_five_pitches_v1",
+  "seed": 0,
+  "image_width": 300,
+  "image_height": 300,
+  "vertical_fov_degrees": 60,
+  "pitches_degrees": [
+    -30,
+    0,
+    30,
+    45,
+    60
+  ],
+  "station_actions": [
+    [],
+    [
+      "RotateRight",
+      "MoveAhead",
+      "MoveAhead"
+    ],
+    [
+      "RotateLeft",
+      "MoveAhead",
+      "MoveAhead"
+    ]
+  ],
+  "navigation_pitch_degrees": 0,
+  "depth_scale_to_meters": 0.001,
+  "depth_saturation_m": 5.0,
+  "initialization": "official_reset_restore_explicit_fov_initialize_official_init",
+  "data_root": "/data1/ysh/Datasets/FILM/alfred/data/json_2.1.0",
+  "splits_path": "/data1/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+  "splits_sha256": "c27918c1f64f58d047cb2a26d477dfdb8935bacde3504ec1ce9cb52cd2c72c83",
+  "alfred_root": "/data1/ysh/Datasets/FILM/alfred",
+  "ai2thor_root": "/home/ysh/codebase/FILM/.venv/lib/python3.8/site-packages/ai2thor",
+  "unity_executable": "/data1/ysh/Datasets/FILM/ai2thor/thor-201909061227-Linux64",
+  "sources": [
+    {
+      "name": "ai2thor_builds",
+      "path": "/home/ysh/codebase/FILM/.venv/lib/python3.8/site-packages/ai2thor/_builds.py",
+      "sha256": "72f27dcebbe00d4443642250105ef4b5bbf41696d225c1a53f87d2f1d85c68c9"
+    },
+    {
+      "name": "ai2thor_controller",
+      "path": "/home/ysh/codebase/FILM/.venv/lib/python3.8/site-packages/ai2thor/controller.py",
+      "sha256": "ef24b707c92ab4948e89da31b441ec20112602d09fb099695d8967481d45ea0a"
+    },
+    {
+      "name": "ai2thor_package",
+      "path": "/home/ysh/codebase/FILM/.venv/lib/python3.8/site-packages/ai2thor/__init__.py",
+      "sha256": "65440beea701d9f7f454322997e1c34c3d730c4216b1f841e95ee93cacf78e7d"
+    },
+    {
+      "name": "ai2thor_server",
+      "path": "/home/ysh/codebase/FILM/.venv/lib/python3.8/site-packages/ai2thor/server.py",
+      "sha256": "f673ee83eaa6fc1a382e0973118148cda060f1f3197a875d5145040764cb9796"
+    },
+    {
+      "name": "alfred_constants",
+      "path": "/data1/ysh/Datasets/FILM/alfred/gen/constants.py",
+      "sha256": "5664c7c163a67fc392ab1f44aa106a8111fb693047a644cc46f76ce627055ff9"
+    },
+    {
+      "name": "alfred_thor_env",
+      "path": "/data1/ysh/Datasets/FILM/alfred/env/thor_env.py",
+      "sha256": "74601fe71ec40e9121eec71d7a2252c5b340e8e6405ebbc1e8478cb9246ddb10"
+    },
+    {
+      "name": "unity_executable",
+      "path": "/data1/ysh/Datasets/FILM/ai2thor/thor-201909061227-Linux64",
+      "sha256": "329400f128d0c08126aa1409e931573b0e676e76395d2845e1338b2c38bf25ca"
+    }
+  ],
+  "trajectories": [
+    {
+      "task": "pick_heat_then_place_in_recep-Plate-None-CounterTop-1/trial_T20190909_115633_911483",
+      "scene_id": "FloorPlan1",
+      "trajectory_path": "/data1/ysh/Datasets/FILM/alfred/data/json_2.1.0/train/pick_heat_then_place_in_recep-Plate-None-CounterTop-1/trial_T20190909_115633_911483/traj_data.json",
+      "trajectory_sha256": "24c18bec746ae16639401bc2ced87cbfd576961ec0877b68975dbf7e25eef40b",
+      "selection_sha256": "0211ee019fd2119c64bafef83bc76c8e95570c764927b28545fa7bc95fbfc66f"
+    },
+    {
+      "task": "pick_and_place_with_movable_recep-Watch-Plate-CoffeeTable-201/trial_T20190909_051356_394008",
+      "scene_id": "FloorPlan201",
+      "trajectory_path": "/data1/ysh/Datasets/FILM/alfred/data/json_2.1.0/train/pick_and_place_with_movable_recep-Watch-Plate-CoffeeTable-201/trial_T20190909_051356_394008/traj_data.json",
+      "trajectory_sha256": "dfc483d2b4715b5b66c980d87abc75d8724d9a2a0db0cd9c32fc5f345a47a320",
+      "selection_sha256": "01414377d81a15285965146c16db21b0192584b2bf49e5c518760d2a298fb0c8"
+    },
+    {
+      "task": "pick_and_place_simple-TissueBox-None-Dresser-301/trial_T20190906_221500_723697",
+      "scene_id": "FloorPlan301",
+      "trajectory_path": "/data1/ysh/Datasets/FILM/alfred/data/json_2.1.0/train/pick_and_place_simple-TissueBox-None-Dresser-301/trial_T20190906_221500_723697/traj_data.json",
+      "trajectory_sha256": "503c6372a60afd5d994fe2799773a951d9cced3e4f2c98892e3ae9885990735b",
+      "selection_sha256": "00d039ec32b87d558166f5afe652e2f93423fd28fb28203e4edfb0c082f75c2d"
+    },
+    {
+      "task": "pick_and_place_simple-DishSponge-None-Cart-401/trial_T20190909_045729_956116",
+      "scene_id": "FloorPlan401",
+      "trajectory_path": "/data1/ysh/Datasets/FILM/alfred/data/json_2.1.0/train/pick_and_place_simple-DishSponge-None-Cart-401/trial_T20190909_045729_956116/traj_data.json",
+      "trajectory_sha256": "966579f6b07d67567b9c23c6649c5c6cb7db2ef3eb01b3ec89366eaffd542b55",
+      "selection_sha256": "0103196bc265db5a933688978113f6fb43b4a2ef850c5aa69afb208991cc7159"
+    }
+  ],
+  "source_sha256": "9bbb8ab74c89b923885ada46d0d849cb0dece05f6c3cd1b8a2187d7b2a727e54",
+  "code": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "52b30b8c5c5fe532845b45c5c5e1f3753517eb8b",
+    "executed_code_sha256": "d4ccbe9f5e77a4e23844f3173720e13c1d8ef1aab20ced195dae3e0ec1b4ddec",
+    "tracked_worktree_drift": ""
+  }
+}

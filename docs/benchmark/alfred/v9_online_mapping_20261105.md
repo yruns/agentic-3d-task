@@ -161,8 +161,19 @@ rejected an unset compiler variable; Python and the simulator were not started.
 The corrected launcher enables nounset after activation.
 [Failed launch and fix](v9_assets/capture_launch_attempt1.json).
 
-Pending: private train capture, measured depth comparison, real perception/mapping
-checks and pilot15 official scoring. Run IDs,
+The corrected launcher captured all 60 train frames at clean HEAD `52b30b8`;
+start/end code hashes agree. FloorPlan201 recorded three blocked movement attempts
+as specified; other scenes had none. The first depth-comparison launch rejected
+signed-pitch frame names containing `+` before loading a model. The validator now
+accepts that safe character; the capture-to-consumer integration regression and
+all 24 capture/comparison tests pass. All frozen frame hashes validate unchanged.
+The complete source gates were rerun: all 1432 source tests, Ruff, Black, mypy,
+MkDocs and lock validation pass
+([post-fix verification](v9_assets/quality_gates_frame_id_fix.json)).
+[Failed comparison launch and fix](v9_assets/depth_compare_launch_attempt1.json).
+
+Pending: measured depth comparison, real perception/mapping checks and pilot15
+official scoring. Run IDs,
 code hashes, commands, artifacts and actual outcomes will be added as each stage
 executes; no pending stage is presented as passed. Historical v1–v8 and the old
 50 scores remain unchanged.

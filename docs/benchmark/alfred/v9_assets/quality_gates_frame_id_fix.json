@@ -1,0 +1,81 @@
+{
+  "scope": "Complete source gates after capture/consumer signed-pitch regression fix",
+  "checks": [
+    {
+      "name": "ruff",
+      "command": [
+        "ruff",
+        "check",
+        "src/"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.020924201235175133,
+      "log": "tmp/alfred_v9/frame_id_fix_gates/ruff.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "name": "black",
+      "command": [
+        "black",
+        "--check",
+        "src/"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.4070202959701419,
+      "log": "tmp/alfred_v9/frame_id_fix_gates/black.log",
+      "log_sha256": "04946b6d3da5af1c164aacca60463dff1cbfd31525b32e2f480bb8ca28a2ac3c"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "mypy",
+        "src/"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.9322557356208563,
+      "log": "tmp/alfred_v9/frame_id_fix_gates/mypy.log",
+      "log_sha256": "7332dc3d363a098775411b7d6d866f031aeac35534364dcc71db72620ab67fae"
+    },
+    {
+      "name": "source_tests",
+      "command": [
+        "pytest",
+        "src/",
+        "-q"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 115.45746527332813,
+      "log": "tmp/alfred_v9/frame_id_fix_gates/source_tests.log",
+      "log_sha256": "ddf079ed6e7d944329fe33508b36e2deb2f94b3b4e27de2f69eae4cc0a198266"
+    },
+    {
+      "name": "docs",
+      "command": [
+        "mkdocs",
+        "build"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.527702352963388,
+      "log": "tmp/alfred_v9/frame_id_fix_gates/docs.log",
+      "log_sha256": "8696abaa7e21f267e03a7396d82373b8f32e1f1c596bd0997fc1c62c8084ba39"
+    },
+    {
+      "name": "lock",
+      "command": [
+        "uv",
+        "lock",
+        "--check",
+        "--python",
+        "/home/ysh/miniconda3/envs/agentic3d/bin/python"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.06327021773904562,
+      "log": "tmp/alfred_v9/frame_id_fix_gates/lock.log",
+      "log_sha256": "779d3fa7967c2487c36c7d327ec9abc99075171101a7b047412a10deb75bd391"
+    }
+  ],
+  "source_tests_passed": 1432,
+  "targeted_capture_comparison_tests_passed": 24,
+  "actual_frozen_frame_hashes_validated": 60,
+  "adapter_suite": "Unchanged adapter: previous 440 tests/91.34% total coverage with branch measurement retained"
+}

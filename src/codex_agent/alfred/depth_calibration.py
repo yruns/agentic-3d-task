@@ -37,7 +37,8 @@ class CalibrationFrame(BaseModel):
     """One immutable captured training observation with evaluator-only targets."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
-    frame_id: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
+    # The capture protocol records signed pitch, e.g. FloorPlan1_s0_p+30.
+    frame_id: str = Field(pattern=r"^[A-Za-z0-9_+\-]+$")
     scene_id: str = Field(min_length=1)
     rgb_path: Path
     gt_depth_path: Path

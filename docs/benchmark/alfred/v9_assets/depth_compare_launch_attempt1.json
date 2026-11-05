@@ -1,0 +1,13 @@
+{
+  "status": "input_validation_error_before_model_load",
+  "command": "bash docs/benchmark/alfred/v9_assets/compare_train60.sh",
+  "code_head": "52b30b8",
+  "executed_code_sha256": "d4ccbe9f5e77a4e23844f3173720e13c1d8ef1aab20ced195dae3e0ec1b4ddec",
+  "manifest": "outputs/alfred_depth_calibration/train60_v1/manifest.json",
+  "manifest_sha256": "ad55c84172a085445f196e1ed2083097980c19b9f13586b7110e68ac310ad084",
+  "log": "tmp/alfred_v9/compare_train60.log",
+  "log_sha256": "473fad4c5ce3468d5fcd2b6bbf66a68df1ae6e2d68195a277c57890c55a8aba1",
+  "error": "CalibrationFrame frame_id rejected plus signs emitted by the signed-pitch capture protocol; 48 of 60 names failed before model loading.",
+  "inferred_frames": 0,
+  "fix": "Accept plus in safe filename components; integration regression loads and hashes the complete capture output through the actual calibration consumer. Existing frozen data is unchanged."
+}

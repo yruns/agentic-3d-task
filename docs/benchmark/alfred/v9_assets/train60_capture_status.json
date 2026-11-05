@@ -1,0 +1,16 @@
+{
+  "status": "completed",
+  "split": "train",
+  "plan_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/capture_plan_v1.json",
+  "plan_sha256": "e967c337607ac5f88629bb93f259b55ba722755f0f10036f0ebaa29867770e1a",
+  "code": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "52b30b8c5c5fe532845b45c5c5e1f3753517eb8b",
+    "executed_code_sha256": "d4ccbe9f5e77a4e23844f3173720e13c1d8ef1aab20ced195dae3e0ec1b4ddec",
+    "tracked_worktree_drift": ""
+  },
+  "started_at_utc": "2026-11-05T08:15:41.032041+00:00",
+  "frame_count": 60,
+  "manifest_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1/manifest.json",
+  "finished_at_utc": "2026-11-05T08:16:29.087461+00:00"
+}

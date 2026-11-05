@@ -312,6 +312,10 @@ def test_complete_offline_manifest_contains_fixed_60_train_frames(
         x_display="5",
     )
     manifest = json.loads(path.read_text())
+    from codex_agent.alfred.depth_calibration import load_calibration_manifest
+
+    validated = load_calibration_manifest(path)
+    assert len(validated.frames) == 60
     assert manifest["split"] == "train"
     assert (
         len(manifest["frames"])
