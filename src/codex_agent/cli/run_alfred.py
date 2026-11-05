@@ -117,6 +117,22 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Select frozen manifest[index::num-shards] before applying --limit.",
     )
     parser.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help="Retry failed episodes once and continue the shard instead of aborting.",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume an existing shard directory, skipping already-completed episodes.",
+    )
+    parser.add_argument(
+        "--concurrency-state-file",
+        type=Path,
+        default=None,
+        help="Optional shared JSON file for adaptive cross-shard concurrency control.",
+    )
+    parser.add_argument(
         "--preflight-only",
         action="store_true",
         help="Validate fold/assets/provider readiness without simulation or evaluation.",
@@ -190,6 +206,9 @@ def main(argv: list[str] | None = None) -> int:
         limit=args.limit,
         shard_index=args.shard_index,
         num_shards=args.num_shards,
+        continue_on_error=args.continue_on_error,
+        resume=args.resume,
+        concurrency_state_path=args.concurrency_state_file,
     )
     if args.preflight_only:
         print(json.dumps(preflight_run(config), ensure_ascii=False, indent=2))

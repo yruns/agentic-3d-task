@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import fcntl
+import json
 import logging
+import math
+import os
 import re
 import sqlite3
-from collections.abc import Sequence
+import time
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -63,6 +70,9 @@ class AlfredRunConfig:
     limit: int | None = None
     shard_index: int = 0
     num_shards: int = 1
+    continue_on_error: bool = False
+    resume: bool = False
+    concurrency_state_path: Path | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -74,6 +84,12 @@ class AlfredRunConfig:
             "database_path",
         ):
             object.__setattr__(self, name, Path(getattr(self, name)).absolute())
+        if self.concurrency_state_path is not None:
+            object.__setattr__(
+                self,
+                "concurrency_state_path",
+                Path(self.concurrency_state_path).absolute(),
+            )
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", self.run_id):
             raise ValueError(
                 "run_id must start with an alphanumeric and contain only alphanumerics, '.', '_', '-'"
@@ -142,14 +158,15 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
     manifest = load_manifest(config.fold_path, config.data_root, config.splits_path)
     episodes = _selected_episodes(config, manifest)
     code = code_provenance(config.source_root)
-    _require_unused_run_id(config.database_path, config.run_id)
-    if config.output_dir.exists():
-        raise FileExistsError(f"output_dir already exists: {config.output_dir}")
+    if not config.resume:
+        _require_unused_run_id(config.database_path, config.run_id)
+        if config.output_dir.exists():
+            raise FileExistsError(f"output_dir already exists: {config.output_dir}")
     metadata = _run_metadata(config, episodes, code, full_fold_size=len(manifest))
     preflight_codex_runtime(config.runtime)
-    config.output_dir.mkdir(parents=True, exist_ok=False)
+    config.output_dir.mkdir(parents=True, exist_ok=config.resume)
     actor_dir = config.output_dir / "actor"
-    actor_dir.mkdir()
+    actor_dir.mkdir(exist_ok=True)
     runtime = AlfredPolicyRuntime(
         replace(
             config.runtime,
@@ -163,32 +180,56 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
         )
     )
     attempts: list[EpisodeAttempt] = []
-    _checkpoint(config, metadata, episodes, attempts)
-    try:
-        with ScenePerception(
-            config.perception, log_path=config.output_dir / "perception.stderr.log"
-        ) as perception:
-            runtime_provenance = perception.runtime_provenance
-            perception_metadata = metadata["perception"]
-            if not isinstance(perception_metadata, dict):
-                raise TypeError("perception metadata must be a mapping")
-            perception_metadata["runtime_provenance"] = runtime_provenance.model_dump(
-                mode="json"
+    completed_indices: set[int] = set()
+    if config.resume:
+        for index in range(len(episodes)):
+            attempt_file = (
+                config.output_dir / "episodes" / f"{index + 1:04d}" / "attempt.json"
             )
-            perception_metadata["libraries"] = {
-                name: package.model_dump(mode="json")
-                for name, package in runtime_provenance.packages.items()
-            }
-            perception_metadata["provenance_status"] = "worker_reported"
-            _checkpoint(config, metadata, episodes, attempts)
-            for index, episode in enumerate(episodes):
+            if attempt_file.is_file():
+                try:
+                    prev = EpisodeAttempt.model_validate_json(attempt_file.read_text())
+                    if prev.status == "completed":
+                        attempts.append(prev)
+                        completed_indices.add(index)
+                except Exception:  # noqa: BLE001
+                    pass
+    _checkpoint(config, metadata, episodes, attempts)
+    perception: ScenePerception | None = None
+    try:
+        perception = ScenePerception(
+            config.perception, log_path=config.output_dir / "perception.stderr.log"
+        )
+        runtime_provenance = perception.runtime_provenance
+        perception_metadata = metadata["perception"]
+        if not isinstance(perception_metadata, dict):
+            raise TypeError("perception metadata must be a mapping")
+        perception_metadata["runtime_provenance"] = runtime_provenance.model_dump(
+            mode="json"
+        )
+        perception_metadata["libraries"] = {
+            name: package.model_dump(mode="json")
+            for name, package in runtime_provenance.packages.items()
+        }
+        perception_metadata["provenance_status"] = "worker_reported"
+        _checkpoint(config, metadata, episodes, attempts)
+        for index, episode in enumerate(episodes):
+            if index in completed_indices:
                 logger.info(
-                    "ALFRED episode %s/%s: %s",
+                    "ALFRED episode %s/%s: %s (already completed on resume, skipping)",
                     index + 1,
                     len(episodes),
                     episode.episode_id,
                 )
-                _run_episode(
+                continue
+            logger.info(
+                "ALFRED episode %s/%s: %s",
+                index + 1,
+                len(episodes),
+                episode.episode_id,
+            )
+            with _adaptive_concurrency_slot(config) as slot_report:
+                perception, ep_status, had_retry = _run_episode_with_resilience(
                     config,
                     episode,
                     index=index,
@@ -196,11 +237,20 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
                     runtime=runtime,
                     attempts=attempts,
                 )
+                slot_report["status"] = ep_status
+                slot_report["had_retry"] = had_retry
+            try:
                 metadata["perception_statistics"] = perception.statistics().model_dump(
                     mode="json"
                 )
-                _checkpoint(config, metadata, episodes, attempts)
-        metadata["status"] = "completed"
+            except Exception:  # noqa: BLE001
+                pass
+            _checkpoint(config, metadata, episodes, attempts)
+        metadata["status"] = (
+            "completed"
+            if all(a.status == "completed" for a in attempts)
+            else "completed_with_errors"
+        )
     except BaseException as exc:
         # Orchestration boundary: archive the failure and propagate it. No
         # synthetic score and no silent continuation after infrastructure loss.
@@ -220,6 +270,11 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
             )
         raise
     finally:
+        if perception is not None:
+            try:
+                perception.close()
+            except Exception:  # noqa: BLE001
+                pass
         metadata["finished_at_utc"] = datetime.now(timezone.utc).isoformat()
         _checkpoint(config, metadata, episodes, attempts)
         ingest_run(
@@ -227,8 +282,247 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
             run_id=config.run_id,
             metadata=metadata,
             attempts=attempts,
+            replace_existing=config.resume,
         )
     return summarize_attempts(episodes, attempts)
+
+
+def _ensure_healthy_perception(
+    config: AlfredRunConfig, perception: ScenePerception
+) -> ScenePerception:
+    try:
+        perception.statistics()
+        return perception
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Restarting unhealthy ScenePerception worker: %s", exc)
+        try:
+            perception.close()
+        except Exception:  # noqa: BLE001
+            pass
+        return ScenePerception(
+            config.perception, log_path=config.output_dir / "perception.stderr.log"
+        )
+
+
+def _run_episode_with_resilience(
+    config: AlfredRunConfig,
+    episode: AlfredEpisode,
+    *,
+    index: int,
+    perception: ScenePerception,
+    runtime: AlfredPolicyRuntime,
+    attempts: list[EpisodeAttempt],
+) -> tuple[ScenePerception, str, bool]:
+    artifact_dir = config.output_dir / "episodes" / f"{index + 1:04d}"
+    if artifact_dir.exists() and config.resume:
+        backup = (
+            config.output_dir / "episodes" / f"{index + 1:04d}_prev_{int(time.time())}"
+        )
+        artifact_dir.rename(backup)
+    if not config.continue_on_error:
+        _run_episode(
+            config,
+            episode,
+            index=index,
+            perception=perception,
+            runtime=runtime,
+            attempts=attempts,
+        )
+        return perception, "completed", False
+
+    had_retry = False
+    for try_idx in range(2):
+        try:
+            _run_episode(
+                config,
+                episode,
+                index=index,
+                perception=perception,
+                runtime=runtime,
+                attempts=attempts,
+            )
+            return perception, "completed", had_retry
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except Exception as exc:  # noqa: BLE001
+            perception = _ensure_healthy_perception(config, perception)
+            if try_idx == 0:
+                had_retry = True
+                # Remove the recorded error attempt from attempts and archive the failed directory
+                if attempts and attempts[-1].episode_id == episode.episode_id:
+                    attempts.pop()
+                if artifact_dir.exists():
+                    retry_backup = (
+                        config.output_dir
+                        / "episodes"
+                        / f"{index + 1:04d}_retry0_{int(time.time())}"
+                    )
+                    artifact_dir.rename(retry_backup)
+                logger.warning(
+                    "Episode %s failed on try 1 (%s: %s); retrying once after 6s...",
+                    episode.episode_id,
+                    type(exc).__name__,
+                    exc,
+                )
+                time.sleep(6.0)
+            else:
+                logger.error(
+                    "Episode %s failed after retry (%s: %s); continuing shard...",
+                    episode.episode_id,
+                    type(exc).__name__,
+                    exc,
+                )
+                return perception, "error", True
+    return perception, "error", True
+
+
+@contextmanager
+def _adaptive_concurrency_slot(
+    config: AlfredRunConfig,
+) -> Iterator[dict[str, object]]:
+    """Coordinate active episodes across shards and step down concurrency on error spikes."""
+    report: dict[str, object] = {"status": "error", "had_retry": False}
+    state_path = config.concurrency_state_path
+    if state_path is None:
+        yield report
+        return
+    lock_path = state_path.with_suffix(".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    pid_str = str(os.getpid())
+    gpu_idx = config.perception.physical_gpu_index
+    while True:
+        with lock_path.open("a", encoding="utf-8") as lock_stream:
+            fcntl.flock(lock_stream.fileno(), fcntl.LOCK_EX)
+            try:
+                state = _load_concurrency_state(state_path)
+                active_pids = state["active_pids"]
+                assert isinstance(active_pids, dict)
+                _reap_dead_pids(active_pids)
+                max_active = int(state.get("max_active", 12))
+                num_gpus = int(state.get("num_gpus", 3))
+                per_gpu_limit = max(1, math.ceil(max_active / max(1, num_gpus)))
+                gpu_active = sum(
+                    1
+                    for info in active_pids.values()
+                    if isinstance(info, dict) and info.get("gpu") == gpu_idx
+                )
+                if len(active_pids) < max_active and gpu_active < per_gpu_limit:
+                    active_pids[pid_str] = {
+                        "shard": config.shard_index,
+                        "gpu": gpu_idx,
+                        "started_at": time.time(),
+                    }
+                    _save_concurrency_state(state_path, state)
+                    break
+            finally:
+                fcntl.flock(lock_stream.fileno(), fcntl.LOCK_UN)
+        time.sleep(1.5)
+    try:
+        yield report
+    finally:
+        with lock_path.open("a", encoding="utf-8") as lock_stream:
+            fcntl.flock(lock_stream.fileno(), fcntl.LOCK_EX)
+            try:
+                state = _load_concurrency_state(state_path)
+                active_pids = state["active_pids"]
+                assert isinstance(active_pids, dict)
+                active_pids.pop(pid_str, None)
+                _reap_dead_pids(active_pids)
+                outcomes = state.setdefault("recent_outcomes", [])
+                assert isinstance(outcomes, list)
+                outcomes.append(
+                    {
+                        "ts": time.time(),
+                        "shard": config.shard_index,
+                        "status": str(report.get("status", "error")),
+                        "had_retry": bool(report.get("had_retry", False)),
+                    }
+                )
+                if len(outcomes) > 24:
+                    del outcomes[:-24]
+                _maybe_step_down_concurrency(state)
+                _save_concurrency_state(state_path, state)
+            finally:
+                fcntl.flock(lock_stream.fileno(), fcntl.LOCK_UN)
+
+
+def _load_concurrency_state(path: Path) -> dict[str, Any]:
+    if path.is_file():
+        try:
+            data = json.loads(path.read_text())
+            if isinstance(data, dict) and isinstance(data.get("active_pids"), dict):
+                return data
+        except Exception:  # noqa: BLE001
+            pass
+    return {
+        "max_active": 12,
+        "min_active": 3,
+        "num_gpus": 3,
+        "active_pids": {},
+        "recent_outcomes": [],
+        "last_throttle_ts": 0.0,
+        "throttle_events": [],
+    }
+
+
+def _save_concurrency_state(path: Path, state: dict[str, Any]) -> None:
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, indent=2) + "\n")
+    tmp.replace(path)
+
+
+def _reap_dead_pids(active_pids: dict[str, Any]) -> None:
+    dead: list[str] = []
+    for pid_str in active_pids:
+        try:
+            os.kill(int(pid_str), 0)
+        except OSError:
+            dead.append(pid_str)
+    for pid_str in dead:
+        active_pids.pop(pid_str, None)
+
+
+def _maybe_step_down_concurrency(state: dict[str, Any]) -> None:
+    max_active = int(state.get("max_active", 12))
+    min_active = int(state.get("min_active", 3))
+    if max_active <= min_active:
+        return
+    last_throttle_ts = float(state.get("last_throttle_ts", 0.0))
+    outcomes = state.get("recent_outcomes", [])
+    if not isinstance(outcomes, list):
+        return
+    window = [
+        o
+        for o in outcomes
+        if isinstance(o, dict) and float(o.get("ts", 0.0)) > last_throttle_ts
+    ][-12:]
+    if len(window) < 4:
+        return
+    errors = sum(1 for o in window if o.get("status") == "error")
+    retries = sum(1 for o in window if o.get("had_retry"))
+    if errors >= 3 or retries >= 5:
+        new_max = max(min_active, max_active - 3)
+        state["max_active"] = new_max
+        state["last_throttle_ts"] = time.time()
+        events = state.setdefault("throttle_events", [])
+        if isinstance(events, list):
+            events.append(
+                {
+                    "ts": time.time(),
+                    "from": max_active,
+                    "to": new_max,
+                    "window_errors": errors,
+                    "window_retries": retries,
+                }
+            )
+        logger.warning(
+            "Adaptive concurrency stepped down from %s to %s (errors=%s, retries=%s in window=%s)",
+            max_active,
+            new_max,
+            errors,
+            retries,
+            len(window),
+        )
 
 
 def _run_episode(

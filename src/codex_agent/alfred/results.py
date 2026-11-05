@@ -41,12 +41,14 @@ def ingest_run(
     run_id: str,
     metadata: Mapping[str, object],
     attempts: Sequence[EpisodeAttempt],
+    replace_existing: bool = False,
 ) -> None:
     """Atomically insert a run and all attempts without overwriting history.
 
     Metadata must include the caller's code, fold, model, command and artifact
     provenance. Partial runs may contain no attempts if startup failed. A new
-    run_id is required for each recorded invocation or subsequent snapshot.
+    run_id is required for each recorded invocation or subsequent snapshot,
+    unless ``replace_existing=True`` is explicitly used for shard resumption.
     """
     if not run_id.strip():
         raise ValueError("run_id must contain non-whitespace text")
@@ -55,7 +57,7 @@ def ingest_run(
         raise ValueError("attempts contain duplicate episode_id values")
     metadata_json = json.dumps(dict(metadata), sort_keys=True, allow_nan=False)
     database_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(database_path) as connection:
+    with sqlite3.connect(database_path, timeout=60.0) as connection:
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute(
             "CREATE TABLE IF NOT EXISTS runs (run_id TEXT PRIMARY KEY, metadata_json TEXT NOT NULL)"
@@ -69,9 +71,12 @@ def ingest_run(
         if connection.execute(
             "SELECT 1 FROM runs WHERE run_id = ?", (run_id,)
         ).fetchone():
-            raise ValueError(
-                f"run_id={run_id!r} already exists; history cannot be overwritten"
-            )
+            if not replace_existing:
+                raise ValueError(
+                    f"run_id={run_id!r} already exists; history cannot be overwritten"
+                )
+            connection.execute("DELETE FROM attempts WHERE run_id = ?", (run_id,))
+            connection.execute("DELETE FROM runs WHERE run_id = ?", (run_id,))
         connection.execute("INSERT INTO runs VALUES (?, ?)", (run_id, metadata_json))
         connection.executemany(
             "INSERT INTO attempts VALUES (?, ?, ?, ?, ?, ?)",

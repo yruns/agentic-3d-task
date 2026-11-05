@@ -387,6 +387,19 @@ class EpisodeExecutor:
                 frame_feature=frame_feature,
             )
         )
+        for temp_path in (
+            prediction.depth_path,
+            prediction.features_path,
+            *(item.mask_path for item in prediction.detections),
+        ):
+            temp_path.unlink(missing_ok=True)
+        if prediction.depth_model == "simulator_gt":
+            gt_depth_tmp = (
+                observation.rgb_path.resolve().parent.parent
+                / "depths"
+                / f"{observation.frame_id:06d}.npy"
+            )
+            gt_depth_tmp.unlink(missing_ok=True)
         self._current, self._predicted = observation, prediction
         append_jsonl(
             self.output_dir / "observations.jsonl",

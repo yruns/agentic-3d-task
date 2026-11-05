@@ -189,6 +189,61 @@ class PilotSubsetManifest(BaseModel):
         return self
 
 
+class FullValidationManifest(BaseModel):
+    """Official full validation splits (valid_seen + valid_unseen) in oct21 order."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    schema_version: Literal[3] = 3
+    selection: Literal["official_validation_splits_v1"] = (
+        "official_validation_splits_v1"
+    )
+    splits_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    split_counts: dict[ValidationSplit, int]
+    samples: tuple[FoldSample, ...]
+
+    @model_validator(mode="after")
+    def validate_samples(self) -> FullValidationManifest:
+        if not self.samples:
+            raise ValueError("full validation manifest must not be empty")
+        identities = [(s.split, s.task, s.repeat_idx) for s in self.samples]
+        if len(identities) != len(set(identities)):
+            raise ValueError("full validation manifest contains duplicate episodes")
+        for split in VALIDATION_SPLITS:
+            selected = [s for s in self.samples if s.split == split]
+            if len(selected) != self.split_counts.get(split, 0):
+                raise ValueError(
+                    f"full validation {split} count={len(selected)} differs from {self.split_counts}"
+                )
+        return self
+
+
+def create_full_validation_manifest(
+    data_root: Path, splits_path: Path
+) -> FullValidationManifest:
+    """Create the frozen manifest for all official valid_seen and valid_unseen entries."""
+    samples: list[FoldSample] = []
+    split_counts: dict[ValidationSplit, int] = {}
+    for split in VALIDATION_SPLITS:
+        episodes = load_split(data_root, splits_path, split=split)
+        split_counts[split] = len(episodes)
+        for episode in episodes:
+            samples.append(
+                FoldSample(
+                    split=episode.split,
+                    task=episode.task,
+                    repeat_idx=episode.repeat_idx,
+                    task_type=episode.task_type,
+                    trajectory_sha256=episode.trajectory_sha256,
+                )
+            )
+    return FullValidationManifest(
+        splits_sha256=hashlib.sha256(splits_path.read_bytes()).hexdigest(),
+        split_counts=split_counts,
+        samples=tuple(samples),
+    )
+
+
 def create_pilot15_manifest(parent_path: Path, *, seed: int = 0) -> PilotSubsetManifest:
     """Select one parent sample per split/type plus one additional unseen sample.
 
@@ -376,7 +431,7 @@ def load_manifest(
     """Verify frozen selection, official membership, and every trajectory hash."""
     content = path.read_bytes()
     payload = json.loads(content)
-    manifest: PilotManifest | PilotSubsetManifest
+    manifest: PilotManifest | PilotSubsetManifest | FullValidationManifest
     if isinstance(payload, dict) and payload.get("schema_version") == 2:
         subset = PilotSubsetManifest.model_validate_json(content)
         parent_path = path.parent / subset.parent_filename
@@ -387,6 +442,8 @@ def load_manifest(
                 f"{path}: samples differ from deterministic parent selection"
             )
         manifest = subset
+    elif isinstance(payload, dict) and payload.get("schema_version") == 3:
+        manifest = FullValidationManifest.model_validate_json(content)
     else:
         manifest = PilotManifest.model_validate_json(content)
     if manifest.splits_sha256 != hashlib.sha256(splits_path.read_bytes()).hexdigest():

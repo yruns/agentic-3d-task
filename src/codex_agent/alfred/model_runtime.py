@@ -82,7 +82,7 @@ def active_model(model: Any, device: str) -> Iterator[Any]:
     if not already_on_device:
         if device.startswith("cuda") and torch.cuda.is_available():
             free_bytes, _ = torch.cuda.mem_get_info()
-            if free_bytes < 10 * 1024**3:
+            if free_bytes < 3 * 1024**3:
                 staged_for_low_vram = True
         model.to(device)
     try:

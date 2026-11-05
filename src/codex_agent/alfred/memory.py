@@ -1148,7 +1148,7 @@ class IncrementalSceneMemory:
             raise FileExistsError(f"observation artifact already exists: {path}")
         detections = observation.detections
         dimension = len(observation.frame_feature)
-        np.savez(
+        np.savez_compressed(
             path,
             depth_m=observation.depth_m.astype(np.float32),
             intrinsics=observation.intrinsics,
@@ -1186,7 +1186,7 @@ class IncrementalSceneMemory:
         effective_path = frame.geometry_path.with_suffix(".mapping.npz")
         indices = sorted(self.current_detection_masks)
         with effective_path.open("xb") as stream:
-            np.savez(
+            np.savez_compressed(
                 stream,
                 detection_indices=np.array(indices, dtype=np.int64),
                 masks=(

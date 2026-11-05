@@ -139,6 +139,8 @@ class SceneModels:
             rgb, instances
         )
         self.feature_seconds += time.monotonic() - stage
+        if self.config.device == "cuda:0":
+            self.torch.cuda.empty_cache()
         if capped:
             logger.warning(
                 "frame_id=%s discarded=%d reason=max_detections limit=%d",

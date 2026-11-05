@@ -346,3 +346,25 @@ def test_external_source_digest_detects_untracked_python_changes(
     assert before["tracked_diff_sha256"] == after["tracked_diff_sha256"]
     assert before["python_source_sha256"] != after["python_source_sha256"]
     assert after["python_source_count"] == 2
+
+
+def test_continue_on_error_retries_transient_failure_and_tracks_concurrency_state(
+    run_config: alfred_runner.AlfredRunConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dataclasses import replace
+
+    monkeypatch.setattr(alfred_runner.time, "sleep", lambda _: None)
+    _FakeSimulator.fail_instance = 1
+    state_file = run_config.output_dir.parent / "concurrency.json"
+    cfg = replace(
+        run_config,
+        continue_on_error=True,
+        concurrency_state_path=state_file,
+    )
+    summary = alfred_runner.run_validation(cfg)
+    assert summary.selected == 2
+    assert summary.completed == 2
+    assert summary.errors == 0
+    state = json.loads(state_file.read_text())
+    assert len(state["recent_outcomes"]) == 2
+    assert state["recent_outcomes"][0]["had_retry"] is True

@@ -349,6 +349,7 @@ class GroundingDetector:
             "position_ids": position_ids.detach(),
             "text_self_attention_masks": text_self_attention_masks.detach(),
         }
+        model.bert = None
         return {k: v.clone() for k, v in self._cached_text_dict.items()}
 
     def predict(
@@ -433,9 +434,17 @@ class PromptedSegmenter:
 
     def __init__(self, config: ScenePerceptionConfig) -> None:
         module = importlib.import_module("segment_anything")
+        torch = importlib.import_module("torch")
         self.model: Any = module.sam_model_registry[config.sam_model_type](
             checkpoint=str(config.sam_checkpoint)
         ).eval()
+        if (
+            config.device.startswith("cuda")
+            and torch.cuda.is_available()
+            and torch.cuda.is_bf16_supported()
+            and hasattr(self.model, "image_encoder")
+        ):
+            self.model.image_encoder.to(dtype=torch.bfloat16)
         self.predictor: Any = module.SamPredictor(self.model)
         self.device = config.device
 
@@ -547,6 +556,25 @@ class ClipEncoder:
             encoded = torch.nn.functional.normalize(encoded, dim=-1)
             self.text_features = encoded.cpu().numpy().astype(np.float32)
             del tokens, encoded
+        for attr in (
+            "transformer",
+            "token_embedding",
+            "ln_final",
+            "text_projection",
+            "positional_embedding",
+            "attn_mask",
+        ):
+            if hasattr(self.model, attr):
+                delattr(self.model, attr)
+        if (
+            self.device.startswith("cuda")
+            and torch.cuda.is_available()
+            and torch.cuda.is_bf16_supported()
+            and hasattr(self.model, "visual")
+        ):
+            self.model.visual.to(dtype=torch.bfloat16)
+        if self.device.startswith("cuda") and torch.cuda.is_available():
+            torch.cuda.empty_cache()
         self.category_indices = {
             category: index for index, category in enumerate(ALFRED_CATEGORIES)
         }

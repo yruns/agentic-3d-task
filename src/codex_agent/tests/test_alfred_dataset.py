@@ -10,6 +10,7 @@ import pytest
 
 from codex_agent.alfred.dataset import (
     TASK_TYPES,
+    create_full_validation_manifest,
     create_pilot15_manifest,
     create_pilot_manifest,
     load_episode,
@@ -162,3 +163,17 @@ def test_pilot15_rejects_reordered_or_replaced_frozen_selection(tmp_path: Path) 
     path.write_text(json.dumps(payload))
     with pytest.raises(ValueError, match="deterministic parent selection"):
         load_manifest(path, tmp_path, splits)
+
+
+def test_full_validation_manifest_preserves_all_repeat_annotations(
+    tmp_path: Path,
+) -> None:
+    splits = _write_dataset(tmp_path)
+    full = create_full_validation_manifest(tmp_path, splits)
+    assert full.schema_version == 3
+    assert full.split_counts == {"valid_seen": 56, "valid_unseen": 56}
+    assert len(full.samples) == 112
+    path = tmp_path / "valid_full.json"
+    path.write_text(full.model_dump_json())
+    episodes = load_manifest(path, tmp_path, splits)
+    assert len(episodes) == 112
