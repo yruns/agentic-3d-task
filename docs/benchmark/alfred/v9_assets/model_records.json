@@ -1,0 +1,118 @@
+{
+  "groundingdino": {
+    "repo_id": "ShilongLiu/GroundingDINO",
+    "revision": "a94c9b567a2a374598f05c584e96798a170c56fb",
+    "files": {
+      "groundingdino_swint_ogc.pth": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/groundingdino/groundingdino_swint_ogc.pth",
+        "sha256": "3b3ca2563c77c69f651d7bd133e97139c186df06231157a64c507099c52bc799",
+        "bytes": 693997677
+      }
+    }
+  },
+  "bert-base-uncased": {
+    "repo_id": "google-bert/bert-base-uncased",
+    "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+    "files": {
+      "config.json": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/config.json",
+        "sha256": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20",
+        "bytes": 570
+      },
+      "model.safetensors": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/model.safetensors",
+        "sha256": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3",
+        "bytes": 440449768
+      },
+      "tokenizer.json": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/tokenizer.json",
+        "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98",
+        "bytes": 466062
+      },
+      "tokenizer_config.json": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/tokenizer_config.json",
+        "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10",
+        "bytes": 48
+      },
+      "vocab.txt": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/vocab.txt",
+        "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
+        "bytes": 231508
+      },
+      "README.md": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/README.md",
+        "sha256": "9187b6018ea0010d884e78e098e328faa1b88b301570d0cce606bb35e4067e17",
+        "bytes": 10517
+      },
+      "LICENSE": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/LICENSE",
+        "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1",
+        "bytes": 11356
+      }
+    }
+  },
+  "da3metric-large": {
+    "repo_id": "depth-anything/DA3METRIC-LARGE",
+    "revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+    "files": {
+      "config.json": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/config.json",
+        "sha256": "a336f3e76fe375aaae17a9aed9130c9f2aa061535d317ec57dcb2f1f02e1dd53",
+        "bytes": 847
+      },
+      "model.safetensors": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/model.safetensors",
+        "sha256": "bbea5b0b3ee389849cffa7ddae89de064a90abd2b055fc5aa99aac68db324776",
+        "bytes": 1336734448
+      },
+      "README.md": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/README.md",
+        "sha256": "4fdd25492cf6401d1459483fd829f6abb399bda8218e1a3ef5ad4a66e9aa5a2a",
+        "bytes": 4789
+      }
+    }
+  },
+  "unidepth-v2-vitl14": {
+    "repo_id": "lpiccinelli/unidepth-v2-vitl14",
+    "revision": "52b349b514bd8b47642f67ac78cb7b5dc5c51dd9",
+    "files": {
+      "config.json": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/unidepth-v2-vitl14/config.json",
+        "sha256": "09eb0ea8de53a6c9a1d428ac98c79847fe2602ea417701261f3f628099a30816",
+        "bytes": 3848
+      },
+      "model.safetensors": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/unidepth-v2-vitl14/model.safetensors",
+        "sha256": "ba73d3de735302ccc64a50f1e557122050c4b1893e6060b28dba05d6af3e67c6",
+        "bytes": 1415383604
+      },
+      "README.md": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/unidepth-v2-vitl14/README.md",
+        "sha256": "56b1da4f52d78fd22d6191aa40b6e59223072e32393907494c31aff7b57ba3be",
+        "bytes": 397
+      }
+    }
+  },
+  "sam": {
+    "url": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth",
+    "files": {
+      "sam_vit_h_4b8939.pth": {
+        "path": "/home/ysh/Models/agentic3d/models/alfred_vision/sam/sam_vit_h_4b8939.pth",
+        "sha256": "a7bf3b02f3ebf1267aba913ff637d9a2d5c33d3173bb679e46d9f338c26f262e",
+        "bytes": 2564550879
+      }
+    }
+  },
+  "openclip": {
+    "architecture": "ViT-H-14",
+    "pretrained": "laion2b_s32b_b79k",
+    "source": "existing shared checkpoint",
+    "files": {
+      "open_clip_model.safetensors": {
+        "path": "/home/ysh/Models/agentic3d/models/CLIP-ViT-H-14-laion2B-s32B-b79K/open_clip_model.safetensors",
+        "sha256": "0084e75319a50ad85ef45377bad5bc38f2f58824459eb690048d51c9f8863be5",
+        "bytes": 3944517836
+      }
+    }
+  }
+}

@@ -19,6 +19,9 @@ Future rows must report seen and unseen separately and use the frozen fold,
 matching language inputs, perception models, action interface and budgets.
 See the [protocol and metric definitions](README.md).
 
+The [v9 rewrite](v9_online_mapping_20261105.md) uses frozen pilot15 and has no
+scored results yet. A future comparison must restrict v8 to those same identities.
+
 ## Diagnostic attempts
 
 The [two failed recovery rounds](v7_recovery_failures_20261105.md) added six

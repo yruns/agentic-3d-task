@@ -66,6 +66,13 @@ clip = [
 codex = [
     "openai-codex>=0.163.0",
 ]
+alfred = [
+    "scikit-fmm==2025.6.23",
+    "safetensors>=0.4,<1",
+    "einops>=0.7,<1",
+    # Detector, SAM and depth sources/checkpoints are pinned externally; see
+    # docs/codex_agent/alfred.md. Do not install their training dependency stacks.
+]
 
 [project.urls]
 "Homepage" = "https://github.com/research/3DVLMReasoning"

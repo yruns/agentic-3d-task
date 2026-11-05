@@ -1,286 +1,265 @@
-"""Standalone Python 3.8 bridge to FILM's published perception architectures.
-
-Launch by absolute file path in the configured FILM interpreter. The optional
-torch/FILM dependencies are deliberately confined to this process. Dynamic model
-values use Any at this external framework boundary, never in the actor API.
-"""
+"""JSONL entrypoint for fixed-vocabulary local RGB scene perception."""
 
 from __future__ import annotations
 
-import argparse
 import contextlib
 import importlib
 import json
-import math
+import logging
 import sys
 import time
 import traceback
-from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
-from unittest.mock import patch
 
-if TYPE_CHECKING:
-    import numpy as np
-    from numpy.typing import NDArray
+import numpy as np
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
+from .depth_models import DA3MetricDepth, validate_intrinsics
+from .model_runtime import gpu_file_lock
+from .perception import (
+    PERCEPTION_PROFILE,
+    PerceptionDetection,
+    PerceptionDiagnostics,
+    PerceptionObservation,
+    PerceptionRuntimeStats,
+    ScenePerceptionConfig,
+    validate_prediction_artifacts,
+)
+from .provenance import capture_runtime_provenance
+from .vision_models import ClipEncoder, GroundingDetector, PromptedSegmenter
+from .vocabulary import ALFRED_CATEGORIES, detection_batches, vocabulary_sha256
 
-def prepare_model_images(
-    rgb: NDArray[np.uint8],
-) -> tuple[NDArray[np.uint8], NDArray[np.uint8]]:
-    """Return detector RGB and depth BGR without modifying the source image.
-
-    FILM's Mask R-CNN helper uses simulator RGB directly, whereas its released
-    depth inference explicitly converts RGB to BGR. Both arrays are contiguous
-    because torch.from_numpy cannot consume the reversed channel view's strides.
-    """
-    import numpy as np
-
-    if rgb.dtype != np.uint8 or rgb.ndim != 3 or rgb.shape[2] != 3:
-        raise ValueError("model image input must be uint8 HxWx3 RGB")
-    return np.ascontiguousarray(rgb), np.ascontiguousarray(rgb[:, :, ::-1])
+logger = logging.getLogger(__name__)
 
 
-def normalize_horizon_degrees(horizon_degrees: float) -> float:
-    """Clamp only Unity's sub-millidegree roundoff at the camera pitch limits."""
-    tolerance = 1e-3
-    if (
-        not math.isfinite(horizon_degrees)
-        or not -30 - tolerance <= horizon_degrees <= 60 + tolerance
-    ):
-        raise ValueError(f"horizon_degrees={horizon_degrees!r} must be in [-30, 60]")
-    return min(60.0, max(-30.0, horizon_degrees))
+class PredictionRequest(BaseModel):
+    """Only observed RGB and calibrated intrinsics may enter the neural worker."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
+    command: str
+    rgb_path: Path
+    frame_id: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
+    intrinsics: tuple[
+        tuple[float, float, float],
+        tuple[float, float, float],
+        tuple[float, float, float],
+    ]
+    output_dir: Path
 
 
-def choose_depth_view(horizon_degrees: float) -> Literal["level", "downward"]:
-    """Select the nearest released 0-degree or 45-degree checkpoint."""
-    horizon_degrees = normalize_horizon_degrees(horizon_degrees)
-    return "level" if abs(horizon_degrees) <= abs(horizon_degrees - 45) else "downward"
+class SceneModels:
+    """Load neural models once, executing each stage with bounded GPU residency."""
 
-
-def normalize_depth_state(state: Mapping[str, Any]) -> dict[str, Any]:
-    """Remove the released DataParallel prefix without truncating arbitrary keys."""
-    if not state or any(not key.startswith("module.") for key in state):
-        raise ValueError("FILM depth checkpoint keys must have the 'module.' prefix")
-    return {key[len("module.") :]: value for key, value in state.items()}
-
-
-class FilmModels:
-    """Loaded ALFRED-trained depth and two instance segmentation networks."""
-
-    def __init__(self, args: argparse.Namespace) -> None:
+    def __init__(self, config: ScenePerceptionConfig) -> None:
         started = time.monotonic()
-        sys.path.insert(0, str(Path(args.film_root).resolve()))
+        self.config = config
         self.torch = importlib.import_module("torch")
-        self.numpy = importlib.import_module("numpy")
-        self.image = importlib.import_module("PIL.Image")
-        torchvision = importlib.import_module("torchvision")
-        depth_module = importlib.import_module("models.depth.alfred_perception_models")
-        segmentation = importlib.import_module("models.segmentation.alfworld_mrcnn")
-        labels = importlib.import_module("models.segmentation.alfworld_constants")
-        self.device = self.torch.device(args.device)
         self.torch.set_num_threads(1)
         self.torch.set_grad_enabled(False)
-        self.score_threshold = args.score_threshold
-        self.mask_threshold = args.mask_threshold
-        root = Path(args.weights_root)
-        self.detectors: list[tuple[Any, list[str]]] = []
-        constructor = torchvision.models.detection.maskrcnn_resnet50_fpn
-
-        def offline_constructor(*positional: Any, **keywords: Any) -> Any:
-            # The released helper requests COCO initialization before replacing
-            # every weight. Suppress those unnecessary downloads explicitly.
-            keywords.pop("pretrained", None)
-            keywords.pop("pretrained_backbone", None)
-            keywords.update(weights=None, weights_backbone=None)
-            return constructor(*positional, **keywords)
-
-        with patch.object(
-            torchvision.models.detection, "maskrcnn_resnet50_fpn", offline_constructor
-        ):
-            for kind, filename, categories in (
-                ("obj", "objects_lr5e-3_005.pth", labels.OBJECTS_DETECTOR),
-                ("recep", "receps_lr5e-3_003.pth", labels.STATIC_RECEPTACLES),
-            ):
-                model = (
-                    segmentation.load_pretrained_model(
-                        str(root / "maskrcnn_alfworld" / filename), self.device, kind
-                    )
-                    .eval()
-                    .to(self.device)
-                )
-                self.detectors.append((model, list(categories)))
-        self.depth_models: dict[str, Any] = {}
-        for view, filename in (
-            ("level", "valts0/model-102500-best_silog_17.00430"),
-            ("downward", "valts/model-2000-best_silog_10.13741"),
-        ):
-            checkpoint = self.torch.load(
-                str(root / "depth_models" / filename), map_location="cpu"
-            )
-            model = depth_module.AlfredSegmentationAndDepthModel()
-            model.load_state_dict(
-                normalize_depth_state(checkpoint["model"]), strict=True
-            )
-            self.depth_models[view] = model.eval().to(self.device)
-        if self.device.type == "cuda":
-            self.torch.cuda.synchronize(self.device)
+        if config.device == "cuda:0":
+            if not self.torch.cuda.is_available():
+                raise RuntimeError("device=cuda:0 requested but CUDA is unavailable")
+            self.torch.cuda.reset_peak_memory_stats()
+        self.depth = DA3MetricDepth(config.depth_model_dir, device=config.device)
+        self.detector = GroundingDetector(config)
+        self.segmenter = PromptedSegmenter(config)
+        self.features = ClipEncoder(config)
         self.load_seconds = time.monotonic() - started
         self.inference_seconds = 0.0
+        self.depth_seconds = 0.0
+        self.detection_seconds = 0.0
+        self.segmentation_seconds = 0.0
+        self.feature_seconds = 0.0
         self.frames = 0
+        self.gpu_wait_seconds = 0.0
+        self.capped_detections = 0
+        self.nms_suppressed = 0
+        self.empty_masks = 0
 
-    def predict(self, request: dict[str, object]) -> dict[str, object]:
-        """Write independent depth/instance predictions from RGB to the output folder."""
-        import re
+    def predict(self, request: PredictionRequest) -> PerceptionObservation:
+        """Hold the shared ALFRED lock for the complete GPU prediction pipeline."""
+        with gpu_file_lock(
+            self.config.gpu_lock_path, timeout_seconds=self.config.timeout_seconds
+        ) as waited:
+            self.gpu_wait_seconds += waited
+            return self._predict_frame(request)
+
+    def _predict_frame(self, request: PredictionRequest) -> PerceptionObservation:
+        """Write one frame's predicted geometry and aligned CLIP evidence."""
+        from PIL import Image
 
         started = time.monotonic()
-        frame_id = request["frame_id"]
-        if not isinstance(frame_id, str) or not re.fullmatch(
-            r"[A-Za-z0-9_-]+", frame_id
-        ):
-            raise ValueError("frame_id must be a safe filename component")
-        horizon = request["horizon_degrees"]
-        if not isinstance(horizon, (int, float)) or isinstance(horizon, bool):
-            raise ValueError("horizon_degrees must be numeric")
-        view = choose_depth_view(horizon)
-        rgb_path, output = request["rgb_path"], request["output_dir"]
-        if not isinstance(rgb_path, str) or not isinstance(output, str):
-            raise ValueError("rgb_path and output_dir must be strings")
-        with self.image.open(rgb_path) as image:
-            if image.size != (300, 300) or image.mode != "RGB":
-                raise ValueError("FILM perception requires a 300x300 RGB image")
-            rgb = self.numpy.array(image)
-        detector_rgb, depth_bgr = prepare_model_images(rgb)
-        detector_tensor = (
-            self.torch.from_numpy(detector_rgb).permute(2, 0, 1).float().to(self.device)
-            / 255
+        with Image.open(request.rgb_path) as image:
+            if image.mode != "RGB" or min(image.size) < 2:
+                raise ValueError("rgb_path must be a valid RGB image")
+            rgb = np.array(image, dtype=np.uint8)
+        intrinsics = validate_intrinsics(
+            np.asarray(request.intrinsics, dtype=np.float32)
         )
-        depth_tensor = (
-            self.torch.from_numpy(depth_bgr).permute(2, 0, 1).float().to(self.device)
-            / 255
-        )
-        output_dir = Path(output).absolute()
+        output_dir = request.output_dir.absolute()
         output_dir.mkdir(parents=True, exist_ok=True)
-        depth_path = output_dir / (frame_id + "_depth.npy")
-        if depth_path.exists():
-            raise FileExistsError("prediction already exists: " + str(depth_path))
-        with self.torch.inference_mode():
-            _, estimate = self.depth_models[view].predict(depth_tensor.unsqueeze(0))
-            depth = estimate.mle()[0, 0].cpu().numpy().astype(self.numpy.float32)
-            if not self.numpy.isfinite(depth).all():
-                raise ValueError("depth network returned nonfinite metric depth")
-            self.numpy.save(str(depth_path), depth, allow_pickle=False)
-            detections: list[dict[str, object]] = []
-            for detector, categories in self.detectors:
-                prediction = detector([detector_tensor])[0]
-                detections.extend(
-                    self._save_detections(
-                        prediction, categories, output_dir, frame_id, len(detections)
-                    )
+        depth_path = output_dir / f"{request.frame_id}_depth.npy"
+        features_path = output_dir / f"{request.frame_id}_features.npz"
+        if (
+            depth_path.exists()
+            or features_path.exists()
+            or any(output_dir.glob(f"{request.frame_id}_mask_*.npy"))
+        ):
+            raise FileExistsError(
+                f"prediction artifacts already exist: frame_id={request.frame_id}"
+            )
+        stage = time.monotonic()
+        depth = self.depth.predict(rgb, intrinsics)
+        self.depth_seconds += time.monotonic() - stage
+        stage = time.monotonic()
+        boxes, candidates, suppressed, capped = self.detector.predict(rgb)
+        self.detection_seconds += time.monotonic() - stage
+        stage = time.monotonic()
+        instances, empty = self.segmenter.predict(rgb, boxes)
+        self.segmentation_seconds += time.monotonic() - stage
+        stage = time.monotonic()
+        image_features, text_features, frame_feature = self.features.predict(
+            rgb, instances
+        )
+        self.feature_seconds += time.monotonic() - stage
+        if capped:
+            logger.warning(
+                "frame_id=%s discarded=%d reason=max_detections limit=%d",
+                request.frame_id,
+                capped,
+                self.config.max_detections,
+            )
+        logger.info(
+            "frame_id=%s classes=%d candidates=%d suppressed=%d capped=%d empty_masks=%d retained=%d",
+            request.frame_id,
+            len(ALFRED_CATEGORIES),
+            candidates,
+            suppressed,
+            capped,
+            empty,
+            len(instances),
+        )
+        with depth_path.open("xb") as stream:
+            np.save(stream, depth, allow_pickle=False)
+        with features_path.open("xb") as stream:
+            np.savez_compressed(
+                stream,
+                image_features=image_features,
+                text_features=text_features,
+                frame_feature=frame_feature,
+            )
+        detections: list[PerceptionDetection] = []
+        for index, instance in enumerate(instances):
+            mask_path = output_dir / f"{request.frame_id}_mask_{index:03d}.npy"
+            mask = instance.mask.astype(np.uint8)
+            with mask_path.open("xb") as stream:
+                np.save(stream, mask, allow_pickle=False)
+            detections.append(
+                PerceptionDetection(
+                    category=instance.category,
+                    mask_path=mask_path,
+                    bbox_xyxy=instance.bbox_xyxy,
+                    confidence=instance.confidence,
                 )
-        self.inference_seconds += time.monotonic() - started
+            )
+        observation = PerceptionObservation(
+            frame_id=request.frame_id,
+            depth_path=depth_path,
+            depth_model="da3metric-large",
+            image_width=rgb.shape[1],
+            image_height=rgb.shape[0],
+            features_path=features_path,
+            detections=tuple(detections),
+            diagnostics=PerceptionDiagnostics(
+                vocabulary_categories=len(ALFRED_CATEGORIES),
+                caption_batches=len(detection_batches(self.config.caption_batch_size)),
+                candidate_boxes=candidates,
+                nms_suppressed=suppressed,
+                capped_detections=capped,
+                empty_masks=empty,
+            ),
+        )
+        validate_prediction_artifacts(observation, output_dir=output_dir)
         self.frames += 1
-        return {
-            "frame_id": frame_id,
-            "depth_path": str(depth_path),
-            "depth_model": view,
-            "detections": detections,
-        }
+        self.capped_detections += capped
+        self.nms_suppressed += suppressed
+        self.empty_masks += empty
+        self.inference_seconds += time.monotonic() - started
+        return observation
 
-    def statistics(self) -> dict[str, object]:
-        """Return timing and peak device allocation without exposing model state."""
-        return {
-            "load_seconds": self.load_seconds,
-            "inference_seconds": self.inference_seconds,
-            "frames": self.frames,
-            "peak_cuda_memory_bytes": (
-                int(self.torch.cuda.max_memory_allocated(self.device))
-                if self.device.type == "cuda"
+    def statistics(self) -> PerceptionRuntimeStats:
+        """Expose actual model-stage timings and suppression counts."""
+        return PerceptionRuntimeStats(
+            load_seconds=self.load_seconds,
+            inference_seconds=self.inference_seconds,
+            frames=self.frames,
+            peak_cuda_memory_bytes=(
+                int(self.torch.cuda.max_memory_allocated())
+                if self.config.device == "cuda:0"
                 else 0
             ),
-            "device": str(self.device),
-        }
-
-    def _save_detections(
-        self,
-        prediction: Any,
-        categories: list[str],
-        output_dir: Path,
-        frame_id: str,
-        first_index: int,
-    ) -> list[dict[str, object]]:
-        detections: list[dict[str, object]] = []
-        for index, score in enumerate(prediction["scores"]):
-            confidence = float(score.item())
-            if not math.isfinite(confidence):
-                raise ValueError("instance network returned a nonfinite score")
-            if confidence < self.score_threshold:
-                continue
-            label = int(prediction["labels"][index].item())
-            if not 0 <= label < len(categories):
-                raise ValueError(f"predicted class index={label} has no FILM category")
-            probabilities = prediction["masks"][index, 0].cpu().numpy()
-            if not self.numpy.isfinite(probabilities).all():
-                raise ValueError("instance network returned a nonfinite mask")
-            mask = (probabilities >= self.mask_threshold).astype(self.numpy.uint8)
-            rows, columns = self.numpy.nonzero(mask)
-            if rows.size == 0:
-                continue
-            bbox = [
-                int(columns.min()),
-                int(rows.min()),
-                int(columns.max()) + 1,
-                int(rows.max()) + 1,
-            ]
-            mask_path = (
-                output_dir / f"{frame_id}_mask_{first_index + len(detections):03d}.npy"
-            )
-            self.numpy.save(str(mask_path), mask, allow_pickle=False)
-            detections.append(
-                {
-                    "category": categories[label],
-                    "mask_path": str(mask_path),
-                    "bbox_xyxy": bbox,
-                    "confidence": confidence,
-                }
-            )
-        return detections
+            device=self.config.device,
+            depth_seconds=self.depth_seconds,
+            detection_seconds=self.detection_seconds,
+            segmentation_seconds=self.segmentation_seconds,
+            feature_seconds=self.feature_seconds,
+            capped_detections=self.capped_detections,
+            nms_suppressed=self.nms_suppressed,
+            empty_masks=self.empty_masks,
+            gpu_wait_seconds=self.gpu_wait_seconds,
+            residency="sequential_cpu_offload",
+        )
 
 
 def main() -> None:
-    """Serve JSONL requests; unexpected failures are reported and terminate worker."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--film-root", required=True)
-    parser.add_argument("--weights-root", required=True)
-    parser.add_argument("--device", choices=("cuda:0", "cpu"), required=True)
-    parser.add_argument("--score-threshold", type=float, required=True)
-    parser.add_argument("--mask-threshold", type=float, required=True)
-    args = parser.parse_args()
-    models: FilmModels | None = None
+    """Serve JSONL only on stdout; any prediction failure terminates the worker."""
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+    models: SceneModels | None = None
     protocol_stdout = sys.stdout
     for line in sys.stdin:
         try:
             with contextlib.redirect_stdout(sys.stderr):
                 request = json.loads(line)
                 if not isinstance(request, dict):
-                    raise ValueError("request must be a JSON object")
+                    raise ValueError("perception request must be a JSON object")
                 command = request.get("command")
-                if command == "close":
+                if command == "close" and set(request) == {"command"}:
                     break
-                if command == "initialize":
+                if command == "initialize" and set(request) == {"command", "config"}:
                     if models is not None:
                         raise ValueError("perception models are already initialized")
-                    models = FilmModels(args)
-                    result: dict[str, object] = {"backend": "film_predicted_rgb_v1"}
+                    configuration = TypeAdapter(ScenePerceptionConfig).validate_python(
+                        request["config"]
+                    )
+                    with gpu_file_lock(
+                        configuration.gpu_lock_path,
+                        timeout_seconds=configuration.timeout_seconds,
+                    ) as waited:
+                        models = SceneModels(configuration)
+                        models.gpu_wait_seconds += waited
+                    result: dict[str, object] = {
+                        "backend": PERCEPTION_PROFILE,
+                        "vocabulary_sha256": vocabulary_sha256(),
+                        "runtime_provenance": capture_runtime_provenance(
+                            model_worker=True
+                        ).model_dump(mode="json"),
+                    }
                 elif command == "predict" and models is not None:
-                    result = models.predict(request)
-                elif command == "statistics" and models is not None:
-                    result = models.statistics()
+                    result = models.predict(
+                        PredictionRequest.model_validate(request)
+                    ).model_dump(mode="json")
+                elif (
+                    command == "statistics"
+                    and models is not None
+                    and set(request) == {"command"}
+                ):
+                    result = models.statistics().model_dump(mode="json")
                 else:
                     raise ValueError(f"unexpected perception command={command!r}")
             response = {"ok": True, "result": result}
         except Exception as exc:
-            # Process boundary: report failure and exit, never substitute models.
+            # External process boundary: preserve a visible failure; never retry
+            # with a different model or invent empty predictions.
             traceback.print_exc(file=sys.stderr)
             protocol_stdout.write(
                 json.dumps(

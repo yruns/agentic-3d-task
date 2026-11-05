@@ -54,6 +54,7 @@ def _decision(command: dict[str, object]) -> AlfredDecision:
             ("retrieve", None, None, [1, 2], 1),
         ),
         ({"kind": "stop"}, ("stop", None, None, None, 1)),
+        ({"kind": "explore"}, ("explore", None, None, None, 1)),
     ],
 )
 def test_commands_preserve_executor_interface(
@@ -104,6 +105,7 @@ def test_commands_preserve_executor_interface(
             "target": {"type": "cell", "object_id": 22, "cell": [5, -5]},
         },
         {"kind": "navigate", "target": None},
+        {"kind": "explore", "target": {"type": "cell", "cell": [1, 2]}},
         {"kind": "stop", "target": {"type": "object", "object_id": 22}},
     ],
 )
@@ -194,7 +196,7 @@ def test_actor_wire_schema_is_flat_and_has_no_union_or_reference_keywords(
     assert schema["type"] == "object"
     assert schema["additionalProperties"] is False
     assert set(schema["required"]) == set(schema["properties"])
-    assert len(schema["properties"]["operation"]["enum"]) == 17
+    assert len(schema["properties"]["operation"]["enum"]) == 18
     for field in schema["properties"].values():
         assert field["type"] in {"string", "integer"}
     encoded = json.dumps(schema)
@@ -222,6 +224,7 @@ def test_actor_wire_schema_is_flat_and_has_no_union_or_reference_keywords(
         "RetrieveObject",
         "RetrieveCell",
         "Stop",
+        "Explore",
     ],
 )
 def test_all_wire_operations_round_trip_without_changing_selected_command(
@@ -246,6 +249,7 @@ def test_all_wire_operations_round_trip_without_changing_selected_command(
         ("PickupObject", ("act", "PickupObject", 22, None, 1)),
         ("RotateLeft", ("act", "RotateLeft", None, None, 7)),
         ("Stop", ("stop", None, None, None, 1)),
+        ("Explore", ("explore", None, None, None, 1)),
     ],
 )
 def test_operation_explicitly_selects_parameters_and_ignores_unused_fields(

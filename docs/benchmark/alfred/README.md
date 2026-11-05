@@ -11,6 +11,10 @@ the same configuration. All 50 saved terminal scores passed independent
 rechecking. [v7](v7_recovery_failures_20261105.md) preserves the unsuccessful
 recovery attempts separately; none became synthetic zero-score tasks.
 
+The new online OpenEQA mapping experiment uses a separate frozen **pilot15**
+(7 seen + 8 unseen); see [v9 protocol and status](v9_online_mapping_20261105.md).
+Old v8 scores are not scores of the new implementation.
+
 ## Protocol
 
 ALFRED's official `oct21.json` has 820 `valid_seen` and 821 `valid_unseen`
@@ -74,6 +78,7 @@ every episode attempt without overwriting old run IDs.
 
 | Record | Date | Scope | Result |
 |---|---|---|---|
+| [v9 online mapping](v9_online_mapping_20261105.md) | 2026-11-05 | New mapper, train-only depth comparison, frozen pilot15 | Implementation validation in progress; no task scores yet |
 | [v8 completed pilot50](v8_pilot50_complete_20261105.md) | 2026-11-05 | Original41 + nine unchanged-configuration recoveries | 50/50 scored, 5 successes; SR 10.00%, GC 15.87%; independent scores 50/50 agree |
 | [v7 failed recovery rounds](v7_recovery_failures_20261105.md) | 2026-11-05 | Two recovery rounds; three unscored attempts each | No new scores; nine historical error attempts retained across five identities |
 | [v6 partial pilot and upstream outage](v6_upstream_outage_20261105.md) | 2026-11-05 | Frozen50, predicted perception, H input | 41/50 scored, 5 successes; 3 upstream errors and 6 pending; 41/41 independent score checks agree |

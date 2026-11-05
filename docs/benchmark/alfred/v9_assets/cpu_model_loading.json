@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "scope": "CPU model checkpoint/architecture loading; not an ALFRED task evaluation",
+  "status": "passed",
+  "model_count": 5,
+  "models": [
+    {
+      "model": "sam1",
+      "status": "loaded",
+      "seconds": 4.084294182248414,
+      "parameters": 641090608,
+      "parameter_devices": [
+        "cpu"
+      ]
+    },
+    {
+      "model": "open_clip",
+      "status": "loaded",
+      "seconds": 35.57904268335551,
+      "parameters": 986109441,
+      "parameter_devices": [
+        "cpu"
+      ]
+    },
+    {
+      "model": "da3metric-large",
+      "status": "loaded",
+      "seconds": 1.3453448954969645,
+      "parameters": 334171394,
+      "parameter_devices": [
+        "cpu"
+      ]
+    },
+    {
+      "model": "unidepth-v2-vitl14",
+      "status": "loaded",
+      "seconds": 2.737200320698321,
+      "parameters": 353831043,
+      "parameter_devices": [
+        "cpu"
+      ]
+    },
+    {
+      "model": "groundingdino",
+      "status": "loaded",
+      "seconds": 3.7294270722195506,
+      "parameters": 172839682,
+      "parameter_devices": [
+        "cpu"
+      ]
+    }
+  ],
+  "torch": "2.8.0+cu126",
+  "cuda_visible_devices": "",
+  "memory_policy": "models loaded sequentially, deleted and garbage-collected after each check",
+  "strict_inference_weights": true,
+  "verified_dino_noninference_entries": {
+    "module.label_enc.weight": {
+      "shape": [
+        2001,
+        256
+      ],
+      "dtype": "torch.float32"
+    },
+    "module.bert.embeddings.position_ids": {
+      "shape": [
+        1,
+        512
+      ],
+      "dtype": "torch.int64"
+    }
+  },
+  "dino_migration": "Only the verified training-only 2001x256 label_enc table and deterministic arange(512) position-ID buffer are removed; all inference parameters load with strict=True. Unknown or missing inference keys fail.",
+  "failed_attempts_preserved": [
+    {
+      "attempt": 1,
+      "model": "groundingdino",
+      "status": "error",
+      "seconds": 4.117436173371971,
+      "error_type": "ValueError",
+      "error": "GroundingDINO checkpoint mismatch: _IncompatibleKeys(missing_keys=[], unexpected_keys=['label_enc.weight', 'bert.embeddings.position_ids'])"
+    },
+    {
+      "attempt": 2,
+      "model": "groundingdino",
+      "status": "error",
+      "seconds": 3.9331770380958915,
+      "error_type": "ValueError",
+      "error": "GroundingDINO training label embedding shape mismatch"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "tmp/alfred_v9/cpu_load_models_attempt1.json",
+      "sha256": "c508ae1ed2bc5ac67161577484eb14f8409fccbea0278dcc163a6c7ef9345e18"
+    },
+    {
+      "path": "tmp/alfred_v9/cpu_load_models_attempt1.log",
+      "sha256": "e3d78820eb54e228b5a87beae701e7143e731fb59fe47c698fb14fcad3e4c48f"
+    },
+    {
+      "path": "tmp/alfred_v9/cpu_load_models_attempt2.json",
+      "sha256": "48fb29527fec02681fdb011eb1cb0a2c4a693f820e74a936af3ce1c1a1b9fd3d"
+    },
+    {
+      "path": "tmp/alfred_v9/cpu_load_models_attempt2.log",
+      "sha256": "e2eb2468e3440eb69067e1eaca62b913a48ac4d8e7b071729ab1eaa5f5b6e3cd"
+    },
+    {
+      "path": "tmp/alfred_v9/cpu_load_models_attempt3.json",
+      "sha256": "885aec7a1a93cd697e63e2debc8f1e4afe8802ef2769dd3d87c38fb1321bc28c"
+    },
+    {
+      "path": "tmp/alfred_v9/cpu_load_models_attempt3.log",
+      "sha256": "7ae1d25b2217b99567d13270383a2a62c88b871977565c79e8863a8ffd513686"
+    }
+  ],
+  "limitations": [
+    "No real-image depth accuracy test",
+    "No GPU forward or peak GPU memory measurement",
+    "No benchmark task score"
+  ]
+}

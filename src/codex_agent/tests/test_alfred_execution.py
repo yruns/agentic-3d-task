@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TypeVar
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 from PIL import Image
 
 from codex_agent.alfred.dataset import AlfredInstruction
@@ -16,9 +18,15 @@ from codex_agent.alfred.execution import (
     ExecutionConfig,
     ExecutionOutcome,
 )
-from codex_agent.alfred.perception import PerceptionDetection, PerceptionObservation
+from codex_agent.alfred.memory import MappingConfig, MemoryConfig
+from codex_agent.alfred.perception import (
+    PerceptionDetection,
+    PerceptionDiagnostics,
+    PerceptionObservation,
+)
 from codex_agent.alfred.policy import AlfredDecision, AlfredPolicyTask
 from codex_agent.alfred.simulator import SimulatorObservation
+from codex_agent.alfred.vocabulary import ALFRED_CATEGORIES, detection_batches
 from codex_agent.models import CodexTaskResult, CodexTurnMetadata, CodexTurnResult
 from codex_agent.tasks.base import CodexTask
 
@@ -39,6 +47,7 @@ class FakeEnvironment:
         self.root.mkdir()
         self.successes = successes
         self.yaw_degrees = yaw_degrees
+        self.horizon_degrees = 0.0
         self.frame_id = 0
         self.calls: list[tuple[str, Path | None]] = []
         self.score_calls = 0
@@ -51,7 +60,7 @@ class FakeEnvironment:
             frame_id=self.frame_id,
             rgb_path=path,
             yaw_degrees=self.yaw_degrees,
-            horizon_degrees=0,
+            horizon_degrees=self.horizon_degrees,
             last_action_success=success,
             last_action_error="" if success else "Action blocked",
         )
@@ -66,6 +75,10 @@ class FakeEnvironment:
             self.yaw_degrees = (self.yaw_degrees + 90) % 360
         if success and action == "RotateLeft":
             self.yaw_degrees = (self.yaw_degrees - 90) % 360
+        if success and action == "LookDown":
+            self.horizon_degrees = min(60.0, self.horizon_degrees + 30)
+        if success and action == "LookUp":
+            self.horizon_degrees = max(-30.0, self.horizon_degrees - 30)
         self.frame_id += 1
         return self.observe(success=success)
 
@@ -77,19 +90,36 @@ class FakeEnvironment:
 class FakePerception:
     """Supply current-frame arrays while recording exactly which frames were read."""
 
-    def __init__(self, *, visible_frames: set[int] | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        visible_frames: set[int] | None = None,
+        features_by_frame: Mapping[int, tuple[float, float, float]] | None = None,
+        include_container: bool = False,
+    ) -> None:
         self.visible_frames = visible_frames
+        self.features_by_frame = features_by_frame or {}
+        self.include_container = include_container
         self.frames: list[int] = []
 
     def predict(
-        self, rgb_path: Path, *, frame_id: str, horizon_degrees: float, output_dir: Path
+        self,
+        rgb_path: Path,
+        *,
+        frame_id: str,
+        intrinsics: NDArray[np.float64],
+        output_dir: Path,
     ) -> PerceptionObservation:
         assert rgb_path.is_file()
+        assert intrinsics.shape == (3, 3)
         index = int(frame_id)
         self.frames.append(index)
         output_dir.mkdir(parents=True, exist_ok=True)
         depth_path = output_dir / f"depth_{index}.npy"
-        np.save(depth_path, np.full((300, 300), 2.0, dtype=np.float32))
+        np.save(
+            depth_path,
+            np.full((300, 300), max(0.75, 2.0 - index * 0.25), dtype=np.float32),
+        )
         detections: tuple[PerceptionDetection, ...] = ()
         if self.visible_frames is None or index in self.visible_frames:
             mask_path = output_dir / f"mask_{index}.npy"
@@ -104,11 +134,48 @@ class FakePerception:
                     confidence=0.9,
                 ),
             )
+            if self.include_container:
+                container_path = output_dir / f"container_{index}.npy"
+                container_mask = np.zeros_like(mask)
+                container_mask[90:210, 90:210] = 1
+                np.save(container_path, container_mask)
+                detections = (
+                    PerceptionDetection(
+                        category="Cabinet",
+                        mask_path=container_path,
+                        bbox_xyxy=(90, 90, 210, 210),
+                        confidence=0.95,
+                    ),
+                    *detections,
+                )
+        features_path = output_dir / f"features_{index}.npz"
+        feature = np.asarray(
+            self.features_by_frame.get(index, (1.0, 0.0, 0.0)), dtype=np.float32
+        )
+        np.savez(
+            features_path,
+            frame_feature=feature,
+            image_features=np.tile(feature, (len(detections), 1)),
+            text_features=np.tile(
+                np.array([1.0, 0.0, 0.0], dtype=np.float32), (len(detections), 1)
+            ),
+        )
         return PerceptionObservation(
             frame_id=frame_id,
             depth_path=depth_path,
-            depth_model="level",
+            depth_model="da3metric-large",
+            image_width=300,
+            image_height=300,
+            features_path=features_path,
             detections=detections,
+            diagnostics=PerceptionDiagnostics(
+                vocabulary_categories=len(ALFRED_CATEGORIES),
+                caption_batches=len(detection_batches(24)),
+                candidate_boxes=len(detections),
+                nms_suppressed=0,
+                capped_detections=0,
+                empty_masks=0,
+            ),
         )
 
 
@@ -163,15 +230,20 @@ def _executor(
     visible_frames: set[int] | None = None,
     successes: Sequence[bool] = (),
     yaw_degrees: float = 0.0,
+    memory_config: MemoryConfig | None = None,
+    features_by_frame: Mapping[int, tuple[float, float, float]] | None = None,
 ) -> EpisodeExecutor:
     return EpisodeExecutor(
         environment=FakeEnvironment(
             tmp_path / "simulator", successes=successes, yaw_degrees=yaw_degrees
         ),
-        perception=FakePerception(visible_frames=visible_frames),
+        perception=FakePerception(
+            visible_frames=visible_frames, features_by_frame=features_by_frame
+        ),
         runtime=FakeRuntime(decisions),
         output_dir=tmp_path / "episode",
         config=config if config is not None else ExecutionConfig(),
+        memory_config=memory_config if memory_config is not None else MemoryConfig(),
     )
 
 
@@ -226,8 +298,136 @@ def test_interaction_uses_reobserved_mask_after_movement(tmp_path: Path) -> None
     assert executor.environment.calls[0] == ("MoveAhead", None)
     action, mask_path = executor.environment.calls[1]
     assert action == "PickupObject"
-    assert mask_path is not None and mask_path.name == "mask_1.npy"
+    assert mask_path is not None and mask_path.name == "000002.npy"
+    np.testing.assert_array_equal(
+        np.load(mask_path), np.load(executor.output_dir / "perception" / "mask_1.npy")
+    )
+    record = json.loads(
+        (executor.output_dir / "actions.jsonl").read_text().splitlines()[1]
+    )
+    assert record["interaction_mask"]["source_detection_index"] == 0
+    assert record["interaction_mask"]["source"] == "current_mapping_mask"
+    assert record["source_frame"] == 1
     assert executor.memory.held_object_id == 0
+
+
+def test_interaction_dispatch_excludes_a_contained_objects_pixels(
+    tmp_path: Path,
+) -> None:
+    executor = _executor(
+        tmp_path,
+        [
+            _decision(
+                {
+                    "kind": "interact",
+                    "interaction_action": "OpenObject",
+                    "target": {"type": "object", "object_id": 0},
+                }
+            ),
+            _decision(),
+        ],
+    )
+    executor.perception = FakePerception(include_container=True)
+    outcome = _run(executor)
+    assert outcome.actions == 1
+    assert isinstance(executor.environment, FakeEnvironment)
+    action, mask_path = executor.environment.calls[0]
+    assert action == "OpenObject" and mask_path is not None
+    parent = np.load(executor.output_dir / "perception" / "container_0.npy").astype(
+        bool
+    )
+    child = np.load(executor.output_dir / "perception" / "mask_0.npy").astype(bool)
+    actual = np.load(mask_path)
+    assert np.any(parent & child)
+    assert not np.any(actual & child)
+    np.testing.assert_array_equal(actual, parent & ~child)
+
+
+def test_interaction_resolves_a_real_merge_alias_and_uses_the_current_mask(
+    tmp_path: Path,
+) -> None:
+    executor = _executor(
+        tmp_path,
+        [
+            _decision({"kind": "motion", "motion_action": "MoveAhead", "repeat": 1}),
+            _decision(
+                {
+                    "kind": "interact",
+                    "interaction_action": "PickupObject",
+                    "target": {"type": "object", "object_id": 1},
+                }
+            ),
+            _decision(),
+        ],
+        memory_config=MemoryConfig(
+            mapping=MappingConfig(
+                association_threshold=1.9,
+                merge_image_similarity=0.6,
+                maintenance_interval=2,
+            )
+        ),
+        features_by_frame={1: (0.7, float(np.sqrt(0.51)), 0.0)},
+    )
+    outcome = _run(executor)
+    assert outcome.actions == 2
+    assert executor.memory.aliases[1] == 0
+    assert executor.memory.held_object_id == 0
+    assert isinstance(executor.environment, FakeEnvironment)
+    action, mask_path = executor.environment.calls[1]
+    assert action == "PickupObject"
+    assert mask_path is not None and mask_path.name == "000002.npy"
+    np.testing.assert_array_equal(
+        np.load(mask_path), np.load(executor.output_dir / "perception" / "mask_1.npy")
+    )
+
+
+def test_explore_obeys_atomic_action_budget_and_reobserves_every_step(
+    tmp_path: Path,
+) -> None:
+    executor = _executor(
+        tmp_path,
+        [_decision({"kind": "explore"})],
+        config=ExecutionConfig(max_actions=2, navigation_chunk=5),
+    )
+    outcome = _run(executor)
+    assert outcome.stop_reason == "action_budget"
+    assert (outcome.actions, outcome.decisions) == (2, 1)
+    assert isinstance(executor.perception, FakePerception)
+    assert executor.perception.frames == [0, 1, 2]
+    assert tuple(executor.memory.frames) == (0, 1, 2)
+    assert isinstance(executor.environment, FakeEnvironment)
+    assert len(executor.environment.calls) == 2
+    assert all(mask is None for _, mask in executor.environment.calls)
+
+
+def test_explore_chunk_returns_control_to_policy_without_extra_atomic_actions(
+    tmp_path: Path,
+) -> None:
+    executor = _executor(
+        tmp_path,
+        [_decision({"kind": "explore"}), _decision()],
+        config=ExecutionConfig(navigation_chunk=2),
+    )
+    outcome = _run(executor)
+    assert outcome.stop_reason == "policy_stop"
+    assert (outcome.actions, outcome.decisions) == (2, 2)
+    assert isinstance(executor.perception, FakePerception)
+    assert executor.perception.frames == [0, 1, 2]
+
+
+def test_explore_stops_at_failure_budget_after_recording_failed_observation(
+    tmp_path: Path,
+) -> None:
+    executor = _executor(
+        tmp_path,
+        [_decision({"kind": "explore"})],
+        config=ExecutionConfig(max_failures=1),
+        successes=[False],
+    )
+    outcome = _run(executor)
+    assert outcome.stop_reason == "failure_budget"
+    assert (outcome.actions, outcome.failures) == (1, 1)
+    assert tuple(executor.memory.frames) == (0, 1)
 
 
 def test_missing_provider_usage_remains_unknown_instead_of_zero(tmp_path: Path) -> None:
@@ -307,7 +507,8 @@ def test_failure_budget_stops_repetition_and_preserves_failed_observation(
     assert (outcome.actions, outcome.failures) == (1, 1)
     assert outcome.stop_reason == "failure_budget"
     assert executor.odometry.agent_position == (0.0, 0.0, 0.0)
-    assert executor.memory.cell_state((0, 1)) == "occupied"
+    spatial = executor.memory.spatial_map
+    assert spatial.cell_state(spatial.world_to_cell(0.0, 0.25)) == "occupied"
     assert tuple(executor.memory.frames) == (0, 1)
 
 
@@ -322,7 +523,8 @@ def test_failed_westward_move_marks_attempted_cell_without_float_drift(
         yaw_degrees=270.0,
     )
     _run(executor)
-    assert executor.memory.cell_state((-1, 0)) == "occupied"
+    spatial = executor.memory.spatial_map
+    assert spatial.cell_state(spatial.world_to_cell(-0.25, 0.0)) == "occupied"
 
 
 def test_action_budget_reached_on_last_decision_reports_action_limit(

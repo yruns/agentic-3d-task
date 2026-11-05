@@ -1,9 +1,8 @@
-"""Incremental object/view/grid memory built only from received observations.
+"""Online object/view/region memory using geometric overlap and CLIP fusion.
 
-This first RGB-D implementation uses geometric proximity plus an RGB histogram
-for association. It does not consume simulator object identities or unseen
-metadata, and does not claim equivalence to a learned appearance encoder.
-Historical observations remain on disk when interactions invalidate geometry.
+Only received observations and action feedback enter the memory. Stable identity
+is independent of geometry versions, and navigation evidence is owned separately
+by SpatialMap. The implementation does not import the offline dataset pipeline.
 """
 
 from __future__ import annotations
@@ -11,9 +10,9 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -22,62 +21,57 @@ from .geometry import (
     FloatArray,
     GridCell,
     Observation,
-    appearance_histogram,
-    bound_rows,
+    depth_visible_points,
     project_pixels,
 )
+from .object_mapping import (
+    MappingConfig,
+    association_similarity,
+    feature_cosine,
+    fuse_features,
+    mapping_masks,
+    oriented_envelopes_overlap,
+    point_overlap,
+    process_cloud,
+)
+from .object_store import (
+    ActionState,
+    MappedDetection,
+    ObjectMemory,
+    ObjectStore,
+    ObjectView,
+)
+from .spatial_map import SpatialMap
 
 if TYPE_CHECKING:
     from keyframe.models.scene import SceneObject
 
-CellState = Literal["free", "occupied", "unknown"]
-
 
 @dataclass(frozen=True)
 class MemoryConfig:
-    """Explicit metric thresholds and storage limits for online fusion."""
+    """Object mapping configuration and bounded source-view storage."""
 
-    cell_size_m: float = 0.25
-    association_distance_m: float = 0.45
-    held_max_camera_distance_m: float = 1.0
-    appearance_similarity_min: float = 0.65
+    mapping: MappingConfig = field(default_factory=MappingConfig)
     max_depth_m: float = 8.0
-    depth_stride: int = 8
-    floor_height_m: float = 0.0
-    floor_tolerance_m: float = 0.10
-    obstacle_min_height_m: float = 0.15
-    obstacle_max_height_m: float = 1.8
-    max_points_per_object: int = 1024
     max_object_views: int = 64
+    visibility_depth_tolerance_m: float = 0.15
 
     def __post_init__(self) -> None:
-        for name in (
-            "cell_size_m",
-            "association_distance_m",
-            "held_max_camera_distance_m",
-            "max_depth_m",
-            "floor_tolerance_m",
-            "obstacle_min_height_m",
-            "obstacle_max_height_m",
-        ):
+        if not isinstance(self.mapping, MappingConfig):
+            raise ValueError("mapping must be a MappingConfig")
+        for name in ("max_depth_m", "visibility_depth_tolerance_m"):
             value = getattr(self, name)
-            if not math.isfinite(value) or value <= 0:
-                raise ValueError(f"{name} must be finite and positive, got {value!r}")
-        if not math.isfinite(self.floor_height_m):
-            raise ValueError("floor_height_m must be finite")
-        if not 0 <= self.appearance_similarity_min <= 1:
-            raise ValueError("appearance_similarity_min must be in [0, 1]")
-        if self.obstacle_max_height_m <= self.obstacle_min_height_m:
-            raise ValueError("obstacle_max_height_m must exceed obstacle_min_height_m")
-        for name in ("depth_stride", "max_points_per_object", "max_object_views"):
+            if isinstance(value, bool) or not math.isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be positive and finite")
+        for name in ("max_object_views",):
             value = getattr(self, name)
-            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-                raise ValueError(f"{name} must be a positive int, got {value!r}")
+            if type(value) is not int or value < 1:
+                raise ValueError(f"{name} must be a positive integer")
 
 
 @dataclass(frozen=True)
 class FrameRecord:
-    """Immutable references and bidirectional index keys for an observed frame."""
+    """References to one real observation and its current canonical index keys."""
 
     frame_id: int
     rgb_path: Path
@@ -86,83 +80,63 @@ class FrameRecord:
     cells: tuple[GridCell, ...]
     camera_position: tuple[float, float, float]
     camera_direction: tuple[float, float, float]
-
-
-@dataclass(frozen=True)
-class ObjectView:
-    """An image-space observation associated with a persistent memory instance."""
-
-    frame_id: int
-    detection_index: int
-    box_xyxy: tuple[float, float, float, float]
-
-
-@dataclass
-class ObjectMemory:
-    """Mutable fused instance; mutations are owned by one scene-memory instance."""
-
-    object_id: int
-    category: str
-    points: FloatArray
-    colors: FloatArray
-    appearance: FloatArray
-    first_seen: int
-    last_seen: int
-    views: list[ObjectView] = field(default_factory=list)
-    geometry_valid: bool = True
-    stale_through_frame: int = -1
-    state: str = "observed"
-
-    @property
-    def centroid(self) -> FloatArray:
-        """Mean of the current geometry; inspect geometry_valid before navigation."""
-        return np.asarray(self.points.mean(axis=0), dtype=np.float64)
-
-    @property
-    def bounds(self) -> FloatArray:
-        """Axis-aligned minimum/maximum world coordinates."""
-        return np.stack((self.points.min(axis=0), self.points.max(axis=0)))
-
-
-_DEFAULT_CONFIG = MemoryConfig()
+    frame_feature: FloatArray
 
 
 class IncrementalSceneMemory:
-    """Own one episode's incrementally fused scene; not safe for concurrent writes.
+    """Own one episode's scene memory; integration is sequential, not thread-safe.
 
-    Grid keys are fixed world ``(floor(x / size), floor(y / size))`` coordinates.
-    They never change as the observed extent grows. Only actually traversed
-    cells and floor endpoints are considered free. Coverage along camera rays
-    is recorded separately and never grants traversability.
+    Objects use monotonic IDs with merge aliases. Region/view links use the
+    spatial map's fixed coarse region coordinates; fine navigation cells never
+    substitute for those coordinates. Raw historical observations are immutable.
     """
 
     def __init__(
-        self, output_dir: Path, config: MemoryConfig = _DEFAULT_CONFIG
+        self,
+        output_dir: Path,
+        config: MemoryConfig | None = None,
+        *,
+        spatial_map: SpatialMap | None = None,
     ) -> None:
         self.output_dir = Path(output_dir)
-        self.config = config
-        self.objects: dict[int, ObjectMemory] = {}
+        self.config = config or MemoryConfig()
+        self.spatial_map = spatial_map or SpatialMap()
+        self._store = ObjectStore()
+        self.objects = self._store.objects
+        self.aliases = self._store.aliases
         self.frames: dict[int, FrameRecord] = {}
         self.object_to_views: dict[int, set[int]] = {}
         self.view_to_objects: dict[int, set[int]] = {}
         self.grid_to_views: dict[GridCell, set[int]] = {}
         self.view_to_grids: dict[int, set[GridCell]] = {}
-        self.free_cells: set[GridCell] = set()
-        self.occupied_cells: set[GridCell] = set()
-        self.collision_cells: set[GridCell] = set()
-        self.traversed_cells: set[GridCell] = set()
         self.current_detection_objects: dict[int, int] = {}
+        self.current_detection_masks: dict[int, np.ndarray] = {}
+        self.rejected_detection_reasons: dict[int, str] = {}
+        self.suppressed_detection_indices: dict[int, int] = {}
         self.agent_position: tuple[float, float, float] | None = None
         self.held_object_id: int | None = None
         self._grid_stale_through: dict[GridCell, int] = {}
         self._latest_frame_id = -1
+        self._feature_dimension: int | None = None
+
+    def resolve_object_id(self, object_id: int) -> int:
+        """Resolve a previously issued ID after any periodic object merges."""
+        return self._store.resolve(object_id)
+
+    def world_to_region(self, x: float, y: float) -> GridCell:
+        """Map world XY to the coarse retrieval/BEV region coordinates."""
+        return self.spatial_map.world_to_region(x, y)
+
+    def record_collision(self, cell: GridCell) -> None:
+        """Forward physical collision evidence in fine navigation cell coordinates."""
+        self.spatial_map.record_collision(cell)
 
     def integrate(self, observation: Observation) -> FrameRecord:
-        """Persist and fuse one strictly newer frame; return its source record.
+        """Persist and integrate one strictly newer RGB-D/CLIP observation.
 
-        RGB, depth, intrinsics, pose and masks are preserved for later inspection.
-        An instance mask with no in-range valid depth remains in the raw record
-        but cannot create geometry; no fictitious object location is substituted.
+        A detection lacking usable depth stays in the raw record but does not
+        invent a 3D location. Duplicate masks retain their source identity link
+        while contributing only once to object confidence and feature fusion.
         """
         from PIL import Image
 
@@ -170,61 +144,73 @@ class IncrementalSceneMemory:
             raise ValueError(
                 f"frame_id={observation.frame_id} must exceed {self._latest_frame_id}"
             )
+        dimension = len(observation.frame_feature)
+        if self._feature_dimension is not None and dimension != self._feature_dimension:
+            raise ValueError(
+                "feature dimension must remain constant throughout an episode"
+            )
         with Image.open(observation.rgb_path) as image:
             rgb = np.array(image.convert("RGB"), dtype=np.uint8)
         if rgb.shape[:2] != observation.depth_m.shape:
             raise ValueError("rgb_path image dimensions must match depth_m")
         geometry_path = self._save_geometry(observation)
+        self._feature_dimension = dimension
         self.current_detection_objects = {}
-        matched_objects: set[int] = set()
-        for index, detection in enumerate(observation.detections):
-            valid = (
-                detection.mask
-                & (observation.depth_m > 0)
-                & (observation.depth_m <= self.config.max_depth_m)
+        self.current_detection_masks = {}
+        self.suppressed_detection_indices = {}
+        effective_masks, self.rejected_detection_reasons = mapping_masks(
+            observation.detections, self.config.mapping
+        )
+        regions = self._project_detections(observation, rgb, effective_masks)
+        assignments = self._assign_regions(regions, observation)
+        for region in regions:
+            existing_id = assignments.get(region.index)
+            if existing_id is None:
+                node = self._store.create(region, observation.frame_id)
+                self._set_slice_parent(node)
+            else:
+                node = self.objects[existing_id]
+                self._fuse_observation(node, region, observation.frame_id)
+            node.provisional = (
+                node.detection_count < self.config.mapping.confirmation_observations
             )
-            rows, cols = np.nonzero(valid)
-            if not len(rows):
-                continue
-            points = project_pixels(observation, rows, cols)
-            colors = rgb[rows, cols]
-            appearance = appearance_histogram(colors)
-            node = self._associate(
-                detection.category,
-                points,
-                appearance,
-                matched_objects,
-                observation,
-            )
-            self._fuse(node, points, colors.astype(float) / 255, appearance)
-            node.last_seen = observation.frame_id
             is_held = node.object_id == self.held_object_id
             node.geometry_valid = not is_held
             node.state = "held" if is_held else "observed"
+            node.reacquire_bounds = None if not is_held else node.reacquire_bounds
             node.views.append(
                 ObjectView(
                     observation.frame_id,
-                    index,
-                    (
-                        float(cols.min()),
-                        float(rows.min()),
-                        float(cols.max() + 1),
-                        float(rows.max() + 1),
-                    ),
+                    region.index,
+                    region.box_xyxy,
+                    node.geometry_epoch,
+                    region.detection.confidence,
+                    int(effective_masks[region.index].sum()),
                 )
             )
             del node.views[: -self.config.max_object_views]
-            matched_objects.add(node.object_id)
-            self.current_detection_objects[index] = node.object_id
+            self.current_detection_objects[region.index] = node.object_id
+            self.current_detection_masks[region.index] = effective_masks[region.index]
             self.object_to_views.setdefault(node.object_id, set()).add(
                 observation.frame_id
             )
-        cells = self._update_grid(observation)
+        for duplicate, representative in self.suppressed_detection_indices.items():
+            if representative in self.current_detection_objects:
+                self.current_detection_objects[duplicate] = (
+                    self.current_detection_objects[representative]
+                )
+                self.current_detection_masks[duplicate] = effective_masks[duplicate]
+        held_mask = np.zeros(observation.depth_m.shape, dtype=bool)
+        for index, object_id in self.current_detection_objects.items():
+            if object_id == self.held_object_id:
+                held_mask |= self.current_detection_masks[index]
+        cells = set(self.spatial_map.update(observation, ignored_mask=held_mask))
+        object_ids = set(self.current_detection_objects.values())
         frame = FrameRecord(
             frame_id=observation.frame_id,
             rgb_path=observation.rgb_path.resolve(),
             geometry_path=geometry_path,
-            object_ids=tuple(sorted(matched_objects)),
+            object_ids=tuple(sorted(object_ids)),
             cells=tuple(sorted(cells)),
             camera_position=(
                 float(observation.camera_to_world[0, 3]),
@@ -236,66 +222,337 @@ class IncrementalSceneMemory:
                 float(observation.camera_to_world[1, 2]),
                 float(observation.camera_to_world[2, 2]),
             ),
+            frame_feature=observation.frame_feature,
         )
         self.frames[frame.frame_id] = frame
-        self.view_to_objects[frame.frame_id] = matched_objects
+        self.view_to_objects[frame.frame_id] = object_ids
         self.view_to_grids[frame.frame_id] = cells
         for cell in cells:
             self.grid_to_views.setdefault(cell, set()).add(frame.frame_id)
         self.agent_position = observation.agent_position
         self._latest_frame_id = frame.frame_id
-        self._save_frame_index(frame)
+        if len(self.frames) % self.config.mapping.maintenance_interval == 0:
+            self.maintain_objects()
+            frame = self.frames[frame.frame_id]
+        self._save_frame_index(frame, observation.depth_m.shape)
         return frame
 
-    def world_to_cell(self, x: float, y: float) -> GridCell:
-        """Map a finite Z-up world XY location to a stable signed cell key."""
-        if not (math.isfinite(x) and math.isfinite(y)):
-            raise ValueError(f"world coordinates must be finite, got {(x, y)!r}")
+    def _project_detections(
+        self,
+        observation: Observation,
+        rgb: np.ndarray,
+        effective_masks: dict[int, np.ndarray],
+    ) -> list[MappedDetection]:
+        projected: list[MappedDetection] = []
+        ordered = sorted(
+            enumerate(observation.detections),
+            key=lambda item: (-item[1].confidence, item[0]),
+        )
+        for index, detection in ordered:
+            if index not in effective_masks:
+                continue
+            valid = (
+                effective_masks[index]
+                & (observation.depth_m > 0)
+                & (observation.depth_m <= self.config.max_depth_m)
+            )
+            rows, cols = np.nonzero(valid)
+            if len(rows) < self.config.mapping.min_detection_points:
+                self.rejected_detection_reasons[index] = (
+                    "insufficient_valid_depth_after_subtraction"
+                )
+                continue
+            duplicate = next(
+                (
+                    region.index
+                    for region in projected
+                    if self._duplicate_mask(
+                        detection,
+                        region.detection,
+                        left_mask=effective_masks[index],
+                        right_mask=effective_masks[region.index],
+                    )
+                ),
+                None,
+            )
+            if duplicate is not None:
+                self.suppressed_detection_indices[index] = duplicate
+                continue
+            points, colors = process_cloud(
+                project_pixels(observation, rows, cols),
+                rgb[rows, cols].astype(float) / 255,
+                self.config.mapping,
+                denoise=True,
+            )
+            if not len(points):
+                continue
+            box = detection.bbox_xyxy
+            projected.append(MappedDetection(index, detection, points, colors, box))
+        return projected
+
+    def _duplicate_mask(
+        self,
+        left: Detection,
+        right: Detection,
+        *,
+        left_mask: np.ndarray,
+        right_mask: np.ndarray,
+    ) -> bool:
+        intersection = int(np.count_nonzero(left_mask & right_mask))
+        union = int(np.count_nonzero(left_mask | right_mask))
         return (
-            math.floor(x / self.config.cell_size_m),
-            math.floor(y / self.config.cell_size_m),
+            intersection / union >= self.config.mapping.duplicate_mask_iou
+            and feature_cosine(left.image_feature, right.image_feature)
+            >= self.config.mapping.duplicate_image_similarity
         )
 
-    def cell_state(self, cell: GridCell) -> CellState:
-        """Return occupancy evidence; an unobserved or merely seen cell is unknown."""
-        if cell in self.occupied_cells:
-            return "occupied"
-        if cell in self.free_cells:
-            return "free"
-        return "unknown"
-
-    def record_collision(self, cell: GridCell) -> None:
-        """Retain physical blockage separately from predicted depth occupancy.
-
-        Later floor predictions cannot clear a failed-motion observation. The
-        blockage expires only when the agent actually traverses that cell or
-        an interaction invalidates the affected object's previous region.
-        """
-        if (
-            not isinstance(cell, tuple)
-            or len(cell) != 2
-            or any(type(coordinate) is not int for coordinate in cell)
+    def _assign_regions(
+        self, regions: Sequence[MappedDetection], observation: Observation
+    ) -> dict[int, int]:
+        candidates: list[tuple[float, int, int]] = []
+        for region in regions:
+            for node in self.objects.values():
+                score = self._association_score(region, node, observation)
+                if score is not None:
+                    candidates.append((score, region.index, node.object_id))
+        assigned: dict[int, int] = {}
+        used: set[int] = set()
+        for _, detection_index, object_id in sorted(
+            candidates, key=lambda item: (-item[0], item[1], item[2])
         ):
-            raise ValueError(f"collision cell must be a pair of integers, got {cell!r}")
-        self.collision_cells.add(cell)
-        self.occupied_cells.add(cell)
-        self.free_cells.discard(cell)
+            if detection_index not in assigned and object_id not in used:
+                assigned[detection_index] = object_id
+                used.add(object_id)
+        return assigned
+
+    def _association_score(
+        self, region: MappedDetection, node: ObjectMemory, observation: Observation
+    ) -> float | None:
+        if node.state == "sliced":
+            return None
+        image_similarity = feature_cosine(
+            region.detection.image_feature, node.image_feature
+        )
+        text_similarity = feature_cosine(
+            region.detection.text_feature, node.text_feature
+        )
+        if not node.geometry_valid:
+            semantic_score = 0.75 * image_similarity + 0.25 * text_similarity
+            if semantic_score < self.config.mapping.reacquire_similarity:
+                return None
+            center = region.points.mean(axis=0)
+            if node.object_id == self.held_object_id:
+                distance = float(
+                    np.linalg.norm(center - observation.camera_to_world[:3, 3])
+                )
+                return (
+                    3 + semantic_score
+                    if distance <= self.config.mapping.held_max_camera_distance_m
+                    else None
+                )
+            bounds = (
+                node.reacquire_bounds
+                if node.reacquire_bounds is not None
+                else node.bounds
+            )
+            gap = np.maximum(0, np.maximum(bounds[0] - center, center - bounds[1]))
+            return (
+                2 + semantic_score
+                if np.linalg.norm(gap) <= self.config.mapping.reacquire_margin_m
+                else None
+            )
+        if not oriented_envelopes_overlap(region.points, node.points):
+            return None
+        overlap = point_overlap(
+            region.points, node.points, self.config.mapping.voxel_size_m
+        )
+        score = association_similarity(
+            overlap,
+            image_similarity,
+            self.config.mapping.phys_bias,
+        )
+        return (
+            score
+            if overlap > 0 and score >= self.config.mapping.association_threshold
+            else None
+        )
+
+    def _fuse_observation(
+        self, node: ObjectMemory, region: MappedDetection, frame_id: int
+    ) -> None:
+        points, colors = region.points, region.colors
+        if node.geometry_valid:
+            points, colors = np.concatenate((node.points, points)), np.concatenate(
+                (node.colors, colors)
+            )
+        node.points, node.colors = process_cloud(
+            points, colors, self.config.mapping, denoise=False
+        )
+        node.image_feature = fuse_features(
+            node.image_feature, region.detection.image_feature, node.detection_count, 1
+        )
+        node.text_feature = fuse_features(
+            node.text_feature, region.detection.text_feature, node.detection_count, 1
+        )
+        node.detection_count += 1
+        node.last_seen = frame_id
+        evidence = node.category_evidence
+        evidence[region.detection.category] = (
+            evidence.get(region.detection.category, 0) + 1
+        )
+        # Stable lexical tie-breaking does not depend on detector arrival order.
+        node.category = min(evidence, key=lambda label: (-evidence[label], label))
+
+    def _set_slice_parent(self, child: ObjectMemory) -> None:
+        if not child.category.casefold().endswith("sliced"):
+            return
+        base = child.category.casefold().removesuffix("sliced")
+        parents = [
+            node
+            for node in self.objects.values()
+            if node.state == "sliced"
+            and node.category.casefold() == base
+            and np.linalg.norm(node.centroid - child.centroid)
+            <= self.config.mapping.reacquire_margin_m
+        ]
+        if parents:
+            child.parent_object_id = min(
+                parents, key=lambda node: np.linalg.norm(node.centroid - child.centroid)
+            ).object_id
+
+    def maintain_objects(self) -> None:
+        """Denoise and consolidate overlapping identities without reusing IDs.
+
+        Identities observed as separate detections in the same frame cannot be
+        merged. Low-support objects remain explicitly provisional, not erased.
+        """
+        for node in self.objects.values():
+            if node.geometry_valid:
+                node.points, node.colors = process_cloud(
+                    node.points, node.colors, self.config.mapping, denoise=True
+                )
+        for _, first_id, second_id in self._merge_candidates():
+            first_id, second_id = self.resolve_object_id(
+                first_id
+            ), self.resolve_object_id(second_id)
+            if first_id == second_id:
+                continue
+            left_id, right_id = sorted((first_id, second_id))
+            left, right = self.objects[left_id], self.objects[right_id]
+            if self.object_to_views[left_id] & self.object_to_views[right_id]:
+                continue
+            if (
+                feature_cosine(left.image_feature, right.image_feature)
+                <= self.config.mapping.merge_image_similarity
+                or feature_cosine(left.text_feature, right.text_feature)
+                <= self.config.mapping.merge_text_similarity
+            ):
+                continue
+            self._merge_objects(left, right)
+
+    def _merge_candidates(self) -> list[tuple[float, int, int]]:
+        candidates: list[tuple[float, int, int]] = []
+        ids = sorted(key for key, node in self.objects.items() if node.geometry_valid)
+        for position, left_id in enumerate(ids):
+            for right_id in ids[position + 1 :]:
+                left, right = self.objects[left_id], self.objects[right_id]
+                if not oriented_envelopes_overlap(left.points, right.points):
+                    continue
+                overlap = max(
+                    point_overlap(
+                        left.points, right.points, self.config.mapping.voxel_size_m
+                    ),
+                    point_overlap(
+                        right.points, left.points, self.config.mapping.voxel_size_m
+                    ),
+                )
+                if overlap > self.config.mapping.merge_overlap_threshold:
+                    candidates.append((overlap, left_id, right_id))
+        return sorted(candidates, key=lambda item: (-item[0], item[1], item[2]))
+
+    def _merge_objects(self, survivor: ObjectMemory, retired: ObjectMemory) -> None:
+        left, right = survivor.object_id, retired.object_id
+        survivor.points, survivor.colors = process_cloud(
+            np.concatenate((survivor.points, retired.points)),
+            np.concatenate((survivor.colors, retired.colors)),
+            self.config.mapping,
+            denoise=True,
+        )
+        survivor.image_feature = fuse_features(
+            survivor.image_feature,
+            retired.image_feature,
+            survivor.detection_count,
+            retired.detection_count,
+        )
+        survivor.text_feature = fuse_features(
+            survivor.text_feature,
+            retired.text_feature,
+            survivor.detection_count,
+            retired.detection_count,
+        )
+        survivor.detection_count += retired.detection_count
+        survivor.provisional = (
+            survivor.detection_count < self.config.mapping.confirmation_observations
+        )
+        survivor.first_seen = min(survivor.first_seen, retired.first_seen)
+        survivor.last_seen = max(survivor.last_seen, retired.last_seen)
+        survivor.stale_through_frame = max(
+            survivor.stale_through_frame, retired.stale_through_frame
+        )
+        survivor.geometry_epoch = max(survivor.geometry_epoch, retired.geometry_epoch)
+        for name, evidence in retired.action_states.items():
+            previous = survivor.action_states.get(name)
+            if previous is None or evidence.frame_id > previous.frame_id:
+                survivor.action_states[name] = evidence
+        survivor.views = sorted(
+            survivor.views + retired.views, key=lambda view: view.frame_id
+        )[-self.config.max_object_views :]
+        for category, count in retired.category_evidence.items():
+            survivor.category_evidence[category] = (
+                survivor.category_evidence.get(category, 0) + count
+            )
+        survivor.category = min(
+            survivor.category_evidence,
+            key=lambda label: (-survivor.category_evidence[label], label),
+        )
+        self.object_to_views[left].update(self.object_to_views.pop(right))
+        self._store.retire_alias(right, left)
+        for frame_id in self.object_to_views[left]:
+            if frame_id not in self.frames:
+                continue
+            object_ids = {
+                self.resolve_object_id(value)
+                for value in self.view_to_objects[frame_id]
+            }
+            self.view_to_objects[frame_id] = object_ids
+            self.frames[frame_id] = replace(
+                self.frames[frame_id], object_ids=tuple(sorted(object_ids))
+            )
+        self.current_detection_objects = {
+            index: self.resolve_object_id(value)
+            for index, value in self.current_detection_objects.items()
+        }
+        self._record_event(
+            {
+                "event": "merge",
+                "frame_id": self._latest_frame_id,
+                "survivor": left,
+                "alias": right,
+            }
+        )
 
     def record_interaction(
         self, action: str, object_id: int | None, *, success: bool
     ) -> None:
-        """Invalidate affected historical evidence before integrating the result.
+        """Apply feedback before integrating the post-action observation.
 
-        ``object_id`` is the current image's target memory ID (the receptacle for
-        PutObject). Pickup marks the held instance unavailable for spatial use;
-        PutObject invalidates both the receptacle and the previously held object.
-        Open/close conservatively invalidate neighboring objects whose visibility
-        or placement can change. Failed actions leave evidence unchanged.
+        Success supplies an identity/state prior, not privileged geometry. Old
+        point clouds never accumulate with the new pose of a moved object.
         """
         if not isinstance(success, bool):
-            raise ValueError(f"success must be bool, got {success!r}")
-        if object_id is not None and object_id not in self.objects:
-            raise KeyError(f"unknown object_id={object_id}")
+            raise ValueError("success must be bool")
+        if object_id is not None:
+            object_id = self.resolve_object_id(object_id)
         if not success:
             return
         affected = {object_id} if object_id is not None else set()
@@ -305,28 +562,64 @@ class IncrementalSceneMemory:
             self.held_object_id = object_id
         elif action == "PutObject":
             if self.held_object_id is not None:
-                affected.add(self.held_object_id)
+                held = self.objects[self.held_object_id]
+                held.reacquire_bounds = (
+                    self.objects[object_id].bounds.copy()
+                    if object_id is not None
+                    else None
+                )
+                affected.add(held.object_id)
             self.held_object_id = None
         elif action in {"OpenObject", "CloseObject"} and object_id is not None:
-            center = self.objects[object_id].centroid
+            target = self.objects[object_id]
             affected.update(
                 node.object_id
                 for node in self.objects.values()
-                if np.linalg.norm(node.centroid - center) <= 0.8
+                if node.geometry_valid
+                and np.linalg.norm(node.centroid - target.centroid) <= 0.8
             )
         elif action not in {"SliceObject", "ToggleObjectOn", "ToggleObjectOff"}:
             return
+        state_actions = {
+            "OpenObject": ("open", True),
+            "CloseObject": ("open", False),
+            "ToggleObjectOn": ("toggled_on", True),
+            "ToggleObjectOff": ("toggled_on", False),
+        }
+        if object_id is not None and action in state_actions:
+            name, value = state_actions[action]
+            self.objects[object_id].action_states[name] = ActionState(
+                value, self._latest_frame_id
+            )
+        spatial_change = action not in {"ToggleObjectOn", "ToggleObjectOff"}
+        invalidated: set[GridCell] = set()
         for affected_id in affected:
             node = self.objects[affected_id]
-            node.geometry_valid = False
             node.stale_through_frame = self._latest_frame_id
             node.state = "held" if affected_id == self.held_object_id else "changed"
-            for point in node.points:
-                cell = self.world_to_cell(float(point[0]), float(point[1]))
-                self.free_cells.discard(cell)
-                self.occupied_cells.discard(cell)
-                self.collision_cells.discard(cell)
-                self._grid_stale_through[cell] = self._latest_frame_id
+            if action == "SliceObject" and affected_id == object_id:
+                node.state = "sliced"
+            if spatial_change:
+                node.geometry_valid = False
+                node.geometry_epoch += 1
+                cells = {
+                    self.world_to_region(float(point[0]), float(point[1]))
+                    for point in node.points
+                }
+                invalidated.update(cells)
+                for cell in cells:
+                    self._grid_stale_through[cell] = self._latest_frame_id
+        self.spatial_map.invalidate_region(invalidated)
+        self._record_event(
+            {
+                "event": "interaction",
+                "action": action,
+                "frame_id": self._latest_frame_id,
+                "object_id": object_id,
+                "affected_ids": sorted(affected),
+                "invalidated_regions": sorted(invalidated),
+            }
+        )
 
     def retrieve_frames(
         self,
@@ -337,28 +630,32 @@ class IncrementalSceneMemory:
         include_stale: bool = False,
         exclude_frame_ids: Sequence[int] = (),
     ) -> tuple[FrameRecord, ...]:
-        """Greedily cover requested instances/regions with complementary views.
+        """Select depth-observed historical regions and complementary instance views.
 
-        Unknown regions legitimately return no frames. Unknown object IDs are
-        rejected. By default a changed object's pre-action observations do not
-        count as current evidence; include_stale explicitly retrieves history.
-        Exclusions let an episode avoid returning previously delivered images
-        while leaving later observations eligible for progressive retrieval.
+        Region support comes from SpatialMap's observed depth footprint, never
+        an unseen object catalog. Known object tags cannot exclude region views.
+        Interactions mark old views stale; explicit history requests may read them.
         """
-        if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
-            raise ValueError(f"limit must be a positive int, got {limit!r}")
+        if type(limit) is not int or limit < 1:
+            raise ValueError("limit must be a positive integer")
+        if not isinstance(include_stale, bool):
+            raise ValueError("include_stale must be bool")
         for frame_id in exclude_frame_ids:
             if type(frame_id) is not int or frame_id < 0:
+                raise ValueError("exclude_frame_ids must contain nonnegative integers")
+        for cell in cells:
+            if (
+                not isinstance(cell, tuple)
+                or len(cell) != 2
+                or any(type(value) is not int for value in cell)
+            ):
                 raise ValueError(
-                    "exclude_frame_ids must contain nonnegative integers, "
-                    f"got {frame_id!r}"
+                    "cells must contain pairs of integer coarse region coordinates"
                 )
-        requested_objects = set(object_ids)
+        requested_objects = {self.resolve_object_id(value) for value in object_ids}
         requested_cells = set(cells)
         candidates: set[int] = set()
         for object_id in requested_objects:
-            if object_id not in self.objects:
-                raise KeyError(f"unknown object_id={object_id}")
             candidates.update(self.object_to_views[object_id])
         for cell in requested_cells:
             candidates.update(self.grid_to_views.get(cell, set()))
@@ -367,61 +664,127 @@ class IncrementalSceneMemory:
         candidates.difference_update(exclude_frame_ids)
         coverage: dict[int, set[tuple[str, object]]] = {}
         for frame_id in candidates:
+            if frame_id > self._latest_frame_id:
+                raise RuntimeError("future frame found in historical index")
             frame = self.frames[frame_id]
             covered: set[tuple[str, object]] = {
-                ("object", object_id)
-                for object_id in requested_objects.intersection(frame.object_ids)
+                ("object", value)
+                for value in requested_objects.intersection(frame.object_ids)
                 if include_stale
-                or frame_id > self.objects[object_id].stale_through_frame
+                or (
+                    frame_id > self.objects[value].stale_through_frame
+                    and self._object_visible_in_frame(value, frame)
+                )
             }
             covered.update(
                 ("cell", cell)
                 for cell in requested_cells.intersection(frame.cells)
                 if include_stale or frame_id > self._grid_stale_through.get(cell, -1)
             )
-            if covered or (not requested_objects and not requested_cells):
+            if covered or not requested_objects and not requested_cells:
                 coverage[frame_id] = covered
         selected: list[FrameRecord] = []
         covered_targets: set[tuple[str, object]] = set()
         while coverage and len(selected) < limit:
-            best_id = max(
+            best = max(
                 coverage,
-                key=lambda frame_id: (
-                    len(coverage[frame_id] - covered_targets),
-                    self._view_novelty(self.frames[frame_id], selected),
-                    frame_id,
+                key=lambda index: (
+                    len(coverage[index] - covered_targets),
+                    self._view_novelty(self.frames[index], selected),
+                    self._object_view_quality(index, requested_objects),
+                    index,
                 ),
             )
-            selected.append(self.frames[best_id])
-            covered_targets.update(coverage.pop(best_id))
+            selected.append(self.frames[best])
+            covered_targets.update(coverage.pop(best))
         return tuple(selected)
 
+    def _object_visible_in_frame(self, object_id: int, frame: FrameRecord) -> bool:
+        node = self.objects[object_id]
+        if not node.geometry_valid:
+            # A held view supplies appearance without a stationary world position.
+            return node.state == "held" and frame.frame_id > node.stale_through_frame
+        with np.load(frame.geometry_path, allow_pickle=False) as saved:
+            visible = depth_visible_points(
+                node.points,
+                saved["depth_m"],
+                saved["intrinsics"],
+                saved["camera_to_world"],
+                tolerance_m=self.config.visibility_depth_tolerance_m,
+            )
+        return bool(visible.any())
+
+    def _object_view_quality(self, frame_id: int, object_ids: set[int]) -> float:
+        return sum(
+            view.confidence * math.log1p(view.pixel_area)
+            for object_id in object_ids
+            for view in self.objects[object_id].views
+            if view.frame_id == frame_id
+        )
+
+    @staticmethod
+    def _view_novelty(frame: FrameRecord, selected: Sequence[FrameRecord]) -> float:
+        if not selected:
+            return 0.0
+        return min(
+            min(
+                2.0,
+                float(
+                    np.linalg.norm(
+                        np.array(frame.camera_position)
+                        - np.array(other.camera_position)
+                    )
+                ),
+            )
+            + 1
+            - float(np.array(frame.camera_direction) @ np.array(other.camera_direction))
+            + 0.5 * (1 - feature_cosine(frame.frame_feature, other.frame_feature))
+            for other in selected
+        )
+
     def snapshot(self) -> dict[str, object]:
-        """Build a compact JSON-safe current catalog without unseen scene data."""
+        """Expose current identities, validity, provenance and spatial evidence."""
         current_ids = set(self.current_detection_objects.values())
         return {
             "coordinate_system": "world_z_up",
-            "grid_convention": "cell=(floor(world_x/size),floor(world_y/size))",
-            "cell_size_m": self.config.cell_size_m,
+            "grid_convention": "coarse region=(floor(world_x/region_size),floor(world_y/region_size))",
             "frame_count": len(self.frames),
             "latest_frame_id": self._latest_frame_id,
             "agent_position": self.agent_position,
             "held_object_id": self.held_object_id,
+            "aliases": dict(self.aliases),
+            "rejected_detection_reasons": dict(self.rejected_detection_reasons),
+            "observed_region_count": len(self.grid_to_views),
+            "spatial_map": self.spatial_map.snapshot(),
             "objects": [
                 {
                     "object_id": node.object_id,
                     "category": node.category,
+                    "category_evidence": dict(node.category_evidence),
                     "centroid": (
                         node.centroid.round(3).tolist() if node.geometry_valid else None
                     ),
                     "last_known_centroid": node.centroid.round(3).tolist(),
                     "geometry_valid": node.geometry_valid,
+                    "geometry_epoch": node.geometry_epoch,
+                    "provisional": node.provisional,
+                    "active": node.state != "sliced",
                     "state": node.state,
                     "last_seen": node.last_seen,
+                    "observation_count": node.detection_count,
                     "stale_through_frame": node.stale_through_frame,
                     "visible_now": node.object_id in current_ids,
-                    "cell": (
-                        self.world_to_cell(*node.centroid[:2])
+                    "parent_object_id": node.parent_object_id,
+                    "action_states": {
+                        name: {
+                            "value": evidence.value,
+                            "source": "successful_action",
+                            "source_frame": evidence.frame_id,
+                        }
+                        for name, evidence in node.action_states.items()
+                    },
+                    "region": (
+                        self.world_to_region(*node.centroid[:2])
                         if node.geometry_valid
                         else None
                     ),
@@ -433,24 +796,20 @@ class IncrementalSceneMemory:
                 }
                 for node in self.objects.values()
             ],
-            "free_cells": sorted(self.free_cells),
-            "occupied_cells": sorted(self.occupied_cells),
-            "collision_cells": sorted(self.collision_cells),
-            "observed_cell_count": len(self.grid_to_views),
         }
 
     def to_scene_objects(self) -> list[SceneObject]:
-        """Export currently valid nodes into the existing keyframe object model."""
+        """Export current geometry and CLIP features using the existing scene model."""
         from keyframe.models.scene import SceneObject
 
-        scene_objects: list[SceneObject] = []
+        result: list[SceneObject] = []
         for node in self.objects.values():
             if not node.geometry_valid:
                 continue
-            current_views = [
+            views = [
                 view for view in node.views if view.frame_id > node.stale_through_frame
             ]
-            scene_objects.append(
+            result.append(
                 SceneObject(
                     obj_id=node.object_id,
                     category=node.category,
@@ -458,205 +817,112 @@ class IncrementalSceneMemory:
                     pcd_np=node.points.copy(),
                     pcd_color_np=node.colors.copy(),
                     bbox_np=node.bounds,
-                    image_idx=[view.frame_id for view in current_views],
-                    class_name=[node.category for _ in current_views],
-                    xyxy=[np.array(view.box_xyxy) for view in current_views],
-                    num_detections=len(current_views),
+                    clip_ft=node.image_feature.astype(np.float32),
+                    image_idx=[view.frame_id for view in views],
+                    class_name=[node.category for _ in views],
+                    xyxy=[np.array(view.box_xyxy) for view in views],
+                    num_detections=node.detection_count,
                 )
             )
-        return scene_objects
+        return result
 
     def render_bev(self, path: Path) -> Path:
-        """Render occupancy, coverage, stable cell coordinates and observed objects."""
+        """Render the current objects and separate spatial map."""
         from .rendering import render_memory_bev
 
         return render_memory_bev(self, path)
 
     def _save_geometry(self, observation: Observation) -> Path:
-        frame_dir = self.output_dir / "observations"
-        frame_dir.mkdir(parents=True, exist_ok=True)
-        path = frame_dir / f"frame_{observation.frame_id:06d}.npz"
+        directory = self.output_dir / "observations"
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / f"frame_{observation.frame_id:06d}.npz"
         if path.exists():
             raise FileExistsError(f"observation artifact already exists: {path}")
-        masks = (
-            np.stack([detection.mask for detection in observation.detections])
-            if observation.detections
-            else np.empty((0, *observation.depth_m.shape), dtype=bool)
-        )
+        detections = observation.detections
+        dimension = len(observation.frame_feature)
         np.savez_compressed(
             path,
             depth_m=observation.depth_m.astype(np.float32),
             intrinsics=observation.intrinsics,
             camera_to_world=observation.camera_to_world,
-            masks=masks,
-            categories=np.array(
-                [detection.category for detection in observation.detections]
+            agent_position=observation.agent_position,
+            masks=(
+                np.stack([detection.mask for detection in detections])
+                if detections
+                else np.empty((0, *observation.depth_m.shape), dtype=bool)
             ),
+            categories=np.array(
+                [detection.category for detection in detections], dtype=str
+            ),
+            confidences=np.array([detection.confidence for detection in detections]),
+            detector_boxes=np.asarray(
+                [detection.bbox_xyxy for detection in detections], dtype=np.float64
+            ).reshape(-1, 4),
+            image_features=(
+                np.stack([detection.image_feature for detection in detections])
+                if detections
+                else np.empty((0, dimension))
+            ),
+            text_features=(
+                np.stack([detection.text_feature for detection in detections])
+                if detections
+                else np.empty((0, dimension))
+            ),
+            frame_feature=observation.frame_feature,
         )
         return path.resolve()
 
-    def _save_frame_index(self, frame: FrameRecord) -> None:
-        """Persist complete frame/object/grid associations next to raw geometry."""
+    def _save_frame_index(
+        self, frame: FrameRecord, image_shape: tuple[int, ...]
+    ) -> None:
+        effective_path = frame.geometry_path.with_suffix(".mapping.npz")
+        indices = sorted(self.current_detection_masks)
+        with effective_path.open("xb") as stream:
+            np.savez_compressed(
+                stream,
+                detection_indices=np.array(indices, dtype=np.int64),
+                masks=(
+                    np.stack([self.current_detection_masks[index] for index in indices])
+                    if indices
+                    else np.empty((0, *image_shape), dtype=bool)
+                ),
+            )
         record = {
             "frame_id": frame.frame_id,
             "rgb_path": str(frame.rgb_path),
             "geometry_path": str(frame.geometry_path),
             "object_ids": frame.object_ids,
             "detection_object_ids": self.current_detection_objects,
+            "suppressed_detection_indices": self.suppressed_detection_indices,
+            "effective_masks_path": str(effective_path),
+            "rejected_detection_reasons": self.rejected_detection_reasons,
             "cells": frame.cells,
             "camera_position": frame.camera_position,
             "camera_direction": frame.camera_direction,
+            "aliases": self.aliases,
+            "object_geometry_epochs": {
+                str(value): self.objects[value].geometry_epoch
+                for value in frame.object_ids
+            },
         }
         with frame.geometry_path.with_suffix(".json").open(
             "x", encoding="utf-8"
         ) as stream:
             json.dump(record, stream, allow_nan=False)
 
-    def _associate(
-        self,
-        category: str,
-        points: FloatArray,
-        appearance: FloatArray,
-        matched_objects: set[int],
-        observation: Observation,
-    ) -> ObjectMemory:
-        candidates: list[tuple[float, ObjectMemory]] = []
-        center = points.mean(axis=0)
-        bounds = np.stack((points.min(axis=0), points.max(axis=0)))
-        for node in self.objects.values():
-            if (
-                node.category.casefold() != category.casefold()
-                or node.object_id in matched_objects
-            ):
-                continue
-            similarity = float(node.appearance @ appearance)
-            if similarity < self.config.appearance_similarity_min:
-                continue
-            if node.object_id == self.held_object_id:
-                camera_distance = float(
-                    np.linalg.norm(center - observation.camera_to_world[:3, 3])
-                )
-                if camera_distance <= self.config.held_max_camera_distance_m:
-                    # Successful pickup supplies an identity prior; proximity to
-                    # the current camera distinguishes a carried detection from
-                    # stationary same-class instances elsewhere in the room.
-                    candidates.append((-1.0 + 0.2 * (1 - similarity), node))
-                continue
-            distance = float(np.linalg.norm(center - node.centroid))
-            gap = np.maximum(
-                0, np.maximum(node.bounds[0] - bounds[1], bounds[0] - node.bounds[1])
-            )
-            if (
-                distance <= self.config.association_distance_m
-                or np.linalg.norm(gap) < 0.08
-            ):
-                candidates.append((distance + 0.2 * (1 - similarity), node))
-        if candidates:
-            return min(candidates, key=lambda item: item[0])[1]
-        object_id = len(self.objects)
-        node = ObjectMemory(
-            object_id=object_id,
-            category=category,
-            points=np.empty((0, 3)),
-            colors=np.empty((0, 3)),
-            appearance=appearance,
-            first_seen=observation.frame_id,
-            last_seen=observation.frame_id,
-        )
-        self.objects[object_id] = node
-        return node
-
-    def _fuse(
-        self,
-        node: ObjectMemory,
-        points: FloatArray,
-        colors: FloatArray,
-        appearance: FloatArray,
-    ) -> None:
-        # Invalidated geometry must be replaced, never blended with the old pose.
-        if node.geometry_valid:
-            points = np.concatenate((node.points, points))
-            colors = np.concatenate((node.colors, colors))
-        node.points = bound_rows(points, self.config.max_points_per_object)
-        node.colors = bound_rows(colors, self.config.max_points_per_object)
-        combined = node.appearance + appearance
-        node.appearance = combined / np.linalg.norm(combined)
-
-    def _update_grid(self, observation: Observation) -> set[GridCell]:
-        valid = (observation.depth_m > 0) & (
-            observation.depth_m <= self.config.max_depth_m
-        )
-        for index, object_id in self.current_detection_objects.items():
-            if object_id == self.held_object_id:
-                # A carried object's depth must not leave a trail of permanent
-                # obstacles as the agent moves through the scene.
-                valid &= ~observation.detections[index].mask
-        sampled = np.zeros(valid.shape, dtype=bool)
-        sampled[:: self.config.depth_stride, :: self.config.depth_stride] = True
-        rows, cols = np.nonzero(valid & sampled)
-        points = project_pixels(observation, rows, cols)
-        seen: set[GridCell] = set()
-        new_floor: set[GridCell] = set()
-        new_occupied: set[GridCell] = set()
-        camera_xy = observation.camera_to_world[:2, 3]
-        for point in points:
-            cell = self.world_to_cell(float(point[0]), float(point[1]))
-            height = point[2] - self.config.floor_height_m
-            if abs(height) <= self.config.floor_tolerance_m:
-                new_floor.add(cell)
-            elif (
-                self.config.obstacle_min_height_m
-                <= height
-                <= self.config.obstacle_max_height_m
-            ):
-                new_occupied.add(cell)
-            sample_count = max(
-                2,
-                math.ceil(
-                    np.linalg.norm(point[:2] - camera_xy) / self.config.cell_size_m
-                )
-                * 2,
-            )
-            for position in np.linspace(camera_xy, point[:2], sample_count):
-                seen.add(self.world_to_cell(float(position[0]), float(position[1])))
-        # Direct current floor evidence supersedes older predicted obstacles,
-        # but does not contradict physical collision feedback. Cells outside
-        # this observation retain their previous evidence.
-        cleared_cells = new_floor - new_occupied - self.collision_cells
-        self.occupied_cells.difference_update(cleared_cells)
-        self.free_cells.update(cleared_cells)
-        self.occupied_cells.update(new_occupied)
-        self.occupied_cells.update(self.collision_cells)
-        self.free_cells.difference_update(self.occupied_cells)
-        agent_cell = self.world_to_cell(*observation.agent_position[:2])
-        self.traversed_cells.add(agent_cell)
-        self.free_cells.add(agent_cell)
-        self.occupied_cells.discard(agent_cell)
-        self.collision_cells.discard(agent_cell)
-        seen.add(agent_cell)
-        return seen
-
-    @staticmethod
-    def _view_novelty(frame: FrameRecord, selected: Sequence[FrameRecord]) -> float:
-        if not selected:
-            return 0.0
-        position = np.array(frame.camera_position)
-        direction = np.array(frame.camera_direction)
-        return min(
-            min(
-                2.0,
-                float(np.linalg.norm(position - np.array(previous.camera_position))),
-            )
-            + 1.0
-            - float(direction @ np.array(previous.camera_direction))
-            for previous in selected
-        )
+    def _record_event(self, event: dict[str, object]) -> None:
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        with (self.output_dir / "memory_events.jsonl").open(
+            "a", encoding="utf-8"
+        ) as stream:
+            stream.write(json.dumps(event, allow_nan=False) + "\n")
 
 
 __all__ = [
     "Detection",
     "FrameRecord",
     "IncrementalSceneMemory",
+    "MappingConfig",
     "MemoryConfig",
     "ObjectMemory",
     "Observation",

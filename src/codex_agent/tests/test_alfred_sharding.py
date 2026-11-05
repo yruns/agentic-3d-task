@@ -12,19 +12,15 @@ import pytest
 
 from codex_agent.alfred.dataset import AlfredEpisode, AlfredInstruction
 from codex_agent.alfred.execution import ExecutionConfig
-from codex_agent.alfred.perception import FILM_CHECKPOINTS, FilmPerceptionConfig
 from codex_agent.alfred.simulator import SimulatorConfig
 from codex_agent.cli.run_alfred import build_arg_parser
 from codex_agent.config import CodexAgentConfig
 from codex_agent.evaluation import alfred_runner
+from codex_agent.tests.test_alfred_settings import local_scene_config
 
 
 @pytest.fixture
 def shard_config(tmp_path: Path) -> alfred_runner.AlfredRunConfig:
-    for name in FILM_CHECKPOINTS:
-        checkpoint = tmp_path / "weights" / name
-        checkpoint.parent.mkdir(parents=True, exist_ok=True)
-        checkpoint.write_bytes(b"checkpoint")
     fold = tmp_path / "fold.json"
     splits = tmp_path / "splits.json"
     fold.write_text("{}")
@@ -38,9 +34,7 @@ def shard_config(tmp_path: Path) -> alfred_runner.AlfredRunConfig:
         run_id="shard-test",
         database_path=tmp_path / "runs.sqlite",
         simulator=SimulatorConfig(Path(sys.executable), tmp_path, tmp_path / "run"),
-        perception=FilmPerceptionConfig(
-            Path(sys.executable), tmp_path, tmp_path / "weights", device="cpu"
-        ),
+        perception=local_scene_config(tmp_path / "assets"),
         runtime=CodexAgentConfig(project_root=tmp_path),
         execution=ExecutionConfig(),
         command=("python", "-m", "codex_agent.cli.run_alfred"),
@@ -122,6 +116,11 @@ def test_shard_metadata_retains_full_fold_size_and_is_not_a_diagnostic_prefix(
     shard_config: alfred_runner.AlfredRunConfig, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(alfred_runner, "external_source_provenance", lambda path: {})
+    monkeypatch.setattr(
+        alfred_runner,
+        "model_source_provenance",
+        lambda: {"groundingdino": {"version": "fixture"}},
+    )
     config = replace(shard_config, shard_index=2, num_shards=4)
     selected = alfred_runner._selected_episodes(config, _manifest())
     metadata = alfred_runner._run_metadata(config, selected, {}, full_fold_size=50)
@@ -142,8 +141,7 @@ def test_cli_exposes_explicit_shard_configuration() -> None:
             "output-dir",
             "simulator-python",
             "alfred-root",
-            "film-root",
-            "weights-root",
+            "scene-config",
         )
         for argument in (f"--{name}", "/fixture")
     ]

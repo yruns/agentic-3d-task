@@ -1,0 +1,288 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-11-05T07:59:34.615162+00:00",
+  "scope": "Method-consistency audit and CPU-only synthetic numerical references, before real replay or pilot evaluation",
+  "status": "reviewed_with_explicit_differences",
+  "bitwise_equivalence_claimed": false,
+  "real_cache_replay_performed": false,
+  "unsafe_pickle_loaded": false,
+  "gpu_or_model_inference_performed": false,
+  "reference_provenance_limit": "Reference is the current local OpenEQA production script/config source with hashes below. Imported processed_v1 packages do not carry a complete per-scene production commit/checkpoint lock; no claim is made that inspecting these files proves every historical binary/checkpoint invocation.",
+  "reference_sources": {
+    "production_mapping_script": {
+      "path": "/home/ysh/codecase/3DVLMReasoning/bashes/openeqa_scannet/2b_build_3d_object_map_detect.sh",
+      "sha256": "672408a4dc979b8e6aff4b0cfc9f6c0f969f534c0d426283f0d5f7818216c47b"
+    },
+    "production_detection_script": {
+      "path": "/home/ysh/codecase/3DVLMReasoning/bashes/openeqa_scannet/1b_extract_2d_segmentation_detect.sh",
+      "sha256": "e738a4fc90f51d3893ddc79111b0b1013ff2ae263125d0dceba214d23ddef64d"
+    },
+    "mapping_defaults": {
+      "path": "/home/ysh/codecase/3DVLMReasoning/conceptgraph/configs/slam_pipeline/base.yaml",
+      "sha256": "8c91d1d33c495e5099b3e3e7b7c60ad921320e40e778678b7bb35794ee4da867"
+    },
+    "mapping_math": {
+      "path": "/home/ysh/codecase/3DVLMReasoning/conceptgraph/slam/mapping.py",
+      "sha256": "65de3e4cad94b103c0468e6dde23dd7d268ebfa52d59d86597cd05a93a66bcdb"
+    },
+    "mapping_geometry": {
+      "path": "/home/ysh/codecase/3DVLMReasoning/conceptgraph/slam/utils.py",
+      "sha256": "3c5b4ea1390b26f760343eccdc63bcd5369872c73c3ac0379636094a724d9288"
+    },
+    "mapping_loop": {
+      "path": "/home/ysh/codecase/3DVLMReasoning/conceptgraph/slam/pipeline.py",
+      "sha256": "ef411685e3dbfaad1d36fe3187e9b603929414af5c4a32294c64933574426717"
+    },
+    "mask_subtraction": {
+      "path": "/home/ysh/codecase/3DVLMReasoning/conceptgraph/utils/ious.py",
+      "sha256": "499112c94e6dd4beaaea6e031dfd7c15e0c69af42689ebe86c9b579188197d01"
+    },
+    "clip_extraction": {
+      "path": "/home/ysh/codecase/3DVLMReasoning/conceptgraph/utils/clip.py",
+      "sha256": "f91628a5c55e145111dfa3216d441289a6bac1fda2f82bbda50a678333c87d89"
+    },
+    "detection_pipeline": {
+      "path": "/home/ysh/codecase/3DVLMReasoning/conceptgraph/detection/generate_gsa.py",
+      "sha256": "39629604e58eeb891dee5793479e150d56f93f81c2746f16b232aca60040c47f"
+    },
+    "object_categories": {
+      "path": "/home/ysh/codecase/3DVLMReasoning/conceptgraph/slam/models.py",
+      "sha256": "a9e4761688f11bf2339997edf358f649176307831f0c02c9ebf96fe5e8ef53b9"
+    }
+  },
+  "current_source_files": {
+    "src/codex_agent/alfred/geometry.py": {
+      "sha256": "1912e1b75acf0f19a09ced2e442b3862cb5a37b20099d22fd65d5f45ec4b72b6"
+    },
+    "src/codex_agent/alfred/object_mapping.py": {
+      "sha256": "39d99f5aa657dfb01e91fcc53f89b219d3e367ce23419034ff6ab53d800ea05b"
+    },
+    "src/codex_agent/alfred/object_store.py": {
+      "sha256": "b02c5d65bb6957ac449c3c476896b435445ee9fd3aeee7a351c9629dc2197cf0"
+    },
+    "src/codex_agent/alfred/memory.py": {
+      "sha256": "a2ad4185dd48687856c717a3eda8302b5f6c2e6e313e1daa734f28c3735c9096"
+    },
+    "src/codex_agent/tests/test_alfred_mapping_reference.py": {
+      "sha256": "8f32c7824c141ceea874b733ea8c489f5f836571851a742f38f378e1e409f19e"
+    },
+    "src/codex_agent/tests/test_alfred_mapping_cosine.py": {
+      "sha256": "322607544496a8390d45bbaf79bcb2677c72e9792b7eb631341a903206d19991"
+    },
+    "src/codex_agent/tests/test_alfred_memory.py": {
+      "sha256": "63e6e955202fdd57e5d5fd083f2e450d4ba35aed2833804c718b6fff6d0d41aa"
+    },
+    "src/codex_agent/tests/test_alfred_object_mapping.py": {
+      "sha256": "a9ac3af31e70054aaa66ad780b5b45c7d31c55b23298fcda3bbd062d2d4a8f41"
+    }
+  },
+  "configuration_evidence": {
+    "path": "configs/alfred/scene.toml",
+    "sha256": "7393f1b64c36ed2797a68fbef459702b807c241ab9ee7baccf35ab5ced15fbe0",
+    "explicit_online_override": {
+      "memory.mapping.max_bbox_area_ratio": 1.0
+    }
+  },
+  "checks": [
+    {
+      "topic": "association_formula",
+      "classification": "matched_at_declared_configuration",
+      "openeqa_reference": "(1+phys_bias)*point_overlap+(1-phys_bias)*CLIP_cosine; phys_bias=0, sim_threshold=1.2; match equality accepted",
+      "current_implementation_and_reason": "Explicit phys_bias field; exact norm-divided cosine rather than treating a near-unit dot as cosine. Independent scalar references exercise 0,+.25,-.5."
+    },
+    {
+      "topic": "point_overlap_direction_radius",
+      "classification": "matched_kernel",
+      "openeqa_reference": "Count observed/new points whose nearest existing point has Euclidean distance strictly below voxel_size=.025m, divide by number of observed/new points",
+      "current_implementation_and_reason": "KD-tree double precision replaces FAISS float32 squared-distance search. Direction and strict radius independently checked against brute-force Euclidean distances."
+    },
+    {
+      "topic": "image_and_text_feature_fusion",
+      "classification": "matched_formula",
+      "openeqa_reference": "Both image and text: normalize(n1*f1+n2*f2); update observation count by n1+n2",
+      "current_implementation_and_reason": "Sequential normalized count weighting is preserved; it is not claimed to equal the arithmetic mean of all raw feature vectors after many updates."
+    },
+    {
+      "topic": "mask_confidence_and_area_filters",
+      "classification": "restored",
+      "openeqa_reference": "confidence>=.25; mask pixel count>=max(25,10); exclude wall/floor/ceiling; raw detector bbox area<=.5*image area; valid depth pixels>=16",
+      "current_implementation_and_reason": "Reusable defaults restored. Raw masks and float detector boxes persisted unchanged; filtered/subtracted effective masks are separate artifacts and actual interaction inputs."
+    },
+    {
+      "topic": "alfred_close_container_bbox_override",
+      "classification": "explicit_online_parameter_difference",
+      "openeqa_reference": "OpenEQA max_bbox_area_ratio=.5",
+      "current_implementation_and_reason": "configs/alfred/scene.toml explicitly sets 1.0 before evaluation to retain near-camera containers. This is a declared ALFRED parameter change, not a required property of incremental mapping."
+    },
+    {
+      "topic": "contained_masks",
+      "classification": "restored",
+      "openeqa_reference": "Subtract child mask where intersection/parent_box_area<.7 AND intersection/child_box_area>.8, in original index order",
+      "current_implementation_and_reason": "Raw detector boxes, raw masks, image/text features remain unchanged. Mapping effective masks and rejection reasons are separately preserved; executor must use current_detection_masks."
+    },
+    {
+      "topic": "voxel_lattice",
+      "classification": "restored_and_native_cpu_checked",
+      "openeqa_reference": "Open3D cloud minimum minus half a voxel; voxel=.025m; average points/colors",
+      "current_implementation_and_reason": "Replaces the initial world-zero lattice. Two translated synthetic cases match native Open3D0.19.0 CPU voxel_down_sample to 1e-12, ignoring output order. Navigation/region grids independently retain a fixed world origin."
+    },
+    {
+      "topic": "dbscan",
+      "classification": "matched_default_and_restored_small_cluster_guard",
+      "openeqa_reference": "eps=.1m,min_points10; retain largest cluster, preserve input if no cluster or largest cluster<5",
+      "current_implementation_and_reason": "Deterministic CPU implementation handles border reassignment. Tiny-cluster guard restored; native pipeline jitter is separately excluded."
+    },
+    {
+      "topic": "storage_cap_order",
+      "classification": "explicit_resource_bound_after_restored_order",
+      "openeqa_reference": "Original map has no max_points cap",
+      "current_implementation_and_reason": "All valid mask pixels now reach voxel reduction; removed preprojection40000 cap. Voxel and DBSCAN finish before the declared4096-point final cap. Cap can alter future overlap/density versus uncapped offline mapping and is not a bitwise equivalence claim."
+    },
+    {
+      "topic": "maintenance_merge_thresholds_and_order",
+      "classification": "restored_with_identity_adaptations",
+      "openeqa_reference": "Denoise/merge interval20; overlap>.7,image_cosine>.8,text_cosine>.8; sort pair overlap descending",
+      "current_implementation_and_reason": "Strict threshold boundaries restored. Candidate pairs ranked by descending maximum directed overlap; original sorts directed entries. Oldest stable ID survives; resolved aliases prevent counting a retired object twice. Tie ordering differs deterministically."
+    },
+    {
+      "topic": "oriented_geometry_gate",
+      "classification": "remaining_numerical_difference",
+      "openeqa_reference": "Reference gets hull-PCA Open3D oriented boxes and gates using oriented 3D IoU>=1e-6; volume<1e-6 rejected",
+      "current_implementation_and_reason": "Current uses deterministic hull-PCA boxes and separating-axis intersection before the same nearest-point kernel. This restores orientation-based pruning but does not compute exact intersection volume/IoU cutoff. Degenerate/planar boxes are retained; numerically failed convex hull uses PCA of all points with a documented path. SceneObject export still uses AABB min/max coordinates."
+    },
+    {
+      "topic": "jitter_and_precision",
+      "classification": "explicit_determinism_difference",
+      "openeqa_reference": "Original backprojection adds Gaussian position noise sigma=.004m and generates random instance colors",
+      "current_implementation_and_reason": "No geometric jitter is added. Float64 SciPy geometry and deterministic ordering replace mixed Open3D/FAISS numerical choices. This can affect clustering and bbox gates; it is not attributed to online necessity."
+    },
+    {
+      "topic": "stable_ids_aliases",
+      "classification": "required_online_contract",
+      "openeqa_reference": "Reference indexes a mutable list; filter/merge compacts indices",
+      "current_implementation_and_reason": "Monotonic object IDs and alias events preserve references used by actions and historical retrieval; IDs never reused."
+    },
+    {
+      "topic": "dynamic_geometry_epochs",
+      "classification": "required_online_contract",
+      "openeqa_reference": "Reference fuses all matched observations into a static cloud",
+      "current_implementation_and_reason": "Action-confirmed pickup/put/open/close invalidate affected current geometry and observation recency; moved geometry is replaced on reacquisition. Held/sliced identities use explicit state, and raw history remains available as stale evidence. No simulator IDs or hidden object geometry are used."
+    },
+    {
+      "topic": "provisional_objects",
+      "classification": "required_online_contract",
+      "openeqa_reference": "Offline final filter normally requires >=3 detections",
+      "current_implementation_and_reason": "Keep immediately queryable provisional identities; confirm after three distinct matched frames. Do not delete a newly encountered action target because future evidence has not arrived."
+    },
+    {
+      "topic": "same_frame_matching",
+      "classification": "explicit_identity_safeguard",
+      "openeqa_reference": "Reference assigns each detection row independently to its highest-scoring existing object, permitting many-to-one in one frame",
+      "current_implementation_and_reason": "New duplicate-mask suppression then one-to-one greedy score matching prevents duplicate support inflation and conflation of current interaction masks. This changes association semantics and is not merely stable-ID bookkeeping."
+    },
+    {
+      "topic": "coobserved_merge_veto",
+      "classification": "explicit_conservative_identity_safeguard",
+      "openeqa_reference": "Reference periodic merge does not permanently prohibit merging objects once coobserved",
+      "current_implementation_and_reason": "New memory refuses consolidation if two IDs share any observed frame. Protects distinct same-class interaction targets but can retain an oversegmentation introduced in one frame; requires empirical validation."
+    },
+    {
+      "topic": "category_label_aggregation",
+      "classification": "restored_with_deterministic_tie_rule",
+      "openeqa_reference": "Reference most_common_class uses unweighted class-id frequency",
+      "current_implementation_and_reason": "category_evidence is an integer count of distinct-frame category observations; confidence is not a vote weight and remains stored on ObjectView for view quality. Merged identities add per-category counts. Highest vote count wins; equal counts choose the lexically smallest category, a deterministic tie rule rather than depending on historical class-ID ordering. Regression confirms two confidence0.3 Mug observations beat one confidence0.95 Cup observation."
+    },
+    {
+      "topic": "maintenance_schedule_end_of_stream",
+      "classification": "remaining_schedule_difference",
+      "openeqa_reference": "Reference skips periodic maintenance after empty foreground frames and unconditionally denoises/filters/merges at offline sequence end",
+      "current_implementation_and_reason": "Online maintenance runs every20 observations, including frames without new detections; no unconditional terminal pruning/final pack pass is implied. Action decisions use current provisional state, not a precomputed final sequence."
+    },
+    {
+      "topic": "spatial_support_guard",
+      "classification": "matched_default_conditional_difference",
+      "openeqa_reference": "At phys_bias0 and threshold1.2, overlap0 cannot match because cosine<=1",
+      "current_implementation_and_reason": "Current explicitly requires positive point overlap. Under other exposed phys_bias/threshold values it is stricter than reference sim_sum; declared v9 uses the matched default configuration."
+    },
+    {
+      "topic": "vocabulary_tagging",
+      "classification": "user_requested_protocol_change",
+      "openeqa_reference": "OpenEQA uses RAM per-frame/accumulated category tags",
+      "current_implementation_and_reason": "ALFRED uses the fixed complete canonical vocabulary, including state-derived categories, without current-scene GT class metadata or instruction-based pruning."
+    },
+    {
+      "topic": "clip_crop_text_sam",
+      "classification": "restored_in_perception_module",
+      "openeqa_reference": "Original detector float bbox plus20px padding, unmasked RGB background, direct category text without photo template; SAM multimask=True and quality argmax",
+      "current_implementation_and_reason": "Perception agent corrected the earlier tight-mask gray-background crop and text prefix. Bounding boxes persist through geometry; CLIP extraction happens before mask subtraction. Module owned by parent/perception agent and separately gated."
+    },
+    {
+      "topic": "detector_phrase_assignment",
+      "classification": "explicit_correctness_difference",
+      "openeqa_reference": "Legacy phrases2classes extracts first word, substring-matches first category, and may fall back to class0",
+      "current_implementation_and_reason": "New fixed-vocabulary token-span scoring chooses the highest-scoring valid category span above the text threshold, instead of legacy first-word substring matching or a silent unknown-phrase class0 fallback. Exact score ties follow fixed vocabulary order; semantic ambiguity is not claimed to be eliminated. Global cross-caption NMS remains class-agnostic at IoU .5."
+    },
+    {
+      "topic": "depth_pose_and_navigation",
+      "classification": "declared_environment_extension",
+      "openeqa_reference": "Offline OpenEQA uses recorded RGB-D/poses and a final prepared object/view index",
+      "current_implementation_and_reason": "ALFRED uses predicted metric depth and action odometry, plus separate free/occupied/unknown and observation coverage maps, collisions and exploration. Depth/pose noise means static mathematical agreement cannot establish task performance."
+    }
+  ],
+  "validation": {
+    "all_alfred_suite": {
+      "collected": 284,
+      "passed": 282,
+      "failed": 2,
+      "failure_scope": "Two executor test fixture paths outside mapping implementation; parent subsequently corrected paths and reported20/20 executor tests passed. Final fullsrc gate is parent-owned.",
+      "log": "tmp/alfred_setup/alfred_all_tests_mapping_audit.log",
+      "log_sha256": "554500a8aea5e5a42cbb9406497691e5539fb3de090bb16e11922cc10e41a076"
+    },
+    "mapping_geometry_reference_tests_in_suite": {
+      "passed": 59,
+      "files": [
+        "test_alfred_memory.py",
+        "test_alfred_object_mapping.py",
+        "test_alfred_mapping_reference.py",
+        "test_alfred_mapping_cosine.py"
+      ],
+      "final_targeted_log": "tmp/alfred_v9/final_category_vote_tests.log",
+      "final_targeted_log_sha256": "20e48f644f8c231bf9336786456e61a22b22df486f1a78b8fb18fbac1b572a75",
+      "scope": "59 CPU mapping/geometry/reference regressions passed after the final unweighted-category restore; includes image/text fusion, masks, aliases, voxel/DBSCAN and true-cosine boundaries."
+    },
+    "scoped_mypy": "8 owned source/test files passed",
+    "ruff": "8 owned source/test files passed",
+    "native_cpu_voxel_reference": {
+      "scope": "CPU-only synthetic voxel/color numerical reference; no original pickle/data/model/GPU/replay",
+      "open3d_version": "0.19.0",
+      "checks": [
+        {
+          "offset": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "point_count": 3,
+          "matches_native_open3d": true
+        },
+        {
+          "offset": [
+            0.049,
+            0.017,
+            -0.012
+          ],
+          "point_count": 3,
+          "matches_native_open3d": true
+        }
+      ],
+      "passed": true
+    },
+    "native_cpu_reference_script_sha256": "8c03c3b1a0daf3dd291bd1815a91d74f12c7fb85d01e4cbab614f7e51b19ae43"
+  },
+  "remaining_validation": [
+    "Parent full repository gates after all source changes settle.",
+    "Only after a clean authorized commit: frozen train-depth capture, model comparison, then frozen pilot15.",
+    "A future read-only real-cache parity replay must first establish cache provenance and a safe data representation; synthetic references do not replace it."
+  ],
+  "final_source_freeze": "No further mapping changes planned after this audit refresh; parent owns final repository gates and commit."
+}

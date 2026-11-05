@@ -1,0 +1,20 @@
+{
+  "torch": "2.8.0+cu126",
+  "torchvision": "0.23.0+cu126",
+  "numpy": "1.26.4",
+  "transformers": "4.57.1",
+  "open_clip_torch": "3.2.0",
+  "scikit-fmm": "2025.6.23",
+  "groundingdino": "0.1.0",
+  "segment-anything": "1.0",
+  "depth-anything-3": "0.0.0",
+  "unidepth": "0.1",
+  "hatchling": "1.27.0",
+  "editables": "0.5",
+  "imageio": "2.37.0",
+  "wandb": "0.21.4",
+  "protobuf": "6.33.6",
+  "safetensors": "0.8.0",
+  "einops": "0.8.2",
+  "scikit-learn": "1.9.1"
+}

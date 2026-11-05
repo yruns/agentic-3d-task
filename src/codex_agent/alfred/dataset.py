@@ -158,6 +158,84 @@ class PilotManifest(BaseModel):
         return self
 
 
+class PilotSubsetManifest(BaseModel):
+    """Outcome-independent pilot15 derived from the immutable original pilot50."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    schema_version: Literal[2] = 2
+    selection: Literal["parent_stratified_pilot15_sha256_v1"] = (
+        "parent_stratified_pilot15_sha256_v1"
+    )
+    seed: int = Field(ge=0)
+    parent_filename: str = Field(pattern=r"^[A-Za-z0-9_-]+\.json$")
+    parent_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    splits_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    split_counts: dict[ValidationSplit, int]
+    samples: tuple[FoldSample, ...]
+
+    @model_validator(mode="after")
+    def validate_samples(self) -> PilotSubsetManifest:
+        if self.split_counts != {"valid_seen": 7, "valid_unseen": 8}:
+            raise ValueError("pilot15 split_counts must be 7 seen and 8 unseen")
+        if len(self.samples) != 15 or len({s.task for s in self.samples}) != 15:
+            raise ValueError("pilot15 requires exactly 15 distinct trajectories")
+        for split, count in self.split_counts.items():
+            selected = [s for s in self.samples if s.split == split]
+            if len(selected) != count or {s.task_type for s in selected} != set(
+                TASK_TYPES
+            ):
+                raise ValueError(f"pilot15 {split} must cover all seven task types")
+        return self
+
+
+def create_pilot15_manifest(parent_path: Path, *, seed: int = 0) -> PilotSubsetManifest:
+    """Select one parent sample per split/type plus one additional unseen sample.
+
+    SHA-256 of ``seed:split/task#repeat`` ranks candidates without reading scores,
+    instructions or execution traces. Output order follows the original parent.
+    """
+    if type(seed) is not int or seed < 0:
+        raise ValueError(f"seed={seed!r} must be a nonnegative integer")
+    parent_bytes = parent_path.read_bytes()
+    parent = PilotManifest.model_validate_json(parent_bytes)
+    if parent.per_split != 25:
+        raise ValueError("pilot15 parent must be the original balanced pilot50")
+
+    def identity(sample: FoldSample) -> str:
+        return f"{sample.split}/{sample.task}#{sample.repeat_idx}"
+
+    def rank(sample: FoldSample) -> str:
+        return hashlib.sha256(f"{seed}:{identity(sample)}".encode()).hexdigest()
+
+    chosen: set[str] = set()
+    for split in VALIDATION_SPLITS:
+        for task_type in TASK_TYPES:
+            candidates = [
+                sample
+                for sample in parent.samples
+                if sample.split == split and sample.task_type == task_type
+            ]
+            chosen.add(identity(min(candidates, key=rank)))
+    extra = min(
+        (
+            sample
+            for sample in parent.samples
+            if sample.split == "valid_unseen" and identity(sample) not in chosen
+        ),
+        key=rank,
+    )
+    chosen.add(identity(extra))
+    return PilotSubsetManifest(
+        seed=seed,
+        parent_filename=parent_path.name,
+        parent_sha256=hashlib.sha256(parent_bytes).hexdigest(),
+        splits_sha256=parent.splits_sha256,
+        split_counts={"valid_seen": 7, "valid_unseen": 8},
+        samples=tuple(s for s in parent.samples if identity(s) in chosen),
+    )
+
+
 def load_episode(
     data_root: Path, *, split: ValidationSplit, task: str, repeat_idx: int
 ) -> AlfredEpisode:
@@ -296,7 +374,21 @@ def load_manifest(
     path: Path, data_root: Path, splits_path: Path
 ) -> tuple[AlfredEpisode, ...]:
     """Verify frozen selection, official membership, and every trajectory hash."""
-    manifest = PilotManifest.model_validate_json(path.read_bytes())
+    content = path.read_bytes()
+    payload = json.loads(content)
+    manifest: PilotManifest | PilotSubsetManifest
+    if isinstance(payload, dict) and payload.get("schema_version") == 2:
+        subset = PilotSubsetManifest.model_validate_json(content)
+        parent_path = path.parent / subset.parent_filename
+        if hashlib.sha256(parent_path.read_bytes()).hexdigest() != subset.parent_sha256:
+            raise ValueError(f"{path}: parent_sha256 differs from {parent_path}")
+        if subset != create_pilot15_manifest(parent_path, seed=subset.seed):
+            raise ValueError(
+                f"{path}: samples differ from deterministic parent selection"
+            )
+        manifest = subset
+    else:
+        manifest = PilotManifest.model_validate_json(content)
     if manifest.splits_sha256 != hashlib.sha256(splits_path.read_bytes()).hexdigest():
         raise ValueError(f"{path}: splits_sha256 differs from {splits_path}")
     allowed = {

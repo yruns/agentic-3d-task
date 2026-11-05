@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import re
 import sqlite3
-import subprocess
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -16,17 +14,28 @@ from pydantic import BaseModel, ConfigDict
 
 from codex_agent.alfred.dataset import VALIDATION_SPLITS, AlfredEpisode, load_manifest
 from codex_agent.alfred.execution import EpisodeExecutor, ExecutionConfig, write_json
+from codex_agent.alfred.memory import MemoryConfig
 from codex_agent.alfred.metrics import AggregateMetrics, EpisodeScore, aggregate_scores
 from codex_agent.alfred.odometry import ActionOdometry, camera_intrinsics
 from codex_agent.alfred.perception import (
-    FILM_CHECKPOINTS,
-    FilmPerception,
-    FilmPerceptionConfig,
+    PERCEPTION_PROFILE,
+    ScenePerception,
+    ScenePerceptionConfig,
 )
 from codex_agent.alfred.policy import AlfredPolicyRuntime
-from codex_agent.alfred.provenance import code_provenance, file_sha256
+from codex_agent.alfred.provenance import (
+    capture_runtime_provenance,
+    code_provenance,
+    external_source_provenance,
+    file_sha256,
+)
+from codex_agent.alfred.provenance import (
+    model_source_provenance as model_source_provenance,
+)
 from codex_agent.alfred.results import EpisodeAttempt, ingest_run
 from codex_agent.alfred.simulator import SimulatorConfig, ThorSimulator
+from codex_agent.alfred.spatial_map import SpatialMapConfig
+from codex_agent.alfred.vocabulary import vocabulary_sha256
 from codex_agent.cli.runtime_preflight import preflight_codex_runtime
 from codex_agent.config import CodexAgentConfig
 
@@ -45,10 +54,12 @@ class AlfredRunConfig:
     run_id: str
     database_path: Path
     simulator: SimulatorConfig
-    perception: FilmPerceptionConfig
+    perception: ScenePerceptionConfig
     runtime: CodexAgentConfig
     execution: ExecutionConfig
     command: tuple[str, ...]
+    memory: MemoryConfig = field(default_factory=MemoryConfig)
+    spatial: SpatialMapConfig = field(default_factory=SpatialMapConfig)
     limit: int | None = None
     shard_index: int = 0
     num_shards: int = 1
@@ -115,7 +126,7 @@ def preflight_run(config: AlfredRunConfig) -> dict[str, object]:
             for split in VALIDATION_SPLITS
         },
         "fold_sha256": file_sha256(config.fold_path),
-        "perception": "film_predicted_rgb_v1",
+        "perception": PERCEPTION_PROFILE,
         "simulator_started": False,
         "upstream_credentials_verified": False,
     }
@@ -152,9 +163,22 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
     attempts: list[EpisodeAttempt] = []
     _checkpoint(config, metadata, episodes, attempts)
     try:
-        with FilmPerception(
+        with ScenePerception(
             config.perception, log_path=config.output_dir / "perception.stderr.log"
         ) as perception:
+            runtime_provenance = perception.runtime_provenance
+            perception_metadata = metadata["perception"]
+            if not isinstance(perception_metadata, dict):
+                raise TypeError("perception metadata must be a mapping")
+            perception_metadata["runtime_provenance"] = runtime_provenance.model_dump(
+                mode="json"
+            )
+            perception_metadata["libraries"] = {
+                name: package.model_dump(mode="json")
+                for name, package in runtime_provenance.packages.items()
+            }
+            perception_metadata["provenance_status"] = "worker_reported"
+            _checkpoint(config, metadata, episodes, attempts)
             for index, episode in enumerate(episodes):
                 logger.info(
                     "ALFRED episode %s/%s: %s",
@@ -184,6 +208,14 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
             else "error"
         )
         metadata["error"] = f"{type(exc).__name__}: {exc}"
+        perception_metadata = metadata.get("perception")
+        if (
+            isinstance(perception_metadata, dict)
+            and perception_metadata.get("runtime_provenance") is None
+        ):
+            perception_metadata["provenance_status"] = (
+                "unavailable_initialization_failed"
+            )
         raise
     finally:
         metadata["finished_at_utc"] = datetime.now(timezone.utc).isoformat()
@@ -202,7 +234,7 @@ def _run_episode(
     episode: AlfredEpisode,
     *,
     index: int,
-    perception: FilmPerception,
+    perception: ScenePerception,
     runtime: AlfredPolicyRuntime,
     attempts: list[EpisodeAttempt],
 ) -> None:
@@ -221,6 +253,8 @@ def _run_episode(
                 runtime=runtime,
                 output_dir=artifact_dir,
                 config=config.execution,
+                memory_config=config.memory,
+                spatial_config=config.spatial,
             )
             outcome = executor.run(episode.instruction, initial)
             terminal = environment.score()
@@ -310,40 +344,23 @@ def _selected_episodes(
     return episodes
 
 
-def external_source_provenance(path: Path) -> dict[str, object]:
-    """Hash actual Python sources, including untracked imports, plus Git revision."""
-    head = subprocess.check_output(
-        ["git", "-C", str(path), "rev-parse", "HEAD"], text=True
-    ).strip()
-    diff = subprocess.check_output(["git", "-C", str(path), "diff", "HEAD", "--"])
-    source_paths = subprocess.check_output(
-        [
-            "git",
-            "-C",
-            str(path),
-            "ls-files",
-            "-z",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "--",
-            "*.py",
-        ]
-    ).split(b"\0")
-    digest = hashlib.sha256()
-    paths = sorted({relative for relative in source_paths if relative})
-    for relative in paths:
-        digest.update(relative + b"\0")
-        digest.update((path / relative.decode("utf-8")).read_bytes())
-        digest.update(b"\0")
-    return {
-        "path": str(path),
-        "head_sha": head,
-        "tracked_diff_sha256": hashlib.sha256(diff).hexdigest(),
-        "tracked_dirty": bool(diff),
-        "python_source_sha256": digest.hexdigest(),
-        "python_source_count": len(paths),
+def perception_assets(config: ScenePerceptionConfig) -> dict[str, Path]:
+    """List exact inference assets, excluding download caches and temporary files."""
+    assets = {
+        name: getattr(config, name)
+        for name in (
+            "dino_config",
+            "dino_checkpoint",
+            "sam_checkpoint",
+            "clip_checkpoint",
+        )
     }
+    for name in ("dino_text_encoder_dir", "depth_model_dir"):
+        directory = getattr(config, name)
+        for path in sorted(directory.iterdir()):
+            if path.is_file() and not path.name.startswith("."):
+                assets[f"{name}/{path.name}"] = path
+    return assets
 
 
 def _run_metadata(
@@ -385,6 +402,9 @@ def _run_metadata(
         "reasoning_effort": config.runtime.reasoning_effort,
         "execution": asdict(config.execution),
         "geometry": {
+            "runtime_provenance": capture_runtime_provenance(
+                model_worker=False
+            ).model_dump(mode="json"),
             "camera_height_m": odometry.camera_height_m,
             "step_size_m": odometry.step_size_m,
             "vertical_fov_degrees": 60.0,
@@ -392,16 +412,20 @@ def _run_metadata(
             "pose_source": "successful-action odometry and yaw/horizon proprioception",
             "world_axes": "episode-relative THOR X/Z/Y (Z-up)",
         },
-        "perception_profile": "film_predicted_rgb_v1",
+        "perception_profile": PERCEPTION_PROFILE,
         "perception": {
-            "device": config.perception.device,
-            "score_threshold": config.perception.score_threshold,
-            "mask_threshold": config.perception.mask_threshold,
+            "configuration": config.perception.to_payload(),
+            "vocabulary_sha256": vocabulary_sha256(),
             "checkpoints": {
-                name: file_sha256(config.perception.weights_root / name)
-                for name in FILM_CHECKPOINTS
+                name: {"path": str(path), "sha256": file_sha256(path)}
+                for name, path in perception_assets(config.perception).items()
             },
+            "libraries": None,
+            "runtime_provenance": None,
+            "provenance_status": "not_started",
         },
+        "memory": asdict(config.memory),
+        "spatial_map": asdict(config.spatial),
         "simulator": {
             "python_executable": str(config.simulator.python_executable),
             "x_display": config.simulator.x_display,
@@ -410,7 +434,6 @@ def _run_metadata(
         },
         "external_sources": {
             "alfred": external_source_provenance(config.simulator.alfred_root),
-            "film": external_source_provenance(config.perception.film_root),
         },
     }
 

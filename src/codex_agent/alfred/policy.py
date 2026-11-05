@@ -50,6 +50,7 @@ WireOperation = Literal[
     "NavigateCell",
     "RetrieveObject",
     "RetrieveCell",
+    "Explore",
     "Stop",
 ]
 NAVIGATION_ACTIONS = frozenset(
@@ -124,6 +125,12 @@ class StopCommand(_DecisionModel):
     kind: Literal["stop"]
 
 
+class ExploreCommand(_DecisionModel):
+    """Observe a reachable frontier using the live occupancy and coverage maps."""
+
+    kind: Literal["explore"]
+
+
 class AlfredDecision(_DecisionModel):
     """Internal typed command used by execution; never the upstream wire schema.
 
@@ -137,13 +144,14 @@ class AlfredDecision(_DecisionModel):
         | InteractionCommand
         | NavigateCommand
         | RetrieveCommand
+        | ExploreCommand
         | StopCommand
     )
     rationale: str = Field(min_length=1, max_length=1600)
     memory_note: str = Field(max_length=2400)
 
     @property
-    def kind(self) -> Literal["act", "navigate", "retrieve", "stop"]:
+    def kind(self) -> Literal["act", "navigate", "retrieve", "explore", "stop"]:
         """Return the executor's dispatch family."""
         if isinstance(self.command, (MotionCommand, InteractionCommand)):
             return "act"
@@ -200,6 +208,8 @@ class AlfredDecision(_DecisionModel):
                 if isinstance(self.command.target, ObjectTarget)
                 else "RetrieveCell"
             )
+        elif isinstance(self.command, ExploreCommand):
+            operation = "Explore"
         else:
             operation = "Stop"
         cell = self.cell
@@ -238,6 +248,7 @@ class AlfredWireDecision(_DecisionModel):
             | InteractionCommand
             | NavigateCommand
             | RetrieveCommand
+            | ExploreCommand
             | StopCommand
         )
         if self.operation in NAVIGATION_ACTIONS:
@@ -274,6 +285,8 @@ class AlfredWireDecision(_DecisionModel):
             )
         elif self.operation == "Stop":
             command = StopCommand(kind="stop")
+        elif self.operation == "Explore":
+            command = ExploreCommand(kind="explore")
         else:
             raise ValueError(f"unsupported ALFRED wire operation: {self.operation!r}")
         return AlfredDecision(
@@ -292,7 +305,7 @@ MoveAhead moves 0.25 m. RotateLeft/Right turn 90 degrees. LookUp/Down adjust pit
 primitives; execution stops early on failure and updates memory at EVERY step.
 Return flat JSON with operation, object_id, cell_x, cell_y, repeat, rationale,
 and memory_note. operation is one native action name, NavigateObject, NavigateCell,
-RetrieveObject, RetrieveCell, or Stop. Native interactions and *Object operations
+RetrieveObject, RetrieveCell, Explore, or Stop. Native interactions and *Object operations
 use object_id; *Cell operations use cell_x/cell_y. Motion actions alone use repeat;
 every other operation executes once. Set unused object/cell parameters to 0 and
 unused repeat to 1. The operation explicitly selects which parameters apply.
@@ -305,10 +318,16 @@ before slicing; put it down before picking up the sliced food. Heat: put inside
 microwave, close, toggle on, toggle off, open, retrieve. Cool: put inside fridge,
 close, open, retrieve. Clean: place in sink basin, toggle faucet on then off,
 retrieve. Hold the item and switch on the lamp for a look-at-in-light task.
-Navigate requests a route through observed free cells, to a grid cell or a known
+Object IDs remain stable; merged aliases resolve to the surviving instance.
+Provisional objects have limited observations, not confirmed absence or certainty.
+Action-derived states record successful feedback, not an independent visual check.
+Navigate requests a route through observed free cells, to a coarse map region or a known
 object's vicinity. It does not ensure interaction readiness; inspect the returned
-RGB and adjust position/pitch. If no observed route exists, explore with short
-primitive moves. Retrieve asks for complementary past evidence for an object or
+RGB and adjust position/pitch. If no observed route exists, use Explore.
+Explore commits to a reachable frontier, follows its route, then observes new
+directions. Coverage and navigation are separate: seen need not mean free.
+Do not repeatedly select an unreachable object or completed inspection position.
+Retrieve asks for complementary past evidence for an object or
 grid cell, without moving. Do not repeatedly retrieve the same evidence.
 After a full scan from one position, prefer navigating to an observed free
 approach or moving to obtain a new view over another identical scan or retrieval.

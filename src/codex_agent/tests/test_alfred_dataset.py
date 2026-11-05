@@ -10,6 +10,7 @@ import pytest
 
 from codex_agent.alfred.dataset import (
     TASK_TYPES,
+    create_pilot15_manifest,
     create_pilot_manifest,
     load_episode,
     load_manifest,
@@ -123,3 +124,41 @@ def test_rejects_missing_annotation_and_duplicate_split_entry(tmp_path: Path) ->
     splits_path.write_text(json.dumps(split_payload))
     with pytest.raises(ValueError, match="duplicate"):
         load_split(tmp_path, splits_path, split="valid_seen")
+
+
+def test_pilot15_preserves_parent_membership_and_both_task_type_strata(
+    tmp_path: Path,
+) -> None:
+    splits = _write_dataset(tmp_path)
+    parent = tmp_path / "pilot50.json"
+    parent.write_text(create_pilot_manifest(tmp_path, splits).model_dump_json())
+    subset = create_pilot15_manifest(parent)
+    assert subset == create_pilot15_manifest(parent)
+    assert len(subset.samples) == 15
+    assert subset.split_counts == {"valid_seen": 7, "valid_unseen": 8}
+    for split in subset.split_counts:
+        selected = [sample for sample in subset.samples if sample.split == split]
+        assert len(selected) == subset.split_counts[split]
+        assert {sample.task_type for sample in selected} == set(TASK_TYPES)
+    path = tmp_path / "pilot15.json"
+    path.write_text(subset.model_dump_json())
+    assert len(load_manifest(path, tmp_path, splits)) == 15
+    parent.write_text(parent.read_text() + "\n")
+    with pytest.raises(ValueError, match="parent_sha256"):
+        load_manifest(path, tmp_path, splits)
+
+
+def test_pilot15_rejects_reordered_or_replaced_frozen_selection(tmp_path: Path) -> None:
+    splits = _write_dataset(tmp_path)
+    parent = tmp_path / "pilot50.json"
+    parent.write_text(create_pilot_manifest(tmp_path, splits).model_dump_json())
+    subset = create_pilot15_manifest(parent)
+    payload = subset.model_dump(mode="json")
+    payload["samples"][0], payload["samples"][1] = (
+        payload["samples"][1],
+        payload["samples"][0],
+    )
+    path = tmp_path / "pilot15.json"
+    path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="deterministic parent selection"):
+        load_manifest(path, tmp_path, splits)

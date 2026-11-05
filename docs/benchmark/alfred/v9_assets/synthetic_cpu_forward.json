@@ -1,0 +1,240 @@
+{
+  "schema_version": 1,
+  "scope": "CPU implementation test on programmatically generated color blocks; no dataset image, task, simulator, LLM or task score",
+  "status": "passed",
+  "input": {
+    "description": "300x300 light-gray RGB canvas, green lower rectangle, red and blue rectangles, yellow disk",
+    "shape": [
+      300,
+      300,
+      3
+    ],
+    "sha256": "001724587e38eba3de7252049e462599ce64e6a54b98ba32d791fad153e5c375",
+    "intrinsics": [
+      [
+        259.8076171875,
+        0.0,
+        150.0
+      ],
+      [
+        0.0,
+        259.8076171875,
+        150.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "fov_degrees": 60
+  },
+  "execution": {
+    "entry": "ScenePerception persistent JSONL worker",
+    "device": "cpu",
+    "cuda_visible_devices": "",
+    "worker_torch_threads": 1,
+    "explicit_sam_torch_threads": 2,
+    "timeout_seconds": 900,
+    "offline_models": true,
+    "configuration": {
+      "python_executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+      "dino_config": "/home/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino/groundingdino/config/GroundingDINO_SwinT_OGC.py",
+      "dino_checkpoint": "/home/ysh/Models/agentic3d/models/alfred_vision/groundingdino/groundingdino_swint_ogc.pth",
+      "dino_text_encoder_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased",
+      "sam_checkpoint": "/home/ysh/Models/agentic3d/models/alfred_vision/sam/sam_vit_h_4b8939.pth",
+      "clip_checkpoint": "/home/ysh/Models/agentic3d/models/CLIP-ViT-H-14-laion2B-s32B-b79K/open_clip_model.safetensors",
+      "depth_model_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large",
+      "gpu_lock_path": "/tmp/agentic3d-alfred-gpu0.lock",
+      "device": "cpu",
+      "sam_model_type": "vit_h",
+      "clip_model_name": "ViT-H-14",
+      "box_threshold": 0.2,
+      "text_threshold": 0.2,
+      "nms_iou_threshold": 0.5,
+      "caption_batch_size": 24,
+      "max_detections": 100,
+      "timeout_seconds": 900.0
+    }
+  },
+  "worker_stats": {
+    "load_seconds": 51.46838712878525,
+    "inference_seconds": 106.77342319767922,
+    "frames": 1,
+    "peak_cuda_memory_bytes": 0,
+    "device": "cpu",
+    "depth_seconds": 7.8262851713225245,
+    "detection_seconds": 40.26890180166811,
+    "segmentation_seconds": 45.479633055627346,
+    "feature_seconds": 13.184447678737342,
+    "capped_detections": 0,
+    "nms_suppressed": 47,
+    "empty_masks": 0,
+    "gpu_wait_seconds": 0.00010018236935138702,
+    "residency": "sequential_cpu_offload"
+  },
+  "worker_elapsed_seconds": 159.7036784198135,
+  "total_elapsed_seconds": 193.21014305297285,
+  "detections": {
+    "vocabulary_categories": 114,
+    "caption_batches": 5,
+    "candidate_boxes": 53,
+    "nms_suppressed": 47,
+    "capped_detections": 0,
+    "empty_masks": 0
+  },
+  "outputs": {
+    "depth_min_m": 0.9795809388160706,
+    "depth_median_m": 1.0735478401184082,
+    "depth_max_m": 1.1520791053771973,
+    "depth_shape": [
+      300,
+      300
+    ],
+    "image_feature_shape": [
+      6,
+      1024
+    ],
+    "frame_feature_shape": [
+      1024
+    ],
+    "frame_feature_norm": 0.9999998211860657
+  },
+  "explicit_sam_forward": {
+    "seconds": 26.82919755857438,
+    "instances": 1,
+    "empty_masks": 0,
+    "mask_pixels": [
+      11092
+    ],
+    "original_boxes": [
+      [
+        40,
+        60,
+        116,
+        206
+      ]
+    ]
+  },
+  "validated": [
+    "Real DA3Metric, GroundingDINO, SAM1 and OpenCLIP forward passes",
+    "All 114 fixed classes scanned in five caption batches",
+    "Positive finite float32 depth in original 300x300 image dimensions",
+    "Six nonempty binary masks and original floating detector boxes",
+    "Aligned normalized image/text/frame CLIP features",
+    "No GPU allocation; owned worker process exited after context close"
+  ],
+  "source_sha256": {
+    "src/codex_agent/alfred/perception.py": "be25cf87acdb6e8e04a2685a60057fad9d5363568bce2cd86e85ebab3572f525",
+    "src/codex_agent/alfred/perception_worker.py": "e6791a84dd5cf35f9f2091c1c43822d832c7a40cf3a80812ed99f77155d8f8bb",
+    "src/codex_agent/alfred/vision_models.py": "e2653776680e0b94ff23bd163a48b17afddf245755bde7573f06fb10152d3e64",
+    "src/codex_agent/alfred/depth_models.py": "2c22de84263f53731ed4c5c08f74729ae0d178b157d2ea4f1462dd0caf9a7cf7",
+    "src/codex_agent/alfred/model_runtime.py": "8bcdebb066cf643c7b3319d8b71c48f5ea6f87b4db6bd3515099779c428f65a1",
+    "src/codex_agent/alfred/vocabulary.py": "c0233a4c9c64ffac164d5f0cb33c51689fb4159fda24e59a3ff8426417725b10"
+  },
+  "evidence": [
+    {
+      "path": "tmp/alfred_v9/synthetic_cpu_forward_attempt1/report.json",
+      "sha256": "187fbd0173e8feef6ce41a0cca93bd5d90bce2ec7a382650810d218d047a1dfe"
+    },
+    {
+      "path": "tmp/alfred_v9/synthetic_cpu_forward_attempt1/worker.log",
+      "sha256": "db84eb86f68c0cdd19f4f72aa06557e0754f1bd4aa9f4085542b5c81443c3756"
+    },
+    {
+      "path": "tmp/alfred_v9/synthetic_cpu_forward_attempt1.log",
+      "sha256": "de790e2a48a6da39a14d08b95433eac78105e64cf80ec716eda436f3a212b104"
+    },
+    {
+      "path": "tmp/alfred_v9/synthetic_cpu_forward.py",
+      "sha256": "877e37cca1e4508f4d686e2ef7bc7391026acedca6eeb71ddd8fe1750f2703b2"
+    }
+  ],
+  "limitations": [
+    "Synthetic predictions are not semantic accuracy evidence",
+    "No ground truth or depth-scale calibration used; numerical meters are only an output validity check",
+    "UniDepth comparator has CPU loading evidence only, no forward in this worker test",
+    "GPU forward/memory, real train-frame depth calibration and pilot15 remain untested here"
+  ],
+  "unidepth_comparator_forward": {
+    "scope": "UniDepthV2 comparator CPU implementation test on existing generated color blocks; no dataset, GT, task, simulator or model service calls",
+    "status": "passed",
+    "device": "cpu",
+    "torch_threads": 2,
+    "torch": "2.8.0+cu126",
+    "rgb_sha256": "001724587e38eba3de7252049e462599ce64e6a54b98ba32d791fad153e5c375",
+    "rgb_shape": [
+      300,
+      300,
+      3
+    ],
+    "intrinsics": [
+      [
+        259.8076171875,
+        0.0,
+        150.0
+      ],
+      [
+        0.0,
+        259.8076171875,
+        150.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "model_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/unidepth-v2-vitl14",
+    "adapter_source_sha256": "2c22de84263f53731ed4c5c08f74729ae0d178b157d2ea4f1462dd0caf9a7cf7",
+    "script_sha256": "cce726859b9f1beb347e0f302ebe1915ffcb05ab093f1c7ce497209ff708e854",
+    "load_seconds": 5.423123243264854,
+    "inference_seconds": 3.539331895299256,
+    "depth": {
+      "shape": [
+        300,
+        300
+      ],
+      "dtype": "float32",
+      "min_m": 0.9666895270347595,
+      "median_m": 1.1284849643707275,
+      "p95_m": 1.2248131811618805,
+      "max_m": 1.2343500852584839,
+      "l2_norm_m": 339.244384765625,
+      "finite": true,
+      "positive": true,
+      "sha256": "c8c1f98b0cf0f1550978e2c9ab48ca9063fafda082784bc1d790c1473bdc512b"
+    },
+    "parameter_devices": [
+      "cpu"
+    ],
+    "elapsed_seconds": 8.965468133799732,
+    "separate_from_original_worker_test": true,
+    "prior_audit_sha256": "85d9abeac1f705644d8315e47452defd80a9ba93ff849d42d381628593acf136",
+    "inference_protocol": "Official model.infer with the same RGB and known K; default checkpoint resolution bounds, two CPU threads, no GT-derived scale correction or image resizing override",
+    "warnings": [
+      "Optional KNN evaluation extension and xFormers unavailable; successful forward did not require installation",
+      "Official UniDepthV2 default resolution bounds used, as resolution_level is unset",
+      "External CUDA autocast decorator disabled by PyTorch because CUDA is hidden; model parameters and computation remained on CPU"
+    ],
+    "evidence": [
+      {
+        "path": "tmp/alfred_v9/synthetic_unidepth_cpu_attempt1/report.json",
+        "sha256": "5cfc04cebc754b9e720125f01f6a7139dbd30358f671b7497723cc492afbd238"
+      },
+      {
+        "path": "tmp/alfred_v9/synthetic_unidepth_cpu_attempt1.log",
+        "sha256": "2d4dccf0bc4a52929d6ee07e045cae3659252546146be5afec55df1b8b3aff0e"
+      },
+      {
+        "path": "tmp/alfred_v9/synthetic_unidepth_cpu_forward.py",
+        "sha256": "cce726859b9f1beb347e0f302ebe1915ffcb05ab093f1c7ce497209ff708e854"
+      }
+    ],
+    "limitations": [
+      "No real-image metric accuracy comparison or backend selection",
+      "No GPU forward or memory profiling",
+      "No ALFRED task score"
+    ]
+  }
+}

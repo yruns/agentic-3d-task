@@ -1,0 +1,43 @@
+# ALFRED online OpenEQA-method scene representation. All inference is local.
+# Change these explicit paths on another host; runtime never downloads models.
+[perception]
+python_executable = "/home/ysh/miniconda3/envs/agentic3d/bin/python"
+dino_config = "/home/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+dino_checkpoint = "/home/ysh/Models/agentic3d/models/alfred_vision/groundingdino/groundingdino_swint_ogc.pth"
+dino_text_encoder_dir = "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased"
+sam_checkpoint = "/home/ysh/Models/agentic3d/models/alfred_vision/sam/sam_vit_h_4b8939.pth"
+clip_checkpoint = "/home/ysh/Models/agentic3d/models/CLIP-ViT-H-14-laion2B-s32B-b79K/open_clip_model.safetensors"
+depth_model_dir = "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large"
+gpu_lock_path = "/tmp/agentic3d-alfred-gpu4.lock"
+device = "cuda:0"
+physical_gpu_index = 4
+box_threshold = 0.2
+text_threshold = 0.2
+nms_iou_threshold = 0.5
+caption_batch_size = 24
+max_detections = 100
+timeout_seconds = 300.0
+
+[memory]
+max_depth_m = 8.0
+max_object_views = 64
+visibility_depth_tolerance_m = 0.15
+
+[memory.mapping]
+# ALFRED approaches containers at close range; retain boxes covering >50% of
+# the image. The reusable mapper keeps the OpenEQA default of 0.5.
+max_bbox_area_ratio = 1.0
+voxel_size_m = 0.025
+dbscan_eps_m = 0.1
+dbscan_min_points = 10
+association_threshold = 1.2
+maintenance_interval = 20
+confirmation_observations = 3
+
+[spatial]
+fine_cell_size_m = 0.05
+region_size_m = 0.5
+# Explicit planning clearance, not a claim of independently measured body size.
+robot_radius_m = 0.20
+clearance_m = 0.025
+max_depth_m = 8.0

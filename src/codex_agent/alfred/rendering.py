@@ -1,7 +1,8 @@
-"""BEV visualization of incrementally observed geometry and navigation evidence."""
+"""Schematic object footprints over observed navigation and coverage layers."""
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -10,95 +11,142 @@ if TYPE_CHECKING:
 
 
 def render_memory_bev(memory: IncrementalSceneMemory, path: Path) -> Path:
-    """Draw a bounded-size BEV with fixed world-cell labels and an object legend.
+    """Render fixed world-region labels, fine occupancy, frontiers and heading.
 
-    Empty space outside the observed extent is not drawn as explored free space.
-    Blue coverage means seen, white means free, dark gray means occupied, and
-    unobserved cells remain gray. Object positions are drawn only while valid.
+    The image window may expand, but no object, fine cell or semantic region is
+    renumbered. Blue coverage is distinct from white free space. Gray includes
+    unseen space and dark cells are occupied; these are estimates, not a mesh.
     """
     from PIL import Image, ImageDraw
 
-    cells = set(memory.grid_to_views) | memory.free_cells | memory.occupied_cells
-    if not cells:
-        raise ValueError("cannot render BEV before receiving an observation")
-    min_x = min(cell[0] for cell in cells) - 1
-    max_x = max(cell[0] for cell in cells) + 1
-    min_y = min(cell[1] for cell in cells) - 1
-    max_y = max(cell[1] for cell in cells) + 1
-    cols, rows = max_x - min_x + 1, max_y - min_y + 1
-    scale = max(2, min(30, 700 // max(cols, rows)))
-    margin, header = 44, 68
-    width = max(620, cols * scale + 2 * margin)
-    legend_height = 18 * min(20, len(memory.objects)) + 30
-    height = rows * scale + header + margin + legend_height
-    image = Image.new("RGB", (width, height), "#f7f7f7")
+    spatial_map = memory.spatial_map
+    cells = spatial_map.known_cells | spatial_map.seen_cells
+    if not cells or spatial_map.agent_position is None:
+        raise ValueError("BEV requires an integrated observation")
+    resolution = spatial_map.config.fine_cell_size_m
+    region_size = spatial_map.config.region_size_m
+    min_x = (
+        math.floor(min(cell[0] * resolution for cell in cells) / region_size)
+        * region_size
+        - region_size
+    )
+    max_x = (
+        math.ceil(max((cell[0] + 1) * resolution for cell in cells) / region_size)
+        * region_size
+        + region_size
+    )
+    min_y = (
+        math.floor(min(cell[1] * resolution for cell in cells) / region_size)
+        * region_size
+        - region_size
+    )
+    max_y = (
+        math.ceil(max((cell[1] + 1) * resolution for cell in cells) / region_size)
+        * region_size
+        + region_size
+    )
+    pixels_per_m = min(180.0, 850.0 / max(max_x - min_x, max_y - min_y))
+    margin, header = 48, 80
+    map_width = math.ceil((max_x - min_x) * pixels_per_m)
+    map_height = math.ceil((max_y - min_y) * pixels_per_m)
+    legend_rows = min(24, len(memory.objects))
+    width = max(740, map_width + 2 * margin)
+    height = header + map_height + margin + 20 * (legend_rows + 2)
+    image = Image.new("RGB", (width, height), "#f7f8fa")
     draw = ImageDraw.Draw(image)
     draw.text(
-        (12, 8),
-        f"Incremental scene memory | frame {max(memory.frames)}",
-        fill="black",
+        (12, 10),
+        f"Observed scene | frame {spatial_map.latest_frame_id} | fixed {region_size:g} m region IDs",
+        fill="#202c39",
     )
     draw.text(
-        (12, 26),
-        f"Cell = floor(world XY / {memory.config.cell_size_m:g} m), Z up",
-        fill="black",
+        (12, 30),
+        "White: free | dark: occupied | blue: seen only | gray: unknown",
+        fill="#35465c",
     )
     draw.text(
-        (12, 44),
-        "White free | dark occupied | blue seen only | gray unknown",
-        fill="black",
+        (12, 50),
+        "Green: frontier | red arrow: agent | orange box: committed exploration stance",
+        fill="#35465c",
     )
 
-    def rectangle(cell_x: int, cell_y: int) -> tuple[int, int, int, int]:
-        left = margin + (cell_x - min_x) * scale
-        top = header + (max_y - cell_y) * scale
-        return left, top, left + scale, top + scale
+    def pixel(x: float, y: float) -> tuple[int, int]:
+        return margin + round((x - min_x) * pixels_per_m), header + round(
+            (max_y - y) * pixels_per_m
+        )
 
-    colors = {"free": "#ffffff", "occupied": "#525b65", "unknown": "#cbd0d5"}
-    for cell_x in range(min_x, max_x + 1):
-        for cell_y in range(min_y, max_y + 1):
-            cell = (cell_x, cell_y)
-            state = memory.cell_state(cell)
-            color = colors[state]
-            if state == "unknown" and cell in memory.grid_to_views:
-                color = "#c6e5f5"
-            draw.rectangle(rectangle(*cell), fill=color, outline="#aeb7c0")
-    label_stride = max(1, 32 // scale)
-    for cell_x in range(min_x, max_x + 1, label_stride):
-        left, _, _, _ = rectangle(cell_x, max_y)
-        draw.text((left, header - 14), str(cell_x), fill="black")
-    for cell_y in range(min_y, max_y + 1, label_stride):
-        _, top, _, _ = rectangle(min_x, cell_y)
-        draw.text((3, top), str(cell_y), fill="black")
+    draw.rectangle(
+        (margin, header, margin + map_width, header + map_height), fill="#cbd0d5"
+    )
+    colors = {"free": "#ffffff", "occupied": "#424b58", "unknown": "#c6e5f5"}
+    for cell in cells:
+        x, y = cell[0] * resolution, cell[1] * resolution
+        left, top = pixel(x, y + resolution)
+        right, bottom = pixel(x + resolution, y)
+        draw.rectangle(
+            (left, top, right, bottom), fill=colors[spatial_map.cell_state(cell)]
+        )
+    for cell in spatial_map.frontier_cells():
+        center = pixel(*spatial_map.cell_center(cell))
+        draw.ellipse(
+            (center[0] - 1, center[1] - 1, center[0] + 1, center[1] + 1), fill="#38a66d"
+        )
+
+    first_col, last_col = math.floor(min_x / region_size), math.ceil(
+        max_x / region_size
+    )
+    first_row, last_row = math.floor(min_y / region_size), math.ceil(
+        max_y / region_size
+    )
+    label_stride = max(1, math.ceil(28 / (region_size * pixels_per_m)))
+    for col in range(first_col, last_col + 1):
+        left, _ = pixel(col * region_size, max_y)
+        draw.line((left, header, left, header + map_height), fill="#9aa7b5", width=1)
+        if col % label_stride == 0:
+            center_x, _ = pixel((col + 0.5) * region_size, max_y)
+            draw.text((center_x - 5, header - 16), str(col), fill="#25374b")
+    for row in range(first_row, last_row + 1):
+        _, top = pixel(min_x, row * region_size)
+        draw.line((margin, top, margin + map_width, top), fill="#9aa7b5", width=1)
+        if row % label_stride == 0:
+            _, center_y = pixel(min_x, (row + 0.5) * region_size)
+            draw.text((7, center_y - 6), str(row), fill="#25374b")
+
     for node in memory.objects.values():
         if not node.geometry_valid:
             continue
-        cell = memory.world_to_cell(*node.centroid[:2])
-        left, top, right, bottom = rectangle(*cell)
-        center_x, center_y = (left + right) // 2, (top + bottom) // 2
-        draw.ellipse(
-            (center_x - 4, center_y - 4, center_x + 4, center_y + 4), fill="#d78c10"
-        )
-        draw.text((center_x + 4, center_y - 8), str(node.object_id), fill="#9e3b00")
-    if memory.agent_position is not None:
-        cell = memory.world_to_cell(*memory.agent_position[:2])
-        left, top, right, bottom = rectangle(*cell)
-        draw.ellipse((left + 2, top + 2, right - 2, bottom - 2), fill="#d6293e")
-        draw.text((left + 4, top + 3), "A", fill="white")
-    legend_y = header + rows * scale + 24
-    for node in list(memory.objects.values())[:20]:
-        suffix = "" if node.geometry_valid else f" [{node.state}; location stale]"
+        bounds = node.bounds
+        left, top = pixel(float(bounds[0, 0]), float(bounds[1, 1]))
+        right, bottom = pixel(float(bounds[1, 0]), float(bounds[0, 1]))
+        draw.rectangle((left, top, right, bottom), outline="#a76715", width=2)
+        x, y = pixel(float(node.centroid[0]), float(node.centroid[1]))
+        draw.text((x + 2, y - 10), str(node.object_id), fill="#8c3f0b")
+    progress = spatial_map.exploration
+    if progress.goal is not None:
+        x, y = pixel(*spatial_map.cell_center(progress.goal))
+        draw.rectangle((x - 6, y - 6, x + 6, y + 6), outline="#f08b21", width=3)
+    agent_x, agent_y = pixel(*spatial_map.agent_position[:2])
+    direction_x, direction_y, _ = spatial_map.camera_direction
+    length = max(1e-6, math.hypot(direction_x, direction_y))
+    tip_x = agent_x + round(18 * direction_x / length)
+    tip_y = agent_y - round(18 * direction_y / length)
+    draw.ellipse((agent_x - 5, agent_y - 5, agent_x + 5, agent_y + 5), fill="#d73742")
+    draw.line((agent_x, agent_y, tip_x, tip_y), fill="#d73742", width=4)
+    draw.ellipse((tip_x - 3, tip_y - 3, tip_x + 3, tip_y + 3), fill="#d73742")
+    legend_y = header + map_height + 16
+    for index, node in enumerate(list(memory.objects.values())[:legend_rows]):
+        suffix = "" if node.geometry_valid else f" ({node.state}; historical position)"
         draw.text(
-            (12, legend_y), f"{node.object_id}: {node.category}{suffix}", fill="#222222"
+            (12, legend_y + 20 * index),
+            f"{node.object_id}: {node.category}{suffix}",
+            fill="#263749",
         )
-        legend_y += 18
-    if len(memory.objects) > 20:
+    if len(memory.objects) > legend_rows:
         draw.text(
-            (12, legend_y),
-            f"+ {len(memory.objects) - 20} more objects in catalog",
-            fill="#222222",
+            (12, legend_y + 20 * legend_rows),
+            f"{len(memory.objects) - legend_rows} more observed instances in the catalog",
+            fill="#263749",
         )
-    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path)
     return path.resolve()

@@ -1,0 +1,22 @@
+{
+  "groundingdino": {
+    "path": "/home/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino",
+    "url": "https://github.com/IDEA-Research/GroundingDINO.git",
+    "head_sha": "856dde20aee659246248e20734ef9ba5214f5e44"
+  },
+  "segment_anything": {
+    "path": "/home/ysh/Models/agentic3d/third_party/alfred_vision/segment_anything",
+    "url": "https://github.com/facebookresearch/segment-anything.git",
+    "head_sha": "dca509fe793f601edb92606367a655c15ac00fdf"
+  },
+  "depth_anything_3": {
+    "path": "/home/ysh/Models/agentic3d/third_party/alfred_vision/depth_anything_3",
+    "url": "https://github.com/ByteDance-Seed/Depth-Anything-3.git",
+    "head_sha": "3d835ec1a5802d64a8b8b15f817a1ab54809bfe4"
+  },
+  "unidepth": {
+    "path": "/home/ysh/Models/agentic3d/third_party/alfred_vision/unidepth",
+    "url": "https://github.com/lpiccinelli-eth/UniDepth.git",
+    "head_sha": "8d8cfe4c7ee15297099983607febf0d4f32eb3d6"
+  }
+}

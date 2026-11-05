@@ -13,10 +13,10 @@ import logging
 import sys
 from dataclasses import replace
 from pathlib import Path
-from typing import Literal, cast
+from typing import cast
 
 from codex_agent.alfred.execution import ExecutionConfig
-from codex_agent.alfred.perception import FilmPerceptionConfig
+from codex_agent.alfred.settings import load_scene_settings
 from codex_agent.alfred.simulator import SimulatorConfig
 from codex_agent.config import DEFAULT_PROJECT_ROOT, CodexAgentConfig, ReasoningEffort
 from codex_agent.evaluation.alfred_runner import (
@@ -63,30 +63,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--simulator-python",
         required=True,
         type=Path,
-        help="Existing Python with ai2thor==2.1.0 and FILM model dependencies.",
+        help="Existing simulator Python with pinned ai2thor==2.1.0.",
     )
     parser.add_argument(
         "--alfred-root", required=True, type=Path, help="Official ALFRED checkout."
     )
     parser.add_argument(
-        "--film-root",
+        "--scene-config",
         required=True,
         type=Path,
-        help="Existing FILM source checkout for perception models.",
-    )
-    parser.add_argument(
-        "--weights-root",
-        required=True,
-        type=Path,
-        help="Released FILM checkpoints root.",
+        help="TOML configuration for local perception, object mapping and spatial memory.",
     )
     parser.add_argument("--x-display", default="5")
-    parser.add_argument(
-        "--device",
-        choices=("cuda:0", "cpu"),
-        default="cuda:0",
-        help="Predictor device; cuda:0 explicitly selects physical GPU 0.",
-    )
     parser.add_argument("--model", default=None)
     parser.add_argument(
         "--reasoning-effort",
@@ -138,6 +126,7 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
     )
     output_dir = args.output_dir.absolute()
+    scene = load_scene_settings(args.scene_config)
     runtime = CodexAgentConfig.from_env(project_root=DEFAULT_PROJECT_ROOT)
     runtime = replace(
         runtime,
@@ -164,13 +153,9 @@ def main(argv: list[str] | None = None) -> int:
             x_display=args.x_display,
             timeout_seconds=args.worker_timeout,
         ),
-        perception=FilmPerceptionConfig(
-            python_executable=args.simulator_python,
-            film_root=args.film_root,
-            weights_root=args.weights_root,
-            device=cast(Literal["cuda:0", "cpu"], args.device),
-            timeout_seconds=args.worker_timeout,
-        ),
+        perception=scene.perception,
+        memory=scene.memory,
+        spatial=scene.spatial,
         runtime=runtime,
         execution=ExecutionConfig(
             max_actions=args.max_actions,

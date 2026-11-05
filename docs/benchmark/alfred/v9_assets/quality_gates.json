@@ -1,0 +1,103 @@
+{
+  "scope": "Pre-evaluation implementation verification; no task metrics",
+  "checks": [
+    {
+      "name": "ruff",
+      "command": [
+        "ruff",
+        "check",
+        "src/"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.026192951016128063,
+      "log": "tmp/alfred_v9/final_gates/ruff.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "name": "black",
+      "command": [
+        "black",
+        "--check",
+        "src/"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.33664608281105757,
+      "log": "tmp/alfred_v9/final_gates/black.log",
+      "log_sha256": "04946b6d3da5af1c164aacca60463dff1cbfd31525b32e2f480bb8ca28a2ac3c"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "mypy",
+        "src/"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 3.953893513418734,
+      "log": "tmp/alfred_v9/final_gates/mypy.log",
+      "log_sha256": "7332dc3d363a098775411b7d6d866f031aeac35534364dcc71db72620ab67fae"
+    },
+    {
+      "name": "source_tests",
+      "command": [
+        "pytest",
+        "src/",
+        "-q"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 112.22720115538687,
+      "log": "tmp/alfred_v9/final_gates/source_tests.log",
+      "log_sha256": "874a02e05bc29adb1623d6e9f4253c275f33548a1915cdee05b5dfca8eff0cc7"
+    },
+    {
+      "name": "docs",
+      "command": [
+        "mkdocs",
+        "build"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.4781491328030825,
+      "log": "tmp/alfred_v9/final_gates/docs.log",
+      "log_sha256": "42b2e70e2aadb753f2ebfeb72eddf3c389ec812dad2fbd57ad596a36a6a1daa3"
+    },
+    {
+      "name": "lock",
+      "command": [
+        "uv",
+        "lock",
+        "--check",
+        "--python",
+        "/home/ysh/miniconda3/envs/agentic3d/bin/python"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.06249510683119297,
+      "log": "tmp/alfred_v9/final_gates/lock.log",
+      "log_sha256": "779d3fa7967c2487c36c7d327ec9abc99075171101a7b047412a10deb75bd391"
+    }
+  ],
+  "source_tests": {
+    "passed": 1432,
+    "warnings": 1
+  },
+  "adapter_tests": {
+    "command": [
+      "pytest",
+      "tests/codex_adapter/",
+      "--cov=codex_adapter",
+      "--cov-branch",
+      "--cov-fail-under=80"
+    ],
+    "exit_code": 0,
+    "passed": 440,
+    "log": "tmp/alfred_v9/adapter_tests.log",
+    "log_sha256": "fe137512c612076cf2cd71f4c71d107d3e626a2623c14a6a0bdf0a41b1f35206",
+    "total_coverage_percent": 91.34,
+    "branch_measurement_enabled": true
+  },
+  "simulator_python_compile": {
+    "interpreter": "/home/ysh/codebase/FILM/.venv/bin/python",
+    "file": "src/codex_agent/alfred/calibration_capture_worker.py",
+    "exit_code": 0
+  },
+  "unrelated_benchmark_source_changes": [],
+  "documentation_warnings": "Existing unrelated SceneFunc/NR3D/OpenEQA nav or historical link warnings remain; no new ALFRED link warning."
+}

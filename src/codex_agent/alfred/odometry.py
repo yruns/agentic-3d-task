@@ -15,7 +15,7 @@ class ActionOdometry:
 
     Heading and camera pitch are proprioceptive measurements. No simulator
     position, reachable-position list or object geometry enters this estimate.
-    Camera height is the calibrated standing-agent height used by FILM.
+    Camera height is the calibrated standing-agent height of this simulator.
     """
 
     x: float = 0.0

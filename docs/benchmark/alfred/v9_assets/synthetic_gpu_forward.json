@@ -1,0 +1,260 @@
+{
+  "schema_version": 1,
+  "scope": "Synthetic GPU implementation check only; identical generated RGB/K as CPU test; no dataset, GT, task, simulator or LLM calls",
+  "status": "passed",
+  "input": {
+    "description": "Identical programmatically generated color-block RGB and calibrated 60-degree FOV K used by the CPU checks",
+    "rgb_shape": [
+      300,
+      300,
+      3
+    ],
+    "rgb_sha256": "001724587e38eba3de7252049e462599ce64e6a54b98ba32d791fad153e5c375",
+    "intrinsics": [
+      [
+        259.8076171875,
+        0.0,
+        150.0
+      ],
+      [
+        0.0,
+        259.8076171875,
+        150.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ]
+  },
+  "configuration": {
+    "python_executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+    "dino_config": "/home/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino/groundingdino/config/GroundingDINO_SwinT_OGC.py",
+    "dino_checkpoint": "/home/ysh/Models/agentic3d/models/alfred_vision/groundingdino/groundingdino_swint_ogc.pth",
+    "dino_text_encoder_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased",
+    "sam_checkpoint": "/home/ysh/Models/agentic3d/models/alfred_vision/sam/sam_vit_h_4b8939.pth",
+    "clip_checkpoint": "/home/ysh/Models/agentic3d/models/CLIP-ViT-H-14-laion2B-s32B-b79K/open_clip_model.safetensors",
+    "depth_model_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large",
+    "gpu_lock_path": "/tmp/agentic3d-alfred-gpu4.lock",
+    "device": "cuda:0",
+    "physical_gpu_index": 4,
+    "sam_model_type": "vit_h",
+    "clip_model_name": "ViT-H-14",
+    "box_threshold": 0.2,
+    "text_threshold": 0.2,
+    "nms_iou_threshold": 0.5,
+    "caption_batch_size": 24,
+    "max_detections": 100,
+    "timeout_seconds": 300.0
+  },
+  "configuration_sha256": "7393f1b64c36ed2797a68fbef459702b807c241ab9ee7baccf35ab5ced15fbe0",
+  "source": {
+    "alfred_source_sha256": "096e39c6831fafc432f65e2ecc5ce025114358224a26b5c06fba14456a2b0027",
+    "unchanged_during_test": true,
+    "git_head_at_test": "7e93524590aab824a5835d45a08e0c8141bcf646",
+    "git_tracked_diff_sha256": "9b7e0b0799ee8b7e0071e56e66935aadb961f69b5456157b6d91b110374fd656",
+    "note": "Implementation smoke on explicitly frozen source before final commit; not a benchmark evaluation or claim of a clean evaluation run"
+  },
+  "worker_runtime_provenance": {
+    "schema_version": 1,
+    "executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+    "prefix": "/home/ysh/miniconda3/envs/agentic3d",
+    "package_root": "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred",
+    "package_source_sha256": "096e39c6831fafc432f65e2ecc5ce025114358224a26b5c06fba14456a2b0027",
+    "packages": {
+      "groundingdino": {
+        "version": "0.1.0",
+        "distribution_record_sha256": "83efb4ccc61c5d56c51cd5a6d4b6f2b9dbe8ae355ba4c3faf29f4bc94b0bc542",
+        "source": {
+          "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino",
+          "head_sha": "856dde20aee659246248e20734ef9ba5214f5e44",
+          "tracked_diff_sha256": "4546ab34084f3a81bc6868353b0dd7ca35af076c4548656c87d116551432e7d9",
+          "tracked_dirty": true,
+          "python_source_sha256": "2be7e6190ca890d004ae36d1c35d66d92e6cce2039b588e69dfab84309696f03",
+          "python_source_count": 40
+        },
+        "native_extensions": {
+          "groundingdino/_C.cpython-311-x86_64-linux-gnu.so": "a9a846802b7790cd63fbb996ef57aef6cbb6b43e153d4d8e2b77de0419f6ec0b"
+        }
+      },
+      "segment_anything": {
+        "version": "1.0",
+        "distribution_record_sha256": "41949e64b9159c40e39baa870c306c72dd8cefebdc58de9cf71f5884ad7c55f9",
+        "source": {
+          "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/segment_anything",
+          "head_sha": "dca509fe793f601edb92606367a655c15ac00fdf",
+          "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tracked_dirty": false,
+          "python_source_sha256": "41002a95b5d9fe6c2a66bcee366244055707c52baa9a945571c37c8e2444bae0",
+          "python_source_count": 18
+        },
+        "native_extensions": {}
+      },
+      "depth-anything-3": {
+        "version": "0.0.0",
+        "distribution_record_sha256": "9047e7e51aa8a43f1c84a11bc998a9bcfe3365c38399c1b313231721186f39cc",
+        "source": {
+          "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/depth_anything_3",
+          "head_sha": "3d835ec1a5802d64a8b8b15f817a1ab54809bfe4",
+          "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tracked_dirty": false,
+          "python_source_sha256": "06ef6c03ad01218c5d43a7ea420c9b57873cf3363f8946c2a84a0fb93bc36a31",
+          "python_source_count": 98
+        },
+        "native_extensions": {}
+      },
+      "open_clip_torch": {
+        "version": "3.2.0",
+        "distribution_record_sha256": "99b3743d8c8917f5be7d1f081ba48eebc97c16cfaf70a89812c288b080ced7fe",
+        "source": {
+          "path": "/data1/ysh/Models/agentic3d/third_party/open_clip",
+          "head_sha": "6f939057c792a2f3d4d58df748de60ca47c4aed4",
+          "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tracked_dirty": false,
+          "python_source_sha256": "39c91d60c3434a960b77f984575505ec701ba2fc5ffeb3aa06dcfcfab8276bc0",
+          "python_source_count": 42
+        },
+        "native_extensions": {}
+      },
+      "transformers": {
+        "version": "4.57.1",
+        "distribution_record_sha256": "41b23462d56cf1c0bcfc9d56de691d7248052bdbc2037276bb3705ad3f911d41",
+        "source": {
+          "path": "/data1/ysh/Models/agentic3d/third_party/transformers",
+          "head_sha": "8cb5963cc22174954e7dca2c0a3320b7dc2f4edc",
+          "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tracked_dirty": false,
+          "python_source_sha256": "de4e96846b934cff6b722b50e4429e6cd118eacaff4d22e95dd73a705b5b9a57",
+          "python_source_count": 3691
+        },
+        "native_extensions": {}
+      },
+      "torch": {
+        "version": "2.8.0+cu126",
+        "distribution_record_sha256": "367da124e9391b77c041ff9795350ef838a9570d194a310e303a5d24f08ec933",
+        "source": null,
+        "native_extensions": {}
+      },
+      "torchvision": {
+        "version": "0.23.0+cu126",
+        "distribution_record_sha256": "dc9a168a3b29ae345687dfc709c6c44dfd17431181dc5d180286b4c311b9be3b",
+        "source": null,
+        "native_extensions": {}
+      },
+      "numpy": {
+        "version": "1.26.4",
+        "distribution_record_sha256": "e0993835433c193680e7906d3107c79e9b8512822bb4012996bfcd2bf4317143",
+        "source": null,
+        "native_extensions": {}
+      }
+    },
+    "visible_devices": "GPU-bd6fb183-b27d-9364-0456-94c1d3ddf9a8"
+  },
+  "gpu_before": {
+    "physical_index": 4,
+    "uuid": "GPU-bd6fb183-b27d-9364-0456-94c1d3ddf9a8",
+    "total_mib": 24564,
+    "used_mib": 15,
+    "free_mib": 24068,
+    "utilization_percent": 0
+  },
+  "gpu_after_worker_close": {
+    "physical_index": 4,
+    "uuid": "GPU-bd6fb183-b27d-9364-0456-94c1d3ddf9a8",
+    "total_mib": 24564,
+    "used_mib": 15,
+    "free_mib": 24068,
+    "utilization_percent": 0
+  },
+  "worker_stats": {
+    "load_seconds": 20.23769335448742,
+    "inference_seconds": 5.818936840631068,
+    "frames": 1,
+    "peak_cuda_memory_bytes": 6017993216,
+    "device": "cuda:0",
+    "depth_seconds": 1.1786097791045904,
+    "detection_seconds": 0.8621097663417459,
+    "segmentation_seconds": 1.735656013712287,
+    "feature_seconds": 2.03127468097955,
+    "capped_detections": 0,
+    "nms_suppressed": 47,
+    "empty_masks": 0,
+    "gpu_wait_seconds": 0.0001042243093252182,
+    "residency": "sequential_cpu_offload"
+  },
+  "elapsed_seconds": 28.55605724360794,
+  "outputs": {
+    "depth_shape": [
+      300,
+      300
+    ],
+    "depth_dtype": "float32",
+    "depth_min_m": 0.9783583283424377,
+    "depth_median_m": 1.0723251104354858,
+    "depth_max_m": 1.1508160829544067,
+    "depth_finite": true,
+    "depth_positive": true,
+    "image_feature_shape": [
+      6,
+      1024
+    ],
+    "frame_feature_shape": [
+      1024
+    ],
+    "frame_feature_norm": 1.0
+  },
+  "detections": {
+    "vocabulary_categories": 114,
+    "caption_batches": 5,
+    "candidate_boxes": 53,
+    "nms_suppressed": 47,
+    "capped_detections": 0,
+    "empty_masks": 0
+  },
+  "prediction_artifacts": {
+    "local_directory": "tmp/alfred_v9/synthetic_gpu_forward_attempt1/prediction",
+    "sha256": {
+      "prediction/synthetic_gpu_depth.npy": "b8ede5ff9de79d1d0d7e4eb5bd57990eab39f2282f0332f348bd15d1afbf62d2",
+      "prediction/synthetic_gpu_features.npz": "ecc0dbe8367aa69ee4ffbaa90141978c016b34e1024bd4512530d6c1340486ad",
+      "prediction/synthetic_gpu_mask_000.npy": "5a9ab3b9c3cc2069ffef2521c8ee52b6c29596c11bb637d4bb27131d7d4e2ba0",
+      "prediction/synthetic_gpu_mask_001.npy": "d2429f645695e9185aef45d02fa5841a40efb6e04821a515986b2c927f47b380",
+      "prediction/synthetic_gpu_mask_002.npy": "9265d400b66ad85b1be47adaca3bb6c41cc645e9fd13bd2314b761c1cc324cf1",
+      "prediction/synthetic_gpu_mask_003.npy": "2fabfab6ec30a5881b782ab097e04b999c02eafff168f46374db33d675229893",
+      "prediction/synthetic_gpu_mask_004.npy": "6b2790438f9b488af3644996bec4688c129b7e172e305ed6d150594bf8f29eb6",
+      "prediction/synthetic_gpu_mask_005.npy": "44761299f8900ac95e696389bb77c86a15dff9377600b74adf6a84da651ffbbd"
+    }
+  },
+  "evidence": [
+    {
+      "path": "tmp/alfred_v9/synthetic_gpu_forward_attempt1/report.json",
+      "sha256": "5bba873d4e409eb7e16eead1f9107e37745178bff43272a2aef60a66178adbb9"
+    },
+    {
+      "path": "tmp/alfred_v9/synthetic_gpu_forward_attempt1/worker.log",
+      "sha256": "41b976206175aa584c1af26c837d1050ba633fe649b25ccd1ea5b4a100c3e4bc"
+    },
+    {
+      "path": "tmp/alfred_v9/synthetic_gpu_forward_attempt1.log",
+      "sha256": "03bd3291833ede2e530ea2eb0151311f65a41b7641d678827d25fd02c314ef6d"
+    },
+    {
+      "path": "tmp/alfred_v9/synthetic_gpu_forward.py",
+      "sha256": "0dcb3bb2e772d2b52661dce19e072c31d1db44e1cf4b08365a9890e64afa0053"
+    }
+  ],
+  "validated": [
+    "Physical GPU 4 was idle before launch and UUID matched inside actual model worker",
+    "No inference was routed to physical GPUs 0, 1, 2, 3, 5 or 6",
+    "Real DA3Metric, GroundingDINO CUDA extension, SAM1 and OpenCLIP forward passes completed",
+    "114 fixed classes, 5 caption batches, 53 candidates, 47 suppressed boxes and 6 retained nonempty masks",
+    "Positive finite RGB-aligned depth and normalized paired CLIP features passed artifact validation",
+    "Owned worker exited and GPU 4 returned to its initial 15 MiB memory baseline"
+  ],
+  "limitations": [
+    "Synthetic outputs do not measure semantic or depth accuracy",
+    "Peak CUDA memory is PyTorch max_memory_allocated over this worker lifetime, not a general multiworker capacity bound",
+    "No train/validation image, GT, simulator action, LLM request or task score",
+    "UniDepth comparator GPU forward and train-frame depth calibration are outside this check"
+  ]
+}

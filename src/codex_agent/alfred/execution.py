@@ -14,13 +14,16 @@ import numpy as np
 from codex_agent.tasks.base import CodexExecutor
 
 from .dataset import AlfredInstruction
+from .exploration import exploration_feedback, next_exploration_action
 from .geometry import Detection, Observation
-from .memory import IncrementalSceneMemory
+from .memory import IncrementalSceneMemory, MemoryConfig
 from .navigation import next_navigation_action
 from .odometry import ActionOdometry, camera_intrinsics
 from .perception import PerceptionObservation
 from .policy import NAVIGATION_ACTIONS, AlfredDecision, AlfredPolicyTask
+from .provenance import file_sha256
 from .simulator import SimulatorObservation
+from .spatial_map import SpatialMap, SpatialMapConfig
 
 
 class ActionEnvironment(Protocol):
@@ -33,7 +36,7 @@ class ActionEnvironment(Protocol):
 
 class ImagePerception(Protocol):
     def predict(
-        self, rgb_path: Path, *, frame_id: str, horizon_degrees: float, output_dir: Path
+        self, rgb_path: Path, *, frame_id: str, intrinsics: np.ndarray, output_dir: Path
     ) -> PerceptionObservation: ...
 
 
@@ -88,13 +91,17 @@ class EpisodeExecutor:
         runtime: CodexExecutor,
         output_dir: Path,
         config: ExecutionConfig,
+        memory_config: MemoryConfig | None = None,
+        spatial_config: SpatialMapConfig | None = None,
     ) -> None:
         self.environment = environment
         self.perception = perception
         self.runtime = runtime
         self.output_dir = output_dir
         self.config = config
-        self.memory = IncrementalSceneMemory(output_dir / "memory")
+        self.memory = IncrementalSceneMemory(
+            output_dir / "memory", memory_config, spatial_map=SpatialMap(spatial_config)
+        )
         self.odometry = ActionOdometry()
         self.actions = 0
         self.failures = 0
@@ -152,32 +159,41 @@ class EpisodeExecutor:
 
     def _observe(self, observation: SimulatorObservation) -> None:
         started = time.monotonic()
+        intrinsics = camera_intrinsics()
         prediction = self.perception.predict(
             observation.rgb_path,
             frame_id=str(observation.frame_id),
-            horizon_degrees=observation.horizon_degrees,
+            intrinsics=intrinsics,
             output_dir=self.output_dir / "perception",
         )
         self.perception_seconds += time.monotonic() - started
         depth = np.load(prediction.depth_path, allow_pickle=False)
-        detections = tuple(
-            Detection(item.category, _load_mask(item.mask_path))
-            for item in prediction.detections
-        )
+        with np.load(prediction.features_path, allow_pickle=False) as features:
+            detections = tuple(
+                Detection(
+                    item.category,
+                    _load_mask(item.mask_path),
+                    item.confidence,
+                    features["image_features"][index],
+                    features["text_features"][index],
+                    bbox_xyxy=item.bbox_xyxy,
+                )
+                for index, item in enumerate(prediction.detections)
+            )
+            frame_feature = features["frame_feature"].copy()
         self.memory.integrate(
             Observation(
                 frame_id=observation.frame_id,
                 rgb_path=observation.rgb_path,
                 depth_m=depth,
-                intrinsics=camera_intrinsics(
-                    width=depth.shape[1], height=depth.shape[0]
-                ),
+                intrinsics=intrinsics,
                 camera_to_world=self.odometry.camera_to_world(
                     yaw_degrees=observation.yaw_degrees,
                     horizon_degrees=observation.horizon_degrees,
                 ),
                 agent_position=self.odometry.agent_position,
                 detections=detections,
+                frame_feature=frame_feature,
             )
         )
         self._current, self._predicted = observation, prediction
@@ -199,10 +215,9 @@ class EpisodeExecutor:
         current_rgb = self._annotate_current(directory / "current.png")
         bev = self.memory.render_bev(directory / "bev.png")
         snapshot = self.memory.snapshot()
-        snapshot.pop("free_cells")
-        snapshot.pop("occupied_cells")
         context: dict[str, object] = {
             "scene_memory": snapshot,
+            "exploration": exploration_feedback(self.memory),
             "yaw_degrees": self._current.yaw_degrees,
             "horizon_degrees": self._current.horizon_degrees,
             "feedback": self._feedback,
@@ -253,21 +268,33 @@ class EpisodeExecutor:
         return result.outcome
 
     def _dispatch(self, decision: AlfredDecision) -> None:
+        if decision.kind == "explore":
+            for _ in range(self.config.navigation_chunk):
+                assert self._current is not None
+                action, feedback = next_exploration_action(
+                    self.memory,
+                    yaw_degrees=self._current.yaw_degrees,
+                    horizon_degrees=self._current.horizon_degrees,
+                )
+                self._feedback = feedback
+                if action is None or not self._step(action, object_id=None):
+                    break
+            return
+        if decision.object_id is not None:
+            try:
+                canonical_id = self.memory.resolve_object_id(decision.object_id)
+            except KeyError:
+                self._feedback = "Rejected command: object ID has never been observed."
+                return
+        else:
+            canonical_id = None
         cell = (
             (decision.cell[0], decision.cell[1]) if decision.cell is not None else None
         )
         if decision.kind == "retrieve":
             assert self._current is not None
-            if (
-                decision.object_id is not None
-                and decision.object_id not in self.memory.objects
-            ):
-                self._feedback = (
-                    "Rejected retrieval: object ID has never been observed."
-                )
-                return
             frames = self.memory.retrieve_frames(
-                object_ids=() if decision.object_id is None else (decision.object_id,),
+                object_ids=() if canonical_id is None else (canonical_id,),
                 cells=() if cell is None else (cell,),
                 limit=self.config.retrieved_images,
                 exclude_frame_ids=tuple(
@@ -290,7 +317,7 @@ class EpisodeExecutor:
                     self.memory,
                     yaw_degrees=self._current.yaw_degrees,
                     horizon_degrees=self._current.horizon_degrees,
-                    object_id=decision.object_id,
+                    object_id=canonical_id,
                     cell=cell,
                 )
                 self._feedback = feedback
@@ -299,7 +326,7 @@ class EpisodeExecutor:
             return
         assert decision.action is not None
         for _ in range(decision.repeat):
-            if not self._step(decision.action, object_id=decision.object_id):
+            if not self._step(decision.action, object_id=canonical_id):
                 break
 
     def _step(self, action: str, *, object_id: int | None) -> bool:
@@ -310,6 +337,7 @@ class EpisodeExecutor:
         ):
             return False
         mask_path = None
+        mask_record: dict[str, object] | None = None
         horizon = self._current.horizon_degrees
         if (action == "LookDown" and horizon >= 60 - 1e-3) or (
             action == "LookUp" and horizon <= -30 + 1e-3
@@ -325,7 +353,19 @@ class EpisodeExecutor:
             if not indices:
                 self._feedback = "Rejected interaction: target has no mask in the current observation."
                 return False
-            mask_path = self._predicted.detections[indices[0]].mask_path
+            detection_index = indices[0]
+            mask = self.memory.current_detection_masks[detection_index]
+            mask_path = (
+                self.output_dir / "interaction_masks" / f"{self.actions + 1:06d}.npy"
+            )
+            mask_path.parent.mkdir(parents=True, exist_ok=True)
+            np.save(mask_path, mask, allow_pickle=False)
+            mask_record = {
+                "path": str(mask_path),
+                "sha256": file_sha256(mask_path),
+                "source": "current_mapping_mask",
+                "source_detection_index": detection_index,
+            }
         previous = self._current
         observation = self.environment.step(action, mask_path=mask_path)
         self.actions += 1
@@ -347,6 +387,7 @@ class EpisodeExecutor:
             "result_frame": observation.frame_id,
             "success": observation.last_action_success,
             "error": observation.last_action_error,
+            "interaction_mask": mask_record,
         }
         append_jsonl(self.output_dir / "actions.jsonl", record)
         self._recent_actions.append(record)
@@ -354,7 +395,7 @@ class EpisodeExecutor:
         self._observe(observation)
         if action == "MoveAhead" and not observation.last_action_success:
             yaw = math.radians(previous.yaw_degrees)
-            cell = self.memory.world_to_cell(
+            cell = self.memory.spatial_map.world_to_cell(
                 round(self.odometry.x + self.odometry.step_size_m * math.sin(yaw), 9),
                 round(self.odometry.y + self.odometry.step_size_m * math.cos(yaw), 9),
             )
