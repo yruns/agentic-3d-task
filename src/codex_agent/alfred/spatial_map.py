@@ -163,6 +163,7 @@ class SpatialMap:
         self._seen: set[GridCell] = set()
         self._collisions: set[GridCell] = set()
         self._visited: set[GridCell] = set()
+        self._visited_footprint: set[GridCell] = set()
         self.coverage: dict[GridCell, RegionCoverage] = {}
         self.exploration = ExplorationProgress()
         self.agent_position: tuple[float, float, float] | None = None
@@ -250,7 +251,7 @@ class SpatialMap:
                 -self.config.max_evidence,
                 self._evidence.get(cell, 0.0) - self.config.clear_evidence,
             )
-        for cell in occupied:
+        for cell in occupied - self._visited_footprint:
             self._evidence[cell] = min(
                 self.config.max_evidence,
                 self._evidence.get(cell, 0.0) + self.config.occupied_evidence,
@@ -381,6 +382,7 @@ class SpatialMap:
             self._visited.add(center)
             for dx, dy in offsets:
                 cell = center[0] + dx, center[1] + dy
+                self._visited_footprint.add(cell)
                 self._evidence[cell] = -self.config.max_evidence
                 self._collisions.discard(cell)
 
@@ -388,6 +390,7 @@ class SpatialMap:
         """Record a failed-motion endpoint in fine grid coordinates."""
         if len(cell) != 2 or any(type(value) is not int for value in cell):
             raise ValueError("collision cell must contain two integer indices")
+        self._visited_footprint.discard(cell)
         self._collisions.add(cell)
         self.revision += 1
 
@@ -400,6 +403,7 @@ class SpatialMap:
         for cell in affected:
             self._evidence.pop(cell, None)
         self._collisions.difference_update(affected)
+        self._visited_footprint.difference_update(affected)
         self.revision += 1
 
     def navigation_raster(self) -> NavigationRaster:

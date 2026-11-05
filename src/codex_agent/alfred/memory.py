@@ -383,6 +383,11 @@ class IncrementalSceneMemory:
                 region.detection.text_feature, node.text_feature
             )
             semantic_score = 0.75 * image_similarity + 0.25 * text_similarity
+            if self.config.mapping.same_category_bonus > 0:
+                if region.detection.category == node.category:
+                    semantic_score += 0.20
+                elif text_similarity < 0.85:
+                    return None
             if semantic_score < self.config.mapping.reacquire_similarity:
                 return None
             center = region.points.mean(axis=0)
@@ -659,15 +664,9 @@ class IncrementalSceneMemory:
 
         eff_mask = self.current_detection_masks[chosen_idx]
         raw_mask = self.current_raw_detection_masks.get(chosen_idx, eff_mask)
-        if action in {"OpenObject", "CloseObject"} and int(raw_mask.sum()) > int(
-            eff_mask.sum()
-        ):
-            return chosen_idx, raw_mask, "current_raw_sam_mask"
-        if (
-            action == "PutObject"
-            and int(eff_mask.sum()) < 64
-            and int(raw_mask.sum()) >= 64
-        ):
+        if action in {"OpenObject", "CloseObject", "PutObject"} and int(
+            raw_mask.sum()
+        ) > int(eff_mask.sum()):
             return chosen_idx, raw_mask, "current_raw_sam_mask"
         return chosen_idx, eff_mask, mask_source
 

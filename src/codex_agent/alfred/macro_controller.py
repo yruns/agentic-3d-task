@@ -690,15 +690,16 @@ class MacroActionController:
         if self.executor.can_step():
             pos = np.asarray((memory.agent_position or (0.0, 0.0, 0.0))[:2])
             box_dist = _box_distance_2d(pos, node.bounds)
-            adj_action = (
-                "MoveAhead"
-                if box_dist > 0.50
-                else (
-                    "LookDown"
-                    if self.executor.current_observation.horizon_degrees < 30.0
-                    else "LookUp"
-                )
-            )
+            cur_h = self.executor.current_observation.horizon_degrees
+            if sim_action == "PutObject" and (
+                "No valid positions" in first_err
+                or node.category in {"Fridge", "Cabinet", "Shelf", "Microwave"}
+            ):
+                adj_action = "LookUp" if cur_h >= 15.0 else "LookDown"
+            elif box_dist > 0.50:
+                adj_action = "MoveAhead"
+            else:
+                adj_action = "LookDown" if cur_h < 30.0 else "LookUp"
             adj_ok = self.executor.step_primitive(adj_action, object_id=None)
             steps += 1
             if not adj_ok:
