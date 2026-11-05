@@ -60,14 +60,25 @@ class EpisodeToolServer:
         return f"http://{host}:{port}"
 
     def start(self) -> Path:
-        """Start serving and write session_endpoint.json in executor.output_dir."""
+        """Start serving and write session_endpoint.json in output_dir and project_root."""
         self._thread.start()
+        payload = json.dumps({"url": self.url}, indent=2) + "\n"
         endpoint_path = self.executor.output_dir / SESSION_ENDPOINT_FILENAME
         endpoint_path.parent.mkdir(parents=True, exist_ok=True)
-        endpoint_path.write_text(
-            json.dumps({"url": self.url}, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        endpoint_path.write_text(payload, encoding="utf-8")
+        if (
+            self.executor.workspace_dir is not None
+            and self.executor.workspace_dir.is_dir()
+        ):
+            (self.executor.workspace_dir / SESSION_ENDPOINT_FILENAME).write_text(
+                payload, encoding="utf-8"
+            )
+        runtime_cfg = getattr(self.executor.runtime, "config", None)
+        proj_root = getattr(runtime_cfg, "project_root", None)
+        if isinstance(proj_root, Path) and proj_root.is_dir():
+            (proj_root / SESSION_ENDPOINT_FILENAME).write_text(
+                payload, encoding="utf-8"
+            )
         return endpoint_path
 
     def close(self) -> None:
@@ -77,6 +88,14 @@ class EpisodeToolServer:
         self._thread.join(timeout=5.0)
         endpoint_path = self.executor.output_dir / SESSION_ENDPOINT_FILENAME
         endpoint_path.unlink(missing_ok=True)
+        if self.executor.workspace_dir is not None:
+            (self.executor.workspace_dir / SESSION_ENDPOINT_FILENAME).unlink(
+                missing_ok=True
+            )
+        runtime_cfg = getattr(self.executor.runtime, "config", None)
+        proj_root = getattr(runtime_cfg, "project_root", None)
+        if isinstance(proj_root, Path):
+            (proj_root / SESSION_ENDPOINT_FILENAME).unlink(missing_ok=True)
 
     def __enter__(self) -> EpisodeToolServer:
         self.start()
@@ -530,13 +549,14 @@ class EpisodeToolServer:
                 / f"crop_f{frame_id:04d}_obj{obj_id if obj_id is not None else 'box'}_{self.executor.decisions:03d}.png"
             )
             canvas.save(out_path)
+            published = self.executor.publish_tool_artifact(out_path)
 
         return {
             "tool": "view_crop",
             "frame_id": frame_id,
             "object_id": obj_id,
             "category": category,
-            "image_path": str(out_path.resolve()),
+            "image_path": str(published),
         }
 
     def _handle_view_bev(self, args: dict[str, object]) -> dict[str, object]:
@@ -545,6 +565,7 @@ class EpisodeToolServer:
         bev_dir.mkdir(parents=True, exist_ok=True)
         out_path = bev_dir / f"bev_{self.executor.decisions:03d}.png"
         self.executor.memory.render_bev(out_path)
+        published_bev = self.executor.publish_tool_artifact(out_path)
         frontiers = [
             {
                 "region": list(c.region),
@@ -560,7 +581,7 @@ class EpisodeToolServer:
         return {
             "tool": "view_bev",
             "frame_id": self.executor.memory._latest_frame_id,
-            "image_path": str(out_path.resolve()),
+            "image_path": str(published_bev),
             "top_frontiers": frontiers,
         }
 
@@ -640,11 +661,12 @@ class EpisodeToolServer:
             )
             fpath = out_dir / f"{prefix}_f{fid:04d}_{self.executor.decisions:03d}.png"
             img.save(fpath)
+            pub_fpath = self.executor.publish_tool_artifact(fpath)
             rendered_images.append(img)
             frames_payload.append(
                 {
                     "frame_id": fid,
-                    "image_path": str(fpath.resolve()),
+                    "image_path": str(pub_fpath),
                     "camera_position": [round(x, 3) for x in rec.camera_position],
                     "visible_objects": visible_objs,
                 }
@@ -666,8 +688,9 @@ class EpisodeToolServer:
                 out_dir / f"{prefix}_contact_sheet_{self.executor.decisions:03d}.png"
             )
             sheet.save(sheet_path)
-            result["contact_sheet"] = str(sheet_path.resolve())
-            result["image_path"] = str(sheet_path.resolve())
+            pub_sheet = self.executor.publish_tool_artifact(sheet_path)
+            result["contact_sheet"] = str(pub_sheet)
+            result["image_path"] = str(pub_sheet)
         elif self.executor.memory._latest_frame_id >= 0:
             result["visible_objects_now"] = format_visible_objects_now(memory)
         return result

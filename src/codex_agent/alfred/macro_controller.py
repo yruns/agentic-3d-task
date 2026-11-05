@@ -26,6 +26,8 @@ from .delta import (
 from .exploration import next_exploration_action, suggest_frontiers
 from .geometry import GridCell
 from .navigation import (
+    MOVE_DISTANCE_M,
+    compute_fmm_distances,
     navigation_step,
     next_navigation_action,
     rotation_towards,
@@ -54,6 +56,11 @@ _ACTION_MAP: dict[str, str] = {
 _OPENABLE_CATEGORIES = frozenset(
     {"Fridge", "Microwave", "Cabinet", "Drawer", "Safe", "LaundryHamper"}
 )
+
+
+def _box_distance_2d(point_xy: np.ndarray, bounds: np.ndarray) -> float:
+    nearest = np.clip(point_xy, bounds[0, :2], bounds[1, :2])
+    return float(np.linalg.norm(point_xy - nearest))
 
 
 class MacroActionController:
@@ -242,7 +249,7 @@ class MacroActionController:
         *,
         object_id: int | None = None,
         region: GridCell | None = None,
-        max_steps: int = 32,
+        max_steps: int = 36,
     ) -> dict[str, object]:
         """Navigate to an observed object or coarse grid region and frame the target."""
         if (object_id is None) == (region is None):
@@ -274,7 +281,7 @@ class MacroActionController:
         *,
         object_id: int | None,
         region: GridCell | None,
-        max_steps: int = 32,
+        max_steps: int = 36,
     ) -> tuple[int, int, str, str]:
         memory = self.executor.memory
         steps = 0
@@ -302,6 +309,8 @@ class MacroActionController:
                     "budget_reached",
                     "Action or failure budget reached during navigation.",
                 )
+            if resolved_id is not None:
+                resolved_id = memory.resolve_object_id(resolved_id)
             obs = self.executor.current_observation
             action, feedback = self._next_adaptive_nav_action(
                 resolved_id=resolved_id,
@@ -316,32 +325,42 @@ class MacroActionController:
             steps += 1
             if not ok:
                 failed += 1
-                # If a forward move was blocked, allow FMM to replan around the new collision cell.
                 if failed >= 3:
                     break
 
         if resolved_id is not None and resolved_id in memory.objects:
+            resolved_id = memory.resolve_object_id(resolved_id)
             node = memory.objects[resolved_id]
             o_steps, o_fail = self._auto_frame_object(resolved_id)
             steps += o_steps
             failed += o_fail
+            resolved_id = memory.resolve_object_id(resolved_id)
+            node = memory.objects[resolved_id]
             mask_match = memory.select_interaction_mask(
                 resolved_id, action="PickupObject"
             )
-            pos = memory.agent_position or (0.0, 0.0, 0.0)
-            dist = float(np.linalg.norm(node.centroid[:2] - np.asarray(pos[:2])))
-            if mask_match is not None:
+            pos = np.asarray((memory.agent_position or (0.0, 0.0, 0.0))[:2])
+            box_dist = _box_distance_2d(pos, node.bounds)
+            center_dist = float(np.linalg.norm(node.centroid[:2] - pos))
+            if mask_match is not None and (box_dist <= 1.05 or center_dist <= 1.35):
                 return (
                     steps,
                     failed,
                     "arrived_and_framed",
-                    f"Arrived near #{resolved_id} ({node.category}, horizontal_dist={dist:.2f}m) and verified interaction mask in current view.",
+                    f"Arrived within reach of #{resolved_id} ({node.category}, box_dist={box_dist:.2f}m, center_dist={center_dist:.2f}m) and verified interaction mask in current view.",
+                )
+            if box_dist <= 1.05 or center_dist <= 1.35:
+                return (
+                    steps,
+                    failed,
+                    "arrived_unverified_mask",
+                    f"Reached vicinity of #{resolved_id} ({node.category}, box_dist={box_dist:.2f}m), but target mask was not detected in current frame.",
                 )
             return (
                 steps,
                 failed,
-                "arrived_unverified_mask" if dist <= 1.25 else "partial_approach",
-                f"{last_feedback} (horizontal_dist={dist:.2f}m to #{resolved_id} {node.category}).",
+                "partial_approach",
+                f"Approached to box_dist={box_dist:.2f}m (center_dist={center_dist:.2f}m) of #{resolved_id} ({node.category}); {last_feedback}",
             )
 
         return steps, failed, "completed", last_feedback
@@ -354,15 +373,14 @@ class MacroActionController:
         yaw_degrees: float,
         horizon_degrees: float,
     ) -> tuple[str | None, str]:
-        """Plan FMM step with two-stage adaptive standoff when close floor is unobserved."""
+        """Plan FMM step toward target; progressively reveal floor when target is far."""
         memory = self.executor.memory
         if resolved_id is None:
-            return next_navigation_action(
-                memory,
+            assert region is not None
+            return self._next_region_nav_action(
+                region=region,
                 yaw_degrees=yaw_degrees,
                 horizon_degrees=horizon_degrees,
-                object_id=None,
-                cell=region,
             )
 
         node = memory.objects[resolved_id]
@@ -371,55 +389,145 @@ class MacroActionController:
         if position is None:
             return None, "Navigation requires an integrated observation."
 
+        pos_xy = np.asarray(position[:2], dtype=np.float64)
+        bounds = node.bounds
+        current_box_dist = _box_distance_2d(pos_xy, bounds)
+        if 0.25 <= current_box_dist <= 0.85:
+            return None, "Reached an observed interaction stance near target."
+
         raster = spatial_map.navigation_raster()
-        rows, cols = np.nonzero(raster.traversable)
-        available = [
+        start = spatial_map.world_to_cell(*position[:2])
+        costs_from_start = compute_fmm_distances(raster, {start})
+        stride = round(MOVE_DISTANCE_M / raster.resolution_m)
+        rows, cols = np.nonzero(raster.traversable & np.isfinite(costs_from_start))
+        reachable_cells = [
             raster.cell(int(row), int(col)) for row, col in zip(rows, cols, strict=True)
         ]
-        bounds = node.bounds
+        lattice_cells = [
+            cell
+            for cell in reachable_cells
+            if (cell[0] - start[0]) % stride == 0 and (cell[1] - start[1]) % stride == 0
+        ]
+        if not lattice_cells:
+            lattice_cells = reachable_cells
 
-        def _cells_in_band(low_m: float, high_m: float) -> set[GridCell]:
-            selected: set[GridCell] = set()
-            for candidate in available:
-                point = np.asarray(spatial_map.cell_center(candidate))
-                nearest = np.clip(point, bounds[0, :2], bounds[1, :2])
-                distance = float(np.linalg.norm(point - nearest))
-                if low_m <= distance <= high_m:
-                    selected.add(candidate)
-            return selected
+        close_goals = {
+            cell
+            for cell in lattice_cells
+            if 0.25
+            <= _box_distance_2d(np.asarray(spatial_map.cell_center(cell)), bounds)
+            <= 0.85
+        }
+        if close_goals:
+            action, feedback = navigation_step(
+                spatial_map, close_goals, yaw_degrees=yaw_degrees
+            )
+            if action is not None or feedback.startswith("Reached"):
+                return action, feedback
 
-        close_goals = _cells_in_band(0.30, 0.85)
-        action, feedback = navigation_step(
-            spatial_map, close_goals, yaw_degrees=yaw_degrees
+        # Progressive approach: if the 0.25-0.85m band is still in unobserved space,
+        # advance to the reachable lattice cell that gets closest to the target's bounds!
+        scored = [
+            (
+                _box_distance_2d(np.asarray(spatial_map.cell_center(cell)), bounds),
+                cell,
+            )
+            for cell in lattice_cells
+        ]
+        if scored:
+            min_dist = min(item[0] for item in scored)
+            if min_dist < current_box_dist - 0.12:
+                progressive_goals = {
+                    cell for dist, cell in scored if dist <= min_dist + 0.15
+                }
+                prog_action, prog_feedback = navigation_step(
+                    spatial_map, progressive_goals, yaw_degrees=yaw_degrees
+                )
+                if prog_action is not None:
+                    return (
+                        prog_action,
+                        f"Advancing along FMM toward #{resolved_id} (target box_dist={min_dist:.2f}m).",
+                    )
+
+        # At the boundary of currently known free floor, orient toward the target and
+        # look down (30-45 deg) so the depth sensor clears the floor ahead!
+        dx = float(node.centroid[0] - position[0])
+        dy = float(node.centroid[1] - position[1])
+        desired_yaw = math.degrees(math.atan2(dx, dy)) % 360.0
+        rot = rotation_towards(yaw_degrees, desired_yaw)
+        if rot is not None:
+            return rot, "Orienting toward target to observe floor clearance ahead."
+        if horizon_degrees < 30.0 - 1e-3:
+            return (
+                "LookDown",
+                "Tilting camera down to observe floor clearance toward target.",
+            )
+        return None, "No further free-floor path toward target from current stance."
+
+    def _next_region_nav_action(
+        self,
+        *,
+        region: GridCell,
+        yaw_degrees: float,
+        horizon_degrees: float,
+    ) -> tuple[str | None, str]:
+        memory = self.executor.memory
+        spatial_map = memory.spatial_map
+        position = spatial_map.agent_position
+        if position is None:
+            return None, "Navigation requires an integrated observation."
+        current_region = spatial_map.world_to_region(position[0], position[1])
+        if current_region == region:
+            return None, f"Reached target region {list(region)}."
+
+        action, feedback = next_navigation_action(
+            memory,
+            yaw_degrees=yaw_degrees,
+            horizon_degrees=horizon_degrees,
+            object_id=None,
+            cell=region,
         )
         if action is not None or feedback.startswith("Reached"):
             return action, feedback
 
-        # Two-stage fallback: if the 0.30-0.85m band is still unobserved/unreachable,
-        # step to the closest reachable cell in 0.85-1.65m and look down to reveal the floor.
-        mid_goals = _cells_in_band(0.85, 1.65)
-        if mid_goals:
-            start = spatial_map.world_to_cell(*position[:2])
-            if start in mid_goals and horizon_degrees < 30.0:
-                return (
-                    "LookDown",
-                    "Tilting camera down to observe floor clearance in front of target.",
-                )
-            mid_action, mid_feedback = navigation_step(
-                spatial_map, mid_goals, yaw_degrees=yaw_degrees
+        # Progressive fallback toward the target region's center
+        target_xy = np.asarray(spatial_map.region_center(region), dtype=np.float64)
+        current_dist = float(np.linalg.norm(np.asarray(position[:2]) - target_xy))
+        raster = spatial_map.navigation_raster()
+        start = spatial_map.world_to_cell(*position[:2])
+        costs_from_start = compute_fmm_distances(raster, {start})
+        stride = round(MOVE_DISTANCE_M / raster.resolution_m)
+        rows, cols = np.nonzero(raster.traversable & np.isfinite(costs_from_start))
+        lattice_cells = [
+            raster.cell(int(row), int(col))
+            for row, col in zip(rows, cols, strict=True)
+            if (int(col) + raster.origin[0] - start[0]) % stride == 0
+            and (int(row) + raster.origin[1] - start[1]) % stride == 0
+        ]
+        scored = [
+            (
+                float(
+                    np.linalg.norm(
+                        np.asarray(spatial_map.cell_center(cell)) - target_xy
+                    )
+                ),
+                cell,
             )
-            if mid_action is not None:
-                return (
-                    mid_action,
-                    "Approaching intermediate stance to reveal floor near target.",
+            for cell in lattice_cells
+        ]
+        if scored:
+            min_dist = min(item[0] for item in scored)
+            if min_dist < current_dist - 0.12:
+                prog_goals = {cell for dist, cell in scored if dist <= min_dist + 0.15}
+                prog_action, _ = navigation_step(
+                    spatial_map, prog_goals, yaw_degrees=yaw_degrees
                 )
-            if mid_feedback.startswith("Reached") and horizon_degrees < 30.0:
-                return (
-                    "LookDown",
-                    "Reached intermediate stance; tilting camera down to observe floor clearance.",
-                )
-
-        return action, feedback
+                if prog_action is not None:
+                    return (
+                        prog_action,
+                        f"Advancing toward region {list(region)} (remaining={min_dist:.2f}m).",
+                    )
+        return None, feedback
 
     def _auto_frame_object(self, resolved_id: int) -> tuple[int, int]:
         """Orient camera toward ``resolved_id`` and probe pitch if mask is missing."""
@@ -428,13 +536,13 @@ class MacroActionController:
             return 0, 0
         node = memory.objects[resolved_id]
         steps, failed = self._orient_towards_point(node.centroid)
+        resolved_id = memory.resolve_object_id(resolved_id)
         if (
             memory.select_interaction_mask(resolved_id, action="PickupObject")
             is not None
         ):
             return steps, failed
 
-        # Try one adjacent pitch adjustment (+15 or -15 deg) if target mask was not detected.
         current_h = self.executor.current_observation.horizon_degrees
         probe_action = "LookDown" if current_h < 30.0 else "LookUp"
         if self.executor.can_step():
@@ -501,20 +609,18 @@ class MacroActionController:
         steps = 0
         failed = 0
 
-        # Auto-approach if object is not currently visible or is too far away (> 1.15m).
-        pos = memory.agent_position or (0.0, 0.0, 0.0)
+        pos = np.asarray((memory.agent_position or (0.0, 0.0, 0.0))[:2])
         node = memory.objects[resolved_id]
-        horiz_dist = float(np.linalg.norm(node.centroid[:2] - np.asarray(pos[:2])))
+        box_dist = _box_distance_2d(pos, node.bounds)
         mask_info = memory.select_interaction_mask(resolved_id, action=sim_action)
-        if mask_info is None or horiz_dist > 1.25:
+        if mask_info is None or box_dist > 1.05:
             nav_steps, nav_fail, _, _ = self._execute_navigation(
-                object_id=resolved_id, region=None, max_steps=24
+                object_id=resolved_id, region=None, max_steps=32
             )
             steps += nav_steps
             failed += nav_fail
             resolved_id = memory.resolve_object_id(resolved_id)
 
-        # Attempt 1
         if not self.executor.can_step():
             return (
                 steps,
@@ -527,6 +633,7 @@ class MacroActionController:
             o_steps, o_fail = self._auto_frame_object(resolved_id)
             steps += o_steps
             failed += o_fail
+            resolved_id = memory.resolve_object_id(resolved_id)
 
         if memory.select_interaction_mask(resolved_id, action=sim_action) is None:
             return (
@@ -548,7 +655,7 @@ class MacroActionController:
         failed += 1
         first_err = self.executor.current_observation.last_action_error
 
-        # 1-Step Micro-Recovery: if PutObject failed on a closed openable container, try OpenObject first!
+        resolved_id = memory.resolve_object_id(resolved_id)
         node = memory.objects[resolved_id]
         if (
             sim_action == "PutObject"
@@ -580,13 +687,12 @@ class MacroActionController:
                 elif not open_ok:
                     failed += 1
 
-        # Distance / pitch micro-adjustment retry if target was out of reach or poorly angled
         if self.executor.can_step():
-            pos = memory.agent_position or (0.0, 0.0, 0.0)
-            horiz_dist = float(np.linalg.norm(node.centroid[:2] - np.asarray(pos[:2])))
+            pos = np.asarray((memory.agent_position or (0.0, 0.0, 0.0))[:2])
+            box_dist = _box_distance_2d(pos, node.bounds)
             adj_action = (
                 "MoveAhead"
-                if horiz_dist > 0.65
+                if box_dist > 0.50
                 else (
                     "LookDown"
                     if self.executor.current_observation.horizon_degrees < 30.0
@@ -597,23 +703,25 @@ class MacroActionController:
             steps += 1
             if not adj_ok:
                 failed += 1
-            elif (
-                self.executor.can_step()
-                and memory.select_interaction_mask(resolved_id, action=sim_action)
-                is not None
-            ):
-                retry_ok = self.executor.step_primitive(
-                    sim_action, object_id=resolved_id
-                )
-                steps += 1
-                if retry_ok:
-                    return (
-                        steps,
-                        failed,
-                        True,
-                        f"{sim_action} on #{resolved_id} ({node.category}) succeeded after micro-adjustment ({adj_action}).",
+            else:
+                resolved_id = memory.resolve_object_id(resolved_id)
+                if (
+                    self.executor.can_step()
+                    and memory.select_interaction_mask(resolved_id, action=sim_action)
+                    is not None
+                ):
+                    retry_ok = self.executor.step_primitive(
+                        sim_action, object_id=resolved_id
                     )
-                failed += 1
+                    steps += 1
+                    if retry_ok:
+                        return (
+                            steps,
+                            failed,
+                            True,
+                            f"{sim_action} on #{resolved_id} ({node.category}) succeeded after micro-adjustment ({adj_action}).",
+                        )
+                    failed += 1
 
         return (
             steps,

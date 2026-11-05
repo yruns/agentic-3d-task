@@ -2,14 +2,14 @@
 
 Usage (invoked by Codex inside the episode turn)::
 
-    python -m codex_agent.alfred.tools <tool> \\
-        --episode-dir <episode_artifact_dir> --args '<json>'
+    python -m codex_agent.alfred.tools <tool> --args '<json>'
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -30,9 +30,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--episode-dir",
-        required=True,
+        required=False,
+        default=None,
         type=Path,
-        help="Active episode artifact directory containing session_endpoint.json.",
+        help="Optional episode directory containing session_endpoint.json (defaults to current working directory).",
     )
     parser.add_argument(
         "--args",
@@ -52,17 +53,40 @@ def _parse_args_json(raw: str) -> dict[str, Any]:
     return parsed
 
 
+def _resolve_endpoint_url(episode_dir: Path | None) -> str | None:
+    candidates: list[Path] = []
+    if episode_dir is not None:
+        candidates.append(episode_dir.resolve() / SESSION_ENDPOINT_FILENAME)
+    env_dir = os.environ.get("ALFRED_EPISODE_DIR")
+    if env_dir:
+        candidates.append(Path(env_dir).resolve() / SESSION_ENDPOINT_FILENAME)
+    candidates.append(Path.cwd().resolve() / SESSION_ENDPOINT_FILENAME)
+    for path in candidates:
+        if path.is_file():
+            info = json.loads(path.read_text(encoding="utf-8"))
+            url = info.get("url")
+            if isinstance(url, str) and url:
+                return url.rstrip("/")
+    env_url = os.environ.get("ALFRED_EPISODE_ENDPOINT")
+    if env_url:
+        return env_url.rstrip("/")
+    return None
+
+
 def call_episode_server(
-    episode_dir: Path, tool_name: str, args: dict[str, Any], *, timeout: float = 600.0
+    episode_dir: Path | None,
+    tool_name: str,
+    args: dict[str, Any],
+    *,
+    timeout: float = 600.0,
 ) -> dict[str, Any]:
     """Send one tool request to the active EpisodeToolServer over loopback."""
-    endpoint_file = episode_dir.resolve() / SESSION_ENDPOINT_FILENAME
-    if not endpoint_file.is_file():
+    base_url = _resolve_endpoint_url(episode_dir)
+    if base_url is None:
         return {
-            "error": f"Active episode endpoint not found at {endpoint_file}. Is the episode running?"
+            "error": "Active episode endpoint not found (missing session_endpoint.json). Is the episode running?"
         }
-    info = json.loads(endpoint_file.read_text(encoding="utf-8"))
-    url = f"{info['url'].rstrip('/')}/tool"
+    url = f"{base_url}/tool"
     body = json.dumps({"tool": tool_name, "args": args}, ensure_ascii=False).encode(
         "utf-8"
     )
@@ -72,7 +96,6 @@ def call_episode_server(
         headers={"Content-Type": "application/json", "Accept": "application/json"},
         method="POST",
     )
-    # Explicitly bypass any environment HTTP/SOCKS proxies for 127.0.0.1 RPC.
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
         with opener.open(request, timeout=timeout) as response:

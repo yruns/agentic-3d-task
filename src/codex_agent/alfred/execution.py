@@ -12,13 +12,16 @@ from __future__ import annotations
 
 import json
 import math
+import shutil
+import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Protocol
 
 import numpy as np
 
+from codex_agent.runtime import CodexAgentRuntime
 from codex_agent.tasks.base import CodexExecutor
 
 from .dataset import AlfredInstruction
@@ -128,6 +131,7 @@ class EpisodeExecutor:
         self.policy_seconds = 0.0
         self.finish_requested = False
         self.finish_summary = ""
+        self.workspace_dir: Path | None = None
         self._recent_actions: list[dict[str, object]] = []
         self._current: SimulatorObservation | None = None
         self._predicted: PerceptionObservation | None = None
@@ -152,34 +156,48 @@ class EpisodeExecutor:
         """Perform initial scan, start tool server, and run a single Codex turn."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._observe(initial)
-        if self.config.initial_scan and self.can_step():
-            self.macro.scan_surroundings(pitches=(30.0,))
+        with tempfile.TemporaryDirectory(prefix="alfred_actor_ws_") as tmp_ws:
+            self.workspace_dir = Path(tmp_ws).resolve()
+            if self.config.initial_scan and self.can_step():
+                self.macro.scan_surroundings(pitches=(30.0,))
 
-        initial_rgb, initial_bev = self.render_latest_artifacts(prefix="initial")
-        initial_context = self._build_initial_context()
-        task = AlfredPolicyTask(
-            instruction=instruction,
-            episode_dir=self.output_dir,
-            initial_context=initial_context,
-            image_paths=(initial_rgb, initial_bev),
-            use_step_instructions=self.config.use_step_instructions,
-        )
+            initial_rgb, initial_bev = self.render_latest_artifacts(prefix="initial")
+            initial_context = self._build_initial_context()
+            task = AlfredPolicyTask(
+                instruction=instruction,
+                episode_dir=self.workspace_dir,
+                initial_context=initial_context,
+                image_paths=(initial_rgb, initial_bev),
+                use_step_instructions=self.config.use_step_instructions,
+            )
 
-        decisions_dir = self.output_dir / "decisions" / "0001"
-        decisions_dir.mkdir(parents=True, exist_ok=True)
-        request = task.build_turn_request()
-        write_json(
-            decisions_dir / "request.json",
-            {
-                "prompt": request.prompt,
-                "images": [str(path) for path in request.image_paths],
-            },
-        )
+            decisions_dir = self.output_dir / "decisions" / "0001"
+            decisions_dir.mkdir(parents=True, exist_ok=True)
+            request = task.build_turn_request()
+            write_json(
+                decisions_dir / "request.json",
+                {
+                    "prompt": request.prompt,
+                    "images": [str(path) for path in request.image_paths],
+                },
+            )
 
-        started = time.monotonic()
-        with EpisodeToolServer(self):
-            result = self.runtime.execute(task)
-        self.policy_seconds += time.monotonic() - started
+            started = time.monotonic()
+            orig_cfg = (
+                self.runtime.config
+                if isinstance(self.runtime, CodexAgentRuntime)
+                else None
+            )
+            if isinstance(self.runtime, CodexAgentRuntime) and orig_cfg is not None:
+                self.runtime.config = replace(orig_cfg, project_root=self.workspace_dir)
+            try:
+                with EpisodeToolServer(self):
+                    result = self.runtime.execute(task)
+            finally:
+                if isinstance(self.runtime, CodexAgentRuntime) and orig_cfg is not None:
+                    self.runtime.config = orig_cfg
+                self.workspace_dir = None
+            self.policy_seconds += time.monotonic() - started
 
         if self.decisions == 0:
             self.decisions = 1
@@ -406,6 +424,16 @@ class EpisodeExecutor:
             self.memory.record_collision(cell)
         return observation.last_action_success
 
+    def publish_tool_artifact(self, path: Path) -> Path:
+        """Mirror a rendered tool image into the isolated workspace if active."""
+        resolved = path.resolve()
+        if self.workspace_dir is not None and self.workspace_dir.is_dir():
+            dest = self.workspace_dir / resolved.name
+            if dest != resolved:
+                shutil.copy2(resolved, dest)
+            return dest
+        return resolved
+
     def render_latest_artifacts(self, *, prefix: str = "step") -> tuple[Path, Path]:
         """Render annotated current RGB and current BEV under tool_artifacts/."""
         artifacts_dir = self.output_dir / "tool_artifacts"
@@ -415,7 +443,10 @@ class EpisodeExecutor:
         bev_out = artifacts_dir / f"{prefix}_f{fid:04d}_bev.png"
         self._annotate_current(rgb_out)
         self.memory.render_bev(bev_out)
-        return rgb_out.resolve(), bev_out.resolve()
+        return (
+            self.publish_tool_artifact(rgb_out),
+            self.publish_tool_artifact(bev_out),
+        )
 
     def _annotate_current(self, path: Path) -> Path:
         from PIL import Image, ImageDraw

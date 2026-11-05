@@ -153,7 +153,7 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
     runtime = AlfredPolicyRuntime(
         replace(
             config.runtime,
-            project_root=config.output_dir,
+            project_root=actor_dir,
             sandbox="workspace_write",
             sandbox_network_access=True,
             restrict_skills_to_project=True,

@@ -24,9 +24,16 @@ Playbook (everything you need is here — do NOT look for a skill or any other \
 file):
 
 You control an embodied ALFRED agent inside a single interactive turn.
+- STRICT SHELL RULE: Every ``exec_command`` call MUST execute ONLY \
+``python -m codex_agent.alfred.tools <tool_name> --args '<json>'`` with \
+``yield_time_ms: 60000``. NEVER run ``ls``, ``cat``, ``find``, ``grep``, \
+``head``, ``ps``, or ``python -c``! Inspecting files on disk is forbidden and \
+wastes your tool budget.
+- Always pass ``yield_time_ms: 60000`` when calling ``exec_command`` so \
+multi-step navigation and neural perception finish in one call without \
+``write_stdin`` polling.
 - You do NOT issue low-level primitive moves (MoveAhead / RotateLeft / LookUp / \
 LookDown) yourself.
-- Instead, you invoke HIGH-LEVEL MACRO TOOLS via ``python -m codex_agent.alfred.tools``.
 - Every time you run a navigation, exploration, scanning, or interaction tool, \
 the EpisodeExecutor automatically steps the simulator, runs metric depth + \
 GroundingDINO + SAM1 + OpenCLIP perception on every intermediate frame, updates \
@@ -35,8 +42,9 @@ incremental ``SceneDelta`` JSON!
 
 High-Level Tool Catalog
 1. navigate_to — Plan and execute a full FMM path to an observed object's \
-interaction stance OR a coarse 0.5m map region ``[x, y]``, then automatically \
-rotate and tilt the camera to frame the target and verify its interaction mask.
+interaction stance OR a coarse 0.5m map region ``[x, y]``, progressively \
+revealing floor along the way, then automatically rotate and tilt the camera \
+to frame the target and verify its interaction mask.
    args: ``{"object_id": 14}`` or ``{"region": [-2, 3]}``
 2. interact_object — Execute a physical object interaction or a complete \
 multi-step appliance macro. Automatically approaches and frames ``object_id`` \
@@ -76,7 +84,7 @@ observed ``object_id`` (or ``frame_id`` + normalized ``bbox``). Mandatory when \
 disambiguating small tabletop items (e.g. Fork vs. Spoon vs. ButterKnife, \
 SaltShaker vs. PepperShaker, Apple vs. Tomato). Zero simulator steps!
    args: ``{"object_id": 48}`` or ``{"frame_id": 4, "bbox": [0.2, 0.4, 0.5, 0.7]}``
-8. view_frame — Renderannotated or raw first-person frames by ``frame_ids`` \
+8. view_frame — Render annotated or raw first-person frames by ``frame_ids`` \
 (or ``"current"``). Zero simulator steps!
    args: ``{"frame_ids": ["current"]}`` or ``{"frame_ids": [1, 3]}``
 9. view_bev — Re-render the latest top-down BEV map and list top frontiers.
@@ -90,11 +98,11 @@ Critical ALFRED Task Rules
 has ALREADY been executed for you before Turn 0! Check the inlined 3D Object \
 Catalog before calling ``explore_frontier``. If the target object and \
 destination receptacle are already in the catalog, jump straight to \
-``navigate_to`` / ``interact_object``!
+``interact_object`` or ``navigate_to``!
 - Use ``stop_on_categories`` when exploring: If the target object is not yet in \
 the catalog, call ``explore_frontier({"stop_on_categories": [...]})`` or check \
 closed containers (``Fridge``, ``Cabinet``, ``Drawer``, ``Microwave``) by \
-navigating to them and calling ``interact_object({"action": "open", ...})``.
+calling ``interact_object({"action": "open", "object_id": ...})``.
 - Verify small or ambiguous objects with ``view_crop`` + ``view_image``: \
 Open-vocabulary 2D detectors can confuse small utensils or shakers. Before \
 picking up a small item, check its high-res crop if multiple candidates exist.

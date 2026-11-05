@@ -75,6 +75,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="TOML configuration for local perception, object mapping and spatial memory.",
     )
     parser.add_argument("--x-display", default="5")
+    parser.add_argument(
+        "--physical-gpu",
+        type=int,
+        default=None,
+        help="Optional physical GPU index override (e.g., 4, 5, 6; never 1).",
+    )
     parser.add_argument("--model", default=None)
     parser.add_argument(
         "--reasoning-effort",
@@ -127,6 +133,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     output_dir = args.output_dir.absolute()
     scene = load_scene_settings(args.scene_config)
+    perception_cfg = scene.perception
+    if args.physical_gpu is not None:
+        perception_cfg = replace(
+            perception_cfg,
+            physical_gpu_index=args.physical_gpu,
+            gpu_lock_path=Path(f"/tmp/agentic3d-alfred-gpu{args.physical_gpu}.lock"),
+        )
     runtime = CodexAgentConfig.from_env(project_root=DEFAULT_PROJECT_ROOT)
     resolved_model = args.model or runtime.model
     if args.reasoning_effort is not None:
@@ -156,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
             x_display=args.x_display,
             timeout_seconds=args.worker_timeout,
         ),
-        perception=scene.perception,
+        perception=perception_cfg,
         memory=scene.memory,
         spatial=scene.spatial,
         runtime=runtime,

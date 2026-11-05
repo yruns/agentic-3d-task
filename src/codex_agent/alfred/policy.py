@@ -103,18 +103,16 @@ class AlfredPolicyTask:
             )
             sections.append(f"Step-by-step hints:\n{steps_formatted}")
 
-        ep_dir_str = str(self.episode_dir.resolve())
         sections.append(
-            "Tool CLI invocation syntax (run via shell tool):\n"
-            f"  {self.python_executable} -m codex_agent.alfred.tools <tool_name> \\\n"
-            f'    --episode-dir "{ep_dir_str}" \\\n'
-            "    --args '<json_object>'\n\n"
+            "Tool CLI invocation syntax (run via exec_command with yield_time_ms=60000):\n"
+            f"  {self.python_executable} -m codex_agent.alfred.tools <tool_name> --args '<json_object>'\n\n"
             "Examples:\n"
-            f'  {self.python_executable} -m codex_agent.alfred.tools navigate_to --episode-dir "{ep_dir_str}" --args \'{{"object_id": 12}}\'\n'
-            f'  {self.python_executable} -m codex_agent.alfred.tools interact_object --episode-dir "{ep_dir_str}" --args \'{{"action": "pickup", "object_id": 12}}\'\n'
-            f'  {self.python_executable} -m codex_agent.alfred.tools explore_frontier --episode-dir "{ep_dir_str}" --args \'{{"stop_on_categories": ["Ladle", "SinkBasin"]}}\'\n'
-            f'  {self.python_executable} -m codex_agent.alfred.tools view_crop --episode-dir "{ep_dir_str}" --args \'{{"object_id": 12}}\'\n'
-            f'  {self.python_executable} -m codex_agent.alfred.tools finish_episode --episode-dir "{ep_dir_str}" --args \'{{"summary": "Completed task"}}\''
+            f'  {self.python_executable} -m codex_agent.alfred.tools interact_object --args \'{{"action": "pickup", "object_id": 12}}\'\n'
+            f"  {self.python_executable} -m codex_agent.alfred.tools navigate_to --args '{{\"object_id\": 12}}'\n"
+            f'  {self.python_executable} -m codex_agent.alfred.tools explore_frontier --args \'{{"stop_on_categories": ["Ladle", "SinkBasin"]}}\'\n'
+            f"  {self.python_executable} -m codex_agent.alfred.tools view_crop --args '{{\"object_id\": 12}}'\n"
+            f'  {self.python_executable} -m codex_agent.alfred.tools finish_episode --args \'{{"summary": "Completed task"}}\'\n\n'
+            "STRICT RULE: Do NOT run ls, cat, find, grep, head, or python -c. Only run `codex_agent.alfred.tools` commands!"
         )
         sections.append(ALFRED_TOOLS_PLAYBOOK)
         sections.append(

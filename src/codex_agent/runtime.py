@@ -284,11 +284,22 @@ class CodexAgentRuntime:
                 max_finalization_retries,
             )
             prompt = self._finalization_prompt(result.final_response, schema)
-            attempts.append(
-                self._run_turn_bounded(
-                    thread, [TextInput(prompt)], output_schema=schema
-                )
+            final_attempt = self._run_turn_bounded(
+                thread, [TextInput(prompt)], output_schema=schema
             )
+            for _backoff_idx in range(3):
+                if (
+                    _status_str(final_attempt.status) == "failed"
+                    and final_attempt.error is not None
+                    and "409" in str(final_attempt.error)
+                ):
+                    time.sleep(2.0 * (_backoff_idx + 1))
+                    final_attempt = self._run_turn_bounded(
+                        thread, [TextInput(prompt)], output_schema=schema
+                    )
+                else:
+                    break
+            attempts.append(final_attempt)
         return attempts
 
     def _run_turn_bounded(
