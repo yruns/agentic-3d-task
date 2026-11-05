@@ -1,0 +1,73 @@
+{
+  "scope": "Visualization from completed episode actor-visible saved RGB/BEV and logs only",
+  "run_id": "ALFRED_V9_20261105_pilot15_i02",
+  "output": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/i02_visual_timeline.png",
+  "output_sha256": "7aa7047276efde8240dfa1306dce646f04986cbaf0f2be59e85d9f8192f6c9d1",
+  "sources": [
+    {
+      "decision": 8,
+      "action": 11,
+      "source_frame": 10,
+      "kind": "current.png",
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0008/current.png",
+      "sha256": "85a5c5052fdd5df53b327ab5f0ce08eb94887fab241a401c3785fb737b79cf5e"
+    },
+    {
+      "decision": 8,
+      "action": 11,
+      "source_frame": 10,
+      "kind": "bev.png",
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0008/bev.png",
+      "sha256": "d07fe8a2b60c432feb58703e35649e1d6af9c6b57079b4fb848e3858cd330362"
+    },
+    {
+      "decision": 21,
+      "action": 20,
+      "source_frame": 19,
+      "kind": "current.png",
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/current.png",
+      "sha256": "7199aed7fd92a3ebddd42aeaa6f64d4beb2f02655f77d090dbda9134779dafbd"
+    },
+    {
+      "decision": 21,
+      "action": 20,
+      "source_frame": 19,
+      "kind": "bev.png",
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/bev.png",
+      "sha256": "69845826638e02ff4f37c273b9b1bdab97d9f590474a7d1d1713f09eb38b40e2"
+    },
+    {
+      "decision": 29,
+      "action": 27,
+      "source_frame": 26,
+      "kind": "current.png",
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/current.png",
+      "sha256": "544597f3596538a41b40a70d274601b82862309739ffe17e29b7f113796dc701"
+    },
+    {
+      "decision": 29,
+      "action": 27,
+      "source_frame": 26,
+      "kind": "bev.png",
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/bev.png",
+      "sha256": "5cc9f11cc8900045d997eeae67fbbeccca53e0bfcbbc540b865a7e288d806151"
+    },
+    {
+      "decision": 38,
+      "action": 33,
+      "source_frame": 32,
+      "kind": "current.png",
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/current.png",
+      "sha256": "b839f36157e61a5972e1d1d0594ebcf7e42fe707f7796b4f9a084e880c33810b"
+    },
+    {
+      "decision": 38,
+      "action": 33,
+      "source_frame": 32,
+      "kind": "bev.png",
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/bev.png",
+      "sha256": "79cd0ce75bfe40c87a5fd3620cb8c84702ac2235be26a42c6aedad111460ede6"
+    }
+  ],
+  "no_inference_or_mapping_recomputation": true
+}

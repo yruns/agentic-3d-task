@@ -1,0 +1,64 @@
+{
+  "checked_at_utc": "2026-11-05T09:01:34.975032+00:00",
+  "passed": true,
+  "records": [
+    {
+      "run_id": "ALFRED_V9_20261105_capture_launch1",
+      "kind": "capture",
+      "status": "failed",
+      "artifact_path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/v9_assets/capture_launch_attempt1.json",
+      "artifact_sha256": "9049d7db1f9220330860c5693ac434b6ce5802c23ebe14a4323ae975a608ce85",
+      "artifact_file_count": 1,
+      "code_status": "not_executed",
+      "manifest_record_matches": true
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_train60_capture_v1",
+      "kind": "capture",
+      "status": "completed",
+      "artifact_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1",
+      "artifact_sha256": "c2de11332a658aeb8a83cbdc04b53d8b6a1b76e17e07bf3a00dd3207e65f2a67",
+      "artifact_file_count": 130,
+      "code_status": "recorded",
+      "manifest_record_matches": true
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_depth_compare_launch_v1",
+      "kind": "depth_comparison",
+      "status": "failed",
+      "artifact_path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/v9_assets/depth_compare_launch_attempt1.json",
+      "artifact_sha256": "d5059bc32c9905ae3a31f4211a973f8d6daa065004d3384554175275e9eaeeac",
+      "artifact_file_count": 1,
+      "code_status": "unavailable",
+      "manifest_record_matches": true
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_depth_compare_train60_v2",
+      "kind": "depth_comparison",
+      "status": "completed",
+      "artifact_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/compare_train60_v2",
+      "artifact_sha256": "4481a2ca6be38663383c72e1625ac086cb5b9c62b9fb5d680a3056d752c921ec",
+      "artifact_file_count": 126,
+      "code_status": "recorded",
+      "manifest_record_matches": true
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_native_probe",
+      "kind": "transport_probe",
+      "status": "completed",
+      "artifact_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/v9_native_probe_20261105",
+      "artifact_sha256": "d7893be06cbe9326f4a874bc871082ebf8e39b78bf4817a28422276ab606ad41",
+      "artifact_file_count": 2,
+      "code_status": "recorded",
+      "manifest_record_matches": true
+    }
+  ],
+  "task_run_id_collisions": 0,
+  "task_attempt_id_collisions": 0,
+  "scope": "Only five diagnostics were inserted into diagnostic_runs; task rows are checked for ID collisions, not snapshotted as immutable while independent task jobs are active.",
+  "source_sha256": {
+    "build_diagnostic_manifest.py": "067f970918e4097921e64edae9d7229d0ffdda6ad42a60c548f3123a21280571",
+    "ingest_diagnostics.py": "115df0b1ca623ab7f202dce5e60ceddfbc796ddb8b4228d295a397cf0cb6beda",
+    "diagnostic_manifest_01.json": "eddcdd31fecafdc01bc7a2899f74245e8916bee29a528d976183332cd320438b"
+  }
+}

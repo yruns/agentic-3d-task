@@ -1,7 +1,8 @@
 # v9: online OpenEQA mapping rewrite and frozen pilot15
 
-Date: 2026-11-05. Status: implementation and dependency validation in progress;
-**no v9 task scores or measured depth winner yet**. This is a new method/configuration,
+Date: 2026-11-05. Status: setup, full verification and train-only depth selection
+completed. The user subsequently reduced evaluation to five tasks;
+[v10 records their official results and two replays](v10_prefix5_20261105.md). This is a new method/configuration,
 not a continuation of the v8 score cohort. The user approved replacing the mapper
 and reduced the requested validation from 50 to 15 tasks.
 
@@ -189,7 +190,8 @@ which does not override the predeclared AbsRel ranking. These are four-room,
 [Full per-frame/scene/pitch comparison](v9_assets/depth_comparison.json) and
 [executed code, model hashes and command configuration](v9_assets/depth_protocol.json).
 
-Pending: real perception/mapping checks and pilot15 official scoring. Run IDs,
+Task execution was completed for the user-requested original prefix5; see v10.
+The full balanced pilot15 was not completed. Run IDs,
 code hashes, commands, artifacts and actual outcomes will be added as each stage
 executes; no pending stage is presented as passed. Historical v1–v8 and the old
 50 scores remain unchanged.

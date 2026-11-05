@@ -1,0 +1,13 @@
+{
+  "episode_id": "valid_seen/pick_and_place_with_movable_recep-Fork-Cup-DiningTable-23/trial_T20190906_205421_980666#2",
+  "status": "completed",
+  "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001",
+  "score": {
+    "success": false,
+    "completed_goal_conditions": 0,
+    "total_goal_conditions": 3,
+    "expert_actions": 41,
+    "executed_actions": 33
+  },
+  "error": null
+}

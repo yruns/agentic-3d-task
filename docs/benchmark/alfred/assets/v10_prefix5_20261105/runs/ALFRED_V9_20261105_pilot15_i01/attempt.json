@@ -1,0 +1,13 @@
+{
+  "episode_id": "valid_seen/pick_and_place_simple-SprayBottle-None-Toilet-415/trial_T20190909_075955_678702#0",
+  "status": "completed",
+  "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i01/episodes/0001",
+  "score": {
+    "success": false,
+    "completed_goal_conditions": 0,
+    "total_goal_conditions": 1,
+    "expert_actions": 33,
+    "executed_actions": 91
+  },
+  "error": null
+}

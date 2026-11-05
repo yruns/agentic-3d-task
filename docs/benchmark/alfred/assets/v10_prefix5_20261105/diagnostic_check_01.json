@@ -1,0 +1,11 @@
+{
+  "status": "validated_not_ingested",
+  "records": 5,
+  "kinds": [
+    "capture",
+    "capture",
+    "depth_comparison",
+    "depth_comparison",
+    "transport_probe"
+  ]
+}

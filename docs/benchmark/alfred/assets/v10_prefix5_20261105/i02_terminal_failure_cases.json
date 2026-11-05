@@ -1,0 +1,1467 @@
+{
+  "schema_version": 1,
+  "scope": "Post-terminal read-only analysis of i02 only; no model/GPU/simulator/replay calls, no source/config/docs edits, no information fed to actors",
+  "run_id": "ALFRED_V9_20261105_pilot15_i02",
+  "episode_id": "valid_seen/pick_and_place_with_movable_recep-Fork-Cup-DiningTable-23/trial_T20190906_205421_980666#2",
+  "score": {
+    "success": false,
+    "completed_goal_conditions": 0,
+    "total_goal_conditions": 3,
+    "expert_actions": 41,
+    "executed_actions": 33
+  },
+  "execution": {
+    "stop_reason": "failure_budget",
+    "actions": 33,
+    "failures": 10,
+    "decisions": 38,
+    "input_tokens": 936976,
+    "output_tokens": 53710,
+    "perception_seconds": 211.64313646871597,
+    "policy_seconds": 1526.56534335576
+  },
+  "summary": {
+    "action_counts": {
+      "RotateRight": 12,
+      "LookUp": 4,
+      "OpenObject": 10,
+      "RotateLeft": 3,
+      "LookDown": 2,
+      "MoveAhead": 2
+    },
+    "observations": 34,
+    "distinct_base_positions": [
+      [
+        0.0,
+        -0.25,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.25,
+        -0.25,
+        0.0
+      ]
+    ],
+    "final_memory_objects": 167,
+    "navigate_requests": [
+      {
+        "decision": 1,
+        "object_id": 2,
+        "feedback": "No reachable stance through observed space with body clearance."
+      },
+      {
+        "decision": 3,
+        "object_id": 0,
+        "feedback": "No reachable stance through observed space with body clearance."
+      },
+      {
+        "decision": 4,
+        "object_id": 28,
+        "feedback": "No reachable stance through observed space with body clearance."
+      },
+      {
+        "decision": 5,
+        "object_id": 14,
+        "feedback": "Reached an observed stance; visibility and interaction readiness remain unverified."
+      },
+      {
+        "decision": 7,
+        "object_id": 52,
+        "feedback": "No reachable stance through observed space with body clearance."
+      },
+      {
+        "decision": 11,
+        "object_id": 68,
+        "feedback": "No reachable stance through observed space with body clearance."
+      },
+      {
+        "decision": 15,
+        "object_id": 68,
+        "feedback": "No reachable stance through observed space with body clearance."
+      },
+      {
+        "decision": 17,
+        "object_id": 88,
+        "feedback": "No reachable stance through observed space with body clearance."
+      },
+      {
+        "decision": 19,
+        "object_id": 88,
+        "feedback": "No reachable stance through observed space with body clearance."
+      },
+      {
+        "decision": 22,
+        "object_id": 4,
+        "feedback": "FMM route has no safe 0.25 m action from this stance; acquire another view."
+      },
+      {
+        "decision": 24,
+        "object_id": 52,
+        "feedback": "No reachable stance through observed space with body clearance."
+      },
+      {
+        "decision": 28,
+        "object_id": 129,
+        "feedback": "FMM route has no safe 0.25 m action from this stance; acquire another view."
+      },
+      {
+        "decision": 30,
+        "object_id": 126,
+        "feedback": "FMM route has no safe 0.25 m action from this stance; acquire another view."
+      },
+      {
+        "decision": 32,
+        "object_id": 136,
+        "feedback": "FMM route has no safe 0.25 m action from this stance; acquire another view."
+      },
+      {
+        "decision": 37,
+        "object_id": 68,
+        "feedback": "No reachable stance through observed space with body clearance."
+      }
+    ],
+    "all_10_interactions_used_current_source_frame": true
+  },
+  "cases": [
+    {
+      "name": "Fridge visible in RGB, repeated identities and unverified approach",
+      "evidence": [
+        {
+          "action": {
+            "index": 18,
+            "action": "OpenObject",
+            "object_id": 88,
+            "source_frame": 17,
+            "result_frame": 18,
+            "success": false,
+            "error": "object not found: object",
+            "interaction_mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000018.npy",
+              "sha256": "4fc8c1c5ab27281b5e9e9096cf08b55020a2fca22f4387a5c0c13c7c013e95e1",
+              "source": "current_mapping_mask",
+              "source_detection_index": 1
+            }
+          },
+          "decision_index": 18,
+          "decision": {
+            "command": {
+              "kind": "interact",
+              "interaction_action": "OpenObject",
+              "target": {
+                "type": "object",
+                "object_id": 88
+              }
+            },
+            "rationale": "The likely first subgoal is to search the fridge for a martini glass so it can be chilled. The fridge is currently visible from this pose, and navigation already reported no better reachable stance through observed free space, so a direct open attempt is the best next step.",
+            "memory_note": "Fridge is visible and centered enough to test direct interaction; if opening fails again, adjust stance/view rather than repeating the same mask attempt. Martini glass still not found; likely need to search fridge first, then collect fork and later find a table for placement."
+          },
+          "decision_request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0018/request.json",
+            "sha256": "759a3051f5fed665ec772e76e6438922d5a49c4d21882a7513beaf6677fcb889"
+          },
+          "decision_response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0018/response.json",
+            "sha256": "7c4fcfcf2ebb9c8ad51583adcb63984b3926bab7e42b9ee8ec8585e8966c95e1"
+          },
+          "source_frame": {
+            "frame_id": 17,
+            "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000017.png",
+            "yaw_degrees": 90.0,
+            "horizon_degrees": 0.0,
+            "last_action_success": true,
+            "last_action_error": ""
+          },
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000017.png",
+            "sha256": "cb3653e62f531ecf2f605e5bacae2ebcd421dab1601f4128d8ebcd7a17c98f90"
+          },
+          "actor_labeled_rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0018/current.png",
+            "sha256": "b696e2c11a46ccc80054e60f773b2da59f4e7a2239aa3c41509f82942e66246d"
+          },
+          "agent_position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "prior_feedback": "No reachable stance through observed space with body clearance.",
+          "current_detection": {
+            "category": "Fridge",
+            "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/17_mask_001.npy",
+            "bbox_xyxy": [
+              153.1379833817482,
+              99.49526488780975,
+              261.75755113363266,
+              258.5376173257828
+            ],
+            "confidence": 0.5072705149650574,
+            "mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/17_mask_001.npy",
+              "sha256": "060883b6f62502248f4ad980511f37986cca6447d6cc6a13e49f8594e70e73c0"
+            }
+          },
+          "current_detection_to_memory_id": 88,
+          "actor_memory_record": {
+            "object_id": 88,
+            "category": "Fridge",
+            "category_evidence": {
+              "Fridge": 3
+            },
+            "centroid": [
+              2.101,
+              -0.473,
+              1.337
+            ],
+            "last_known_centroid": [
+              2.101,
+              -0.473,
+              1.337
+            ],
+            "geometry_valid": true,
+            "geometry_epoch": 0,
+            "provisional": false,
+            "active": true,
+            "state": "observed",
+            "last_seen": 17,
+            "observation_count": 3,
+            "stale_through_frame": -1,
+            "visible_now": true,
+            "parent_object_id": null,
+            "action_states": {},
+            "region": [
+              4,
+              -1
+            ],
+            "recent_frames": [
+              14,
+              15,
+              17
+            ]
+          },
+          "interaction_mask": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000018.npy",
+            "sha256": "4fc8c1c5ab27281b5e9e9096cf08b55020a2fca22f4387a5c0c13c7c013e95e1"
+          },
+          "mask_statistics": {
+            "raw_pixels": 16242,
+            "executed_pixels": 14785,
+            "removed_pixels": 1457,
+            "added_pixels": 0,
+            "retained_fraction": 0.9102942987316833,
+            "removed_overlap_with_other_retained_detections": [
+              {
+                "detection_index": 8,
+                "category": "ShowerDoor",
+                "confidence": 0.2580893337726593,
+                "memory_id": 94,
+                "removed_pixel_overlap": 730,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/17_mask_008.npy",
+                  "sha256": "d96c4dabee6e2147c0dec2054a012a42d3dc6f5e2b2f2c50c3e13ee2a9e8b494"
+                }
+              },
+              {
+                "detection_index": 9,
+                "category": "ShowerDoor",
+                "confidence": 0.251693457365036,
+                "memory_id": 95,
+                "removed_pixel_overlap": 727,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/17_mask_009.npy",
+                  "sha256": "8a7fb44382f6671155c2adb099218140688498a8c4f1a0c0e6fc90bd1eaa3c67"
+                }
+              }
+            ],
+            "overlaps_may_overlap_each_other_do_not_sum": true
+          },
+          "predicted_depth_not_ground_truth": {
+            "model": "da3metric-large",
+            "artifact": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/17_depth.npy",
+              "sha256": "8db616b287cc430c38b7ddc4d0742a00a9edac7216d5d7f4695d491eb1a23420"
+            },
+            "over_executed_mask_min_p10_p50_p90_max_m": [
+              2.075979709625244,
+              2.0833876609802244,
+              2.097895622253418,
+              2.118324708938599,
+              2.1870315074920654
+            ]
+          },
+          "posthoc_evaluator_only": {
+            "access_scope": "Read after this episode reached terminal state; never actor input or feedback to active agents",
+            "source": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/terminal_evaluation.json",
+              "sha256": "ec061b3f62156289ba2962ef737e3a7073201438023167f953adad6abc6e370e"
+            },
+            "saved_api_selected_category": "Fridge",
+            "saved_api_object_id_sha256": "1a69d847537c2c8fe567aeda091d595c4a614d7562828f3f144423789b40476a",
+            "api_action_available": true
+          }
+        },
+        {
+          "action": {
+            "index": 20,
+            "action": "OpenObject",
+            "object_id": 4,
+            "source_frame": 19,
+            "result_frame": 20,
+            "success": false,
+            "error": "object not found: object",
+            "interaction_mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000020.npy",
+              "sha256": "5e9f06fad652a839a5cd403d72ffc882b16f81918f7e7c92e7340b9e6a9dbdf4",
+              "source": "current_mapping_mask",
+              "source_detection_index": 1
+            }
+          },
+          "decision_index": 21,
+          "decision": {
+            "command": {
+              "kind": "interact",
+              "interaction_action": "OpenObject",
+              "target": {
+                "type": "object",
+                "object_id": 4
+              }
+            },
+            "rationale": "The task needs a chilled martini glass, and the fridge is currently large, centered, and visible from this pose after looking down. Earlier open failures used stale or bad masks on other detections; using the current visible fridge detection is the best next step.",
+            "memory_note": "Fridge is centered and visibly detected now; try opening this current fridge view to inspect for a martini glass. If it still fails, reposition closer rather than repeating the same stale mask attempts."
+          },
+          "decision_request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/request.json",
+            "sha256": "43b109b6cea66d0172cd4a6424626ac99eb6a7cc0913d0941b575fb8cc3b0bcc"
+          },
+          "decision_response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/response.json",
+            "sha256": "ae0de57f4bb0b060492c674f2c69403e37fc1bc3a93c2f9be558546e752a27c4"
+          },
+          "source_frame": {
+            "frame_id": 19,
+            "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000019.png",
+            "yaw_degrees": 90.0,
+            "horizon_degrees": 15.0000038,
+            "last_action_success": true,
+            "last_action_error": ""
+          },
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000019.png",
+            "sha256": "e706e98d6027cbd8691dbeaf19863b1a2a025ce958ba80e587faec3a85d67587"
+          },
+          "actor_labeled_rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/current.png",
+            "sha256": "7199aed7fd92a3ebddd42aeaa6f64d4beb2f02655f77d090dbda9134779dafbd"
+          },
+          "agent_position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "prior_feedback": "{\"index\": 19, \"action\": \"LookDown\", \"object_id\": null, \"source_frame\": 18, \"result_frame\": 19, \"success\": true, \"error\": \"\", \"interaction_mask\": null}",
+          "current_detection": {
+            "category": "Fridge",
+            "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/19_mask_001.npy",
+            "bbox_xyxy": [
+              151.99975669384003,
+              23.24596345424652,
+              271.5863138437271,
+              241.74834787845612
+            ],
+            "confidence": 0.5360310077667236,
+            "mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/19_mask_001.npy",
+              "sha256": "28e6422ff73ab186ccda08ce61fd23c3d1686823b098bf90bdaa74590f2fdf5b"
+            }
+          },
+          "current_detection_to_memory_id": 4,
+          "actor_memory_record": {
+            "object_id": 4,
+            "category": "Fridge",
+            "category_evidence": {
+              "Fridge": 4
+            },
+            "centroid": [
+              2.24,
+              -0.525,
+              1.315
+            ],
+            "last_known_centroid": [
+              2.24,
+              -0.525,
+              1.315
+            ],
+            "geometry_valid": true,
+            "geometry_epoch": 0,
+            "provisional": false,
+            "active": true,
+            "state": "observed",
+            "last_seen": 19,
+            "observation_count": 4,
+            "stale_through_frame": -1,
+            "visible_now": true,
+            "parent_object_id": null,
+            "action_states": {},
+            "region": [
+              4,
+              -2
+            ],
+            "recent_frames": [
+              4,
+              8,
+              19
+            ]
+          },
+          "interaction_mask": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000020.npy",
+            "sha256": "5e9f06fad652a839a5cd403d72ffc882b16f81918f7e7c92e7340b9e6a9dbdf4"
+          },
+          "mask_statistics": {
+            "raw_pixels": 22203,
+            "executed_pixels": 15284,
+            "removed_pixels": 6919,
+            "added_pixels": 0,
+            "retained_fraction": 0.6883754447597171,
+            "removed_overlap_with_other_retained_detections": [
+              {
+                "detection_index": 6,
+                "category": "Footstool",
+                "confidence": 0.4499536454677582,
+                "memory_id": 1,
+                "removed_pixel_overlap": 5440,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/19_mask_006.npy",
+                  "sha256": "28789881d0bcd14014c5d6644623c54fc74d28d1c172f038cd24c3855e133bd5"
+                }
+              },
+              {
+                "detection_index": 8,
+                "category": "Curtains",
+                "confidence": 0.2932265102863312,
+                "memory_id": 3,
+                "removed_pixel_overlap": 1479,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/19_mask_008.npy",
+                  "sha256": "50de00ff07486765bcc3adc0a28cfe57e8b2d1f7813fdd0da5172f8ea0d6248e"
+                }
+              },
+              {
+                "detection_index": 9,
+                "category": "Curtains",
+                "confidence": 0.2803744077682495,
+                "memory_id": 100,
+                "removed_pixel_overlap": 737,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/19_mask_009.npy",
+                  "sha256": "fefbc2940a7a073183855d109f5f5bb91a87c898959258f7d4d9c22d84e071dd"
+                }
+              }
+            ],
+            "overlaps_may_overlap_each_other_do_not_sum": true
+          },
+          "predicted_depth_not_ground_truth": {
+            "model": "da3metric-large",
+            "artifact": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/19_depth.npy",
+              "sha256": "d20d4386263769af73e5873ff7042ec3eda6b8012ad96bd7fa75686f21e84eae"
+            },
+            "over_executed_mask_min_p10_p50_p90_max_m": [
+              2.0420467853546143,
+              2.096201515197754,
+              2.2060245275497437,
+              2.3328968048095704,
+              2.5281360149383545
+            ]
+          },
+          "posthoc_evaluator_only": {
+            "access_scope": "Read after this episode reached terminal state; never actor input or feedback to active agents",
+            "source": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/terminal_evaluation.json",
+              "sha256": "ec061b3f62156289ba2962ef737e3a7073201438023167f953adad6abc6e370e"
+            },
+            "saved_api_selected_category": "Fridge",
+            "saved_api_object_id_sha256": "1a69d847537c2c8fe567aeda091d595c4a614d7562828f3f144423789b40476a",
+            "api_action_available": true
+          }
+        },
+        {
+          "action": {
+            "index": 25,
+            "action": "OpenObject",
+            "object_id": 122,
+            "source_frame": 24,
+            "result_frame": 25,
+            "success": false,
+            "error": "object not found: object",
+            "interaction_mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000025.npy",
+              "sha256": "1910fa98f8161982cf1099cb3c24caf979b1f2dfaef7f70f98025d863c994dd7",
+              "source": "current_mapping_mask",
+              "source_detection_index": 6
+            }
+          },
+          "decision_index": 26,
+          "decision": {
+            "command": {
+              "kind": "interact",
+              "interaction_action": "OpenObject",
+              "target": {
+                "type": "object",
+                "object_id": 122
+              }
+            },
+            "rationale": "The task needs a chilled martini glass, and the centered current fridge detection is a valid visible interactable. Previous fridge failures used stale/misaligned detections; opening the currently visible fridge is the best immediate search and cooling step.",
+            "memory_note": "Centered on visible fridge 122. Open it to inspect for martini glass or make cooling accessible; if absent, search nearby cabinets/drawer next. Fork remains known on counter area for later."
+          },
+          "decision_request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0026/request.json",
+            "sha256": "ee7098956fe76edd44f746589e1632393e9d676064909b8ce591e3dedda9a35f"
+          },
+          "decision_response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0026/response.json",
+            "sha256": "8031ac3ff962087a79a1868a06a920a773eef96d5b09e3c50535dc5033d768ef"
+          },
+          "source_frame": {
+            "frame_id": 24,
+            "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000024.png",
+            "yaw_degrees": 90.0,
+            "horizon_degrees": 15.0000038,
+            "last_action_success": true,
+            "last_action_error": ""
+          },
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000024.png",
+            "sha256": "90118e0b19db943f21814522a10ed6ea33700cf6eba65ad5c8bc36d31f485f03"
+          },
+          "actor_labeled_rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0026/current.png",
+            "sha256": "caaea939592b527c3eb0b8f06c74c6db29a31f6ee0eb63499d5f75489d56296c"
+          },
+          "agent_position": [
+            0.0,
+            -0.25,
+            0.0
+          ],
+          "prior_feedback": "{\"index\": 24, \"action\": \"RotateLeft\", \"object_id\": null, \"source_frame\": 23, \"result_frame\": 24, \"success\": true, \"error\": \"\", \"interaction_mask\": null}",
+          "current_detection": {
+            "category": "Fridge",
+            "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/24_mask_006.npy",
+            "bbox_xyxy": [
+              123.46023917198181,
+              23.73749613761902,
+              241.15042090415955,
+              240.40313959121704
+            ],
+            "confidence": 0.48991942405700684,
+            "mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/24_mask_006.npy",
+              "sha256": "c2c49655993730ad7fd18c40ed0bde47e7871d323ed1ef068df7e921ea0d2b2c"
+            }
+          },
+          "current_detection_to_memory_id": 122,
+          "actor_memory_record": {
+            "object_id": 122,
+            "category": "Fridge",
+            "category_evidence": {
+              "Fridge": 1
+            },
+            "centroid": [
+              2.178,
+              -0.509,
+              1.35
+            ],
+            "last_known_centroid": [
+              2.178,
+              -0.509,
+              1.35
+            ],
+            "geometry_valid": true,
+            "geometry_epoch": 0,
+            "provisional": true,
+            "active": true,
+            "state": "observed",
+            "last_seen": 24,
+            "observation_count": 1,
+            "stale_through_frame": -1,
+            "visible_now": true,
+            "parent_object_id": null,
+            "action_states": {},
+            "region": [
+              4,
+              -2
+            ],
+            "recent_frames": [
+              24
+            ]
+          },
+          "interaction_mask": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000025.npy",
+            "sha256": "1910fa98f8161982cf1099cb3c24caf979b1f2dfaef7f70f98025d863c994dd7"
+          },
+          "mask_statistics": {
+            "raw_pixels": 22050,
+            "executed_pixels": 16733,
+            "removed_pixels": 5317,
+            "added_pixels": 0,
+            "retained_fraction": 0.7588662131519275,
+            "removed_overlap_with_other_retained_detections": [
+              {
+                "detection_index": 9,
+                "category": "Drawer",
+                "confidence": 0.31860101222991943,
+                "memory_id": 124,
+                "removed_pixel_overlap": 5317,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/24_mask_009.npy",
+                  "sha256": "6f6dccf4cd7fee7b8e4235cd73672ba4559e3eb15d3bbf63b0cb3fb93dc0a267"
+                }
+              }
+            ],
+            "overlaps_may_overlap_each_other_do_not_sum": true
+          },
+          "predicted_depth_not_ground_truth": {
+            "model": "da3metric-large",
+            "artifact": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/24_depth.npy",
+              "sha256": "f9af3d29c884035373c5b5c90fe5023f0d8fc6955fb2b87c00d8adf7311ae64d"
+            },
+            "over_executed_mask_min_p10_p50_p90_max_m": [
+              2.0096371173858643,
+              2.0512539386749267,
+              2.1484453678131104,
+              2.2730563163757322,
+              2.4172420501708984
+            ]
+          },
+          "posthoc_evaluator_only": {
+            "access_scope": "Read after this episode reached terminal state; never actor input or feedback to active agents",
+            "source": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/terminal_evaluation.json",
+              "sha256": "ec061b3f62156289ba2962ef737e3a7073201438023167f953adad6abc6e370e"
+            },
+            "saved_api_selected_category": "Fridge",
+            "saved_api_object_id_sha256": "1a69d847537c2c8fe567aeda091d595c4a614d7562828f3f144423789b40476a",
+            "api_action_available": true
+          }
+        },
+        {
+          "action": {
+            "index": 27,
+            "action": "OpenObject",
+            "object_id": 129,
+            "source_frame": 26,
+            "result_frame": 27,
+            "success": false,
+            "error": "object not found: object",
+            "interaction_mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000027.npy",
+              "sha256": "7ec41be2ec199c81d7b44689bf561ad56768830a4ef9932571a37c990341f4f8",
+              "source": "current_mapping_mask",
+              "source_detection_index": 5
+            }
+          },
+          "decision_index": 29,
+          "decision": {
+            "command": {
+              "kind": "interact",
+              "interaction_action": "OpenObject",
+              "target": {
+                "type": "object",
+                "object_id": 129
+              }
+            },
+            "rationale": "The fridge is centered and visibly detected right now as object 129. The last few fridge opens likely suffered from stale or poor masks at earlier poses, and we just adjusted viewpoint. Opening it now is the best chance to inspect for a martini glass already inside or to use it later for chilling.",
+            "memory_note": "Retry the clearly visible current fridge (id 129) from this updated pose; if it still fails, switch to inspecting the nearby drawer/cabinet for the martini glass."
+          },
+          "decision_request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/request.json",
+            "sha256": "405776b9d128a24bbd5badecfd79f439a2e479529a416ab1e782738c12c798c8"
+          },
+          "decision_response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/response.json",
+            "sha256": "6d4b0b69af0131f9034916ac36dfdd74a50e48efa6bc968920c964bd2b924c21"
+          },
+          "source_frame": {
+            "frame_id": 26,
+            "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000026.png",
+            "yaw_degrees": 90.0,
+            "horizon_degrees": 0.0,
+            "last_action_success": true,
+            "last_action_error": ""
+          },
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000026.png",
+            "sha256": "e04165423a9e77b6d16b09845316dcc57c5981ad0abc2d590988bacfc1800c40"
+          },
+          "actor_labeled_rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/current.png",
+            "sha256": "544597f3596538a41b40a70d274601b82862309739ffe17e29b7f113796dc701"
+          },
+          "agent_position": [
+            0.0,
+            -0.25,
+            0.0
+          ],
+          "prior_feedback": "FMM route has no safe 0.25 m action from this stance; acquire another view.",
+          "current_detection": {
+            "category": "Fridge",
+            "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/26_mask_005.npy",
+            "bbox_xyxy": [
+              125.37093311548233,
+              99.11105632781982,
+              234.21276658773422,
+              261.36724948883057
+            ],
+            "confidence": 0.5202786326408386,
+            "mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/26_mask_005.npy",
+              "sha256": "4b085e68b5d2a91207d29d6aaff7b30ec56fd9d52142caa29856c2fc93bea9ad"
+            }
+          },
+          "current_detection_to_memory_id": 129,
+          "actor_memory_record": {
+            "object_id": 129,
+            "category": "Fridge",
+            "category_evidence": {
+              "Fridge": 1
+            },
+            "centroid": [
+              2.131,
+              -0.493,
+              1.342
+            ],
+            "last_known_centroid": [
+              2.131,
+              -0.493,
+              1.342
+            ],
+            "geometry_valid": true,
+            "geometry_epoch": 0,
+            "provisional": true,
+            "active": true,
+            "state": "observed",
+            "last_seen": 26,
+            "observation_count": 1,
+            "stale_through_frame": -1,
+            "visible_now": true,
+            "parent_object_id": null,
+            "action_states": {},
+            "region": [
+              4,
+              -1
+            ],
+            "recent_frames": [
+              26
+            ]
+          },
+          "interaction_mask": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000027.npy",
+            "sha256": "7ec41be2ec199c81d7b44689bf561ad56768830a4ef9932571a37c990341f4f8"
+          },
+          "mask_statistics": {
+            "raw_pixels": 16257,
+            "executed_pixels": 16257,
+            "removed_pixels": 0,
+            "added_pixels": 0,
+            "retained_fraction": 1.0,
+            "removed_overlap_with_other_retained_detections": [],
+            "overlaps_may_overlap_each_other_do_not_sum": true
+          },
+          "predicted_depth_not_ground_truth": {
+            "model": "da3metric-large",
+            "artifact": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/26_depth.npy",
+              "sha256": "767a5ce11cf3b6d7b2b91bd393b6f1ba003dac3006c297b67233b306e744430a"
+            },
+            "over_executed_mask_min_p10_p50_p90_max_m": [
+              2.0884106159210205,
+              2.1168009757995607,
+              2.133212089538574,
+              2.145009756088257,
+              2.2358710765838623
+            ]
+          },
+          "posthoc_evaluator_only": {
+            "access_scope": "Read after this episode reached terminal state; never actor input or feedback to active agents",
+            "source": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/terminal_evaluation.json",
+              "sha256": "ec061b3f62156289ba2962ef737e3a7073201438023167f953adad6abc6e370e"
+            },
+            "saved_api_selected_category": "Fridge",
+            "saved_api_object_id_sha256": "1a69d847537c2c8fe567aeda091d595c4a614d7562828f3f144423789b40476a",
+            "api_action_available": true
+          }
+        }
+      ],
+      "observed_facts": [
+        "Actions18/20/25/27 used memory IDs88/4/122/129 but saved official api_actions selected the same Fridge objectId (only its hash is retained here).",
+        "All four were OpenObject failures using current-frame masks, not reused historical masks.",
+        "Frame19 displays a fridge; the retained Footstool mask overlaps its lower compartment and Curtains masks overlap its handles (human visual inspection, no new model).",
+        "Frame19 raw fridge mask has22203pixels; executed mapping mask has15284. Removed regions overlap Footstool5440px and Curtains1479px; another Curtains737px overlaps that removal and must not be added again.",
+        "At decision29 the preceding NavigateObject129 returned no safe0.25m action; decision29 still opened129 from unchanged frame26. Its predicted depth median was2.133m, not measured GT distance."
+      ],
+      "interpretation_not_proven_cause": [
+        "Insufficient approach is consistent with predicted depth and failed navigation, but these artifacts alone do not prove the exact action-time simulator range condition.",
+        "False contained labels alter the interaction mask, but the official interface still selected Fridge; this does not establish that mask subtraction caused these failures.",
+        "Multiple memory IDs for the same saved simulator target demonstrate identity fragmentation in this episode; its contribution to failure remains unmeasured."
+      ]
+    },
+    {
+      "name": "Cabinet memory label, Shelf current region and Microwave interaction selection",
+      "evidence": [
+        {
+          "action": {
+            "index": 13,
+            "action": "OpenObject",
+            "object_id": 68,
+            "source_frame": 12,
+            "result_frame": 13,
+            "success": false,
+            "error": "Bad interact mask. Couldn't locate target object",
+            "interaction_mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000013.npy",
+              "sha256": "04f36c50b6e6b63037fcd9de8ce8acb02971f4b143fa876f76a230b9456e24c9",
+              "source": "current_mapping_mask",
+              "source_detection_index": 5
+            }
+          },
+          "decision_index": 10,
+          "decision": {
+            "command": {
+              "kind": "interact",
+              "interaction_action": "OpenObject",
+              "target": {
+                "type": "object",
+                "object_id": 68
+              }
+            },
+            "rationale": "The martini glass is not visible in the current view, and an upper cabinet is a plausible container for glassware. Cabinet 68 is currently visible and better centered after the recent upward adjustment, so opening it is the best next search step.",
+            "memory_note": "Martini glass still not found. Upper cabinet 68 is visible now; open it to inspect for a glass. Fridge 83 is visible for chilling later, and a fork was seen earlier near the countertop/TV stand area."
+          },
+          "decision_request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0010/request.json",
+            "sha256": "e67364f67c48c458006d0c61cc5173b4b2b50ca3f582884105a5b8b5ffa21002"
+          },
+          "decision_response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0010/response.json",
+            "sha256": "b62b640637476eef871d0f3f4f7014dc84218c7eebd403888c1ce12a743b649c"
+          },
+          "source_frame": {
+            "frame_id": 12,
+            "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000012.png",
+            "yaw_degrees": 180.0,
+            "horizon_degrees": 0.0,
+            "last_action_success": true,
+            "last_action_error": ""
+          },
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000012.png",
+            "sha256": "2ee36bcf4ddfff5049b0a9089cc994f1533caf9759d28bc53c4949c417664e1b"
+          },
+          "actor_labeled_rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0010/current.png",
+            "sha256": "220f2ebb5a402c39bc4acbab7f5fef1edcbd6d9a47839f42394d8212913928d7"
+          },
+          "agent_position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "prior_feedback": "{\"index\": 12, \"action\": \"LookUp\", \"object_id\": null, \"source_frame\": 11, \"result_frame\": 12, \"success\": true, \"error\": \"\", \"interaction_mask\": null}",
+          "current_detection": {
+            "category": "Cabinet",
+            "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/12_mask_005.npy",
+            "bbox_xyxy": [
+              -0.003980845212936401,
+              91.44416525959969,
+              65.32451882958412,
+              156.4360074698925
+            ],
+            "confidence": 0.5275185704231262,
+            "mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/12_mask_005.npy",
+              "sha256": "27185b022ad9f43c5fd1704b2f109690c86f70cd4cc720df6093e9c8d01df030"
+            }
+          },
+          "current_detection_to_memory_id": 68,
+          "actor_memory_record": {
+            "object_id": 68,
+            "category": "Cabinet",
+            "category_evidence": {
+              "Cabinet": 1
+            },
+            "centroid": [
+              1.199,
+              -3.237,
+              1.811
+            ],
+            "last_known_centroid": [
+              1.199,
+              -3.237,
+              1.811
+            ],
+            "geometry_valid": true,
+            "geometry_epoch": 0,
+            "provisional": true,
+            "active": true,
+            "state": "observed",
+            "last_seen": 12,
+            "observation_count": 1,
+            "stale_through_frame": -1,
+            "visible_now": true,
+            "parent_object_id": null,
+            "action_states": {},
+            "region": [
+              2,
+              -7
+            ],
+            "recent_frames": [
+              12
+            ]
+          },
+          "interaction_mask": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000013.npy",
+            "sha256": "04f36c50b6e6b63037fcd9de8ce8acb02971f4b143fa876f76a230b9456e24c9"
+          },
+          "mask_statistics": {
+            "raw_pixels": 4136,
+            "executed_pixels": 755,
+            "removed_pixels": 3381,
+            "added_pixels": 0,
+            "retained_fraction": 0.18254352030947776,
+            "removed_overlap_with_other_retained_detections": [
+              {
+                "detection_index": 0,
+                "category": "Microwave",
+                "confidence": 0.7094751000404358,
+                "memory_id": 65,
+                "removed_pixel_overlap": 1612,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/12_mask_000.npy",
+                  "sha256": "7bdd19632ac6962c3fefe443be7462bff50f4322b1d59d19a70f025d1c25d5bf"
+                }
+              },
+              {
+                "detection_index": 18,
+                "category": "CoffeeMachine",
+                "confidence": 0.32337331771850586,
+                "memory_id": 77,
+                "removed_pixel_overlap": 199,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/12_mask_018.npy",
+                  "sha256": "23ccf21435609025b8b2066b6ce4d6faf23e6e90d0b36df93b14d8440c9b86b7"
+                }
+              },
+              {
+                "detection_index": 20,
+                "category": "Shelf",
+                "confidence": 0.29659363627433777,
+                "memory_id": 78,
+                "removed_pixel_overlap": 1769,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/12_mask_020.npy",
+                  "sha256": "a793de52779383ff17b99cf7efe36ee2c12734a971c90ad26f028daf7f426e62"
+                }
+              }
+            ],
+            "overlaps_may_overlap_each_other_do_not_sum": true
+          },
+          "predicted_depth_not_ground_truth": {
+            "model": "da3metric-large",
+            "artifact": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/12_depth.npy",
+              "sha256": "54b8b3cc9b66a50f2f9cb96072d4cc3afee73ff82866dd9d8b3787a0826d7b6f"
+            },
+            "over_executed_mask_min_p10_p50_p90_max_m": [
+              3.0856611728668213,
+              3.1229224681854246,
+              3.200805425643921,
+              3.3794001579284667,
+              3.433152675628662
+            ]
+          },
+          "posthoc_evaluator_only": {
+            "access_scope": "Read after this episode reached terminal state; never actor input or feedback to active agents",
+            "source": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/terminal_evaluation.json",
+              "sha256": "ec061b3f62156289ba2962ef737e3a7073201438023167f953adad6abc6e370e"
+            },
+            "saved_api_selected_category": null,
+            "saved_api_object_id_sha256": null,
+            "api_action_available": false
+          }
+        },
+        {
+          "action": {
+            "index": 31,
+            "action": "OpenObject",
+            "object_id": 159,
+            "source_frame": 30,
+            "result_frame": 31,
+            "success": false,
+            "error": "object not found: object",
+            "interaction_mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000031.npy",
+              "sha256": "990b084a9e4344d1e72f8a882953b13c2195655e95df082aae7f6e10686d71ac",
+              "source": "current_mapping_mask",
+              "source_detection_index": 4
+            }
+          },
+          "decision_index": 35,
+          "decision": {
+            "command": {
+              "kind": "interact",
+              "interaction_action": "OpenObject",
+              "target": {
+                "type": "object",
+                "object_id": 159
+              }
+            },
+            "rationale": "The martini glass has not been found yet, and the newly visible upper cabinet is a plausible container. Previous note indicates this pose was adjusted specifically to center the high cabinet for an open attempt, so opening visible cabinet 159 is the best next search action.",
+            "memory_note": "No item held. Current priority is to search the now-visible upper cabinet for the missing martini glass; fork is already known near region [1,-3]. If cabinet opens, inspect contents for a glass before returning to fridge/cooling steps."
+          },
+          "decision_request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0035/request.json",
+            "sha256": "fc3af1a7c49b66588789bc418dddcceb3879fb76b717df24036f440fd2ffb272"
+          },
+          "decision_response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0035/response.json",
+            "sha256": "bd490fac9ce3fffd143fcaa7db43ffd9a69024b23df3263c19e9911058c482e3"
+          },
+          "source_frame": {
+            "frame_id": 30,
+            "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000030.png",
+            "yaw_degrees": 180.0,
+            "horizon_degrees": -15.0,
+            "last_action_success": true,
+            "last_action_error": ""
+          },
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000030.png",
+            "sha256": "7dffe9f5331170bee503fd8ce926c2b687b7cd8810dfc7df4f3dc9a3dae84b3a"
+          },
+          "actor_labeled_rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0035/current.png",
+            "sha256": "56faec4bd0d8ac6e7e74eb335db16c4bffec5f3d8a8f255be29143a41be66fe6"
+          },
+          "agent_position": [
+            0.25,
+            -0.25,
+            0.0
+          ],
+          "prior_feedback": "{\"index\": 30, \"action\": \"LookUp\", \"object_id\": null, \"source_frame\": 29, \"result_frame\": 30, \"success\": true, \"error\": \"\", \"interaction_mask\": null}",
+          "current_detection": {
+            "category": "Cabinet",
+            "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/30_mask_004.npy",
+            "bbox_xyxy": [
+              0.007116794586181641,
+              155.0623968243599,
+              76.16018056869507,
+              227.61823385953903
+            ],
+            "confidence": 0.4911932945251465,
+            "mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/30_mask_004.npy",
+              "sha256": "9fba7df88b4b0b7e60b14211d3df95316d13bacab152af668acc307883f84586"
+            }
+          },
+          "current_detection_to_memory_id": 159,
+          "actor_memory_record": {
+            "object_id": 159,
+            "category": "Cabinet",
+            "category_evidence": {
+              "Cabinet": 1
+            },
+            "centroid": [
+              1.212,
+              -2.909,
+              1.75
+            ],
+            "last_known_centroid": [
+              1.212,
+              -2.909,
+              1.75
+            ],
+            "geometry_valid": true,
+            "geometry_epoch": 0,
+            "provisional": true,
+            "active": true,
+            "state": "observed",
+            "last_seen": 30,
+            "observation_count": 1,
+            "stale_through_frame": -1,
+            "visible_now": true,
+            "parent_object_id": null,
+            "action_states": {},
+            "region": [
+              2,
+              -6
+            ],
+            "recent_frames": [
+              30
+            ]
+          },
+          "interaction_mask": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000031.npy",
+            "sha256": "990b084a9e4344d1e72f8a882953b13c2195655e95df082aae7f6e10686d71ac"
+          },
+          "mask_statistics": {
+            "raw_pixels": 5426,
+            "executed_pixels": 1168,
+            "removed_pixels": 4258,
+            "added_pixels": 0,
+            "retained_fraction": 0.2152598599336528,
+            "removed_overlap_with_other_retained_detections": [
+              {
+                "detection_index": 0,
+                "category": "Microwave",
+                "confidence": 0.6467079520225525,
+                "memory_id": 157,
+                "removed_pixel_overlap": 1834,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/30_mask_000.npy",
+                  "sha256": "058cfd2dd69ae5ca70bd469ba1496bf8cc4b40ea63867f01a7788b733e8f6a4b"
+                }
+              },
+              {
+                "detection_index": 6,
+                "category": "Shelf",
+                "confidence": 0.39431190490722656,
+                "memory_id": 161,
+                "removed_pixel_overlap": 2424,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/30_mask_006.npy",
+                  "sha256": "faedc7ae75112d408f075d63608b1318ea71046f3ffc8585e6584c7d6e3626e4"
+                }
+              },
+              {
+                "detection_index": 7,
+                "category": "TomatoSliced",
+                "confidence": 0.350652277469635,
+                "memory_id": 162,
+                "removed_pixel_overlap": 36,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/30_mask_007.npy",
+                  "sha256": "1b0fda8e05452392f6b332f1ae3fe292beacdcbd35a1050570a4cb0fc9854545"
+                }
+              }
+            ],
+            "overlaps_may_overlap_each_other_do_not_sum": true
+          },
+          "predicted_depth_not_ground_truth": {
+            "model": "da3metric-large",
+            "artifact": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/30_depth.npy",
+              "sha256": "70d36ec78dfd905e5264f4780ab50eac46d4efbd9da6c8d6d50662b4bdc7da9c"
+            },
+            "over_executed_mask_min_p10_p50_p90_max_m": [
+              2.466726779937744,
+              2.4848806142807005,
+              2.5866010189056396,
+              2.7206920623779296,
+              2.9183754920959473
+            ]
+          },
+          "posthoc_evaluator_only": {
+            "access_scope": "Read after this episode reached terminal state; never actor input or feedback to active agents",
+            "source": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/terminal_evaluation.json",
+              "sha256": "ec061b3f62156289ba2962ef737e3a7073201438023167f953adad6abc6e370e"
+            },
+            "saved_api_selected_category": "Microwave",
+            "saved_api_object_id_sha256": "0c055e1d44a1d40a65f3cad48ef22db6e3ca382ba3c31782ffa49558d5d6d85c",
+            "api_action_available": true
+          }
+        },
+        {
+          "action": {
+            "index": 33,
+            "action": "OpenObject",
+            "object_id": 68,
+            "source_frame": 32,
+            "result_frame": 33,
+            "success": false,
+            "error": "object not found: object",
+            "interaction_mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000033.npy",
+              "sha256": "2c3b5afb405abcb252476ef3fa388237dac209ff6f4867ba851aa9a98e423d50",
+              "source": "current_mapping_mask",
+              "source_detection_index": 9
+            }
+          },
+          "decision_index": 38,
+          "decision": {
+            "command": {
+              "kind": "interact",
+              "interaction_action": "OpenObject",
+              "target": {
+                "type": "object",
+                "object_id": 68
+              }
+            },
+            "rationale": "The goal still depends on first finding a martini glass. A cabinet is currently visible and is a likely container for glassware, and this specific cabinet has not been tried from the current pose. Opening it is the most direct search step before further movement or exploration.",
+            "memory_note": "Martini glass still missing; fork was seen earlier near region [1,-3]. Try opening the currently visible upper cabinet 68 to search for the glass; if this fails again, adjust position/view or inspect the fridge next."
+          },
+          "decision_request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/request.json",
+            "sha256": "f78b1e31c44af91e5b977f6c16b16d6f53a203143f9e7180076d21c4bfee59db"
+          },
+          "decision_response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/response.json",
+            "sha256": "404f2f41252bca9f11b8fa7633607b6b4be0037b11c277db4779fbe5ef1349e1"
+          },
+          "source_frame": {
+            "frame_id": 32,
+            "rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000032.png",
+            "yaw_degrees": 180.0,
+            "horizon_degrees": 0.0,
+            "last_action_success": true,
+            "last_action_error": ""
+          },
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000032.png",
+            "sha256": "d193e887a0b77c9549ee6ba9d26014a83d894e08b123e3559cbe84c5d43aa870"
+          },
+          "actor_labeled_rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/current.png",
+            "sha256": "b839f36157e61a5972e1d1d0594ebcf7e42fe707f7796b4f9a084e880c33810b"
+          },
+          "agent_position": [
+            0.25,
+            -0.25,
+            0.0
+          ],
+          "prior_feedback": "No reachable stance through observed space with body clearance.",
+          "current_detection": {
+            "category": "Shelf",
+            "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/32_mask_009.npy",
+            "bbox_xyxy": [
+              0.03465414047241211,
+              86.19575500488281,
+              78.35708856582642,
+              157.92340636253357
+            ],
+            "confidence": 0.4686853885650635,
+            "mask": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/32_mask_009.npy",
+              "sha256": "e06284bab424489d3cbfcd4a303e8fb4cf6ae4cc23d5b122e23700f7f9cc14d7"
+            }
+          },
+          "current_detection_to_memory_id": 68,
+          "actor_memory_record": {
+            "object_id": 68,
+            "category": "Cabinet",
+            "category_evidence": {
+              "Cabinet": 3,
+              "Shelf": 2
+            },
+            "centroid": [
+              1.295,
+              -3.209,
+              1.791
+            ],
+            "last_known_centroid": [
+              1.295,
+              -3.209,
+              1.791
+            ],
+            "geometry_valid": true,
+            "geometry_epoch": 0,
+            "provisional": false,
+            "active": true,
+            "state": "observed",
+            "last_seen": 32,
+            "observation_count": 5,
+            "stale_through_frame": -1,
+            "visible_now": true,
+            "parent_object_id": null,
+            "action_states": {},
+            "region": [
+              2,
+              -7
+            ],
+            "recent_frames": [
+              16,
+              29,
+              32
+            ]
+          },
+          "interaction_mask": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/interaction_masks/000033.npy",
+            "sha256": "2c3b5afb405abcb252476ef3fa388237dac209ff6f4867ba851aa9a98e423d50"
+          },
+          "mask_statistics": {
+            "raw_pixels": 5395,
+            "executed_pixels": 1115,
+            "removed_pixels": 4280,
+            "added_pixels": 0,
+            "retained_fraction": 0.20667284522706209,
+            "removed_overlap_with_other_retained_detections": [
+              {
+                "detection_index": 0,
+                "category": "Microwave",
+                "confidence": 0.7354018092155457,
+                "memory_id": 143,
+                "removed_pixel_overlap": 1844,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/32_mask_000.npy",
+                  "sha256": "61886515b5c75c189a768baabe80bc9409dfa711be5b637a29e973b903aa7b0b"
+                }
+              },
+              {
+                "detection_index": 11,
+                "category": "Apple",
+                "confidence": 0.4594160318374634,
+                "memory_id": 65,
+                "removed_pixel_overlap": 32,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/32_mask_011.npy",
+                  "sha256": "d9e436efdaa5cc264b0066f2d0b1ea87d4cc4a81006c784eab3c4fa97a967d29"
+                }
+              },
+              {
+                "detection_index": 15,
+                "category": "Shelf",
+                "confidence": 0.4199378490447998,
+                "memory_id": 78,
+                "removed_pixel_overlap": 2434,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/32_mask_015.npy",
+                  "sha256": "646c6bca7a0b280b9ad3f0771db59233e9079a430c10a1e88f4995da738ef3f4"
+                }
+              },
+              {
+                "detection_index": 26,
+                "category": "AlarmClock",
+                "confidence": 0.3102015554904938,
+                "memory_id": 153,
+                "removed_pixel_overlap": 200,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/32_mask_026.npy",
+                  "sha256": "c5940b9d3fcbfbe9ab583680853cc67195bcebd4c43e9d92ae806f642757928c"
+                }
+              },
+              {
+                "detection_index": 31,
+                "category": "CellPhone",
+                "confidence": 0.2750014364719391,
+                "memory_id": 156,
+                "removed_pixel_overlap": 130,
+                "mask": {
+                  "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/32_mask_031.npy",
+                  "sha256": "10dba597cb97ffe73e60199110c455ae16f5bf21541742e330c5c84f669bbccb"
+                }
+              }
+            ],
+            "overlaps_may_overlap_each_other_do_not_sum": true
+          },
+          "predicted_depth_not_ground_truth": {
+            "model": "da3metric-large",
+            "artifact": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/perception/32_depth.npy",
+              "sha256": "62d83ed2400ba4b55c999eda8f7bd7bd2cb12c15a36e6019cc7954ea68b08489"
+            },
+            "over_executed_mask_min_p10_p50_p90_max_m": [
+              2.8231050968170166,
+              2.846608304977417,
+              2.8983314037323,
+              3.046773672103882,
+              3.19217848777771
+            ]
+          },
+          "posthoc_evaluator_only": {
+            "access_scope": "Read after this episode reached terminal state; never actor input or feedback to active agents",
+            "source": {
+              "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/terminal_evaluation.json",
+              "sha256": "ec061b3f62156289ba2962ef737e3a7073201438023167f953adad6abc6e370e"
+            },
+            "saved_api_selected_category": "Microwave",
+            "saved_api_object_id_sha256": "0c055e1d44a1d40a65f3cad48ef22db6e3ca382ba3c31782ffa49558d5d6d85c",
+            "api_action_available": true,
+            "final_action_same_pose_metadata": {
+              "objectType": "Microwave",
+              "visible": false,
+              "distance": 3.69716787,
+              "openable": true,
+              "isOpen": false
+            }
+          }
+        }
+      ],
+      "observed_facts": [
+        "Final action33 requested memory68 as a cabinet, but its current source detection at frame32/index9 was Shelf; memory68 label remainedCabinet with evidenceCabinet3/Shelf2.",
+        "Raw Shelf mask covered the upper-cabinet/microwave region at the left edge; raw5395px became executed1115px after contained-mask subtraction. Removed pixels include all1844px of the current Microwave detection and2434px of a smaller Shelf detection.",
+        "Final saved official api_action selected Microwave. Same-pose terminal-only metadata reports openable=true, isOpen=false, visible=false, distance3.69716787m. These values were not actor inputs.",
+        "The previous NavigateObject68 returned no reachable stance. Last decision still issued OpenObject68 from frame32; failure exhausted the10-failure budget."
+      ],
+      "interpretation_not_proven_cause": [
+        "Semantic identity, current visual extent and selected simulator object differ; this is a concrete interaction-grounding mismatch, without proving which upstream component dominates.",
+        "Terminal invisibility/range supports lack of interaction readiness on the last action; it does not imply that the object was absent from the RGB image.",
+        "No replay or counterfactual mask/approach test was performed, so neither the association rule nor mask filtering is isolated as the sole cause."
+      ]
+    }
+  ],
+  "performance_observations": {
+    "run_wall_seconds": 1947.106679,
+    "policy_seconds": 1526.56534335576,
+    "policy_fraction_of_run_wall": 0.7840173113369306,
+    "perception_rpc_seconds": 211.64313646871597,
+    "worker_stats": {
+      "load_seconds": 18.48680216167122,
+      "inference_seconds": 116.63287367019802,
+      "frames": 34,
+      "peak_cuda_memory_bytes": 6017993216,
+      "device": "cuda:0",
+      "depth_seconds": 14.853452201932669,
+      "detection_seconds": 21.374494522809982,
+      "segmentation_seconds": 32.30295146163553,
+      "feature_seconds": 46.90597515646368,
+      "capped_detections": 0,
+      "nms_suppressed": 1597,
+      "empty_masks": 0,
+      "gpu_wait_seconds": 114.38716727402061,
+      "residency": "sequential_cpu_offload"
+    },
+    "untimed_remainder_seconds": 208.89819917552404,
+    "limits": [
+      "Worker GPU wait includes initialization and differs in scope from per-frame RPC time; do not add these overlapping timers.",
+      "Untimed remainder includes startup, simulator, mapping, navigation, rendering and I/O; it cannot be labeled measured parent CPU mapping time.",
+      "Source shows CPU cKDTree DBSCAN neighbor lists plus Python cluster expansion, and full object catalog in prompts; these are scaling risks, not measured bottleneck attribution.",
+      "No profiling or inspection of other live task processes was performed."
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/attempt.json",
+      "sha256": "662045a7ba2a65f14d455cb9d7c4e09ed900073fb36907a2bc7b387898528854"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/execution.json",
+      "sha256": "9c6160d32d08d82baf3afe61839ec9b0b5373965c4359e9efcb38ae0cb6f4244"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/actions.jsonl",
+      "sha256": "ddba20f16365c9f0f58151455ddc5c7d815e9894e56122aaf033e4e8ee555868"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/observations.jsonl",
+      "sha256": "a8958c8edef477682988463c97561a850a67428fda03e0c86f55e15bdb568899"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/memory.json",
+      "sha256": "e1b854ce84b51a157974b4c801684e7b3a8ab9dcfc3832a9a17d9398dbb4a6f5"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/run.json",
+      "sha256": "50f956a13869f816fca68bdf9b6e1e6a720b7fc6067640d5db2890e494afc7d9"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/i02_saved_mask_comparison.png",
+      "sha256": "32649328111242d85ffc59c77b88849054eff16d036c667fa19bd5a7338a1ad4"
+    }
+  ]
+}

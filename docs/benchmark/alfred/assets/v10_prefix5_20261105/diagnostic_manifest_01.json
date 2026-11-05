@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "diagnostics": [
+    {
+      "run_id": "ALFRED_V9_20261105_capture_launch1",
+      "kind": "capture",
+      "status": "failed",
+      "code": null,
+      "code_status": "not_executed",
+      "artifact_path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/v9_assets/capture_launch_attempt1.json",
+      "summary": {
+        "source_status": "setup_error_before_python",
+        "failure_classification": "conda_activation_before_python",
+        "error_sha256": "e344287b4332b4b42e2c1b8b23949b3f7ab05a42a28f015711c7fa06f03148d0",
+        "launcher_sha256": "000bb5f496ac13a7ce5c191859cd331daf2649bc81e6fcc4cacb65fc4ac5c482",
+        "log_sha256": "ae0042c70b009e0a6c2a20bbd564c8d8e90476122220dcf64f214cd1b64e415d",
+        "frame_count": 0,
+        "python_started": false
+      },
+      "metrics": null
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_train60_capture_v1",
+      "kind": "capture",
+      "status": "completed",
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "52b30b8c5c5fe532845b45c5c5e1f3753517eb8b",
+        "executed_code_sha256": "d4ccbe9f5e77a4e23844f3173720e13c1d8ef1aab20ced195dae3e0ec1b4ddec",
+        "tracked_worktree_drift": ""
+      },
+      "code_status": "recorded",
+      "artifact_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/train60_v1",
+      "summary": {
+        "split": "train",
+        "frame_count": 60,
+        "started_at_utc": "2026-11-05T08:15:41.032041+00:00",
+        "finished_at_utc": "2026-11-05T08:16:29.087461+00:00",
+        "manifest_sha256": "ad55c84172a085445f196e1ed2083097980c19b9f13586b7110e68ac310ad084",
+        "plan_sha256": "e967c337607ac5f88629bb93f259b55ba722755f0f10036f0ebaa29867770e1a",
+        "start_end_source_match": true,
+        "ground_truth_scope": "Training-only depth comparison; never actor input or task scoring"
+      },
+      "metrics": null
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_depth_compare_launch_v1",
+      "kind": "depth_comparison",
+      "status": "failed",
+      "code": null,
+      "code_status": "unavailable",
+      "artifact_path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/v9_assets/depth_compare_launch_attempt1.json",
+      "summary": {
+        "source_status": "input_validation_error_before_model_load",
+        "failure_classification": "signed_pitch_frame_id_validation",
+        "error_sha256": "c8d7ca566a901d9df92e7830aa6c9e42aee1609b241f19777db583517d05170b",
+        "recorded_code_head_prefix": "52b30b8",
+        "recorded_executed_code_sha256": "d4ccbe9f5e77a4e23844f3173720e13c1d8ef1aab20ced195dae3e0ec1b4ddec",
+        "code_evidence_limit": "Failure record preserves short HEAD/source SHA only; full contemporaneous branch/clean-state provenance is unavailable",
+        "log_sha256": "473fad4c5ce3468d5fcd2b6bbf66a68df1ae6e2d68195a277c57890c55a8aba1",
+        "inferred_frames": 0,
+        "model_loaded": false
+      },
+      "metrics": null
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_depth_compare_train60_v2",
+      "kind": "depth_comparison",
+      "status": "completed",
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "0e8951134150f4c108806ca72adcd5bb59fd6b67",
+        "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+        "tracked_worktree_drift": ""
+      },
+      "code_status": "recorded",
+      "artifact_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred_depth_calibration/compare_train60_v2",
+      "summary": {
+        "started_at_utc": "2026-11-05T08:26:14.897751+00:00",
+        "finished_at_utc": "2026-11-05T08:27:05.113685+00:00",
+        "manifest_sha256": "ad55c84172a085445f196e1ed2083097980c19b9f13586b7110e68ac310ad084",
+        "frames_per_backend": 60,
+        "selection": {
+          "status": "selected",
+          "selected_backend": "da3metric-large",
+          "tied_backends": [],
+          "deciding_metric": "abs_rel",
+          "excluded": {},
+          "rule": {
+            "version": 1,
+            "minimum_frame_coverage": 0.99,
+            "aggregation": "equal-weight macro average of frames",
+            "ranking": [
+              "abs_rel",
+              "near_abs_rel",
+              "edge_gradient_mae_m",
+              "rmse_m"
+            ],
+            "tie_tolerance": 1e-08,
+            "near_range_m": [
+              0.3,
+              2.0
+            ],
+            "gt_depth_range_m_exclusive": [
+              0.0,
+              5.0
+            ],
+            "gt_saturation_m": 5.0,
+            "edge_depth_jump_m": 0.1,
+            "ground_truth_scale_alignment": false,
+            "geometry_metrics": "diagnostic only; excluded from model selection"
+          }
+        },
+        "scope": "Frozen training diagnostic; no ALFRED task rollout",
+        "protocol_sha256": "2281e9841340d55f29635a2586d1086324657908e2dd86f4cd462b707e28ac30"
+      },
+      "metrics": {
+        "da3metric-large": {
+          "summary": {
+            "frames": 60,
+            "minimum_frame_coverage": 1.0,
+            "total_pixels": 5400000,
+            "saturated_gt_pixels": 366755,
+            "valid_gt_pixels": 5033245,
+            "valid_prediction_pixels": 5033245,
+            "saturation_fraction": 0.0679175925925926,
+            "saturation_fraction_frames": 60,
+            "valid_coverage": 1.0,
+            "valid_coverage_frames": 60,
+            "abs_rel": 0.19530338419715468,
+            "abs_rel_frames": 60,
+            "rmse_m": 0.31422294440997156,
+            "rmse_m_frames": 60,
+            "median_scale_ratio": 0.9258312999918196,
+            "median_scale_ratio_frames": 60,
+            "near_coverage": 1.0,
+            "near_coverage_frames": 60,
+            "near_abs_rel": 0.19976359486038628,
+            "near_abs_rel_frames": 60,
+            "near_rmse_m": 0.25991861271723643,
+            "near_rmse_m_frames": 60,
+            "edge_gradient_mae_m": 0.24869855231605897,
+            "edge_gradient_mae_m_frames": 51
+          },
+          "inference_seconds": 20.439657038077712,
+          "gpu_wait_seconds": 0.0010991254821419716,
+          "load_seconds": 2.2477875975891948,
+          "peak_cuda_memory_bytes": 2266360832
+        },
+        "unidepth-v2-vitl14": {
+          "summary": {
+            "frames": 60,
+            "minimum_frame_coverage": 1.0,
+            "total_pixels": 5400000,
+            "saturated_gt_pixels": 366755,
+            "valid_gt_pixels": 5033245,
+            "valid_prediction_pixels": 5033245,
+            "saturation_fraction": 0.0679175925925926,
+            "saturation_fraction_frames": 60,
+            "valid_coverage": 1.0,
+            "valid_coverage_frames": 60,
+            "abs_rel": 0.414729753624226,
+            "abs_rel_frames": 60,
+            "rmse_m": 0.5195125207493062,
+            "rmse_m_frames": 60,
+            "median_scale_ratio": 1.3894419071175657,
+            "median_scale_ratio_frames": 60,
+            "near_coverage": 1.0,
+            "near_coverage_frames": 60,
+            "near_abs_rel": 0.4334696423737921,
+            "near_abs_rel_frames": 60,
+            "near_rmse_m": 0.4579115444114184,
+            "near_rmse_m_frames": 60,
+            "edge_gradient_mae_m": 0.23543261043609212,
+            "edge_gradient_mae_m_frames": 51
+          },
+          "inference_seconds": 18.28180853277445,
+          "gpu_wait_seconds": 0.000948815606534481,
+          "load_seconds": 3.9183503910899162,
+          "peak_cuda_memory_bytes": 2534894080
+        }
+      }
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_native_probe",
+      "kind": "transport_probe",
+      "status": "completed",
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "ea444a0ff8bd982ad082a38d7d5df8b927fb3eb0",
+        "executed_code_sha256": "d4ccbe9f5e77a4e23844f3173720e13c1d8ef1aab20ced195dae3e0ec1b4ddec",
+        "tracked_worktree_drift": ""
+      },
+      "code_status": "recorded",
+      "artifact_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/v9_native_probe_20261105",
+      "summary": {
+        "started_at_utc": "2026-11-05T08:14:26.279451+00:00",
+        "model": "gpt-5.4-2026-03-05",
+        "reasoning_effort": "medium",
+        "turn_timeout_s": 90,
+        "max_finalization_retries": 0,
+        "succeeded": true,
+        "scope": "Synthetic native Responses transport/structured output check; no task action executed"
+      },
+      "metrics": {
+        "wall_seconds": 5.240036839619279,
+        "usage": {
+          "last": {
+            "cache_write_input_tokens": 0,
+            "cached_input_tokens": 0,
+            "input_tokens": 1860,
+            "output_tokens": 70,
+            "reasoning_output_tokens": 18,
+            "total_tokens": 1930
+          },
+          "total": {
+            "cache_write_input_tokens": 0,
+            "cached_input_tokens": 0,
+            "input_tokens": 1860,
+            "output_tokens": 70,
+            "reasoning_output_tokens": 18,
+            "total_tokens": 1930
+          }
+        },
+        "sdk_attempts": 1
+      }
+    }
+  ]
+}

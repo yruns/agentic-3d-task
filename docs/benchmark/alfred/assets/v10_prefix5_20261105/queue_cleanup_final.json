@@ -1,0 +1,23 @@
+{
+  "at_unix": 1793871033.823384,
+  "extra_task_interrupts": [
+    {
+      "pid": 2067299,
+      "run_id": "ALFRED_V9_20261105_pilot15_i08"
+    },
+    {
+      "pid": 2071392,
+      "run_id": "ALFRED_V9_20261105_pilot15_i07"
+    },
+    {
+      "pid": 2071710,
+      "run_id": "ALFRED_V9_20261105_pilot15_i05"
+    }
+  ],
+  "queue_supervisors_terminated": [
+    1991235,
+    1991246,
+    1991251
+  ],
+  "reason": "Enforce user-requested prefix5; supervisor suspension was not persistent, so permanent termination is required."
+}

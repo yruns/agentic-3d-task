@@ -1,0 +1,6 @@
+{
+  "checked_at_utc": "2026-11-05T09:37:39.863552+00:00",
+  "passed": true,
+  "matching_runner_or_worker_processes": [],
+  "scope": "Read-only /proc command-entrypoint scan for codex_agent.cli.run_alfred, codex_agent.alfred.perception_worker, and project simulator_worker.py/perception_worker.py; no other FILM sessions inspected or signalled. Detached Unity binaries are not claimed by this scan."
+}

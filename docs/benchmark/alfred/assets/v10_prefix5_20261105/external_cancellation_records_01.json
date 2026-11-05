@@ -1,0 +1,1591 @@
+{
+  "record_origin": "derived_external_user_cancellation",
+  "created_at_utc": "2026-11-05T09:44:06.921914+00:00",
+  "source_cancellation_report_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/pilot5_excluded_user_cancellations.json",
+  "source_cancellation_report_sha256": "9f4355ace15a1aa6adc2cf2e99a89520d60ff732f689ff8363e10726f4dc847e",
+  "self_checks": {
+    "passed": true,
+    "checks": {
+      "null_score_and_interrupted_attempt": true,
+      "raw_running_and_derived_interrupted_both_explicit": true,
+      "unknown_finish_time_stays_null": true,
+      "source_metadata_not_modified": true,
+      "existing_history_cannot_be_overwritten": true
+    },
+    "scope": "Temporary fixture database only"
+  },
+  "helper_sha256": "03435c62fe1dbddf25d63d0705c10d6f915218515ac14d6c87865b4fcbcce52f",
+  "accounting_helper_sha256": "488f1a68da8c0e4cd765cf84aef8db6bd15ed36366f0f3c9b7623636576dbdd3",
+  "records": [
+    {
+      "run_id": "ALFRED_V9_20261105_pilot15_i05",
+      "metadata": {
+        "run_id": "ALFRED_V9_20261105_pilot15_i05",
+        "status": "interrupted",
+        "started_at_utc": "2026-11-05T09:24:14.367304+00:00",
+        "code": {
+          "branch": "feat/alfred-benchmark",
+          "head_sha": "62e9f18a6654bbedb1558b3ae2a08cc7f2207a6f",
+          "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+          "tracked_worktree_drift": ""
+        },
+        "command": [
+          "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+          "-m",
+          "codex_agent.cli.run_alfred",
+          "--data-root",
+          "/home/ysh/Datasets/FILM/alfred/data/json_2.1.0",
+          "--splits",
+          "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+          "--fold",
+          "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/folds/pilot15.json",
+          "--simulator-python",
+          "/home/ysh/codebase/FILM/.venv/bin/python",
+          "--alfred-root",
+          "/home/ysh/Datasets/FILM/alfred",
+          "--scene-config",
+          "/home/ysh/codebase/agentic-3d-task/configs/alfred/scene.toml",
+          "--x-display",
+          "5",
+          "--model",
+          "gpt-5.4-2026-03-05",
+          "--reasoning-effort",
+          "medium",
+          "--max-actions",
+          "1000",
+          "--max-failures",
+          "10",
+          "--max-decisions",
+          "60",
+          "--num-shards",
+          "15",
+          "--shard-index",
+          "5",
+          "--run-id",
+          "ALFRED_V9_20261105_pilot15_i05",
+          "--output-dir",
+          "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i05"
+        ],
+        "output_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i05",
+        "fold_path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/folds/pilot15.json",
+        "fold_sha256": "2fa0520b130ec9748762b31b7dc1c3aeeb072edbb5bb7e9393ea4c406da1f34a",
+        "full_fold_size": 15,
+        "shard_index": 5,
+        "num_shards": 15,
+        "splits_path": "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+        "splits_sha256": "c27918c1f64f58d047cb2a26d477dfdb8935bacde3504ec1ce9cb52cd2c72c83",
+        "limit": null,
+        "diagnostic_prefix": false,
+        "episodes": [
+          {
+            "episode_id": "valid_seen/pick_heat_then_place_in_recep-Tomato-None-DiningTable-16/trial_T20190907_201243_698086#0",
+            "split": "valid_seen",
+            "task_type": "pick_heat_then_place_in_recep",
+            "trajectory_sha256": "255af8bec5de4c08a1ba10b8032a9e839f06dbc066c1bb5d929c1111b76ec360",
+            "expert_actions": 89
+          }
+        ],
+        "model": "gpt-5.4-2026-03-05",
+        "model_provider": "codex_adapter",
+        "reasoning_effort": "medium",
+        "execution": {
+          "max_actions": 1000,
+          "max_failures": 10,
+          "max_decisions": 60,
+          "navigation_chunk": 12,
+          "retrieved_images": 3,
+          "use_step_instructions": false
+        },
+        "geometry": {
+          "runtime_provenance": {
+            "schema_version": 1,
+            "executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+            "prefix": "/home/ysh/miniconda3/envs/agentic3d",
+            "package_root": "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred",
+            "package_source_sha256": "ba831f84632efcef1fe6142461eb17218ba9468337f990088c3354c2225c741a",
+            "packages": {
+              "numpy": {
+                "version": "1.26.4",
+                "distribution_record_sha256": "e0993835433c193680e7906d3107c79e9b8512822bb4012996bfcd2bf4317143",
+                "source": null,
+                "native_extensions": {}
+              },
+              "scipy": {
+                "version": "1.15.3",
+                "distribution_record_sha256": "ca8835e1256f4ae80bb568b07aec2e0a8c168b325a30d0539be8e2d3b71bdcf2",
+                "source": null,
+                "native_extensions": {}
+              },
+              "scikit-fmm": {
+                "version": "2025.6.23",
+                "distribution_record_sha256": "ad2b73c74350d1fb15a917167f79aa3f5e5352f750f49beb0705ae73af32d7ee",
+                "source": null,
+                "native_extensions": {}
+              }
+            },
+            "visible_devices": null
+          },
+          "camera_height_m": 1.576,
+          "step_size_m": 0.25,
+          "vertical_fov_degrees": 60.0,
+          "intrinsics": [
+            [
+              259.8076211353316,
+              0.0,
+              149.5
+            ],
+            [
+              0.0,
+              259.8076211353316,
+              149.5
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "pose_source": "successful-action odometry and yaw/horizon proprioception",
+          "world_axes": "episode-relative THOR X/Z/Y (Z-up)"
+        },
+        "perception_profile": "grounded_scene_rgb_v1",
+        "perception": {
+          "configuration": {
+            "python_executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+            "dino_config": "/home/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino/groundingdino/config/GroundingDINO_SwinT_OGC.py",
+            "dino_checkpoint": "/home/ysh/Models/agentic3d/models/alfred_vision/groundingdino/groundingdino_swint_ogc.pth",
+            "dino_text_encoder_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased",
+            "sam_checkpoint": "/home/ysh/Models/agentic3d/models/alfred_vision/sam/sam_vit_h_4b8939.pth",
+            "clip_checkpoint": "/home/ysh/Models/agentic3d/models/CLIP-ViT-H-14-laion2B-s32B-b79K/open_clip_model.safetensors",
+            "depth_model_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large",
+            "gpu_lock_path": "/tmp/agentic3d-alfred-gpu4.lock",
+            "device": "cuda:0",
+            "physical_gpu_index": 4,
+            "sam_model_type": "vit_h",
+            "clip_model_name": "ViT-H-14",
+            "box_threshold": 0.2,
+            "text_threshold": 0.2,
+            "nms_iou_threshold": 0.5,
+            "caption_batch_size": 24,
+            "max_detections": 100,
+            "timeout_seconds": 300.0
+          },
+          "vocabulary_sha256": "5f45d111d1f428780df2a72256ee78209837cb690bafee0e6aeb24ae5cf7f553",
+          "checkpoints": {
+            "dino_config": {
+              "path": "/home/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino/groundingdino/config/GroundingDINO_SwinT_OGC.py",
+              "sha256": "172e80017f9395668a9cb5d1b8bd9d061c0e360471c6ed673c83b69bb14399f1"
+            },
+            "dino_checkpoint": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/groundingdino/groundingdino_swint_ogc.pth",
+              "sha256": "3b3ca2563c77c69f651d7bd133e97139c186df06231157a64c507099c52bc799"
+            },
+            "sam_checkpoint": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/sam/sam_vit_h_4b8939.pth",
+              "sha256": "a7bf3b02f3ebf1267aba913ff637d9a2d5c33d3173bb679e46d9f338c26f262e"
+            },
+            "clip_checkpoint": {
+              "path": "/home/ysh/Models/agentic3d/models/CLIP-ViT-H-14-laion2B-s32B-b79K/open_clip_model.safetensors",
+              "sha256": "0084e75319a50ad85ef45377bad5bc38f2f58824459eb690048d51c9f8863be5"
+            },
+            "dino_text_encoder_dir/LICENSE": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/LICENSE",
+              "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+            },
+            "dino_text_encoder_dir/README.md": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/README.md",
+              "sha256": "9187b6018ea0010d884e78e098e328faa1b88b301570d0cce606bb35e4067e17"
+            },
+            "dino_text_encoder_dir/config.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/config.json",
+              "sha256": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20"
+            },
+            "dino_text_encoder_dir/model.safetensors": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/model.safetensors",
+              "sha256": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3"
+            },
+            "dino_text_encoder_dir/tokenizer.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/tokenizer.json",
+              "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98"
+            },
+            "dino_text_encoder_dir/tokenizer_config.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/tokenizer_config.json",
+              "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10"
+            },
+            "dino_text_encoder_dir/vocab.txt": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/vocab.txt",
+              "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+            },
+            "depth_model_dir/README.md": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/README.md",
+              "sha256": "4fdd25492cf6401d1459483fd829f6abb399bda8218e1a3ef5ad4a66e9aa5a2a"
+            },
+            "depth_model_dir/config.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/config.json",
+              "sha256": "a336f3e76fe375aaae17a9aed9130c9f2aa061535d317ec57dcb2f1f02e1dd53"
+            },
+            "depth_model_dir/model.safetensors": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/model.safetensors",
+              "sha256": "bbea5b0b3ee389849cffa7ddae89de064a90abd2b055fc5aa99aac68db324776"
+            }
+          },
+          "libraries": {
+            "groundingdino": {
+              "version": "0.1.0",
+              "distribution_record_sha256": "83efb4ccc61c5d56c51cd5a6d4b6f2b9dbe8ae355ba4c3faf29f4bc94b0bc542",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino",
+                "head_sha": "856dde20aee659246248e20734ef9ba5214f5e44",
+                "tracked_diff_sha256": "4546ab34084f3a81bc6868353b0dd7ca35af076c4548656c87d116551432e7d9",
+                "tracked_dirty": true,
+                "python_source_sha256": "2be7e6190ca890d004ae36d1c35d66d92e6cce2039b588e69dfab84309696f03",
+                "python_source_count": 40
+              },
+              "native_extensions": {
+                "groundingdino/_C.cpython-311-x86_64-linux-gnu.so": "a9a846802b7790cd63fbb996ef57aef6cbb6b43e153d4d8e2b77de0419f6ec0b"
+              }
+            },
+            "segment_anything": {
+              "version": "1.0",
+              "distribution_record_sha256": "41949e64b9159c40e39baa870c306c72dd8cefebdc58de9cf71f5884ad7c55f9",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/segment_anything",
+                "head_sha": "dca509fe793f601edb92606367a655c15ac00fdf",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "41002a95b5d9fe6c2a66bcee366244055707c52baa9a945571c37c8e2444bae0",
+                "python_source_count": 18
+              },
+              "native_extensions": {}
+            },
+            "depth-anything-3": {
+              "version": "0.0.0",
+              "distribution_record_sha256": "9047e7e51aa8a43f1c84a11bc998a9bcfe3365c38399c1b313231721186f39cc",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/depth_anything_3",
+                "head_sha": "3d835ec1a5802d64a8b8b15f817a1ab54809bfe4",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "06ef6c03ad01218c5d43a7ea420c9b57873cf3363f8946c2a84a0fb93bc36a31",
+                "python_source_count": 98
+              },
+              "native_extensions": {}
+            },
+            "open_clip_torch": {
+              "version": "3.2.0",
+              "distribution_record_sha256": "99b3743d8c8917f5be7d1f081ba48eebc97c16cfaf70a89812c288b080ced7fe",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/open_clip",
+                "head_sha": "6f939057c792a2f3d4d58df748de60ca47c4aed4",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "39c91d60c3434a960b77f984575505ec701ba2fc5ffeb3aa06dcfcfab8276bc0",
+                "python_source_count": 42
+              },
+              "native_extensions": {}
+            },
+            "transformers": {
+              "version": "4.57.1",
+              "distribution_record_sha256": "41b23462d56cf1c0bcfc9d56de691d7248052bdbc2037276bb3705ad3f911d41",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/transformers",
+                "head_sha": "8cb5963cc22174954e7dca2c0a3320b7dc2f4edc",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "de4e96846b934cff6b722b50e4429e6cd118eacaff4d22e95dd73a705b5b9a57",
+                "python_source_count": 3691
+              },
+              "native_extensions": {}
+            },
+            "torch": {
+              "version": "2.8.0+cu126",
+              "distribution_record_sha256": "367da124e9391b77c041ff9795350ef838a9570d194a310e303a5d24f08ec933",
+              "source": null,
+              "native_extensions": {}
+            },
+            "torchvision": {
+              "version": "0.23.0+cu126",
+              "distribution_record_sha256": "dc9a168a3b29ae345687dfc709c6c44dfd17431181dc5d180286b4c311b9be3b",
+              "source": null,
+              "native_extensions": {}
+            },
+            "numpy": {
+              "version": "1.26.4",
+              "distribution_record_sha256": "e0993835433c193680e7906d3107c79e9b8512822bb4012996bfcd2bf4317143",
+              "source": null,
+              "native_extensions": {}
+            }
+          },
+          "runtime_provenance": {
+            "schema_version": 1,
+            "executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+            "prefix": "/home/ysh/miniconda3/envs/agentic3d",
+            "package_root": "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred",
+            "package_source_sha256": "ba831f84632efcef1fe6142461eb17218ba9468337f990088c3354c2225c741a",
+            "packages": {
+              "groundingdino": {
+                "version": "0.1.0",
+                "distribution_record_sha256": "83efb4ccc61c5d56c51cd5a6d4b6f2b9dbe8ae355ba4c3faf29f4bc94b0bc542",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino",
+                  "head_sha": "856dde20aee659246248e20734ef9ba5214f5e44",
+                  "tracked_diff_sha256": "4546ab34084f3a81bc6868353b0dd7ca35af076c4548656c87d116551432e7d9",
+                  "tracked_dirty": true,
+                  "python_source_sha256": "2be7e6190ca890d004ae36d1c35d66d92e6cce2039b588e69dfab84309696f03",
+                  "python_source_count": 40
+                },
+                "native_extensions": {
+                  "groundingdino/_C.cpython-311-x86_64-linux-gnu.so": "a9a846802b7790cd63fbb996ef57aef6cbb6b43e153d4d8e2b77de0419f6ec0b"
+                }
+              },
+              "segment_anything": {
+                "version": "1.0",
+                "distribution_record_sha256": "41949e64b9159c40e39baa870c306c72dd8cefebdc58de9cf71f5884ad7c55f9",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/segment_anything",
+                  "head_sha": "dca509fe793f601edb92606367a655c15ac00fdf",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "41002a95b5d9fe6c2a66bcee366244055707c52baa9a945571c37c8e2444bae0",
+                  "python_source_count": 18
+                },
+                "native_extensions": {}
+              },
+              "depth-anything-3": {
+                "version": "0.0.0",
+                "distribution_record_sha256": "9047e7e51aa8a43f1c84a11bc998a9bcfe3365c38399c1b313231721186f39cc",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/depth_anything_3",
+                  "head_sha": "3d835ec1a5802d64a8b8b15f817a1ab54809bfe4",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "06ef6c03ad01218c5d43a7ea420c9b57873cf3363f8946c2a84a0fb93bc36a31",
+                  "python_source_count": 98
+                },
+                "native_extensions": {}
+              },
+              "open_clip_torch": {
+                "version": "3.2.0",
+                "distribution_record_sha256": "99b3743d8c8917f5be7d1f081ba48eebc97c16cfaf70a89812c288b080ced7fe",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/open_clip",
+                  "head_sha": "6f939057c792a2f3d4d58df748de60ca47c4aed4",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "39c91d60c3434a960b77f984575505ec701ba2fc5ffeb3aa06dcfcfab8276bc0",
+                  "python_source_count": 42
+                },
+                "native_extensions": {}
+              },
+              "transformers": {
+                "version": "4.57.1",
+                "distribution_record_sha256": "41b23462d56cf1c0bcfc9d56de691d7248052bdbc2037276bb3705ad3f911d41",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/transformers",
+                  "head_sha": "8cb5963cc22174954e7dca2c0a3320b7dc2f4edc",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "de4e96846b934cff6b722b50e4429e6cd118eacaff4d22e95dd73a705b5b9a57",
+                  "python_source_count": 3691
+                },
+                "native_extensions": {}
+              },
+              "torch": {
+                "version": "2.8.0+cu126",
+                "distribution_record_sha256": "367da124e9391b77c041ff9795350ef838a9570d194a310e303a5d24f08ec933",
+                "source": null,
+                "native_extensions": {}
+              },
+              "torchvision": {
+                "version": "0.23.0+cu126",
+                "distribution_record_sha256": "dc9a168a3b29ae345687dfc709c6c44dfd17431181dc5d180286b4c311b9be3b",
+                "source": null,
+                "native_extensions": {}
+              },
+              "numpy": {
+                "version": "1.26.4",
+                "distribution_record_sha256": "e0993835433c193680e7906d3107c79e9b8512822bb4012996bfcd2bf4317143",
+                "source": null,
+                "native_extensions": {}
+              }
+            },
+            "visible_devices": "GPU-bd6fb183-b27d-9364-0456-94c1d3ddf9a8"
+          },
+          "provenance_status": "worker_reported"
+        },
+        "memory": {
+          "mapping": {
+            "voxel_size_m": 0.025,
+            "dbscan_eps_m": 0.1,
+            "dbscan_min_points": 10,
+            "min_detection_points": 16,
+            "max_points_per_object": 4096,
+            "association_threshold": 1.2,
+            "phys_bias": 0.0,
+            "min_mask_confidence": 0.25,
+            "min_mask_pixels": 25,
+            "max_bbox_area_ratio": 1.0,
+            "contained_child_fraction": 0.8,
+            "contained_parent_fraction": 0.7,
+            "merge_overlap_threshold": 0.7,
+            "merge_image_similarity": 0.8,
+            "merge_text_similarity": 0.8,
+            "maintenance_interval": 20,
+            "confirmation_observations": 3,
+            "duplicate_mask_iou": 0.8,
+            "duplicate_image_similarity": 0.9,
+            "reacquire_similarity": 0.75,
+            "reacquire_margin_m": 0.6,
+            "held_max_camera_distance_m": 1.0
+          },
+          "max_depth_m": 8.0,
+          "max_object_views": 64,
+          "visibility_depth_tolerance_m": 0.15
+        },
+        "spatial_map": {
+          "fine_cell_size_m": 0.05,
+          "region_size_m": 0.5,
+          "robot_radius_m": 0.2,
+          "clearance_m": 0.025,
+          "floor_height_m": 0.0,
+          "floor_tolerance_m": 0.1,
+          "obstacle_min_height_m": 0.12,
+          "obstacle_max_height_m": 1.8,
+          "max_depth_m": 8.0,
+          "occupied_evidence": 0.9,
+          "clear_evidence": 0.5,
+          "max_evidence": 3.0,
+          "max_raster_cells": 2000000
+        },
+        "simulator": {
+          "python_executable": "/home/ysh/codebase/FILM/.venv/bin/python",
+          "x_display": "5",
+          "ai2thor_version": "2.1.0",
+          "build": "201909061227"
+        },
+        "external_sources": {
+          "alfred": {
+            "path": "/home/ysh/Datasets/FILM/alfred",
+            "head_sha": "f91f4c0c96c7a29f33d0557f86b0a21035379b3b",
+            "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "tracked_dirty": false,
+            "python_source_sha256": "412cc3dba05844c40f7a9c673ac1a23f7b6d32695a1b0b0bf977ef1e8d692074",
+            "python_source_count": 55
+          }
+        },
+        "error": "ExternalUserCancellation: original pilot15 scope was reduced to original-prefix5. This extra run was externally interrupted; the native runner did not write terminal metadata or an attempt record. Its original run.json remains running/pending. No official score was produced.",
+        "finished_at_utc": null,
+        "record_origin": "derived_external_user_cancellation",
+        "included_in_requested_prefix5": false,
+        "included_in_infrastructure_error_count": false,
+        "external_cancellation": {
+          "classification": "user_requested_scope_reduction_cancellation",
+          "registered_at_utc": "2026-11-05T09:44:06.913324+00:00",
+          "receipt_at_utc": "2026-11-05T09:30:33.823384+00:00",
+          "receipt_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/queue_cleanup_final.json",
+          "receipt_sha256": "b96df5f073c494b8e544599846338c57dce9b224adc07db1ccb12de1bfc29338",
+          "receipt_source": "parent queue cleanup after initial supervisor suspension did not persist",
+          "process_exit_verified_at_utc": "2026-11-05T09:37:39.863552+00:00",
+          "process_exit_proof_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/pilot5_v9_process_exit_check.json",
+          "process_exit_proof_sha256": "04fc80e542718f0c7d30a0b93d67c27772453bc87674a3d5f60b445ce7215e3f",
+          "native_terminal_archive_written": false,
+          "raw_run_json_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i05/run.json",
+          "raw_run_json_sha256": "af97a9312aa79a94b871363f4903869916c7bb7595a46dbc7c40e2e9679a6aca",
+          "raw_run_status": "running",
+          "raw_summary_json_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i05/summary.json",
+          "raw_summary_json_sha256": "3d8b3af447c1b0d46f68d3a028bb2bb997385aa9982e4c108e8a3c66ee6dc2b1",
+          "raw_summary_counts": {
+            "completed": 0,
+            "errors": 0,
+            "interrupted": 0,
+            "pending": 1
+          },
+          "native_attempt_json_present": false,
+          "exact_finish_at_utc": null,
+          "exact_finish_time_note": "Receipt and exit-verification timestamps bracket cancellation handling; exact process exit time was not recorded",
+          "partial_accounting": {
+            "actions": 16,
+            "failed_actions": 0,
+            "observations": 16,
+            "requests": 9,
+            "responses": 9,
+            "sdk_attempts_observed": 9,
+            "decision_image_attachments": 18,
+            "historical_image_attachments": 0,
+            "unanswered_decisions": 0,
+            "reported_usage_lower_bound": {
+              "cache_write_input_tokens": 0,
+              "cached_input_tokens": 1408,
+              "input_tokens": 224567,
+              "output_tokens": 7725,
+              "reasoning_output_tokens": 6439,
+              "total_tokens": 232292
+            },
+            "exact_saved_request_input_tokens": 224567,
+            "exact_saved_request_output_tokens": 7725,
+            "unanswered_model_requests": [],
+            "unknown_usage_decisions": [],
+            "wall_seconds": null,
+            "policy_seconds": null,
+            "perception_seconds": null
+          }
+        }
+      },
+      "attempt": {
+        "episode_id": "valid_seen/pick_heat_then_place_in_recep-Tomato-None-DiningTable-16/trial_T20190907_201243_698086#0",
+        "status": "interrupted",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i05/episodes/0001",
+        "score": null,
+        "error": "ExternalUserCancellation: original pilot15 scope was reduced to original-prefix5. This extra run was externally interrupted; the native runner did not write terminal metadata or an attempt record. Its original run.json remains running/pending. No official score was produced."
+      }
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_pilot15_i07",
+      "metadata": {
+        "run_id": "ALFRED_V9_20261105_pilot15_i07",
+        "status": "interrupted",
+        "started_at_utc": "2026-11-05T09:23:48.337038+00:00",
+        "code": {
+          "branch": "feat/alfred-benchmark",
+          "head_sha": "62e9f18a6654bbedb1558b3ae2a08cc7f2207a6f",
+          "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+          "tracked_worktree_drift": ""
+        },
+        "command": [
+          "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+          "-m",
+          "codex_agent.cli.run_alfred",
+          "--data-root",
+          "/home/ysh/Datasets/FILM/alfred/data/json_2.1.0",
+          "--splits",
+          "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+          "--fold",
+          "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/folds/pilot15.json",
+          "--simulator-python",
+          "/home/ysh/codebase/FILM/.venv/bin/python",
+          "--alfred-root",
+          "/home/ysh/Datasets/FILM/alfred",
+          "--scene-config",
+          "/home/ysh/codebase/agentic-3d-task/configs/alfred/scene.toml",
+          "--x-display",
+          "5",
+          "--model",
+          "gpt-5.4-2026-03-05",
+          "--reasoning-effort",
+          "medium",
+          "--max-actions",
+          "1000",
+          "--max-failures",
+          "10",
+          "--max-decisions",
+          "60",
+          "--num-shards",
+          "15",
+          "--shard-index",
+          "7",
+          "--run-id",
+          "ALFRED_V9_20261105_pilot15_i07",
+          "--output-dir",
+          "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i07"
+        ],
+        "output_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i07",
+        "fold_path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/folds/pilot15.json",
+        "fold_sha256": "2fa0520b130ec9748762b31b7dc1c3aeeb072edbb5bb7e9393ea4c406da1f34a",
+        "full_fold_size": 15,
+        "shard_index": 7,
+        "num_shards": 15,
+        "splits_path": "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+        "splits_sha256": "c27918c1f64f58d047cb2a26d477dfdb8935bacde3504ec1ce9cb52cd2c72c83",
+        "limit": null,
+        "diagnostic_prefix": false,
+        "episodes": [
+          {
+            "episode_id": "valid_unseen/look_at_obj_in_light-RemoteControl-None-FloorLamp-219/trial_T20190909_032721_511027#0",
+            "split": "valid_unseen",
+            "task_type": "look_at_obj_in_light",
+            "trajectory_sha256": "0e91b92f6e7fbd57ea1bc0037837650e8bbb5423cd1b7879c3e19b871ba58bf8",
+            "expert_actions": 27
+          }
+        ],
+        "model": "gpt-5.4-2026-03-05",
+        "model_provider": "codex_adapter",
+        "reasoning_effort": "medium",
+        "execution": {
+          "max_actions": 1000,
+          "max_failures": 10,
+          "max_decisions": 60,
+          "navigation_chunk": 12,
+          "retrieved_images": 3,
+          "use_step_instructions": false
+        },
+        "geometry": {
+          "runtime_provenance": {
+            "schema_version": 1,
+            "executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+            "prefix": "/home/ysh/miniconda3/envs/agentic3d",
+            "package_root": "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred",
+            "package_source_sha256": "ba831f84632efcef1fe6142461eb17218ba9468337f990088c3354c2225c741a",
+            "packages": {
+              "numpy": {
+                "version": "1.26.4",
+                "distribution_record_sha256": "e0993835433c193680e7906d3107c79e9b8512822bb4012996bfcd2bf4317143",
+                "source": null,
+                "native_extensions": {}
+              },
+              "scipy": {
+                "version": "1.15.3",
+                "distribution_record_sha256": "ca8835e1256f4ae80bb568b07aec2e0a8c168b325a30d0539be8e2d3b71bdcf2",
+                "source": null,
+                "native_extensions": {}
+              },
+              "scikit-fmm": {
+                "version": "2025.6.23",
+                "distribution_record_sha256": "ad2b73c74350d1fb15a917167f79aa3f5e5352f750f49beb0705ae73af32d7ee",
+                "source": null,
+                "native_extensions": {}
+              }
+            },
+            "visible_devices": null
+          },
+          "camera_height_m": 1.576,
+          "step_size_m": 0.25,
+          "vertical_fov_degrees": 60.0,
+          "intrinsics": [
+            [
+              259.8076211353316,
+              0.0,
+              149.5
+            ],
+            [
+              0.0,
+              259.8076211353316,
+              149.5
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "pose_source": "successful-action odometry and yaw/horizon proprioception",
+          "world_axes": "episode-relative THOR X/Z/Y (Z-up)"
+        },
+        "perception_profile": "grounded_scene_rgb_v1",
+        "perception": {
+          "configuration": {
+            "python_executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+            "dino_config": "/home/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino/groundingdino/config/GroundingDINO_SwinT_OGC.py",
+            "dino_checkpoint": "/home/ysh/Models/agentic3d/models/alfred_vision/groundingdino/groundingdino_swint_ogc.pth",
+            "dino_text_encoder_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased",
+            "sam_checkpoint": "/home/ysh/Models/agentic3d/models/alfred_vision/sam/sam_vit_h_4b8939.pth",
+            "clip_checkpoint": "/home/ysh/Models/agentic3d/models/CLIP-ViT-H-14-laion2B-s32B-b79K/open_clip_model.safetensors",
+            "depth_model_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large",
+            "gpu_lock_path": "/tmp/agentic3d-alfred-gpu4.lock",
+            "device": "cuda:0",
+            "physical_gpu_index": 4,
+            "sam_model_type": "vit_h",
+            "clip_model_name": "ViT-H-14",
+            "box_threshold": 0.2,
+            "text_threshold": 0.2,
+            "nms_iou_threshold": 0.5,
+            "caption_batch_size": 24,
+            "max_detections": 100,
+            "timeout_seconds": 300.0
+          },
+          "vocabulary_sha256": "5f45d111d1f428780df2a72256ee78209837cb690bafee0e6aeb24ae5cf7f553",
+          "checkpoints": {
+            "dino_config": {
+              "path": "/home/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino/groundingdino/config/GroundingDINO_SwinT_OGC.py",
+              "sha256": "172e80017f9395668a9cb5d1b8bd9d061c0e360471c6ed673c83b69bb14399f1"
+            },
+            "dino_checkpoint": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/groundingdino/groundingdino_swint_ogc.pth",
+              "sha256": "3b3ca2563c77c69f651d7bd133e97139c186df06231157a64c507099c52bc799"
+            },
+            "sam_checkpoint": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/sam/sam_vit_h_4b8939.pth",
+              "sha256": "a7bf3b02f3ebf1267aba913ff637d9a2d5c33d3173bb679e46d9f338c26f262e"
+            },
+            "clip_checkpoint": {
+              "path": "/home/ysh/Models/agentic3d/models/CLIP-ViT-H-14-laion2B-s32B-b79K/open_clip_model.safetensors",
+              "sha256": "0084e75319a50ad85ef45377bad5bc38f2f58824459eb690048d51c9f8863be5"
+            },
+            "dino_text_encoder_dir/LICENSE": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/LICENSE",
+              "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+            },
+            "dino_text_encoder_dir/README.md": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/README.md",
+              "sha256": "9187b6018ea0010d884e78e098e328faa1b88b301570d0cce606bb35e4067e17"
+            },
+            "dino_text_encoder_dir/config.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/config.json",
+              "sha256": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20"
+            },
+            "dino_text_encoder_dir/model.safetensors": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/model.safetensors",
+              "sha256": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3"
+            },
+            "dino_text_encoder_dir/tokenizer.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/tokenizer.json",
+              "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98"
+            },
+            "dino_text_encoder_dir/tokenizer_config.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/tokenizer_config.json",
+              "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10"
+            },
+            "dino_text_encoder_dir/vocab.txt": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/vocab.txt",
+              "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+            },
+            "depth_model_dir/README.md": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/README.md",
+              "sha256": "4fdd25492cf6401d1459483fd829f6abb399bda8218e1a3ef5ad4a66e9aa5a2a"
+            },
+            "depth_model_dir/config.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/config.json",
+              "sha256": "a336f3e76fe375aaae17a9aed9130c9f2aa061535d317ec57dcb2f1f02e1dd53"
+            },
+            "depth_model_dir/model.safetensors": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/model.safetensors",
+              "sha256": "bbea5b0b3ee389849cffa7ddae89de064a90abd2b055fc5aa99aac68db324776"
+            }
+          },
+          "libraries": {
+            "groundingdino": {
+              "version": "0.1.0",
+              "distribution_record_sha256": "83efb4ccc61c5d56c51cd5a6d4b6f2b9dbe8ae355ba4c3faf29f4bc94b0bc542",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino",
+                "head_sha": "856dde20aee659246248e20734ef9ba5214f5e44",
+                "tracked_diff_sha256": "4546ab34084f3a81bc6868353b0dd7ca35af076c4548656c87d116551432e7d9",
+                "tracked_dirty": true,
+                "python_source_sha256": "2be7e6190ca890d004ae36d1c35d66d92e6cce2039b588e69dfab84309696f03",
+                "python_source_count": 40
+              },
+              "native_extensions": {
+                "groundingdino/_C.cpython-311-x86_64-linux-gnu.so": "a9a846802b7790cd63fbb996ef57aef6cbb6b43e153d4d8e2b77de0419f6ec0b"
+              }
+            },
+            "segment_anything": {
+              "version": "1.0",
+              "distribution_record_sha256": "41949e64b9159c40e39baa870c306c72dd8cefebdc58de9cf71f5884ad7c55f9",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/segment_anything",
+                "head_sha": "dca509fe793f601edb92606367a655c15ac00fdf",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "41002a95b5d9fe6c2a66bcee366244055707c52baa9a945571c37c8e2444bae0",
+                "python_source_count": 18
+              },
+              "native_extensions": {}
+            },
+            "depth-anything-3": {
+              "version": "0.0.0",
+              "distribution_record_sha256": "9047e7e51aa8a43f1c84a11bc998a9bcfe3365c38399c1b313231721186f39cc",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/depth_anything_3",
+                "head_sha": "3d835ec1a5802d64a8b8b15f817a1ab54809bfe4",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "06ef6c03ad01218c5d43a7ea420c9b57873cf3363f8946c2a84a0fb93bc36a31",
+                "python_source_count": 98
+              },
+              "native_extensions": {}
+            },
+            "open_clip_torch": {
+              "version": "3.2.0",
+              "distribution_record_sha256": "99b3743d8c8917f5be7d1f081ba48eebc97c16cfaf70a89812c288b080ced7fe",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/open_clip",
+                "head_sha": "6f939057c792a2f3d4d58df748de60ca47c4aed4",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "39c91d60c3434a960b77f984575505ec701ba2fc5ffeb3aa06dcfcfab8276bc0",
+                "python_source_count": 42
+              },
+              "native_extensions": {}
+            },
+            "transformers": {
+              "version": "4.57.1",
+              "distribution_record_sha256": "41b23462d56cf1c0bcfc9d56de691d7248052bdbc2037276bb3705ad3f911d41",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/transformers",
+                "head_sha": "8cb5963cc22174954e7dca2c0a3320b7dc2f4edc",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "de4e96846b934cff6b722b50e4429e6cd118eacaff4d22e95dd73a705b5b9a57",
+                "python_source_count": 3691
+              },
+              "native_extensions": {}
+            },
+            "torch": {
+              "version": "2.8.0+cu126",
+              "distribution_record_sha256": "367da124e9391b77c041ff9795350ef838a9570d194a310e303a5d24f08ec933",
+              "source": null,
+              "native_extensions": {}
+            },
+            "torchvision": {
+              "version": "0.23.0+cu126",
+              "distribution_record_sha256": "dc9a168a3b29ae345687dfc709c6c44dfd17431181dc5d180286b4c311b9be3b",
+              "source": null,
+              "native_extensions": {}
+            },
+            "numpy": {
+              "version": "1.26.4",
+              "distribution_record_sha256": "e0993835433c193680e7906d3107c79e9b8512822bb4012996bfcd2bf4317143",
+              "source": null,
+              "native_extensions": {}
+            }
+          },
+          "runtime_provenance": {
+            "schema_version": 1,
+            "executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+            "prefix": "/home/ysh/miniconda3/envs/agentic3d",
+            "package_root": "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred",
+            "package_source_sha256": "ba831f84632efcef1fe6142461eb17218ba9468337f990088c3354c2225c741a",
+            "packages": {
+              "groundingdino": {
+                "version": "0.1.0",
+                "distribution_record_sha256": "83efb4ccc61c5d56c51cd5a6d4b6f2b9dbe8ae355ba4c3faf29f4bc94b0bc542",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino",
+                  "head_sha": "856dde20aee659246248e20734ef9ba5214f5e44",
+                  "tracked_diff_sha256": "4546ab34084f3a81bc6868353b0dd7ca35af076c4548656c87d116551432e7d9",
+                  "tracked_dirty": true,
+                  "python_source_sha256": "2be7e6190ca890d004ae36d1c35d66d92e6cce2039b588e69dfab84309696f03",
+                  "python_source_count": 40
+                },
+                "native_extensions": {
+                  "groundingdino/_C.cpython-311-x86_64-linux-gnu.so": "a9a846802b7790cd63fbb996ef57aef6cbb6b43e153d4d8e2b77de0419f6ec0b"
+                }
+              },
+              "segment_anything": {
+                "version": "1.0",
+                "distribution_record_sha256": "41949e64b9159c40e39baa870c306c72dd8cefebdc58de9cf71f5884ad7c55f9",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/segment_anything",
+                  "head_sha": "dca509fe793f601edb92606367a655c15ac00fdf",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "41002a95b5d9fe6c2a66bcee366244055707c52baa9a945571c37c8e2444bae0",
+                  "python_source_count": 18
+                },
+                "native_extensions": {}
+              },
+              "depth-anything-3": {
+                "version": "0.0.0",
+                "distribution_record_sha256": "9047e7e51aa8a43f1c84a11bc998a9bcfe3365c38399c1b313231721186f39cc",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/depth_anything_3",
+                  "head_sha": "3d835ec1a5802d64a8b8b15f817a1ab54809bfe4",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "06ef6c03ad01218c5d43a7ea420c9b57873cf3363f8946c2a84a0fb93bc36a31",
+                  "python_source_count": 98
+                },
+                "native_extensions": {}
+              },
+              "open_clip_torch": {
+                "version": "3.2.0",
+                "distribution_record_sha256": "99b3743d8c8917f5be7d1f081ba48eebc97c16cfaf70a89812c288b080ced7fe",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/open_clip",
+                  "head_sha": "6f939057c792a2f3d4d58df748de60ca47c4aed4",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "39c91d60c3434a960b77f984575505ec701ba2fc5ffeb3aa06dcfcfab8276bc0",
+                  "python_source_count": 42
+                },
+                "native_extensions": {}
+              },
+              "transformers": {
+                "version": "4.57.1",
+                "distribution_record_sha256": "41b23462d56cf1c0bcfc9d56de691d7248052bdbc2037276bb3705ad3f911d41",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/transformers",
+                  "head_sha": "8cb5963cc22174954e7dca2c0a3320b7dc2f4edc",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "de4e96846b934cff6b722b50e4429e6cd118eacaff4d22e95dd73a705b5b9a57",
+                  "python_source_count": 3691
+                },
+                "native_extensions": {}
+              },
+              "torch": {
+                "version": "2.8.0+cu126",
+                "distribution_record_sha256": "367da124e9391b77c041ff9795350ef838a9570d194a310e303a5d24f08ec933",
+                "source": null,
+                "native_extensions": {}
+              },
+              "torchvision": {
+                "version": "0.23.0+cu126",
+                "distribution_record_sha256": "dc9a168a3b29ae345687dfc709c6c44dfd17431181dc5d180286b4c311b9be3b",
+                "source": null,
+                "native_extensions": {}
+              },
+              "numpy": {
+                "version": "1.26.4",
+                "distribution_record_sha256": "e0993835433c193680e7906d3107c79e9b8512822bb4012996bfcd2bf4317143",
+                "source": null,
+                "native_extensions": {}
+              }
+            },
+            "visible_devices": "GPU-bd6fb183-b27d-9364-0456-94c1d3ddf9a8"
+          },
+          "provenance_status": "worker_reported"
+        },
+        "memory": {
+          "mapping": {
+            "voxel_size_m": 0.025,
+            "dbscan_eps_m": 0.1,
+            "dbscan_min_points": 10,
+            "min_detection_points": 16,
+            "max_points_per_object": 4096,
+            "association_threshold": 1.2,
+            "phys_bias": 0.0,
+            "min_mask_confidence": 0.25,
+            "min_mask_pixels": 25,
+            "max_bbox_area_ratio": 1.0,
+            "contained_child_fraction": 0.8,
+            "contained_parent_fraction": 0.7,
+            "merge_overlap_threshold": 0.7,
+            "merge_image_similarity": 0.8,
+            "merge_text_similarity": 0.8,
+            "maintenance_interval": 20,
+            "confirmation_observations": 3,
+            "duplicate_mask_iou": 0.8,
+            "duplicate_image_similarity": 0.9,
+            "reacquire_similarity": 0.75,
+            "reacquire_margin_m": 0.6,
+            "held_max_camera_distance_m": 1.0
+          },
+          "max_depth_m": 8.0,
+          "max_object_views": 64,
+          "visibility_depth_tolerance_m": 0.15
+        },
+        "spatial_map": {
+          "fine_cell_size_m": 0.05,
+          "region_size_m": 0.5,
+          "robot_radius_m": 0.2,
+          "clearance_m": 0.025,
+          "floor_height_m": 0.0,
+          "floor_tolerance_m": 0.1,
+          "obstacle_min_height_m": 0.12,
+          "obstacle_max_height_m": 1.8,
+          "max_depth_m": 8.0,
+          "occupied_evidence": 0.9,
+          "clear_evidence": 0.5,
+          "max_evidence": 3.0,
+          "max_raster_cells": 2000000
+        },
+        "simulator": {
+          "python_executable": "/home/ysh/codebase/FILM/.venv/bin/python",
+          "x_display": "5",
+          "ai2thor_version": "2.1.0",
+          "build": "201909061227"
+        },
+        "external_sources": {
+          "alfred": {
+            "path": "/home/ysh/Datasets/FILM/alfred",
+            "head_sha": "f91f4c0c96c7a29f33d0557f86b0a21035379b3b",
+            "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "tracked_dirty": false,
+            "python_source_sha256": "412cc3dba05844c40f7a9c673ac1a23f7b6d32695a1b0b0bf977ef1e8d692074",
+            "python_source_count": 55
+          }
+        },
+        "error": "ExternalUserCancellation: original pilot15 scope was reduced to original-prefix5. This extra run was externally interrupted; the native runner did not write terminal metadata or an attempt record. Its original run.json remains running/pending. No official score was produced.",
+        "finished_at_utc": null,
+        "record_origin": "derived_external_user_cancellation",
+        "included_in_requested_prefix5": false,
+        "included_in_infrastructure_error_count": false,
+        "external_cancellation": {
+          "classification": "user_requested_scope_reduction_cancellation",
+          "registered_at_utc": "2026-11-05T09:44:06.917143+00:00",
+          "receipt_at_utc": "2026-11-05T09:30:33.823384+00:00",
+          "receipt_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/queue_cleanup_final.json",
+          "receipt_sha256": "b96df5f073c494b8e544599846338c57dce9b224adc07db1ccb12de1bfc29338",
+          "receipt_source": "parent queue cleanup after initial supervisor suspension did not persist",
+          "process_exit_verified_at_utc": "2026-11-05T09:37:39.863552+00:00",
+          "process_exit_proof_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/pilot5_v9_process_exit_check.json",
+          "process_exit_proof_sha256": "04fc80e542718f0c7d30a0b93d67c27772453bc87674a3d5f60b445ce7215e3f",
+          "native_terminal_archive_written": false,
+          "raw_run_json_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i07/run.json",
+          "raw_run_json_sha256": "48f8bad3ee2cc166989c9675e6b49619046ad47092d28a0284bc263f80e4226f",
+          "raw_run_status": "running",
+          "raw_summary_json_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i07/summary.json",
+          "raw_summary_json_sha256": "3d8b3af447c1b0d46f68d3a028bb2bb997385aa9982e4c108e8a3c66ee6dc2b1",
+          "raw_summary_counts": {
+            "completed": 0,
+            "errors": 0,
+            "interrupted": 0,
+            "pending": 1
+          },
+          "native_attempt_json_present": false,
+          "exact_finish_at_utc": null,
+          "exact_finish_time_note": "Receipt and exit-verification timestamps bracket cancellation handling; exact process exit time was not recorded",
+          "partial_accounting": {
+            "actions": 9,
+            "failed_actions": 0,
+            "observations": 10,
+            "requests": 9,
+            "responses": 8,
+            "sdk_attempts_observed": 8,
+            "decision_image_attachments": 21,
+            "historical_image_attachments": 3,
+            "unanswered_decisions": 1,
+            "reported_usage_lower_bound": {
+              "cache_write_input_tokens": 0,
+              "cached_input_tokens": 4224,
+              "input_tokens": 111720,
+              "output_tokens": 9211,
+              "reasoning_output_tokens": 8013,
+              "total_tokens": 120931
+            },
+            "exact_saved_request_input_tokens": null,
+            "exact_saved_request_output_tokens": null,
+            "unanswered_model_requests": [
+              9
+            ],
+            "unknown_usage_decisions": [],
+            "wall_seconds": null,
+            "policy_seconds": null,
+            "perception_seconds": null
+          }
+        }
+      },
+      "attempt": {
+        "episode_id": "valid_unseen/look_at_obj_in_light-RemoteControl-None-FloorLamp-219/trial_T20190909_032721_511027#0",
+        "status": "interrupted",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i07/episodes/0001",
+        "score": null,
+        "error": "ExternalUserCancellation: original pilot15 scope was reduced to original-prefix5. This extra run was externally interrupted; the native runner did not write terminal metadata or an attempt record. Its original run.json remains running/pending. No official score was produced."
+      }
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_pilot15_i08",
+      "metadata": {
+        "run_id": "ALFRED_V9_20261105_pilot15_i08",
+        "status": "interrupted",
+        "started_at_utc": "2026-11-05T09:21:02.128906+00:00",
+        "code": {
+          "branch": "feat/alfred-benchmark",
+          "head_sha": "62e9f18a6654bbedb1558b3ae2a08cc7f2207a6f",
+          "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+          "tracked_worktree_drift": ""
+        },
+        "command": [
+          "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+          "-m",
+          "codex_agent.cli.run_alfred",
+          "--data-root",
+          "/home/ysh/Datasets/FILM/alfred/data/json_2.1.0",
+          "--splits",
+          "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+          "--fold",
+          "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/folds/pilot15.json",
+          "--simulator-python",
+          "/home/ysh/codebase/FILM/.venv/bin/python",
+          "--alfred-root",
+          "/home/ysh/Datasets/FILM/alfred",
+          "--scene-config",
+          "/home/ysh/codebase/agentic-3d-task/configs/alfred/scene.toml",
+          "--x-display",
+          "5",
+          "--model",
+          "gpt-5.4-2026-03-05",
+          "--reasoning-effort",
+          "medium",
+          "--max-actions",
+          "1000",
+          "--max-failures",
+          "10",
+          "--max-decisions",
+          "60",
+          "--num-shards",
+          "15",
+          "--shard-index",
+          "8",
+          "--run-id",
+          "ALFRED_V9_20261105_pilot15_i08",
+          "--output-dir",
+          "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i08"
+        ],
+        "output_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i08",
+        "fold_path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/folds/pilot15.json",
+        "fold_sha256": "2fa0520b130ec9748762b31b7dc1c3aeeb072edbb5bb7e9393ea4c406da1f34a",
+        "full_fold_size": 15,
+        "shard_index": 8,
+        "num_shards": 15,
+        "splits_path": "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+        "splits_sha256": "c27918c1f64f58d047cb2a26d477dfdb8935bacde3504ec1ce9cb52cd2c72c83",
+        "limit": null,
+        "diagnostic_prefix": false,
+        "episodes": [
+          {
+            "episode_id": "valid_unseen/pick_and_place_simple-Plunger-None-Cabinet-424/trial_T20190908_021537_611374#0",
+            "split": "valid_unseen",
+            "task_type": "pick_and_place_simple",
+            "trajectory_sha256": "a7ddbfa940b68ee81405c815d863131c9549ec6dbfe363c7df8991c60bcee1fd",
+            "expert_actions": 20
+          }
+        ],
+        "model": "gpt-5.4-2026-03-05",
+        "model_provider": "codex_adapter",
+        "reasoning_effort": "medium",
+        "execution": {
+          "max_actions": 1000,
+          "max_failures": 10,
+          "max_decisions": 60,
+          "navigation_chunk": 12,
+          "retrieved_images": 3,
+          "use_step_instructions": false
+        },
+        "geometry": {
+          "runtime_provenance": {
+            "schema_version": 1,
+            "executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+            "prefix": "/home/ysh/miniconda3/envs/agentic3d",
+            "package_root": "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred",
+            "package_source_sha256": "ba831f84632efcef1fe6142461eb17218ba9468337f990088c3354c2225c741a",
+            "packages": {
+              "numpy": {
+                "version": "1.26.4",
+                "distribution_record_sha256": "e0993835433c193680e7906d3107c79e9b8512822bb4012996bfcd2bf4317143",
+                "source": null,
+                "native_extensions": {}
+              },
+              "scipy": {
+                "version": "1.15.3",
+                "distribution_record_sha256": "ca8835e1256f4ae80bb568b07aec2e0a8c168b325a30d0539be8e2d3b71bdcf2",
+                "source": null,
+                "native_extensions": {}
+              },
+              "scikit-fmm": {
+                "version": "2025.6.23",
+                "distribution_record_sha256": "ad2b73c74350d1fb15a917167f79aa3f5e5352f750f49beb0705ae73af32d7ee",
+                "source": null,
+                "native_extensions": {}
+              }
+            },
+            "visible_devices": null
+          },
+          "camera_height_m": 1.576,
+          "step_size_m": 0.25,
+          "vertical_fov_degrees": 60.0,
+          "intrinsics": [
+            [
+              259.8076211353316,
+              0.0,
+              149.5
+            ],
+            [
+              0.0,
+              259.8076211353316,
+              149.5
+            ],
+            [
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "pose_source": "successful-action odometry and yaw/horizon proprioception",
+          "world_axes": "episode-relative THOR X/Z/Y (Z-up)"
+        },
+        "perception_profile": "grounded_scene_rgb_v1",
+        "perception": {
+          "configuration": {
+            "python_executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+            "dino_config": "/home/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino/groundingdino/config/GroundingDINO_SwinT_OGC.py",
+            "dino_checkpoint": "/home/ysh/Models/agentic3d/models/alfred_vision/groundingdino/groundingdino_swint_ogc.pth",
+            "dino_text_encoder_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased",
+            "sam_checkpoint": "/home/ysh/Models/agentic3d/models/alfred_vision/sam/sam_vit_h_4b8939.pth",
+            "clip_checkpoint": "/home/ysh/Models/agentic3d/models/CLIP-ViT-H-14-laion2B-s32B-b79K/open_clip_model.safetensors",
+            "depth_model_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large",
+            "gpu_lock_path": "/tmp/agentic3d-alfred-gpu4.lock",
+            "device": "cuda:0",
+            "physical_gpu_index": 4,
+            "sam_model_type": "vit_h",
+            "clip_model_name": "ViT-H-14",
+            "box_threshold": 0.2,
+            "text_threshold": 0.2,
+            "nms_iou_threshold": 0.5,
+            "caption_batch_size": 24,
+            "max_detections": 100,
+            "timeout_seconds": 300.0
+          },
+          "vocabulary_sha256": "5f45d111d1f428780df2a72256ee78209837cb690bafee0e6aeb24ae5cf7f553",
+          "checkpoints": {
+            "dino_config": {
+              "path": "/home/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino/groundingdino/config/GroundingDINO_SwinT_OGC.py",
+              "sha256": "172e80017f9395668a9cb5d1b8bd9d061c0e360471c6ed673c83b69bb14399f1"
+            },
+            "dino_checkpoint": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/groundingdino/groundingdino_swint_ogc.pth",
+              "sha256": "3b3ca2563c77c69f651d7bd133e97139c186df06231157a64c507099c52bc799"
+            },
+            "sam_checkpoint": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/sam/sam_vit_h_4b8939.pth",
+              "sha256": "a7bf3b02f3ebf1267aba913ff637d9a2d5c33d3173bb679e46d9f338c26f262e"
+            },
+            "clip_checkpoint": {
+              "path": "/home/ysh/Models/agentic3d/models/CLIP-ViT-H-14-laion2B-s32B-b79K/open_clip_model.safetensors",
+              "sha256": "0084e75319a50ad85ef45377bad5bc38f2f58824459eb690048d51c9f8863be5"
+            },
+            "dino_text_encoder_dir/LICENSE": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/LICENSE",
+              "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+            },
+            "dino_text_encoder_dir/README.md": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/README.md",
+              "sha256": "9187b6018ea0010d884e78e098e328faa1b88b301570d0cce606bb35e4067e17"
+            },
+            "dino_text_encoder_dir/config.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/config.json",
+              "sha256": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20"
+            },
+            "dino_text_encoder_dir/model.safetensors": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/model.safetensors",
+              "sha256": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3"
+            },
+            "dino_text_encoder_dir/tokenizer.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/tokenizer.json",
+              "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98"
+            },
+            "dino_text_encoder_dir/tokenizer_config.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/tokenizer_config.json",
+              "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10"
+            },
+            "dino_text_encoder_dir/vocab.txt": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/bert-base-uncased/vocab.txt",
+              "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+            },
+            "depth_model_dir/README.md": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/README.md",
+              "sha256": "4fdd25492cf6401d1459483fd829f6abb399bda8218e1a3ef5ad4a66e9aa5a2a"
+            },
+            "depth_model_dir/config.json": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/config.json",
+              "sha256": "a336f3e76fe375aaae17a9aed9130c9f2aa061535d317ec57dcb2f1f02e1dd53"
+            },
+            "depth_model_dir/model.safetensors": {
+              "path": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/model.safetensors",
+              "sha256": "bbea5b0b3ee389849cffa7ddae89de064a90abd2b055fc5aa99aac68db324776"
+            }
+          },
+          "libraries": {
+            "groundingdino": {
+              "version": "0.1.0",
+              "distribution_record_sha256": "83efb4ccc61c5d56c51cd5a6d4b6f2b9dbe8ae355ba4c3faf29f4bc94b0bc542",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino",
+                "head_sha": "856dde20aee659246248e20734ef9ba5214f5e44",
+                "tracked_diff_sha256": "4546ab34084f3a81bc6868353b0dd7ca35af076c4548656c87d116551432e7d9",
+                "tracked_dirty": true,
+                "python_source_sha256": "2be7e6190ca890d004ae36d1c35d66d92e6cce2039b588e69dfab84309696f03",
+                "python_source_count": 40
+              },
+              "native_extensions": {
+                "groundingdino/_C.cpython-311-x86_64-linux-gnu.so": "a9a846802b7790cd63fbb996ef57aef6cbb6b43e153d4d8e2b77de0419f6ec0b"
+              }
+            },
+            "segment_anything": {
+              "version": "1.0",
+              "distribution_record_sha256": "41949e64b9159c40e39baa870c306c72dd8cefebdc58de9cf71f5884ad7c55f9",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/segment_anything",
+                "head_sha": "dca509fe793f601edb92606367a655c15ac00fdf",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "41002a95b5d9fe6c2a66bcee366244055707c52baa9a945571c37c8e2444bae0",
+                "python_source_count": 18
+              },
+              "native_extensions": {}
+            },
+            "depth-anything-3": {
+              "version": "0.0.0",
+              "distribution_record_sha256": "9047e7e51aa8a43f1c84a11bc998a9bcfe3365c38399c1b313231721186f39cc",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/depth_anything_3",
+                "head_sha": "3d835ec1a5802d64a8b8b15f817a1ab54809bfe4",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "06ef6c03ad01218c5d43a7ea420c9b57873cf3363f8946c2a84a0fb93bc36a31",
+                "python_source_count": 98
+              },
+              "native_extensions": {}
+            },
+            "open_clip_torch": {
+              "version": "3.2.0",
+              "distribution_record_sha256": "99b3743d8c8917f5be7d1f081ba48eebc97c16cfaf70a89812c288b080ced7fe",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/open_clip",
+                "head_sha": "6f939057c792a2f3d4d58df748de60ca47c4aed4",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "39c91d60c3434a960b77f984575505ec701ba2fc5ffeb3aa06dcfcfab8276bc0",
+                "python_source_count": 42
+              },
+              "native_extensions": {}
+            },
+            "transformers": {
+              "version": "4.57.1",
+              "distribution_record_sha256": "41b23462d56cf1c0bcfc9d56de691d7248052bdbc2037276bb3705ad3f911d41",
+              "source": {
+                "path": "/data1/ysh/Models/agentic3d/third_party/transformers",
+                "head_sha": "8cb5963cc22174954e7dca2c0a3320b7dc2f4edc",
+                "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "tracked_dirty": false,
+                "python_source_sha256": "de4e96846b934cff6b722b50e4429e6cd118eacaff4d22e95dd73a705b5b9a57",
+                "python_source_count": 3691
+              },
+              "native_extensions": {}
+            },
+            "torch": {
+              "version": "2.8.0+cu126",
+              "distribution_record_sha256": "367da124e9391b77c041ff9795350ef838a9570d194a310e303a5d24f08ec933",
+              "source": null,
+              "native_extensions": {}
+            },
+            "torchvision": {
+              "version": "0.23.0+cu126",
+              "distribution_record_sha256": "dc9a168a3b29ae345687dfc709c6c44dfd17431181dc5d180286b4c311b9be3b",
+              "source": null,
+              "native_extensions": {}
+            },
+            "numpy": {
+              "version": "1.26.4",
+              "distribution_record_sha256": "e0993835433c193680e7906d3107c79e9b8512822bb4012996bfcd2bf4317143",
+              "source": null,
+              "native_extensions": {}
+            }
+          },
+          "runtime_provenance": {
+            "schema_version": 1,
+            "executable": "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+            "prefix": "/home/ysh/miniconda3/envs/agentic3d",
+            "package_root": "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred",
+            "package_source_sha256": "ba831f84632efcef1fe6142461eb17218ba9468337f990088c3354c2225c741a",
+            "packages": {
+              "groundingdino": {
+                "version": "0.1.0",
+                "distribution_record_sha256": "83efb4ccc61c5d56c51cd5a6d4b6f2b9dbe8ae355ba4c3faf29f4bc94b0bc542",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/groundingdino",
+                  "head_sha": "856dde20aee659246248e20734ef9ba5214f5e44",
+                  "tracked_diff_sha256": "4546ab34084f3a81bc6868353b0dd7ca35af076c4548656c87d116551432e7d9",
+                  "tracked_dirty": true,
+                  "python_source_sha256": "2be7e6190ca890d004ae36d1c35d66d92e6cce2039b588e69dfab84309696f03",
+                  "python_source_count": 40
+                },
+                "native_extensions": {
+                  "groundingdino/_C.cpython-311-x86_64-linux-gnu.so": "a9a846802b7790cd63fbb996ef57aef6cbb6b43e153d4d8e2b77de0419f6ec0b"
+                }
+              },
+              "segment_anything": {
+                "version": "1.0",
+                "distribution_record_sha256": "41949e64b9159c40e39baa870c306c72dd8cefebdc58de9cf71f5884ad7c55f9",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/segment_anything",
+                  "head_sha": "dca509fe793f601edb92606367a655c15ac00fdf",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "41002a95b5d9fe6c2a66bcee366244055707c52baa9a945571c37c8e2444bae0",
+                  "python_source_count": 18
+                },
+                "native_extensions": {}
+              },
+              "depth-anything-3": {
+                "version": "0.0.0",
+                "distribution_record_sha256": "9047e7e51aa8a43f1c84a11bc998a9bcfe3365c38399c1b313231721186f39cc",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/alfred_vision/depth_anything_3",
+                  "head_sha": "3d835ec1a5802d64a8b8b15f817a1ab54809bfe4",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "06ef6c03ad01218c5d43a7ea420c9b57873cf3363f8946c2a84a0fb93bc36a31",
+                  "python_source_count": 98
+                },
+                "native_extensions": {}
+              },
+              "open_clip_torch": {
+                "version": "3.2.0",
+                "distribution_record_sha256": "99b3743d8c8917f5be7d1f081ba48eebc97c16cfaf70a89812c288b080ced7fe",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/open_clip",
+                  "head_sha": "6f939057c792a2f3d4d58df748de60ca47c4aed4",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "39c91d60c3434a960b77f984575505ec701ba2fc5ffeb3aa06dcfcfab8276bc0",
+                  "python_source_count": 42
+                },
+                "native_extensions": {}
+              },
+              "transformers": {
+                "version": "4.57.1",
+                "distribution_record_sha256": "41b23462d56cf1c0bcfc9d56de691d7248052bdbc2037276bb3705ad3f911d41",
+                "source": {
+                  "path": "/data1/ysh/Models/agentic3d/third_party/transformers",
+                  "head_sha": "8cb5963cc22174954e7dca2c0a3320b7dc2f4edc",
+                  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "tracked_dirty": false,
+                  "python_source_sha256": "de4e96846b934cff6b722b50e4429e6cd118eacaff4d22e95dd73a705b5b9a57",
+                  "python_source_count": 3691
+                },
+                "native_extensions": {}
+              },
+              "torch": {
+                "version": "2.8.0+cu126",
+                "distribution_record_sha256": "367da124e9391b77c041ff9795350ef838a9570d194a310e303a5d24f08ec933",
+                "source": null,
+                "native_extensions": {}
+              },
+              "torchvision": {
+                "version": "0.23.0+cu126",
+                "distribution_record_sha256": "dc9a168a3b29ae345687dfc709c6c44dfd17431181dc5d180286b4c311b9be3b",
+                "source": null,
+                "native_extensions": {}
+              },
+              "numpy": {
+                "version": "1.26.4",
+                "distribution_record_sha256": "e0993835433c193680e7906d3107c79e9b8512822bb4012996bfcd2bf4317143",
+                "source": null,
+                "native_extensions": {}
+              }
+            },
+            "visible_devices": "GPU-bd6fb183-b27d-9364-0456-94c1d3ddf9a8"
+          },
+          "provenance_status": "worker_reported"
+        },
+        "memory": {
+          "mapping": {
+            "voxel_size_m": 0.025,
+            "dbscan_eps_m": 0.1,
+            "dbscan_min_points": 10,
+            "min_detection_points": 16,
+            "max_points_per_object": 4096,
+            "association_threshold": 1.2,
+            "phys_bias": 0.0,
+            "min_mask_confidence": 0.25,
+            "min_mask_pixels": 25,
+            "max_bbox_area_ratio": 1.0,
+            "contained_child_fraction": 0.8,
+            "contained_parent_fraction": 0.7,
+            "merge_overlap_threshold": 0.7,
+            "merge_image_similarity": 0.8,
+            "merge_text_similarity": 0.8,
+            "maintenance_interval": 20,
+            "confirmation_observations": 3,
+            "duplicate_mask_iou": 0.8,
+            "duplicate_image_similarity": 0.9,
+            "reacquire_similarity": 0.75,
+            "reacquire_margin_m": 0.6,
+            "held_max_camera_distance_m": 1.0
+          },
+          "max_depth_m": 8.0,
+          "max_object_views": 64,
+          "visibility_depth_tolerance_m": 0.15
+        },
+        "spatial_map": {
+          "fine_cell_size_m": 0.05,
+          "region_size_m": 0.5,
+          "robot_radius_m": 0.2,
+          "clearance_m": 0.025,
+          "floor_height_m": 0.0,
+          "floor_tolerance_m": 0.1,
+          "obstacle_min_height_m": 0.12,
+          "obstacle_max_height_m": 1.8,
+          "max_depth_m": 8.0,
+          "occupied_evidence": 0.9,
+          "clear_evidence": 0.5,
+          "max_evidence": 3.0,
+          "max_raster_cells": 2000000
+        },
+        "simulator": {
+          "python_executable": "/home/ysh/codebase/FILM/.venv/bin/python",
+          "x_display": "5",
+          "ai2thor_version": "2.1.0",
+          "build": "201909061227"
+        },
+        "external_sources": {
+          "alfred": {
+            "path": "/home/ysh/Datasets/FILM/alfred",
+            "head_sha": "f91f4c0c96c7a29f33d0557f86b0a21035379b3b",
+            "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "tracked_dirty": false,
+            "python_source_sha256": "412cc3dba05844c40f7a9c673ac1a23f7b6d32695a1b0b0bf977ef1e8d692074",
+            "python_source_count": 55
+          }
+        },
+        "error": "ExternalUserCancellation: original pilot15 scope was reduced to original-prefix5. This extra run was externally interrupted; the native runner did not write terminal metadata or an attempt record. Its original run.json remains running/pending. No official score was produced.",
+        "finished_at_utc": null,
+        "record_origin": "derived_external_user_cancellation",
+        "included_in_requested_prefix5": false,
+        "included_in_infrastructure_error_count": false,
+        "external_cancellation": {
+          "classification": "user_requested_scope_reduction_cancellation",
+          "registered_at_utc": "2026-11-05T09:44:06.921452+00:00",
+          "receipt_at_utc": "2026-11-05T09:30:33.823384+00:00",
+          "receipt_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/queue_cleanup_final.json",
+          "receipt_sha256": "b96df5f073c494b8e544599846338c57dce9b224adc07db1ccb12de1bfc29338",
+          "receipt_source": "parent queue cleanup after initial supervisor suspension did not persist",
+          "process_exit_verified_at_utc": "2026-11-05T09:37:39.863552+00:00",
+          "process_exit_proof_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/pilot5_v9_process_exit_check.json",
+          "process_exit_proof_sha256": "04fc80e542718f0c7d30a0b93d67c27772453bc87674a3d5f60b445ce7215e3f",
+          "native_terminal_archive_written": false,
+          "raw_run_json_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i08/run.json",
+          "raw_run_json_sha256": "8c2c284eb7c45aa98fb8e588092b1089214279cdf1dfd0f047635ef8ae59e3c7",
+          "raw_run_status": "running",
+          "raw_summary_json_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i08/summary.json",
+          "raw_summary_json_sha256": "3d8b3af447c1b0d46f68d3a028bb2bb997385aa9982e4c108e8a3c66ee6dc2b1",
+          "raw_summary_counts": {
+            "completed": 0,
+            "errors": 0,
+            "interrupted": 0,
+            "pending": 1
+          },
+          "native_attempt_json_present": false,
+          "exact_finish_at_utc": null,
+          "exact_finish_time_note": "Receipt and exit-verification timestamps bracket cancellation handling; exact process exit time was not recorded",
+          "partial_accounting": {
+            "actions": 25,
+            "failed_actions": 0,
+            "observations": 26,
+            "requests": 16,
+            "responses": 15,
+            "sdk_attempts_observed": 15,
+            "decision_image_attachments": 32,
+            "historical_image_attachments": 0,
+            "unanswered_decisions": 1,
+            "reported_usage_lower_bound": {
+              "cache_write_input_tokens": 0,
+              "cached_input_tokens": 0,
+              "input_tokens": 132088,
+              "output_tokens": 13874,
+              "reasoning_output_tokens": 11823,
+              "total_tokens": 145962
+            },
+            "exact_saved_request_input_tokens": null,
+            "exact_saved_request_output_tokens": null,
+            "unanswered_model_requests": [
+              16
+            ],
+            "unknown_usage_decisions": [],
+            "wall_seconds": null,
+            "policy_seconds": null,
+            "perception_seconds": null
+          }
+        }
+      },
+      "attempt": {
+        "episode_id": "valid_unseen/pick_and_place_simple-Plunger-None-Cabinet-424/trial_T20190908_021537_611374#0",
+        "status": "interrupted",
+        "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i08/episodes/0001",
+        "score": null,
+        "error": "ExternalUserCancellation: original pilot15 scope was reduced to original-prefix5. This extra run was externally interrupted; the native runner did not write terminal metadata or an attempt record. Its original run.json remains running/pending. No official score was produced."
+      }
+    }
+  ]
+}

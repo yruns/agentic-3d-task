@@ -1,0 +1,13 @@
+{
+  "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-4/trial_T20190909_164840_568811#2",
+  "status": "completed",
+  "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001",
+  "score": {
+    "success": false,
+    "completed_goal_conditions": 1,
+    "total_goal_conditions": 3,
+    "expert_actions": 42,
+    "executed_actions": 74
+  },
+  "error": null
+}

@@ -4,7 +4,11 @@ This track evaluates incremental scene memory during interactive ALFRED task
 execution. [Implementation and setup](../../codex_agent/alfred.md) describe the
 actor's observations and external dependencies.
 
-**The frozen pilot now has 50/50 official terminal scores: five successes,
+**Latest online-mapping run: the user-requested original prefix5 has 5/5 scores,
+SR 0/5 and GC 1/12 (8.33%).** See [v10 results and two replays](v10_prefix5_20261105.md).
+The remaining planned tasks were cancelled; pilot15 is not a completed cohort.
+
+**The historical integration pilot has 50/50 official terminal scores: five successes,
 SR 10.00%, and GC 20/126 = 15.87%.** [v8](v8_pilot50_complete_20261105.md)
 combines the unchanged 41 scores from v6 with nine newly completed tasks under
 the same configuration. All 50 saved terminal scores passed independent
@@ -78,7 +82,8 @@ every episode attempt without overwriting old run IDs.
 
 | Record | Date | Scope | Result |
 |---|---|---|---|
-| [v9 online mapping](v9_online_mapping_20261105.md) | 2026-11-05 | New mapper, train-only depth comparison, frozen pilot15 | Implementation validation in progress; no task scores yet |
+| [v10 online mapping prefix5](v10_prefix5_20261105.md) | 2026-11-05 | User reduced the run to original indices0–4, all seen; two visualized episodes | 5/5 scored, SR0/5, GC1/12; 5/5 official rechecks agree; four excluded cancellations separately archived |
+| [v9 online mapping](v9_online_mapping_20261105.md) | 2026-11-05 | New mapper, train-only depth comparison, frozen pilot15 | Setup, train-depth comparison and full gates passed; task results in v10 |
 | [v8 completed pilot50](v8_pilot50_complete_20261105.md) | 2026-11-05 | Original41 + nine unchanged-configuration recoveries | 50/50 scored, 5 successes; SR 10.00%, GC 15.87%; independent scores 50/50 agree |
 | [v7 failed recovery rounds](v7_recovery_failures_20261105.md) | 2026-11-05 | Two recovery rounds; three unscored attempts each | No new scores; nine historical error attempts retained across five identities |
 | [v6 partial pilot and upstream outage](v6_upstream_outage_20261105.md) | 2026-11-05 | Frozen50, predicted perception, H input | 41/50 scored, 5 successes; 3 upstream errors and 6 pending; 41/41 independent score checks agree |

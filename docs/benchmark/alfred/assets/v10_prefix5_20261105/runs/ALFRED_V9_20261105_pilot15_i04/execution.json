@@ -1,0 +1,10 @@
+{
+  "stop_reason": "decision_budget",
+  "actions": 57,
+  "failures": 3,
+  "decisions": 60,
+  "input_tokens": 3046633,
+  "output_tokens": 71614,
+  "perception_seconds": 271.8397493036464,
+  "policy_seconds": 2146.8809687159956
+}

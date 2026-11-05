@@ -1,0 +1,52 @@
+{
+  "user_request": "Evaluate only original frozen prefix indices 0..4 and visualize two; preserve all other attempted runs as interrupted/diagnostic history",
+  "at_unix": 1793870386.7827702,
+  "actions": [
+    {
+      "kind": "queue_supervisor_suspended",
+      "pid": 1991235
+    },
+    {
+      "kind": "queue_supervisor_suspended",
+      "pid": 1991241
+    },
+    {
+      "kind": "queue_supervisor_suspended",
+      "pid": 1991246
+    },
+    {
+      "kind": "queue_supervisor_suspended",
+      "pid": 1991251
+    },
+    {
+      "kind": "requested_task_retained",
+      "pid": 1989192,
+      "run_id": "ALFRED_V9_20261105_pilot15_i00",
+      "index": 0
+    },
+    {
+      "kind": "requested_task_retained",
+      "pid": 1992538,
+      "run_id": "ALFRED_V9_20261105_pilot15_i04",
+      "index": 4
+    },
+    {
+      "kind": "requested_task_retained",
+      "pid": 1992539,
+      "run_id": "ALFRED_V9_20261105_pilot15_i03",
+      "index": 3
+    },
+    {
+      "kind": "requested_task_retained",
+      "pid": 1992540,
+      "run_id": "ALFRED_V9_20261105_pilot15_i01",
+      "index": 1
+    },
+    {
+      "kind": "unneeded_task_interrupt_requested",
+      "pid": 2043174,
+      "run_id": "ALFRED_V9_20261105_pilot15_i06",
+      "index": 6
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "checked_at_utc": "2026-11-05T09:44:06.931138+00:00",
+  "passed": true,
+  "records": [
+    {
+      "run_id": "ALFRED_V9_20261105_pilot15_i05",
+      "metadata_matches": true,
+      "attempts_match": true,
+      "attempt_count": 1,
+      "status": "interrupted",
+      "score_is_null": true,
+      "record_origin": "derived_external_user_cancellation",
+      "native_artifact_status": "running"
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_pilot15_i07",
+      "metadata_matches": true,
+      "attempts_match": true,
+      "attempt_count": 1,
+      "status": "interrupted",
+      "score_is_null": true,
+      "record_origin": "derived_external_user_cancellation",
+      "native_artifact_status": "running"
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_pilot15_i08",
+      "metadata_matches": true,
+      "attempts_match": true,
+      "attempt_count": 1,
+      "status": "interrupted",
+      "score_is_null": true,
+      "record_origin": "derived_external_user_cancellation",
+      "native_artifact_status": "running"
+    }
+  ],
+  "official_first5_sqlite_rows_unchanged": true,
+  "native_artifact_hashes_unchanged": true,
+  "prepared_records_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/external_cancellation_records_01.json",
+  "prepared_records_sha256": "2a3e23ef738c6ffd8504504275178c3450e06c9084bc5c97addc3b3e9ca5a6d5",
+  "helper_sha256": "03435c62fe1dbddf25d63d0705c10d6f915218515ac14d6c87865b4fcbcce52f",
+  "database": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/runs.sqlite"
+}

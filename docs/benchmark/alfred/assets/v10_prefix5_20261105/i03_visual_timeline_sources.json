@@ -1,0 +1,353 @@
+{
+  "schema_version": 1,
+  "scope": "Post-terminal visualization from saved RGB/BEV, action logs and actor memory; no simulator terminal metadata objects read, no model/GPU/replay/mapping calls",
+  "run_id": "ALFRED_V9_20261105_pilot15_i03",
+  "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-4/trial_T20190909_164840_568811#2",
+  "score": {
+    "success": false,
+    "completed_goal_conditions": 1,
+    "total_goal_conditions": 3,
+    "expert_actions": 42,
+    "executed_actions": 74
+  },
+  "execution": {
+    "stop_reason": "decision_budget",
+    "actions": 74,
+    "failures": 7,
+    "decisions": 60,
+    "input_tokens": 1642997,
+    "output_tokens": 84464,
+    "perception_seconds": 323.99043053388596,
+    "policy_seconds": 2336.7079073032364
+  },
+  "output": {
+    "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/i03_visual_timeline.png",
+    "sha256": "ee831762f47d25ee40171a1a7fa61cdcd4230530af180982ce0896ca835f096f"
+  },
+  "stages": [
+    {
+      "title": "Before successful pickup",
+      "decision": 4,
+      "frame": 14,
+      "rgb": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/current.png",
+        "sha256": "8cc94e859ce691d35b251ec4b180b2b274c28dbb32c6eb7a951cce2d5bafd029"
+      },
+      "bev": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/bev.png",
+        "sha256": "362cf8e88ac0f4861b6b542ed23272b04e4d6401b27065451028cc50ae840c62"
+      },
+      "notes": [
+        "Decision 4 / action 15: PickupObject 48",
+        "Current Ladle detection: confidence 0.486",
+        "Held object before: none",
+        "Result: success; next observed frame 15"
+      ]
+    },
+    {
+      "title": "Held-state update",
+      "decision": 5,
+      "frame": 15,
+      "rgb": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/current.png",
+        "sha256": "4d3077dc54cb6927069f15a2eafc2fe8540a93ddecd7c33fcce79ef61f2797fc"
+      },
+      "bev": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/bev.png",
+        "sha256": "958b70ec7763fb444950eaf050855b0c1b4f0867e57b810a2bd30ec445842d56"
+      },
+      "notes": [
+        "Next decision receives held_object_id=48",
+        "Object 48 state=held; geometry_valid=false",
+        "Old location retained only as last-known",
+        "Next action 16: PutObject 36 -> bad mask"
+      ]
+    },
+    {
+      "title": "Placement remains unresolved",
+      "decision": 16,
+      "frame": 22,
+      "rgb": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0016/current.png",
+        "sha256": "424a51af1cc80519a88aca6449e469a112756e6eb2db7c252dafe7dd2547d070"
+      },
+      "bev": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0016/bev.png",
+        "sha256": "08a2f736c75cfff76eab53f67c9f38c44441056fed3ea560413c09b1460e9118"
+      },
+      "notes": [
+        "Decision 16 / action 23: PutObject 94",
+        "Current label: SinkBasin, confidence 0.301",
+        "Detection is a 9.5 px-wide right-edge region",
+        "Result: target is NOT a receptacle",
+        "Held object remains 48"
+      ]
+    },
+    {
+      "title": "Terminal observation",
+      "decision": null,
+      "frame": 74,
+      "rgb": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/simulator/frames/000074.png",
+        "sha256": "db46caedbd161526114a6336f5a2fa0eafe81438fa7890164e65856e676b6b9d"
+      },
+      "bev": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/final_bev.png",
+        "sha256": "202e80fa47a9725c3420f40925fd903c8ae3541710c372f64a77c38caf9ea1ec"
+      },
+      "notes": [
+        "After decision 60 / 74 total actions",
+        "Held object remains 48 (Ladle)",
+        "6 PutObject attempts, all failed",
+        "No ToggleObjectOn/Off action occurred",
+        "Stop: decision budget; score 1/3 GC"
+      ]
+    }
+  ],
+  "pickup_transition": {
+    "action": {
+      "index": 15,
+      "action": "PickupObject",
+      "object_id": 48,
+      "source_frame": 14,
+      "result_frame": 15,
+      "success": true,
+      "error": "",
+      "interaction_mask": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/interaction_masks/000015.npy",
+        "sha256": "9d448e875c5a34824b3a14df71b96b5a4e765017c89cf043083dcfd33958162a",
+        "source": "current_mapping_mask",
+        "source_detection_index": 5
+      }
+    },
+    "before_frame": 14,
+    "after_frame": 15,
+    "before_held_object_id": null,
+    "after_held_object_id": 48,
+    "before_object": {
+      "object_id": 48,
+      "category": "Ladle",
+      "category_evidence": {
+        "Ladle": 2
+      },
+      "centroid": [
+        0.666,
+        -0.731,
+        1.205
+      ],
+      "last_known_centroid": [
+        0.666,
+        -0.731,
+        1.205
+      ],
+      "geometry_valid": true,
+      "geometry_epoch": 0,
+      "provisional": true,
+      "active": true,
+      "state": "observed",
+      "last_seen": 14,
+      "observation_count": 2,
+      "stale_through_frame": -1,
+      "visible_now": true,
+      "parent_object_id": null,
+      "action_states": {},
+      "region": [
+        1,
+        -2
+      ],
+      "recent_frames": [
+        9,
+        14
+      ]
+    },
+    "after_object": {
+      "object_id": 48,
+      "category": "Ladle",
+      "category_evidence": {
+        "Ladle": 2
+      },
+      "centroid": null,
+      "last_known_centroid": [
+        0.666,
+        -0.731,
+        1.205
+      ],
+      "geometry_valid": false,
+      "geometry_epoch": 1,
+      "provisional": true,
+      "active": true,
+      "state": "held",
+      "last_seen": 14,
+      "observation_count": 2,
+      "stale_through_frame": 14,
+      "visible_now": false,
+      "parent_object_id": null,
+      "action_states": {},
+      "region": null,
+      "recent_frames": []
+    },
+    "request_before": {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/request.json",
+      "sha256": "cdc3407114b8754ea68463883fdd92e177040c3071d410d5eab90c83884327c3"
+    },
+    "request_after": {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/request.json",
+      "sha256": "ac14a5227c363627439063b5e6fa9a11be91ed98a49c58e9c39ff6642919309c"
+    },
+    "interaction_mask": {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/interaction_masks/000015.npy",
+      "sha256": "9d448e875c5a34824b3a14df71b96b5a4e765017c89cf043083dcfd33958162a"
+    }
+  },
+  "placement_actions": [
+    {
+      "index": 16,
+      "action": "PutObject",
+      "object_id": 36,
+      "source_frame": 15,
+      "result_frame": 16,
+      "success": false,
+      "error": "Bad interact mask. Couldn't locate target object",
+      "interaction_mask": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/interaction_masks/000016.npy",
+        "sha256": "5282af615837b13db422f019f4fb776a98ff5b93c704e46665310f30cf3656f2",
+        "source": "current_mapping_mask",
+        "source_detection_index": 18
+      }
+    },
+    {
+      "index": 19,
+      "action": "PutObject",
+      "object_id": 36,
+      "source_frame": 18,
+      "result_frame": 19,
+      "success": false,
+      "error": "Bad interact mask. Couldn't locate target object",
+      "interaction_mask": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/interaction_masks/000019.npy",
+        "sha256": "5282af615837b13db422f019f4fb776a98ff5b93c704e46665310f30cf3656f2",
+        "source": "current_mapping_mask",
+        "source_detection_index": 17
+      }
+    },
+    {
+      "index": 23,
+      "action": "PutObject",
+      "object_id": 94,
+      "source_frame": 22,
+      "result_frame": 23,
+      "success": false,
+      "error": "This target object is NOT a receptacle!",
+      "interaction_mask": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/interaction_masks/000023.npy",
+        "sha256": "42374b07225c296f442f1544dc65597cb27d48f2f171190eeebe8406dd889653",
+        "source": "current_mapping_mask",
+        "source_detection_index": 16
+      }
+    },
+    {
+      "index": 24,
+      "action": "PutObject",
+      "object_id": 20,
+      "source_frame": 23,
+      "result_frame": 24,
+      "success": false,
+      "error": "No valid positions to place object found",
+      "interaction_mask": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/interaction_masks/000024.npy",
+        "sha256": "57dc2a9865d6cdadacb1f1ea562d6be6b94988e479de383676db2723a0c33ff0",
+        "source": "current_mapping_mask",
+        "source_detection_index": 9
+      }
+    },
+    {
+      "index": 26,
+      "action": "PutObject",
+      "object_id": 36,
+      "source_frame": 25,
+      "result_frame": 26,
+      "success": false,
+      "error": "Bad interact mask. Couldn't locate target object",
+      "interaction_mask": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/interaction_masks/000026.npy",
+        "sha256": "5282af615837b13db422f019f4fb776a98ff5b93c704e46665310f30cf3656f2",
+        "source": "current_mapping_mask",
+        "source_detection_index": 17
+      }
+    },
+    {
+      "index": 33,
+      "action": "PutObject",
+      "object_id": 36,
+      "source_frame": 32,
+      "result_frame": 33,
+      "success": false,
+      "error": "Bad interact mask. Couldn't locate target object",
+      "interaction_mask": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/interaction_masks/000033.npy",
+        "sha256": "0c105a1935238252cd1346802b9cd3dd88f0f23996a60f6c5ae3a917d71fdd7c",
+        "source": "current_mapping_mask",
+        "source_detection_index": 12
+      }
+    }
+  ],
+  "final_held_object": {
+    "object_id": 48,
+    "category": "Ladle",
+    "category_evidence": {
+      "Ladle": 30,
+      "ButterKnife": 6,
+      "Pot": 1
+    },
+    "centroid": null,
+    "last_known_centroid": [
+      0.208,
+      -0.196,
+      0.976
+    ],
+    "geometry_valid": false,
+    "geometry_epoch": 1,
+    "provisional": false,
+    "active": true,
+    "state": "held",
+    "last_seen": 74,
+    "observation_count": 37,
+    "stale_through_frame": 14,
+    "visible_now": true,
+    "parent_object_id": null,
+    "action_states": {},
+    "region": null,
+    "recent_frames": [
+      71,
+      72,
+      74
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/attempt.json",
+      "sha256": "e762b31c17b0ba5c8603e57485d2094e34fecf1e2d1b6cbde80ceb315b788230"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/execution.json",
+      "sha256": "a66b4cfedbf274fd1ca70b814e7b52bc9a6054a19e1ba539105b6a4d38b4ea08"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/actions.jsonl",
+      "sha256": "ee2b7130ee711490fc77ce8756ade02bb9bbe38b73e2c3999e95aacce3a71649"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/observations.jsonl",
+      "sha256": "4eb12c9e6c2f272401413ece593f3a0a8a09977cfb9fed68dd772844f9de78b7"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/memory.json",
+      "sha256": "5e6aa8376ee775a780159b725fefad0e70132f81c709ce5dbe53e9c66540f113"
+    }
+  ],
+  "interpretation_limits": [
+    "Pickup success and action-derived memory update are directly recorded; no claim that geometry independently verified the held identity",
+    "Failed placement plus lack of faucet toggles does not diagnose a unique perception/navigation/policy cause",
+    "The official 1/3 score is copied from the completed attempt, not recomputed by this visualization"
+  ]
+}

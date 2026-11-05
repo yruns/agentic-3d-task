@@ -1,0 +1,20 @@
+{
+  "scope": "Final documentation and visualization delivery checks; no additional benchmark run",
+  "mkdocs_build_exit_code": 0,
+  "mkdocs_log_sha256": "47869d63de10535a70f37bfed4e7e76b1fec43eed5b3df6cbbdbcf594e3a211b",
+  "new_alfred_link_warnings": 0,
+  "remaining_warnings": "Existing missing SceneFunc leaderboard and unrelated historical reference warnings",
+  "inline_bytes": 342653,
+  "inline_sha256": "1ca44fb497c16dbfa6bde976105dc3cc8d1789192d71f923c5a51111045aa0da",
+  "inline_checks": [
+    "All queried DOM IDs exist and are unique",
+    "JavaScript syntax passes Node --check",
+    "Case selector and slider change actual saved frames",
+    "Pickup snapshot exposes held object48",
+    "Terminal frames show official0/3 and1/3",
+    "Playback stops at final frame and state persists",
+    "Trajectory uses equal meter scale on both axes"
+  ],
+  "browser_layout_tested": false,
+  "static_figures_and_video_endpoints_visually_inspected": true
+}

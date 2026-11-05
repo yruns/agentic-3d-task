@@ -1,0 +1,49 @@
+{
+  "selected": 1,
+  "completed": 1,
+  "errors": 0,
+  "interrupted": 0,
+  "pending": 0,
+  "metrics": {
+    "num_evals": 1,
+    "num_successes": 0,
+    "completed_goal_conditions": 0,
+    "total_goal_conditions": 1,
+    "expert_actions": 33,
+    "executed_actions": 91,
+    "success_rate": 0.0,
+    "goal_condition_success_rate": 0.0,
+    "path_length_weighted_success_rate": 0.0,
+    "path_length_weighted_goal_condition_success_rate": 0.0
+  },
+  "by_split": {
+    "valid_seen": {
+      "num_evals": 1,
+      "num_successes": 0,
+      "completed_goal_conditions": 0,
+      "total_goal_conditions": 1,
+      "expert_actions": 33,
+      "executed_actions": 91,
+      "success_rate": 0.0,
+      "goal_condition_success_rate": 0.0,
+      "path_length_weighted_success_rate": 0.0,
+      "path_length_weighted_goal_condition_success_rate": 0.0
+    },
+    "valid_unseen": null
+  },
+  "attempts": [
+    {
+      "episode_id": "valid_seen/pick_and_place_simple-SprayBottle-None-Toilet-415/trial_T20190909_075955_678702#0",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i01/episodes/0001",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 1,
+        "expert_actions": 33,
+        "executed_actions": 91
+      },
+      "error": null
+    }
+  ]
+}

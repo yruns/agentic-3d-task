@@ -1,0 +1,5 @@
+{
+  "status": "ingested_diagnostics_only",
+  "records": 5,
+  "database": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/runs.sqlite"
+}

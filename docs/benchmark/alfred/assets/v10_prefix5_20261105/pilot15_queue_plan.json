@@ -1,0 +1,68 @@
+{
+  "scope": "One full-budget attempt per frozen index; no scored task retries",
+  "initial": [
+    0
+  ],
+  "queues": [
+    [
+      1,
+      5,
+      9,
+      13
+    ],
+    [
+      2,
+      6,
+      10,
+      14
+    ],
+    [
+      3,
+      7,
+      11
+    ],
+    [
+      4,
+      8,
+      12
+    ]
+  ],
+  "source": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "62e9f18a6654bbedb1558b3ae2a08cc7f2207a6f",
+    "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+    "tracked_worktree_drift": ""
+  },
+  "common_command": [
+    "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+    "-m",
+    "codex_agent.cli.run_alfred",
+    "--data-root",
+    "/home/ysh/Datasets/FILM/alfred/data/json_2.1.0",
+    "--splits",
+    "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+    "--fold",
+    "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/folds/pilot15.json",
+    "--simulator-python",
+    "/home/ysh/codebase/FILM/.venv/bin/python",
+    "--alfred-root",
+    "/home/ysh/Datasets/FILM/alfred",
+    "--scene-config",
+    "/home/ysh/codebase/agentic-3d-task/configs/alfred/scene.toml",
+    "--x-display",
+    "5",
+    "--model",
+    "gpt-5.4-2026-03-05",
+    "--reasoning-effort",
+    "medium",
+    "--max-actions",
+    "1000",
+    "--max-failures",
+    "10",
+    "--max-decisions",
+    "60",
+    "--num-shards",
+    "15"
+  ],
+  "launcher_note": "All four tmux queues started successfully; the separate plan-file writer was corrected after a local NameError. No task process was relaunched."
+}

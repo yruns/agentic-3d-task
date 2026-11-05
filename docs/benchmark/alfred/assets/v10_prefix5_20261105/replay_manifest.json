@@ -1,0 +1,3916 @@
+{
+  "schema_version": 1,
+  "scope": "Post-terminal decision replay of saved artifacts; no new inference, simulation or mapping",
+  "timing": "1 second per decision plus 1 terminal frame; output 24 fps by frame duplication; not real-time",
+  "bev_crop_rule": "PIL crop (0,0,width,height-40-20*(min(24,object_count)+2)); derived from saved renderer dimensions; keeps header/map+8px and removes catalog beginning map+16px",
+  "crop_reference": {
+    "path": "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred/rendering.py",
+    "sha256": "96de03f42048946ed65da9cf22f108cff05e1fc1929398ea126bf24447b9b27c"
+  },
+  "frame_size": [
+    1600,
+    1080
+  ],
+  "runs": [
+    {
+      "run_id": "ALFRED_V9_20261105_pilot15_i02",
+      "episode_id": "valid_seen/pick_and_place_with_movable_recep-Fork-Cup-DiningTable-23/trial_T20190906_205421_980666#2",
+      "decision_count": 38,
+      "frames": [
+        {
+          "ordinal": 0,
+          "decision": 1,
+          "observation_frame": 0,
+          "held_object_id": null,
+          "object_nodes": 8,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 2
+            }
+          },
+          "previous_feedback": "Initial observation.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0001/current.png",
+            "sha256": "bb06a1be5b3134fc0cf23db878d1e154286195a3482cf2e3891f0bfaa0b61229"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0001/bev.png",
+            "sha256": "f4200407067e724f39613aa58eaf93a2fdf5e5a5e78718fda81a79e2997f51e0"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            683
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0001/request.json",
+            "sha256": "fe121c82645118e6f5a768193690eb59dcf9a2ef410f2601301decfa4311d768"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0001/response.json",
+            "sha256": "311203888771adbf1c3aa2edc372c90ec52df9ea07a178febb9634ac36fa9ae5"
+          },
+          "rendered_frame_sha256": "f8b10bf387fc5b8d3637d5bf8a89ecfa1c578ab39854af632cfae9b44d78fbd2"
+        },
+        {
+          "ordinal": 1,
+          "decision": 2,
+          "observation_frame": 0,
+          "held_object_id": null,
+          "object_nodes": 8,
+          "upcoming_command": {
+            "kind": "explore"
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0002/current.png",
+            "sha256": "bb06a1be5b3134fc0cf23db878d1e154286195a3482cf2e3891f0bfaa0b61229"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0002/bev.png",
+            "sha256": "f4200407067e724f39613aa58eaf93a2fdf5e5a5e78718fda81a79e2997f51e0"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            683
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0002/request.json",
+            "sha256": "2cf0ffd2212b78239272ef75ba9eb4c26930fca503c1d2eb00ba5dafdd9582d1"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0002/response.json",
+            "sha256": "4a0f16d75dccecc65437c44ab1493b16c72f103cdd1199e762dfe18a762e33e9"
+          },
+          "rendered_frame_sha256": "45538852b05fe6f9b15eb8dd74f6b469faf4c95b6e7f0f3de4e3e65ada793314"
+        },
+        {
+          "ordinal": 2,
+          "decision": 3,
+          "observation_frame": 9,
+          "held_object_id": null,
+          "object_nodes": 48,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 0
+            }
+          },
+          "previous_feedback": "No currently reachable frontier remains; unobserved space is still unknown.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0003/current.png",
+            "sha256": "1bb2c16481247c310263072e35c4f0e77910a75d35d525442da8a00e15913036"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0003/bev.png",
+            "sha256": "297c7c656ca83017a70bc82aee183f93399693f010872d748aae8cae630fbd51"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            742
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0003/request.json",
+            "sha256": "86768336031d6802824a954bac641ecf6ce52733762fe6d6c84a327dc1d50d92"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0003/response.json",
+            "sha256": "a46256c59e9140250ab92e88401a779369a2bd65e74723fa9e879f3441af872a"
+          },
+          "rendered_frame_sha256": "189daae9e43a5cf04c491f5fb3518526de90044a110405ede57522d976444707"
+        },
+        {
+          "ordinal": 3,
+          "decision": 4,
+          "observation_frame": 9,
+          "held_object_id": null,
+          "object_nodes": 48,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 28
+            }
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0004/current.png",
+            "sha256": "1bb2c16481247c310263072e35c4f0e77910a75d35d525442da8a00e15913036"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0004/bev.png",
+            "sha256": "297c7c656ca83017a70bc82aee183f93399693f010872d748aae8cae630fbd51"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            742
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0004/request.json",
+            "sha256": "053b81b925a49d7684fe32408c22fee638f67ae53a8a21744f1dee628dfc9814"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0004/response.json",
+            "sha256": "071ad036572772b1bd43ae723ac755c4b6713e7ba9c4b1b6b9f67fa890c59a7d"
+          },
+          "rendered_frame_sha256": "85e7b553b0b904298a17408e0433f2c45301a2104505c18cdc2d114c7c27d836"
+        },
+        {
+          "ordinal": 4,
+          "decision": 5,
+          "observation_frame": 9,
+          "held_object_id": null,
+          "object_nodes": 48,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 14
+            }
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0005/current.png",
+            "sha256": "1bb2c16481247c310263072e35c4f0e77910a75d35d525442da8a00e15913036"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0005/bev.png",
+            "sha256": "297c7c656ca83017a70bc82aee183f93399693f010872d748aae8cae630fbd51"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            742
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0005/request.json",
+            "sha256": "888a2e5ca91efecef0f05a223d277c3d5170250cafa3be565d7ab16b0971645b"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0005/response.json",
+            "sha256": "4150975196725f79461a1bccea6a66e3d2536bfecf6363d54ba685bf495ef3a4"
+          },
+          "rendered_frame_sha256": "5666c4b411b89f1e917251d3055e19c7d263c2969b0bde2b4dadae85c9c1d677"
+        },
+        {
+          "ordinal": 5,
+          "decision": 6,
+          "observation_frame": 9,
+          "held_object_id": null,
+          "object_nodes": 48,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookUp",
+            "repeat": 1
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0006/current.png",
+            "sha256": "1bb2c16481247c310263072e35c4f0e77910a75d35d525442da8a00e15913036"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0006/bev.png",
+            "sha256": "297c7c656ca83017a70bc82aee183f93399693f010872d748aae8cae630fbd51"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            742
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0006/request.json",
+            "sha256": "25455d3f882145d3746e719e847d7c85ccd86125fa496941888051217aae55b3"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0006/response.json",
+            "sha256": "813a71e9ee767adf422b7300ba1a3a9d9971629b151f22769f991cdf20626a90"
+          },
+          "rendered_frame_sha256": "26a795484ebc8e05042dc8cc1a94905247900d138172c2bb652769c054c6c4e5"
+        },
+        {
+          "ordinal": 6,
+          "decision": 7,
+          "observation_frame": 10,
+          "held_object_id": null,
+          "object_nodes": 65,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 52
+            }
+          },
+          "previous_feedback": "Action 10: LookUp; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0007/current.png",
+            "sha256": "85a5c5052fdd5df53b327ab5f0ce08eb94887fab241a401c3785fb737b79cf5e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0007/bev.png",
+            "sha256": "d07fe8a2b60c432feb58703e35649e1d6af9c6b57079b4fb848e3858cd330362"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            742
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0007/request.json",
+            "sha256": "a4e7fe405b54515ee977ff8024b39763eb2e3d187f6c495c99a18ecdf49dfaa7"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0007/response.json",
+            "sha256": "4fe0ebf854094aa667eff479e00c2e2848d9c706f67a465d20c768a3692d57a3"
+          },
+          "rendered_frame_sha256": "245512fed24295ce3f3846ec25d10485235d2dc39921808d9fbcbbbbf593a3d8"
+        },
+        {
+          "ordinal": 7,
+          "decision": 8,
+          "observation_frame": 10,
+          "held_object_id": null,
+          "object_nodes": 65,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "OpenObject",
+            "target": {
+              "type": "object",
+              "object_id": 52
+            }
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0008/current.png",
+            "sha256": "85a5c5052fdd5df53b327ab5f0ce08eb94887fab241a401c3785fb737b79cf5e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0008/bev.png",
+            "sha256": "d07fe8a2b60c432feb58703e35649e1d6af9c6b57079b4fb848e3858cd330362"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            742
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0008/request.json",
+            "sha256": "dc403700205e107e44e577a5aa14ced86736fb910ab96f1e5e973bbd611d27c3"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0008/response.json",
+            "sha256": "d388d9b97841889a99710d260e4084cfa08a96c0f1cca4e9c6704f88dc2b4dfb"
+          },
+          "rendered_frame_sha256": "2443b1f2b1b8dc3aee5090d374de266ffb7e8c4b3d0028e2eb1cffd82e6805d6"
+        },
+        {
+          "ordinal": 8,
+          "decision": 9,
+          "observation_frame": 11,
+          "held_object_id": null,
+          "object_nodes": 65,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookUp",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 11: OpenObject; object_id=52; success=False; error=object not found: object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0009/current.png",
+            "sha256": "85a5c5052fdd5df53b327ab5f0ce08eb94887fab241a401c3785fb737b79cf5e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0009/bev.png",
+            "sha256": "817a9b5ce01c33b369addde3dc01f49eaaea3595e9db23e424ad588bc9b8accb"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            742
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0009/request.json",
+            "sha256": "44db164c8d8d557f2836e176de0fc5c2d6992d72649fddd253803f11d9b5c2be"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0009/response.json",
+            "sha256": "fdb0fd800607a1c54445bc31214ecb5982fe7cf6b53107c1d8af93086ca0f6d0"
+          },
+          "rendered_frame_sha256": "cc562e54c5ced3870a7d48d63699f3d94c3be691812cba18ab99b2659d1f0286"
+        },
+        {
+          "ordinal": 9,
+          "decision": 10,
+          "observation_frame": 12,
+          "held_object_id": null,
+          "object_nodes": 87,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "OpenObject",
+            "target": {
+              "type": "object",
+              "object_id": 68
+            }
+          },
+          "previous_feedback": "Action 12: LookUp; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0010/current.png",
+            "sha256": "220f2ebb5a402c39bc4acbab7f5fef1edcbd6d9a47839f42394d8212913928d7"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0010/bev.png",
+            "sha256": "b32ae2d8e191674a943c96a7ea0204becfea1d87eb704228c8904f6b07b61d43"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0010/request.json",
+            "sha256": "e67364f67c48c458006d0c61cc5173b4b2b50ca3f582884105a5b8b5ffa21002"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0010/response.json",
+            "sha256": "b62b640637476eef871d0f3f4f7014dc84218c7eebd403888c1ce12a743b649c"
+          },
+          "rendered_frame_sha256": "4223b4a603289cc07b80b8cd4e6829c3f60c345c74f4d8c105c05b6e3c05541c"
+        },
+        {
+          "ordinal": 10,
+          "decision": 11,
+          "observation_frame": 13,
+          "held_object_id": null,
+          "object_nodes": 87,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 68
+            }
+          },
+          "previous_feedback": "Action 13: OpenObject; object_id=68; success=False; error=Bad interact mask. Couldn't locate target object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0011/current.png",
+            "sha256": "220f2ebb5a402c39bc4acbab7f5fef1edcbd6d9a47839f42394d8212913928d7"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0011/bev.png",
+            "sha256": "c2b8138dcd37b9d47a57fdc3aed753005bad43e5475dc636c185290755467a00"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0011/request.json",
+            "sha256": "cdf473e98665968694e791106f5756b261dec8828766e3dc54546c01ae21f914"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0011/response.json",
+            "sha256": "d8b6ba0c47406b291c95e5cf445b51515113083d506ffed6fb239bbe15348412"
+          },
+          "rendered_frame_sha256": "886afd7003c9c03e5eb88ed8bb6025eb3ea73e8091833d7b1a65a87c89eb69f3"
+        },
+        {
+          "ordinal": 11,
+          "decision": 12,
+          "observation_frame": 13,
+          "held_object_id": null,
+          "object_nodes": 87,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateLeft",
+            "repeat": 1
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0012/current.png",
+            "sha256": "220f2ebb5a402c39bc4acbab7f5fef1edcbd6d9a47839f42394d8212913928d7"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0012/bev.png",
+            "sha256": "c2b8138dcd37b9d47a57fdc3aed753005bad43e5475dc636c185290755467a00"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0012/request.json",
+            "sha256": "b7368fbde6ac9214d0138386d1c996a5ceab01b0156c5e05d34035db899f2456"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0012/response.json",
+            "sha256": "3a73bdafbfef3768e35a15836cef0007230b74918f1b99f7a93901b5e1e11638"
+          },
+          "rendered_frame_sha256": "2f71e881c54825cbfcaeb5c76d431c9f440a1ca5371c1ab86300d7dfd3cde6d8"
+        },
+        {
+          "ordinal": 12,
+          "decision": 13,
+          "observation_frame": 14,
+          "held_object_id": null,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "OpenObject",
+            "target": {
+              "type": "object",
+              "object_id": 87
+            }
+          },
+          "previous_feedback": "Action 14: RotateLeft; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0013/current.png",
+            "sha256": "b696e2c11a46ccc80054e60f773b2da59f4e7a2239aa3c41509f82942e66246d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0013/bev.png",
+            "sha256": "599a9f8b029e1e852e89325a488693768df5c43d75610c4d45391286c1037153"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0013/request.json",
+            "sha256": "e9ac27df8f943f5bd2c17cb4351357cb2e7fa3e0c7d1c6e84b8cee0730dce854"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0013/response.json",
+            "sha256": "f6d1a19e1562f42099108fab49b4eda017b0c66d757d15154f52511b47142f6e"
+          },
+          "rendered_frame_sha256": "fb8c2f9d8a79f7f87ce99eb9df9add6ed9c7a69d06e8b0792e306cbba902e280"
+        },
+        {
+          "ordinal": 13,
+          "decision": 14,
+          "observation_frame": 15,
+          "held_object_id": null,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateRight",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 15: OpenObject; object_id=87; success=False; error=Bad interact mask. Couldn't locate target object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0014/current.png",
+            "sha256": "b696e2c11a46ccc80054e60f773b2da59f4e7a2239aa3c41509f82942e66246d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0014/bev.png",
+            "sha256": "e362a688b17811750623eda17c062c1fb4dd4c7f3a9445f322ef5630bf3683d0"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0014/request.json",
+            "sha256": "353fc8271eeb90e7e840fecad6d8ec19032c99eec7bfbb892ca6406c174a6cb7"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0014/response.json",
+            "sha256": "d6657ba47154f6db5860cdc97e03551cae5f5bd38138b4e4bb484d8a82f5325f"
+          },
+          "rendered_frame_sha256": "492c01f751ada2a70d66f5c99746240f6ff1e1908c1c0c9ccd589445053b0d7c"
+        },
+        {
+          "ordinal": 14,
+          "decision": 15,
+          "observation_frame": 16,
+          "held_object_id": null,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 68
+            }
+          },
+          "previous_feedback": "Action 16: RotateRight; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0015/current.png",
+            "sha256": "220f2ebb5a402c39bc4acbab7f5fef1edcbd6d9a47839f42394d8212913928d7"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0015/bev.png",
+            "sha256": "1489b77f21291027d905222eb5516ca5c8fc55298f15aeefcd9b84406781a7bc"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0015/request.json",
+            "sha256": "6fcc62886ebc5d3bfb9bc5c25356f1b22b44a6a0a1375372c2ac31d78d4ecb6b"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0015/response.json",
+            "sha256": "3b0611fa9885b1d993aba8c05ff779b0d1aff2e5193b9d20b47871cffaeaf1aa"
+          },
+          "rendered_frame_sha256": "3b38d95e1256e450df7e386db1e3362e805620abe6605a54cc91e3362d542f42"
+        },
+        {
+          "ordinal": 15,
+          "decision": 16,
+          "observation_frame": 16,
+          "held_object_id": null,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateLeft",
+            "repeat": 1
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0016/current.png",
+            "sha256": "220f2ebb5a402c39bc4acbab7f5fef1edcbd6d9a47839f42394d8212913928d7"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0016/bev.png",
+            "sha256": "1489b77f21291027d905222eb5516ca5c8fc55298f15aeefcd9b84406781a7bc"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0016/request.json",
+            "sha256": "ad41fd87c946539094d46f51669fc3240bd9be0c059d06b2c7325fd3f0733962"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0016/response.json",
+            "sha256": "f79b04dd452f7f972ec4d6ca8141ce486db066aae90ad720774814d43ac5f053"
+          },
+          "rendered_frame_sha256": "70a2b911c9b100ec3a795bd09a1b55caba841a2030545a6c5c89a285fa8687f3"
+        },
+        {
+          "ordinal": 16,
+          "decision": 17,
+          "observation_frame": 17,
+          "held_object_id": null,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 88
+            }
+          },
+          "previous_feedback": "Action 17: RotateLeft; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0017/current.png",
+            "sha256": "b696e2c11a46ccc80054e60f773b2da59f4e7a2239aa3c41509f82942e66246d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0017/bev.png",
+            "sha256": "d1185f6ef42b105ed135eb47cada3a386fa4815ad1a5398a0f94c46e6179d4f6"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0017/request.json",
+            "sha256": "ee197420fb8b5d7c3bc051134520b2445e172cd87c8ec1960f6e79580f9a516e"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0017/response.json",
+            "sha256": "5e51aa5f9918d12ef0aec5bf75c52c6f2a24556818a0c9c04694a63daee0e680"
+          },
+          "rendered_frame_sha256": "6288b93388ae166f6735dfe942779bee754b510af057a465cccf75963b1e84ef"
+        },
+        {
+          "ordinal": 17,
+          "decision": 18,
+          "observation_frame": 17,
+          "held_object_id": null,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "OpenObject",
+            "target": {
+              "type": "object",
+              "object_id": 88
+            }
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0018/current.png",
+            "sha256": "b696e2c11a46ccc80054e60f773b2da59f4e7a2239aa3c41509f82942e66246d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0018/bev.png",
+            "sha256": "d1185f6ef42b105ed135eb47cada3a386fa4815ad1a5398a0f94c46e6179d4f6"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0018/request.json",
+            "sha256": "759a3051f5fed665ec772e76e6438922d5a49c4d21882a7513beaf6677fcb889"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0018/response.json",
+            "sha256": "7c4fcfcf2ebb9c8ad51583adcb63984b3926bab7e42b9ee8ec8585e8966c95e1"
+          },
+          "rendered_frame_sha256": "504272659768d4d56aec6872886dd4f672e1dd0abc713748646516659a801074"
+        },
+        {
+          "ordinal": 18,
+          "decision": 19,
+          "observation_frame": 18,
+          "held_object_id": null,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 88
+            }
+          },
+          "previous_feedback": "Action 18: OpenObject; object_id=88; success=False; error=object not found: object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0019/current.png",
+            "sha256": "b696e2c11a46ccc80054e60f773b2da59f4e7a2239aa3c41509f82942e66246d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0019/bev.png",
+            "sha256": "5e6ebf286554605df8bff1bd746122fa732c60f47d3df1b1cfe99ebc97828cf4"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0019/request.json",
+            "sha256": "6056cb9611e144406214adc2f3acc88961e7900d83605ba2b9d791c76ef1d149"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0019/response.json",
+            "sha256": "5206392232d92c425f1107fdc938098a48b80b77cfa3b4092ecbc04ee4b05281"
+          },
+          "rendered_frame_sha256": "c5c106f609eb4aad6fe46e0e4a3e2d1eda6de4be2cdeada25e1c00aed1eda233"
+        },
+        {
+          "ordinal": 19,
+          "decision": 20,
+          "observation_frame": 18,
+          "held_object_id": null,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookDown",
+            "repeat": 1
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0020/current.png",
+            "sha256": "b696e2c11a46ccc80054e60f773b2da59f4e7a2239aa3c41509f82942e66246d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0020/bev.png",
+            "sha256": "5e6ebf286554605df8bff1bd746122fa732c60f47d3df1b1cfe99ebc97828cf4"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0020/request.json",
+            "sha256": "394c9ed0c586ccb2de3df74606a652de4dda2b302e4598d876fd69ea545b6441"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0020/response.json",
+            "sha256": "448edf17fd5f021890257acbb8dddd0a4131f66d0c3ee9e1583e6fb25e4007e3"
+          },
+          "rendered_frame_sha256": "4db3c7a51881c0fa0a828abb0ad41a6b0c17b5a378a2c527898f285a71c8d1ab"
+        },
+        {
+          "ordinal": 20,
+          "decision": 21,
+          "observation_frame": 19,
+          "held_object_id": null,
+          "object_nodes": 101,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "OpenObject",
+            "target": {
+              "type": "object",
+              "object_id": 4
+            }
+          },
+          "previous_feedback": "Action 19: LookDown; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/current.png",
+            "sha256": "7199aed7fd92a3ebddd42aeaa6f64d4beb2f02655f77d090dbda9134779dafbd"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/bev.png",
+            "sha256": "69845826638e02ff4f37c273b9b1bdab97d9f590474a7d1d1713f09eb38b40e2"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/request.json",
+            "sha256": "43b109b6cea66d0172cd4a6424626ac99eb6a7cc0913d0941b575fb8cc3b0bcc"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/response.json",
+            "sha256": "ae0de57f4bb0b060492c674f2c69403e37fc1bc3a93c2f9be558546e752a27c4"
+          },
+          "rendered_frame_sha256": "a0a6f9883266dae717f08eb1d3c3425fa9ea031b68ccdcd1bcbd8780d12d5086"
+        },
+        {
+          "ordinal": 21,
+          "decision": 22,
+          "observation_frame": 20,
+          "held_object_id": null,
+          "object_nodes": 101,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 4
+            }
+          },
+          "previous_feedback": "Action 20: OpenObject; object_id=4; success=False; error=object not found: object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0022/current.png",
+            "sha256": "7199aed7fd92a3ebddd42aeaa6f64d4beb2f02655f77d090dbda9134779dafbd"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0022/bev.png",
+            "sha256": "2bd7467a86980a402688fba574d9da9f2bca37a9af21733defaccf08d54edeee"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0022/request.json",
+            "sha256": "f2de3723e0a8193bf7f95f41b56b3751eb8d4c0e88ffa9fcc2f70ca68ea9a977"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0022/response.json",
+            "sha256": "c874e011968c3543c277d9aa518001f0ae7a0d653c9c65d9cf796872bd585dff"
+          },
+          "rendered_frame_sha256": "7f2999d4f65c641018c124e89808e8686d640f0cbdb6d43f17ae603498b6f23e"
+        },
+        {
+          "ordinal": 22,
+          "decision": 23,
+          "observation_frame": 22,
+          "held_object_id": null,
+          "object_nodes": 117,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "OpenObject",
+            "target": {
+              "type": "object",
+              "object_id": 52
+            }
+          },
+          "previous_feedback": "FMM route has no safe 0.25 m action from this stance; acquire another view.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0023/current.png",
+            "sha256": "53d724e09673031f8fcb9fec7915266413cfc444df39b9893b4c181fc94c7fe5"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0023/bev.png",
+            "sha256": "25b830a27b4f3f6afc9113e374690c3c4089d44bb1c8defaea4f216ebcb9abd4"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0023/request.json",
+            "sha256": "2d5c62dfadb68ceef63b6ce69b748a756553edc2ce3ac9067bdf138c323a0433"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0023/response.json",
+            "sha256": "b1dcea2cedbd86f7bc774f5c6f8decf85680bdf3bbd370a4d30de2286ed1af54"
+          },
+          "rendered_frame_sha256": "6845dcc96ac26078ca38a690ac9a0c21da866e2b620bfb53bdad654355af3c4b"
+        },
+        {
+          "ordinal": 23,
+          "decision": 24,
+          "observation_frame": 23,
+          "held_object_id": null,
+          "object_nodes": 117,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 52
+            }
+          },
+          "previous_feedback": "Action 23: OpenObject; object_id=52; success=False; error=Bad interact mask. Couldn't locate target object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0024/current.png",
+            "sha256": "53d724e09673031f8fcb9fec7915266413cfc444df39b9893b4c181fc94c7fe5"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0024/bev.png",
+            "sha256": "6690ec6773b2eb7ee2f3c60998c5a2b4c1c5db679598439fb23c95bc346c9b32"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0024/request.json",
+            "sha256": "4fe13be02ea2a688c4222cafc3d6f1a58800656a3a99a8395d43309fac1a0170"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0024/response.json",
+            "sha256": "9bf66bafdb99fda1c1b3c1412c8a7453ac17ec2dcccb2c8c1c1c4ec744891592"
+          },
+          "rendered_frame_sha256": "112ce571222821d81cab2d645751ea2ab12b1d05643f2510de9d6d5a95e059eb"
+        },
+        {
+          "ordinal": 24,
+          "decision": 25,
+          "observation_frame": 23,
+          "held_object_id": null,
+          "object_nodes": 117,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateLeft",
+            "repeat": 1
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0025/current.png",
+            "sha256": "53d724e09673031f8fcb9fec7915266413cfc444df39b9893b4c181fc94c7fe5"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0025/bev.png",
+            "sha256": "6690ec6773b2eb7ee2f3c60998c5a2b4c1c5db679598439fb23c95bc346c9b32"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0025/request.json",
+            "sha256": "705cc627c6b92a87581478c19acbd1a7f9399fac5ae9c22db13a85021b68b0c1"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0025/response.json",
+            "sha256": "3168735049b1b2662f572de3e6909a42798b59442df29baf15e57f7dc2969eeb"
+          },
+          "rendered_frame_sha256": "1bce0f7c8bab0a8f4152c03b6a07e5609d71b752c86d8f62a1d93df3f7e2b28d"
+        },
+        {
+          "ordinal": 25,
+          "decision": 26,
+          "observation_frame": 24,
+          "held_object_id": null,
+          "object_nodes": 125,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "OpenObject",
+            "target": {
+              "type": "object",
+              "object_id": 122
+            }
+          },
+          "previous_feedback": "Action 24: RotateLeft; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0026/current.png",
+            "sha256": "caaea939592b527c3eb0b8f06c74c6db29a31f6ee0eb63499d5f75489d56296c"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0026/bev.png",
+            "sha256": "6692fe369f83d6b83539f08bc7d97047a636492c40464e0fffbf98d443c0a2d1"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0026/request.json",
+            "sha256": "ee7098956fe76edd44f746589e1632393e9d676064909b8ce591e3dedda9a35f"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0026/response.json",
+            "sha256": "8031ac3ff962087a79a1868a06a920a773eef96d5b09e3c50535dc5033d768ef"
+          },
+          "rendered_frame_sha256": "8ff511a3c4ce09d877d82a110f912d7f5a3a9b111d54ee7b308bc50239a8ff73"
+        },
+        {
+          "ordinal": 26,
+          "decision": 27,
+          "observation_frame": 25,
+          "held_object_id": null,
+          "object_nodes": 125,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookUp",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 25: OpenObject; object_id=122; success=False; error=object not found: object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0027/current.png",
+            "sha256": "caaea939592b527c3eb0b8f06c74c6db29a31f6ee0eb63499d5f75489d56296c"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0027/bev.png",
+            "sha256": "f7660e9e5a8ad6032a835c86749933b84d8c638085cfa9a054055f9ecc656e32"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0027/request.json",
+            "sha256": "c511e4319ec21edf907947d88b38222447c45872c072a69b37dc02cfc8fbbbb9"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0027/response.json",
+            "sha256": "a958d0be44b5998a605906bd2d02ac62a487c432437e863b1c1272352119cce5"
+          },
+          "rendered_frame_sha256": "77fbf061199aab1b8ea96ef82a48da5bc585865f9f14180272ef6d0114e47930"
+        },
+        {
+          "ordinal": 27,
+          "decision": 28,
+          "observation_frame": 26,
+          "held_object_id": null,
+          "object_nodes": 135,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 129
+            }
+          },
+          "previous_feedback": "Action 26: LookUp; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0028/current.png",
+            "sha256": "544597f3596538a41b40a70d274601b82862309739ffe17e29b7f113796dc701"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0028/bev.png",
+            "sha256": "5cc9f11cc8900045d997eeae67fbbeccca53e0bfcbbc540b865a7e288d806151"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0028/request.json",
+            "sha256": "0f6b5cb2cf90f6e8da4b4e3660fa6ba348bb163fad480dbf5912570238b25feb"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0028/response.json",
+            "sha256": "a88ea3519638cff035ce38f22fd28bad8256b4bd7e1309a91b53f963e27f0820"
+          },
+          "rendered_frame_sha256": "3b98167d9f2c04b62e0f2aba2200a130f2874c2653ec89f53e5f1ede52821429"
+        },
+        {
+          "ordinal": 28,
+          "decision": 29,
+          "observation_frame": 26,
+          "held_object_id": null,
+          "object_nodes": 135,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "OpenObject",
+            "target": {
+              "type": "object",
+              "object_id": 129
+            }
+          },
+          "previous_feedback": "FMM route has no safe 0.25 m action from this stance; acquire another view.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/current.png",
+            "sha256": "544597f3596538a41b40a70d274601b82862309739ffe17e29b7f113796dc701"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/bev.png",
+            "sha256": "5cc9f11cc8900045d997eeae67fbbeccca53e0bfcbbc540b865a7e288d806151"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/request.json",
+            "sha256": "405776b9d128a24bbd5badecfd79f439a2e479529a416ab1e782738c12c798c8"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/response.json",
+            "sha256": "6d4b0b69af0131f9034916ac36dfdd74a50e48efa6bc968920c964bd2b924c21"
+          },
+          "rendered_frame_sha256": "6529d55eebf3d9a5786b52c8dcb90cf426a355c08f28d8d1930de36acb8392c6"
+        },
+        {
+          "ordinal": 29,
+          "decision": 30,
+          "observation_frame": 27,
+          "held_object_id": null,
+          "object_nodes": 135,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 126
+            }
+          },
+          "previous_feedback": "Action 27: OpenObject; object_id=129; success=False; error=object not found: object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0030/current.png",
+            "sha256": "544597f3596538a41b40a70d274601b82862309739ffe17e29b7f113796dc701"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0030/bev.png",
+            "sha256": "61979ff18406a83b8732769f8e0a9e7eb427efe0dddcd0c704639326ffce6fb0"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0030/request.json",
+            "sha256": "c286092cb1e245213eb5067b0515f4d29081ef8bccab3701a0a5c7d4eefcd490"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0030/response.json",
+            "sha256": "8af181a16fffcf90163f26e24cfc7a8c1606b4ac3f7f6d2e5d5ae55ee95d4a97"
+          },
+          "rendered_frame_sha256": "02df445f66e8594859be99b5ccc61b9eb71ca01882e0f39dda548f6460f81841"
+        },
+        {
+          "ordinal": 30,
+          "decision": 31,
+          "observation_frame": 27,
+          "held_object_id": null,
+          "object_nodes": 135,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "MoveAhead",
+            "repeat": 1
+          },
+          "previous_feedback": "FMM route has no safe 0.25 m action from this stance; acquire another view.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0031/current.png",
+            "sha256": "544597f3596538a41b40a70d274601b82862309739ffe17e29b7f113796dc701"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0031/bev.png",
+            "sha256": "61979ff18406a83b8732769f8e0a9e7eb427efe0dddcd0c704639326ffce6fb0"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0031/request.json",
+            "sha256": "bfa9a6c640ef6b18a87181ebd92abfba1fb2e69ea3c286810d4e4be519006f5e"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0031/response.json",
+            "sha256": "ff70d9eddda5075dadf7caea7b1e22319e921007f6df0a614217733653800393"
+          },
+          "rendered_frame_sha256": "ba7da40cd623a367d7837c5105df2f03fe69fe29c2aa3914e547363b7fbc23f1"
+        },
+        {
+          "ordinal": 31,
+          "decision": 32,
+          "observation_frame": 28,
+          "held_object_id": null,
+          "object_nodes": 143,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 136
+            }
+          },
+          "previous_feedback": "Action 28: MoveAhead; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0032/current.png",
+            "sha256": "bba3351c9230a49451369e97dfb918a6caf44eaf60ee2a083d6b25807d41435d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0032/bev.png",
+            "sha256": "365bf0d2e57a44da97f4d5f4f871defbfed985d7393bc8820b4e8a9151917b31"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0032/request.json",
+            "sha256": "080c8f20fa394854c9494c765f649bf01c14b78b96cc6769255f1b242d4481f9"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0032/response.json",
+            "sha256": "64498b2bcfeda686879881d89d48f0e7eb0e3eca6b93265c3759da9924c9e138"
+          },
+          "rendered_frame_sha256": "e8f60bb55c40631aedb19a26dad1126265e7ce7f44b13be8aab00fcfe10aa75c"
+        },
+        {
+          "ordinal": 32,
+          "decision": 33,
+          "observation_frame": 28,
+          "held_object_id": null,
+          "object_nodes": 143,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateRight",
+            "repeat": 1
+          },
+          "previous_feedback": "FMM route has no safe 0.25 m action from this stance; acquire another view.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0033/current.png",
+            "sha256": "bba3351c9230a49451369e97dfb918a6caf44eaf60ee2a083d6b25807d41435d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0033/bev.png",
+            "sha256": "365bf0d2e57a44da97f4d5f4f871defbfed985d7393bc8820b4e8a9151917b31"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0033/request.json",
+            "sha256": "01c4ef3f1f75a9466e21bde2d539191bd2cc8ea3772b88475f587988dbbf55d8"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0033/response.json",
+            "sha256": "1c5e0e16bae9a08958bf6bb354d647970c06e8a175d03902ddafd5e354f7396f"
+          },
+          "rendered_frame_sha256": "e26cf8ee90f81abd7129b6cb15a1d5041cc3455765d5da131e67ac1226b29538"
+        },
+        {
+          "ordinal": 33,
+          "decision": 34,
+          "observation_frame": 29,
+          "held_object_id": null,
+          "object_nodes": 157,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookUp",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 29: RotateRight; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0034/current.png",
+            "sha256": "b839f36157e61a5972e1d1d0594ebcf7e42fe707f7796b4f9a084e880c33810b"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0034/bev.png",
+            "sha256": "2d636b66d7f0fe410fcb2d7fdd00eb273d2d7a9dbe8a28dfd990ab28330ff964"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0034/request.json",
+            "sha256": "8bff892f763a363ac09c79a694896e370cf5d99f1ada179046d5b8cb3416b20d"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0034/response.json",
+            "sha256": "810a0a5cb067a6f6f77d53d2bd433dc7ea01e97ba535a49b65023e11b3b82afb"
+          },
+          "rendered_frame_sha256": "3468e692b3def34a943b5a0f1b6c6e494aebe85e93d85b0158420373a2e3f298"
+        },
+        {
+          "ordinal": 34,
+          "decision": 35,
+          "observation_frame": 30,
+          "held_object_id": null,
+          "object_nodes": 167,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "OpenObject",
+            "target": {
+              "type": "object",
+              "object_id": 159
+            }
+          },
+          "previous_feedback": "Action 30: LookUp; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0035/current.png",
+            "sha256": "56faec4bd0d8ac6e7e74eb335db16c4bffec5f3d8a8f255be29143a41be66fe6"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0035/bev.png",
+            "sha256": "468c4cf2e9373df272f1d1dc1cdf76d3e4675b71a39daf0cb688a62b54d1426e"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0035/request.json",
+            "sha256": "fc3af1a7c49b66588789bc418dddcceb3879fb76b717df24036f440fd2ffb272"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0035/response.json",
+            "sha256": "bd490fac9ce3fffd143fcaa7db43ffd9a69024b23df3263c19e9911058c482e3"
+          },
+          "rendered_frame_sha256": "7d9c636b101a91696f912c36ecc99f65aab1a16ba4d29cf09664ff0a22a2640d"
+        },
+        {
+          "ordinal": 35,
+          "decision": 36,
+          "observation_frame": 31,
+          "held_object_id": null,
+          "object_nodes": 167,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookDown",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 31: OpenObject; object_id=159; success=False; error=object not found: object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0036/current.png",
+            "sha256": "56faec4bd0d8ac6e7e74eb335db16c4bffec5f3d8a8f255be29143a41be66fe6"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0036/bev.png",
+            "sha256": "b6fbc916f8eb0e072e947403d9a3549a44e727aabde9807923841423a0011b74"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0036/request.json",
+            "sha256": "1852841eac52d7c2040a005d9b6bccfd2bcab24ba91af1cf8951e1bf30d56c4d"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0036/response.json",
+            "sha256": "aa86be9bde5402a4943f439fc8750d31ac6f0ed83bf2aab9112182cc84558aea"
+          },
+          "rendered_frame_sha256": "ff32d6af4cd1e61a876d5da74ba64d57ac29dc73a41f73346ce539dfe027b253"
+        },
+        {
+          "ordinal": 36,
+          "decision": 37,
+          "observation_frame": 32,
+          "held_object_id": null,
+          "object_nodes": 167,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 68
+            }
+          },
+          "previous_feedback": "Action 32: LookDown; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0037/current.png",
+            "sha256": "b839f36157e61a5972e1d1d0594ebcf7e42fe707f7796b4f9a084e880c33810b"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0037/bev.png",
+            "sha256": "79cd0ce75bfe40c87a5fd3620cb8c84702ac2235be26a42c6aedad111460ede6"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0037/request.json",
+            "sha256": "c4e92e4a3658c5d11f5abf351999316c17b503ae086aa76500c423c491e2e9ee"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0037/response.json",
+            "sha256": "7030b60b4500fc826d79a4e95688182010ff9c4fcaf9f22d0ea9d8ee4a5053c5"
+          },
+          "rendered_frame_sha256": "503edf9df29792de467d9af6443e278a3c8d1de551f67890792ad66222320503"
+        },
+        {
+          "ordinal": 37,
+          "decision": 38,
+          "observation_frame": 32,
+          "held_object_id": null,
+          "object_nodes": 167,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "OpenObject",
+            "target": {
+              "type": "object",
+              "object_id": 68
+            }
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/current.png",
+            "sha256": "b839f36157e61a5972e1d1d0594ebcf7e42fe707f7796b4f9a084e880c33810b"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/bev.png",
+            "sha256": "79cd0ce75bfe40c87a5fd3620cb8c84702ac2235be26a42c6aedad111460ede6"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/request.json",
+            "sha256": "f78b1e31c44af91e5b977f6c16b16d6f53a203143f9e7180076d21c4bfee59db"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/response.json",
+            "sha256": "404f2f41252bca9f11b8fa7633607b6b4be0037b11c277db4779fbe5ef1349e1"
+          },
+          "rendered_frame_sha256": "b7da662f4738bd3c95e956f573a22f694ffb6e6d5f411ed97facf0c9eed160be"
+        },
+        {
+          "ordinal": 38,
+          "decision": null,
+          "observation_frame": 33,
+          "held_object_id": null,
+          "object_nodes": 167,
+          "upcoming_command": null,
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000033.png",
+            "sha256": "d193e887a0b77c9549ee6ba9d26014a83d894e08b123e3559cbe84c5d43aa870"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/final_bev.png",
+            "sha256": "60ecc1ca895761c9c9c6d9de92e8381c1abfad16030784d627cac130669bf2fd"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            808
+          ],
+          "attempt": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/attempt.json",
+            "sha256": "662045a7ba2a65f14d455cb9d7c4e09ed900073fb36907a2bc7b387898528854"
+          },
+          "execution": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/execution.json",
+            "sha256": "9c6160d32d08d82baf3afe61839ec9b0b5373965c4359e9efcb38ae0cb6f4244"
+          },
+          "rendered_frame_sha256": "bbed21d3e74d08c142b48332b114252cef663f85563c55222ba8aa62162a54c3"
+        }
+      ],
+      "video": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i02_decision_replay.mp4",
+        "sha256": "d78a44f1f21795fabf36ed7f0e277e3455f015237a19a450131665ed634f7430"
+      },
+      "duration_seconds": 39,
+      "encoding_command": [
+        "ffmpeg",
+        "-hide_banner",
+        "-nostdin",
+        "-n",
+        "-framerate",
+        "1",
+        "-i",
+        "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/replay_frames_i02/%04d.png",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "20",
+        "-threads",
+        "2",
+        "-pix_fmt",
+        "yuv420p",
+        "-r",
+        "24",
+        "-movflags",
+        "+faststart",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i02_decision_replay.mp4"
+      ],
+      "ffprobe": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1600,
+            "height": 1080,
+            "r_frame_rate": "24/1",
+            "nb_frames": "936"
+          }
+        ],
+        "format": {
+          "duration": "39.000000"
+        }
+      }
+    },
+    {
+      "run_id": "ALFRED_V9_20261105_pilot15_i03",
+      "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-4/trial_T20190909_164840_568811#2",
+      "decision_count": 60,
+      "frames": [
+        {
+          "ordinal": 0,
+          "decision": 1,
+          "observation_frame": 0,
+          "held_object_id": null,
+          "object_nodes": 6,
+          "upcoming_command": {
+            "kind": "explore"
+          },
+          "previous_feedback": "Initial observation.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0001/current.png",
+            "sha256": "eba9e3622d98359a87aa4aae47efd51376fd5381a32e104da59388bfabf3f390"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0001/bev.png",
+            "sha256": "c9dd777f7884b104b5255b013c30f46cc277a62bf539a695e5ade0e74b620140"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            740,
+            718
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0001/request.json",
+            "sha256": "1fd015c26796ca9cc8b4e782884bea3bf2319bd78f886bc352078b2ce72b8529"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0001/response.json",
+            "sha256": "0a1abfdc2200810b6d5c0adc746c661818ee00cba60bbaf866c7fb506a4e1ba1"
+          },
+          "rendered_frame_sha256": "2e643f53a235a6e50106764420d6ce22805fd67a776a9e7379f7be9aa5c3a126"
+        },
+        {
+          "ordinal": 1,
+          "decision": 2,
+          "observation_frame": 12,
+          "held_object_id": null,
+          "object_nodes": 69,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "PickupObject",
+            "target": {
+              "type": "object",
+              "object_id": 10
+            }
+          },
+          "previous_feedback": "Action 12: RotateRight; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0002/current.png",
+            "sha256": "ff57aa9234598a4d88caaa8050c138f062b6291d92ec7994e1d93a6f2bac637a"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0002/bev.png",
+            "sha256": "1ccc066d7db0c3e34a47d365f86061b547edd4afde1f0a5e1bcfb10deeefc61e"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0002/request.json",
+            "sha256": "678f650cd81ea350a20f06e52d0c5b1d70bbd34eb7f6037435155059aa037811"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0002/response.json",
+            "sha256": "885dc4e6a7a1763d3343b03b7fabf069c668f430db1ccd5bf684cf1b829d3728"
+          },
+          "rendered_frame_sha256": "d07383ee68f16471b140e84e6d635db8339d858315c99b15a609879ea51b12a4"
+        },
+        {
+          "ordinal": 2,
+          "decision": 3,
+          "observation_frame": 13,
+          "held_object_id": null,
+          "object_nodes": 69,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateRight",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 13: PickupObject; object_id=10; success=False; error=object is not visible.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0003/current.png",
+            "sha256": "ff57aa9234598a4d88caaa8050c138f062b6291d92ec7994e1d93a6f2bac637a"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0003/bev.png",
+            "sha256": "2abd883e75ee98c739005cbbf177ce976760fb162edf7640edc065bb9ec36879"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0003/request.json",
+            "sha256": "9c5eeef17bdbae7e393870d7590612f5756bbb6fda144e25280a70b9ea9ccc7f"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0003/response.json",
+            "sha256": "3bec1260ab5286a557f2349abf41160f3654813d89996104da6b4a0b61e412bf"
+          },
+          "rendered_frame_sha256": "b7fe646c6c57777e3ee919b91003408e59e092a71913390eb321cde30a480540"
+        },
+        {
+          "ordinal": 3,
+          "decision": 4,
+          "observation_frame": 14,
+          "held_object_id": null,
+          "object_nodes": 69,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "PickupObject",
+            "target": {
+              "type": "object",
+              "object_id": 48
+            }
+          },
+          "previous_feedback": "Action 14: RotateRight; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/current.png",
+            "sha256": "8cc94e859ce691d35b251ec4b180b2b274c28dbb32c6eb7a951cce2d5bafd029"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/bev.png",
+            "sha256": "362cf8e88ac0f4861b6b542ed23272b04e4d6401b27065451028cc50ae840c62"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/request.json",
+            "sha256": "cdc3407114b8754ea68463883fdd92e177040c3071d410d5eab90c83884327c3"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/response.json",
+            "sha256": "f72379f4514d1ed081acc3abc82d538c456ec338a2afff797328844292ca0991"
+          },
+          "rendered_frame_sha256": "ef7217c4497edd124342619251ea52a3c4a86048d5ba0eeab61a41a97fb35dc4"
+        },
+        {
+          "ordinal": 4,
+          "decision": 5,
+          "observation_frame": 15,
+          "held_object_id": 48,
+          "object_nodes": 79,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "PutObject",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 15: PickupObject; object_id=48; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/current.png",
+            "sha256": "4d3077dc54cb6927069f15a2eafc2fe8540a93ddecd7c33fcce79ef61f2797fc"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/bev.png",
+            "sha256": "958b70ec7763fb444950eaf050855b0c1b4f0867e57b810a2bd30ec445842d56"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/request.json",
+            "sha256": "ac14a5227c363627439063b5e6fa9a11be91ed98a49c58e9c39ff6642919309c"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/response.json",
+            "sha256": "b001fc7f435215518fb8d031eeafcc3b63df44594ed95da3ef85f7f047147e55"
+          },
+          "rendered_frame_sha256": "396341cbc79a9d45a993876dd256b26ac4339d7d4c515f523da1a4ce7d92ee61"
+        },
+        {
+          "ordinal": 5,
+          "decision": 6,
+          "observation_frame": 16,
+          "held_object_id": 48,
+          "object_nodes": 79,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookDown",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 16: PutObject; object_id=36; success=False; error=Bad interact mask. Couldn't locate target object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0006/current.png",
+            "sha256": "4d3077dc54cb6927069f15a2eafc2fe8540a93ddecd7c33fcce79ef61f2797fc"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0006/bev.png",
+            "sha256": "5f9a53a1588dfc0570917ba93a8d5b8f007b2ec1f66b20618fbf616444dad2e6"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0006/request.json",
+            "sha256": "7264e49f50edb01879757561036c979eda7c1c4463920304fda98c96e053473e"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0006/response.json",
+            "sha256": "edd8f9dbe4a7c8e3336a82b556bb3b4bc92bb7f93c1d85f1efd4740e0ff5f90b"
+          },
+          "rendered_frame_sha256": "8742b5c97d4a063454a72cab3d196a3e44cde050dcd397e3e347a93ba948cddc"
+        },
+        {
+          "ordinal": 6,
+          "decision": 7,
+          "observation_frame": 17,
+          "held_object_id": 48,
+          "object_nodes": 86,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 17: LookDown; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0007/current.png",
+            "sha256": "f4c7c7da7008609fc516627073612b5d4e455fa30c02a377724d098ea7596d3e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0007/bev.png",
+            "sha256": "b46a94358b9fefeeefee1ca6992ba80eb9725223f429b516a6744f81ea27fd2f"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0007/request.json",
+            "sha256": "d824533bbe5c263973ea0a6ba06c58c2bf3c460fc9a6ae7bb53d577301d5a429"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0007/response.json",
+            "sha256": "2b78e9b66ee63666f3af89c43992d4dcebd99891489a87c2b1bfe454c56b000f"
+          },
+          "rendered_frame_sha256": "769754a6400c8cb1e64b8e7d44eff981383244967de98d3459928197ed3d8317"
+        },
+        {
+          "ordinal": 7,
+          "decision": 8,
+          "observation_frame": 17,
+          "held_object_id": 48,
+          "object_nodes": 86,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0008/current.png",
+            "sha256": "f4c7c7da7008609fc516627073612b5d4e455fa30c02a377724d098ea7596d3e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0008/bev.png",
+            "sha256": "b46a94358b9fefeeefee1ca6992ba80eb9725223f429b516a6744f81ea27fd2f"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0008/request.json",
+            "sha256": "a1ead782901571392d3ea1c56843ce6d4de293a44423bd834772c91d8b8597e7"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0008/response.json",
+            "sha256": "1858c57e3ec04b2011b3c8aa33e8087206309de42907516014e3a002383231d7"
+          },
+          "rendered_frame_sha256": "e5a8d77e76032b0af1e335ce4512003c50ade17818de12a663eba363b9ba3e5c"
+        },
+        {
+          "ordinal": 8,
+          "decision": 9,
+          "observation_frame": 17,
+          "held_object_id": 48,
+          "object_nodes": 86,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0009/current.png",
+            "sha256": "f4c7c7da7008609fc516627073612b5d4e455fa30c02a377724d098ea7596d3e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0009/bev.png",
+            "sha256": "b46a94358b9fefeeefee1ca6992ba80eb9725223f429b516a6744f81ea27fd2f"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0009/request.json",
+            "sha256": "3ea1451efe05106d816a920e07e5983bbd6c5de187f8ff99ef88cde0a110aa9a"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0009/response.json",
+            "sha256": "674aeefdc094f72c894101794c58eea1a95c5d4e60e2bbe050832c10474ee45f"
+          },
+          "rendered_frame_sha256": "a84f476ec4a7e6a5ed014384abad7a75e57cd0c72fc4b9ecb1ccc4347104e6ee"
+        },
+        {
+          "ordinal": 9,
+          "decision": 10,
+          "observation_frame": 17,
+          "held_object_id": 48,
+          "object_nodes": 86,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0010/current.png",
+            "sha256": "f4c7c7da7008609fc516627073612b5d4e455fa30c02a377724d098ea7596d3e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0010/bev.png",
+            "sha256": "b46a94358b9fefeeefee1ca6992ba80eb9725223f429b516a6744f81ea27fd2f"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0010/request.json",
+            "sha256": "22da7bf8b89015d372066a9efac09ba44b6bb0b8bed040e65139261cee2c9db0"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0010/response.json",
+            "sha256": "30c95731e087afa9e3b19c29d41df6a866858a41625ef28e65d93130ab6e935d"
+          },
+          "rendered_frame_sha256": "814ccff4ef7884e2774f7574e3340761acf5c331dc3088be8c6ba99b2ab088dc"
+        },
+        {
+          "ordinal": 10,
+          "decision": 11,
+          "observation_frame": 17,
+          "held_object_id": 48,
+          "object_nodes": 86,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookUp",
+            "repeat": 1
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0011/current.png",
+            "sha256": "f4c7c7da7008609fc516627073612b5d4e455fa30c02a377724d098ea7596d3e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0011/bev.png",
+            "sha256": "b46a94358b9fefeeefee1ca6992ba80eb9725223f429b516a6744f81ea27fd2f"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0011/request.json",
+            "sha256": "3f301d43865f8c7cb64bd60963f6d0ffaf382bae2c34ba29bb93856c1d7567a0"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0011/response.json",
+            "sha256": "5f64cab834b1529813a38e109b5ae81929fe72fbc23de8c1f9f1e0f33baf22b7"
+          },
+          "rendered_frame_sha256": "5cf6e4cfb7f6bf2acb166c634ab5646e715eb8092db2bcbb75b40ccad1c38888"
+        },
+        {
+          "ordinal": 11,
+          "decision": 12,
+          "observation_frame": 18,
+          "held_object_id": 48,
+          "object_nodes": 86,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "PutObject",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 18: LookUp; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0012/current.png",
+            "sha256": "3c2bf2ecfd2bf23c4095915e339184a4067f6acdaaa16b0a3a9f7ab8d15baae4"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0012/bev.png",
+            "sha256": "8aea31eb593c5af58ad8a85c2a6bfd2ac310cbda1358531c7343c80cf7eb3b3d"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0012/request.json",
+            "sha256": "40ab94b3f5d82667f266571d3c78dc31a6e5c7c52de14682b450383ca7897626"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0012/response.json",
+            "sha256": "b4211865f1ff1c721d2eb79d94c1f660912f7fe266a2dccde607dca007310238"
+          },
+          "rendered_frame_sha256": "ea676c4055490482be3ba7cbc0dce6cd055b50ee1ab33552aadeecb3dea88c63"
+        },
+        {
+          "ordinal": 12,
+          "decision": 13,
+          "observation_frame": 19,
+          "held_object_id": 48,
+          "object_nodes": 86,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookDown",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 19: PutObject; object_id=36; success=False; error=Bad interact mask. Couldn't locate target object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0013/current.png",
+            "sha256": "3c2bf2ecfd2bf23c4095915e339184a4067f6acdaaa16b0a3a9f7ab8d15baae4"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0013/bev.png",
+            "sha256": "f6e86dfbcf90f7dab025552c8ede5417536c363a4c1ef7644a2d22718c1fda94"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0013/request.json",
+            "sha256": "5d650eb179de9458b53215c12a76bcb24b56df501d4836f6337e043b89014406"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0013/response.json",
+            "sha256": "2163095e2d74d32998247cf3eac734f434e1ee017b580925e18e7f1e451cab8b"
+          },
+          "rendered_frame_sha256": "41b1f728281a5c20f3b5aae4ba8f9bfe0be1d85e9a934283cdf77c6f97d9e3ad"
+        },
+        {
+          "ordinal": 13,
+          "decision": 14,
+          "observation_frame": 20,
+          "held_object_id": 48,
+          "object_nodes": 86,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 20: LookDown; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0014/current.png",
+            "sha256": "4bc29f504d4c396be97ba0a4cfcd88f90a64eed16cc7d345e2d9c69b75aa0259"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0014/bev.png",
+            "sha256": "8430dab10c5a9b60daee0a981eb9fa78e39aff9c6914859577e0feec402b11c1"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0014/request.json",
+            "sha256": "48e15a00ec58865f59bd903fbd452293a0d840820785444721c6af7e6c9cc8e3"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0014/response.json",
+            "sha256": "e84915d323a29fb7aa82c15b3b8cf8e1ac3a5743066c5e825406d19859233116"
+          },
+          "rendered_frame_sha256": "992d28cbbb3eb79188208dee98267d59486ed40745555bc3fe8ca0074e6a173c"
+        },
+        {
+          "ordinal": 14,
+          "decision": 15,
+          "observation_frame": 20,
+          "held_object_id": 48,
+          "object_nodes": 86,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 45
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0015/current.png",
+            "sha256": "4bc29f504d4c396be97ba0a4cfcd88f90a64eed16cc7d345e2d9c69b75aa0259"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0015/bev.png",
+            "sha256": "8430dab10c5a9b60daee0a981eb9fa78e39aff9c6914859577e0feec402b11c1"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0015/request.json",
+            "sha256": "0d0724963800e18e443d7c8502da4e6e6a6a9490e2a9b41ce0ae964dcd803b4d"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0015/response.json",
+            "sha256": "af50a3b11ffa0b502dab52d310baaaa2285af00a69d11f5f6aa259df6c5c8d92"
+          },
+          "rendered_frame_sha256": "36a5687c59ce2fad8cb08973c87e1536169adbcf73fb5ba0852123a270b0bc56"
+        },
+        {
+          "ordinal": 15,
+          "decision": 16,
+          "observation_frame": 22,
+          "held_object_id": 48,
+          "object_nodes": 95,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "PutObject",
+            "target": {
+              "type": "object",
+              "object_id": 94
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0016/current.png",
+            "sha256": "424a51af1cc80519a88aca6449e469a112756e6eb2db7c252dafe7dd2547d070"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0016/bev.png",
+            "sha256": "08a2f736c75cfff76eab53f67c9f38c44441056fed3ea560413c09b1460e9118"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0016/request.json",
+            "sha256": "d4f8bb25597b30839a2ac8fa3cc7590595cfc3482769501b02e69132ffcc5db2"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0016/response.json",
+            "sha256": "1f82997b09e4fd995529c9ac04dabdc9ca691a0af1adc96808d0a13e56e8414b"
+          },
+          "rendered_frame_sha256": "a9787a921c9f0fa1d88e7a3075c20ea59d019ccccf15c6ef06793d4156f984af"
+        },
+        {
+          "ordinal": 16,
+          "decision": 17,
+          "observation_frame": 23,
+          "held_object_id": 48,
+          "object_nodes": 95,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "PutObject",
+            "target": {
+              "type": "object",
+              "object_id": 20
+            }
+          },
+          "previous_feedback": "Action 23: PutObject; object_id=94; success=False; error=This target object is NOT a receptacle!",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0017/current.png",
+            "sha256": "424a51af1cc80519a88aca6449e469a112756e6eb2db7c252dafe7dd2547d070"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0017/bev.png",
+            "sha256": "84d255438eeeaf3efa80614c454bc9ac9077734d540333248cda418498d115b9"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0017/request.json",
+            "sha256": "f5711c3c66d6cafee7db0a102d8550a4a823763d53de240826fa46d4244b01d0"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0017/response.json",
+            "sha256": "b8802f368de6e7845439b81fdf29596f7d3192e2a668f0e236e4cf278d206386"
+          },
+          "rendered_frame_sha256": "b0fbff8862a92b2d84648fbdd210eb5eec322fd92cb1ee4cc9dd46a139e593d1"
+        },
+        {
+          "ordinal": 17,
+          "decision": 18,
+          "observation_frame": 24,
+          "held_object_id": 48,
+          "object_nodes": 95,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 20
+            }
+          },
+          "previous_feedback": "Action 24: PutObject; object_id=20; success=False; error=No valid positions to place object found",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0018/current.png",
+            "sha256": "424a51af1cc80519a88aca6449e469a112756e6eb2db7c252dafe7dd2547d070"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0018/bev.png",
+            "sha256": "db2ec033e6718edf2258214315a4068cca19b3ce4174e55b688096997bec456f"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0018/request.json",
+            "sha256": "a54e45cc80f408e9e49476e791f36dc1bf141969d58628dbf22d5a5674f14431"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0018/response.json",
+            "sha256": "dbc64a1c61508428abfda52a9e6aef23e5df572cfadbf46bbd5cd48e293c193a"
+          },
+          "rendered_frame_sha256": "3e7f14ea63624b071ab529977e64ef7ec16de118183731ce894faae264b073f3"
+        },
+        {
+          "ordinal": 18,
+          "decision": 19,
+          "observation_frame": 24,
+          "held_object_id": 48,
+          "object_nodes": 95,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateRight",
+            "repeat": 1
+          },
+          "previous_feedback": "FMM route has no safe 0.25 m action from this stance; acquire another view.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0019/current.png",
+            "sha256": "424a51af1cc80519a88aca6449e469a112756e6eb2db7c252dafe7dd2547d070"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0019/bev.png",
+            "sha256": "db2ec033e6718edf2258214315a4068cca19b3ce4174e55b688096997bec456f"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0019/request.json",
+            "sha256": "c3f33ed1b37055bd06558a8f90cf4209a9fa6bcbce6193e0e572db419aa180f1"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0019/response.json",
+            "sha256": "4d871a0c6a8488b0a057b34c1d45a4034b41ed04d41497c3f17b6174c65db28d"
+          },
+          "rendered_frame_sha256": "bc6bc111ed47f1ce8d210fd8295483a762ba18cffff4c40f1b898d7e3daaf96d"
+        },
+        {
+          "ordinal": 19,
+          "decision": 20,
+          "observation_frame": 25,
+          "held_object_id": 48,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "PutObject",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 25: RotateRight; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0020/current.png",
+            "sha256": "f5bcd5c1158c384da49b9da19669f8185d0af65dc5f1c7edfcbc6681d98cec68"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0020/bev.png",
+            "sha256": "652189d0ac8654983471af3ae1f3bf3fba6a1ff537f9e959bcf88ebc4a3b8807"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0020/request.json",
+            "sha256": "69797d1c80cdd61369049a57306c64c5b5c79cb9c4a1578c1134a300c3c8bdf9"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0020/response.json",
+            "sha256": "357dc7938cd484b1306d7dbc4d9ad6e798fe3fd4a10a3ac3a8bc08620796e91e"
+          },
+          "rendered_frame_sha256": "ca6b9b7a3bdb418840854d6e25531c1b15c5473d194d97773f99e098ef9809d6"
+        },
+        {
+          "ordinal": 20,
+          "decision": 21,
+          "observation_frame": 26,
+          "held_object_id": 48,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 26: PutObject; object_id=36; success=False; error=Bad interact mask. Couldn't locate target object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0021/current.png",
+            "sha256": "f5bcd5c1158c384da49b9da19669f8185d0af65dc5f1c7edfcbc6681d98cec68"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0021/bev.png",
+            "sha256": "cd996e601a4517c3ffb9d16a8246cee73960ea115cb63ad90b80bb5bb41fc17a"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0021/request.json",
+            "sha256": "95d27f8aa69ab3309bf86864d97e1068de3630769802fadcd00f90998163385d"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0021/response.json",
+            "sha256": "9dc5a7c6c7bf0260da99ca253d972118da3e6871750022d45e56db04adc41321"
+          },
+          "rendered_frame_sha256": "c000e9acea0046c0a513e7a17674233e2e772535050e787f5ac33efe61e9f06a"
+        },
+        {
+          "ordinal": 21,
+          "decision": 22,
+          "observation_frame": 27,
+          "held_object_id": 48,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateLeft",
+            "repeat": 1
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0022/current.png",
+            "sha256": "4a82d116bdcd83d2b763e40c14e32ef0bca512abcff44f569d924fe6d40161b1"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0022/bev.png",
+            "sha256": "546a60e8313f1956e9853dd955df74c51da3762617cf34f0f85a6caec4951956"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0022/request.json",
+            "sha256": "8dfd66724f14df8db81f486e4bdee20b25ae87fe5bd7b55f8a38125b7d81cebf"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0022/response.json",
+            "sha256": "65d8d1523c5b71af4991bd9f8b6c7980f2ba4df91c324d09312c6b0e63ab382c"
+          },
+          "rendered_frame_sha256": "8a55257c52c5c6e11dec25ff46a67195d071f23622b21c15d4c2b4572057de35"
+        },
+        {
+          "ordinal": 22,
+          "decision": 23,
+          "observation_frame": 28,
+          "held_object_id": 48,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 89
+            }
+          },
+          "previous_feedback": "Action 28: RotateLeft; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0023/current.png",
+            "sha256": "5468251e8a719e3a2fc9be88e15dbeef34ad97ffa820b8f0d21aeb637ec92ce5"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0023/bev.png",
+            "sha256": "d9b68cab0a8c024b019e7d2c5b043b69b2a44029303a8c8abedd229237daaa96"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0023/request.json",
+            "sha256": "c1e83134a04f355fd023ea0fd6320b3c93dcb4268870c0ad175eaf1198c8a6c8"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0023/response.json",
+            "sha256": "a3846688dfa9849449888022f8146a591ec148fb71f2eb1935ee87ff918961ac"
+          },
+          "rendered_frame_sha256": "7ea5f92fb6aa29bfdbfa4c789de1011cfc0a4148440f23e5f597df14696dca03"
+        },
+        {
+          "ordinal": 23,
+          "decision": 24,
+          "observation_frame": 28,
+          "held_object_id": 48,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateRight",
+            "repeat": 1
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0024/current.png",
+            "sha256": "5468251e8a719e3a2fc9be88e15dbeef34ad97ffa820b8f0d21aeb637ec92ce5"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0024/bev.png",
+            "sha256": "d9b68cab0a8c024b019e7d2c5b043b69b2a44029303a8c8abedd229237daaa96"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0024/request.json",
+            "sha256": "d91aab5b5595148804ee6e4582e514b776856195d53e0f19c0429ae049f70767"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0024/response.json",
+            "sha256": "ad4317004632dfcd615a6200254a49340ea7b40cb4d49247ed8f9ba0df8ffe67"
+          },
+          "rendered_frame_sha256": "7e0da41f3c264b0ca081895f36db0f860e689c9d4f24740367cc30d89de4f467"
+        },
+        {
+          "ordinal": 24,
+          "decision": 25,
+          "observation_frame": 29,
+          "held_object_id": 48,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 89
+            }
+          },
+          "previous_feedback": "Action 29: RotateRight; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0025/current.png",
+            "sha256": "713d50435e6970c714b2d6ed448fd6c04c4c850a334504c72bd98219255e23e0"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0025/bev.png",
+            "sha256": "2f007adc449001c97ef462c389e4d36c43e77d396634335dddcf1950e01e7ba0"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0025/request.json",
+            "sha256": "60fe23a01b8a456b116f9fb8fa2ff16064e5bb3aa9d158b1d032a98cd56c62b8"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0025/response.json",
+            "sha256": "fce689d81dbb5c41c06a2d23d791d19023e015eefb9b994f33d19bb1d23d54d0"
+          },
+          "rendered_frame_sha256": "dd563023afe00685726effb4232b015d085ae535027f322a76de93e5132c3d0a"
+        },
+        {
+          "ordinal": 25,
+          "decision": 26,
+          "observation_frame": 29,
+          "held_object_id": 48,
+          "object_nodes": 96,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookDown",
+            "repeat": 1
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0026/current.png",
+            "sha256": "713d50435e6970c714b2d6ed448fd6c04c4c850a334504c72bd98219255e23e0"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0026/bev.png",
+            "sha256": "2f007adc449001c97ef462c389e4d36c43e77d396634335dddcf1950e01e7ba0"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0026/request.json",
+            "sha256": "8d36b7c3acfc79921b75fa732b72f623b9e16a39de4ea411a95fb181a4947189"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0026/response.json",
+            "sha256": "b87f7d0d68c83fa16edd2dfc094a4ddc6bf6205aa3b7d1f927f9b22db58e2afd"
+          },
+          "rendered_frame_sha256": "11aaffce301678004736dc1bbad27e61efb46822a85d24159f0a2d00836c83c3"
+        },
+        {
+          "ordinal": 26,
+          "decision": 27,
+          "observation_frame": 30,
+          "held_object_id": 48,
+          "object_nodes": 107,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 30: LookDown; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0027/current.png",
+            "sha256": "f7bb6946266be426c65f51381d411a764baa460cd378080eb669bff177f7526e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0027/bev.png",
+            "sha256": "d98e2bf1eeff3b9409ac85b0d0caef391761b70e4959e692d72378531ff01418"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0027/request.json",
+            "sha256": "13f5997eb7eaf3d3638c6a5fd3da04d70c6bb82232d1ac849f8e51dae0f47eac"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0027/response.json",
+            "sha256": "a1ccba1fc50ca6664e8f6696df0c198453a7bd503f78d8bc32f993cb2c729dc2"
+          },
+          "rendered_frame_sha256": "de3f4500e5718a7a9792538191cdd4bb398991a66bf434c1a9fc93b8787f0446"
+        },
+        {
+          "ordinal": 27,
+          "decision": 28,
+          "observation_frame": 30,
+          "held_object_id": 48,
+          "object_nodes": 107,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookUp",
+            "repeat": 1
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0028/current.png",
+            "sha256": "f7bb6946266be426c65f51381d411a764baa460cd378080eb669bff177f7526e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0028/bev.png",
+            "sha256": "d98e2bf1eeff3b9409ac85b0d0caef391761b70e4959e692d72378531ff01418"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0028/request.json",
+            "sha256": "b4316b274700b8ae3bcfa130fe2c2ee21add35706e0e5ee2caf6f03ec8924841"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0028/response.json",
+            "sha256": "84a3cb7ba1709d598089402ac8a39e781690f03982b69aad1382f98a5dc1743e"
+          },
+          "rendered_frame_sha256": "5d29ffda19e1dce8f7de075d92cba5f476b3ccf6e5704d90222bfd1aa091605d"
+        },
+        {
+          "ordinal": 28,
+          "decision": 29,
+          "observation_frame": 31,
+          "held_object_id": 48,
+          "object_nodes": 107,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookDown",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 31: LookUp; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0029/current.png",
+            "sha256": "40138a1c3b4c9e3d10c44b8fccc237d44b82a098a1d87a38efb0b55c48053a11"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0029/bev.png",
+            "sha256": "1383a0ea99231cfff26dfcf6abd6a3854d0b66b0e7b47695f489246a9f65af6f"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0029/request.json",
+            "sha256": "6eb7a96cfecf32d4ec65fef0c1ec8f96a0ed010909d42f44577df5a17eda1105"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0029/response.json",
+            "sha256": "7df22af0944c9cdff24adaa148d09224da8b12a4aab4b1177a34c5a506b5c604"
+          },
+          "rendered_frame_sha256": "555f03c28c76437743212ea7c077d4aa6dde8fa861927081482160ee127045ec"
+        },
+        {
+          "ordinal": 29,
+          "decision": 30,
+          "observation_frame": 32,
+          "held_object_id": 48,
+          "object_nodes": 107,
+          "upcoming_command": {
+            "kind": "interact",
+            "interaction_action": "PutObject",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 32: LookDown; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0030/current.png",
+            "sha256": "f7bb6946266be426c65f51381d411a764baa460cd378080eb669bff177f7526e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0030/bev.png",
+            "sha256": "d77a37ac50f95d408138c8e11af49be3f20c17f5dcfafae7d0e0e2e580f9e83a"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0030/request.json",
+            "sha256": "161bbf4923178501d74525f1d9cab6f98e63b414b7508582b306475d876c2adc"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0030/response.json",
+            "sha256": "8365dee5310c991c0582b0e31422ec09d4d4362c7f55e01a90e5aa6b7f79b793"
+          },
+          "rendered_frame_sha256": "84e9ef36a94fef4cfc04c0fa5c56ca506e813d0c1ee2c982f3d6f38809527b0e"
+        },
+        {
+          "ordinal": 30,
+          "decision": 31,
+          "observation_frame": 33,
+          "held_object_id": 48,
+          "object_nodes": 107,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 94
+            }
+          },
+          "previous_feedback": "Action 33: PutObject; object_id=36; success=False; error=Bad interact mask. Couldn't locate target object",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0031/current.png",
+            "sha256": "f7bb6946266be426c65f51381d411a764baa460cd378080eb669bff177f7526e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0031/bev.png",
+            "sha256": "01cc27f0bf8542d522f2a34d590daf3d711cef10455a3197939a19b286a47388"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0031/request.json",
+            "sha256": "ed7ae18aa02eaa0185bc30de2ff9ff8291a2b2540e439c46d008fbf1d7881e0e"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0031/response.json",
+            "sha256": "a1a191cf9e08bf775cb4f46b352f8ab0db75e8efaac1dd2dbfeca502061926dd"
+          },
+          "rendered_frame_sha256": "d3f8b6c0e2e63414a49683b03247b82fce93c91a7fe470fc3116bdc825aa745f"
+        },
+        {
+          "ordinal": 31,
+          "decision": 32,
+          "observation_frame": 33,
+          "held_object_id": 48,
+          "object_nodes": 107,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookUp",
+            "repeat": 1
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0032/current.png",
+            "sha256": "f7bb6946266be426c65f51381d411a764baa460cd378080eb669bff177f7526e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0032/bev.png",
+            "sha256": "01cc27f0bf8542d522f2a34d590daf3d711cef10455a3197939a19b286a47388"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0032/request.json",
+            "sha256": "bb5014bac3419128bc73f7e962de46192fa452950ed886ee9611862024efe34e"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0032/response.json",
+            "sha256": "d5d3048aa376476c09e8bcd620ab81627f29dc2930d40eb92b0150208c3bd89d"
+          },
+          "rendered_frame_sha256": "72ae250e7712b67970119477212429848eabacef59e2d72bdaf710eddfe9f626"
+        },
+        {
+          "ordinal": 32,
+          "decision": 33,
+          "observation_frame": 34,
+          "held_object_id": 48,
+          "object_nodes": 107,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookUp",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 34: LookUp; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0033/current.png",
+            "sha256": "40138a1c3b4c9e3d10c44b8fccc237d44b82a098a1d87a38efb0b55c48053a11"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0033/bev.png",
+            "sha256": "fce6ad315437445958f88f0b496638d8d29c51afcbab620305e858b84bcd3a9d"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0033/request.json",
+            "sha256": "7da01c74b12d557869d282139217318533140de33d2f47ec3893159661a529c6"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0033/response.json",
+            "sha256": "3de2a70e70854a34af45c4b3f2fd767907e025a507fdbe01d93e455add376c62"
+          },
+          "rendered_frame_sha256": "fe9ec06a4e560a0055395fb01c3047a825e0ae31fb9bd053616f430f6d6f47cb"
+        },
+        {
+          "ordinal": 33,
+          "decision": 34,
+          "observation_frame": 35,
+          "held_object_id": 48,
+          "object_nodes": 107,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookUp",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 35: LookUp; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0034/current.png",
+            "sha256": "b14b26b790e88bd4ce679ba6f927b2851fb83eed256c7419e10fde8dd078708e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0034/bev.png",
+            "sha256": "788b47fb15d213df97a5fc6e76f0741ffecc26c99f54630e27744efeeb3da780"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0034/request.json",
+            "sha256": "4d2c4a6b05286e034cbb47f4f1b6b9a5d3ebffe8db2af43d54133cdba86f2363"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0034/response.json",
+            "sha256": "45cb1226f8988472b6b255d940962d19e36956b6d911c4d3bea6ff16136918ba"
+          },
+          "rendered_frame_sha256": "1fb5cbcc5c0b63e139c755edcb9819264ce08c81f29874ff4e544bc0e8367e8e"
+        },
+        {
+          "ordinal": 34,
+          "decision": 35,
+          "observation_frame": 36,
+          "held_object_id": 48,
+          "object_nodes": 115,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 94
+            }
+          },
+          "previous_feedback": "Action 36: LookUp; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0035/current.png",
+            "sha256": "a1a6b5b0fd873150597c713c4671d11361de89e6b472f23de3fab09c63d48a8d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0035/bev.png",
+            "sha256": "32e0ef31a06f327ab14e43b290d841c413f78c313cb9bc77044a11d31e9aec58"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0035/request.json",
+            "sha256": "ff3b9c47a3573053a096f6ba293d332c66c73ff31b9c29cf5ae41c6a625bb2bc"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0035/response.json",
+            "sha256": "83b1a9ccc608c968a3bda702251deff66caf4372e3a199d70482e3c4188cb471"
+          },
+          "rendered_frame_sha256": "71b5471ee8b6e978ebcc72926288ce27d02231f0db33ef15252c16ba818cfe5c"
+        },
+        {
+          "ordinal": 35,
+          "decision": 36,
+          "observation_frame": 36,
+          "held_object_id": 48,
+          "object_nodes": 115,
+          "upcoming_command": {
+            "kind": "explore"
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0036/current.png",
+            "sha256": "a1a6b5b0fd873150597c713c4671d11361de89e6b472f23de3fab09c63d48a8d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0036/bev.png",
+            "sha256": "32e0ef31a06f327ab14e43b290d841c413f78c313cb9bc77044a11d31e9aec58"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0036/request.json",
+            "sha256": "990f75aa1a9adce312f00bd18d6542e4529848d112b8ae89f41ca5395cc3e82c"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0036/response.json",
+            "sha256": "219eb686a878ac86a47a2d76a1790d648b0a9d77e3f9cbccf0df41520deae009"
+          },
+          "rendered_frame_sha256": "10bace409591b45c78b05c7dd56442642faa30f108bdc2f7428a8ae06e3d1fd0"
+        },
+        {
+          "ordinal": 36,
+          "decision": 37,
+          "observation_frame": 48,
+          "held_object_id": 48,
+          "object_nodes": 161,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 48: RotateRight; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0037/current.png",
+            "sha256": "9ad7abbfc3de34e5647fabff304b98259d7155f0e5075078dc6eea9f57a6b04b"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0037/bev.png",
+            "sha256": "dc07bf5626e093ddf61c300a96c894b6bb59549f5a056e3113cf97ae7e9da731"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0037/request.json",
+            "sha256": "25456d054d5f29e0e6ae01768a23bded949955280306b47bcaca9034270f3870"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0037/response.json",
+            "sha256": "598a274c9e42d360271e2317857900595acecde34db487b253e954cbdb2c648e"
+          },
+          "rendered_frame_sha256": "fde759b57c470220384dd673dc6b90f20650c0c0b3d6318ee1063d75b6e96ed0"
+        },
+        {
+          "ordinal": 37,
+          "decision": 38,
+          "observation_frame": 50,
+          "held_object_id": 48,
+          "object_nodes": 162,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0038/current.png",
+            "sha256": "06e27561d8b704923760e1e96dc91fe37431517b9363e5f1b72821ab92cd0ba8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0038/bev.png",
+            "sha256": "2c8d07c6ce7e0bf41143023870a9ebf8ab357b89de1a566e12e2e7e1fffb5673"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0038/request.json",
+            "sha256": "f45132d8e499f934e2dd2202b8ed73e8e4865bc434dad4a96e417ee745b2192d"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0038/response.json",
+            "sha256": "eadd6c837be7e0f84b9bf282f58e16df6abd56fb23c54132dbcc1f92e08c0658"
+          },
+          "rendered_frame_sha256": "d25b3deeee64357d34a1bc52f20bf4de0124b510fc0f90efc750fd8c4efb10ef"
+        },
+        {
+          "ordinal": 38,
+          "decision": 39,
+          "observation_frame": 50,
+          "held_object_id": 48,
+          "object_nodes": 162,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0039/current.png",
+            "sha256": "06e27561d8b704923760e1e96dc91fe37431517b9363e5f1b72821ab92cd0ba8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0039/bev.png",
+            "sha256": "2c8d07c6ce7e0bf41143023870a9ebf8ab357b89de1a566e12e2e7e1fffb5673"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0039/request.json",
+            "sha256": "5373adaa630b522f9c3defc1c2a1a34332c4fac2a931321791142bd07b9ddffe"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0039/response.json",
+            "sha256": "879a8249b95fc39c9109aa89b89b88ddb80ca460e6eaf1b05765836874348717"
+          },
+          "rendered_frame_sha256": "d150f19a729f815cd15a646a5ed783a10883afa9a99b0299341c0616a0c35ef8"
+        },
+        {
+          "ordinal": 39,
+          "decision": 40,
+          "observation_frame": 50,
+          "held_object_id": 48,
+          "object_nodes": 162,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 94
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0040/current.png",
+            "sha256": "06e27561d8b704923760e1e96dc91fe37431517b9363e5f1b72821ab92cd0ba8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0040/bev.png",
+            "sha256": "2c8d07c6ce7e0bf41143023870a9ebf8ab357b89de1a566e12e2e7e1fffb5673"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0040/request.json",
+            "sha256": "a5e082492acb9b47dc38a26cbe5a836ad8f7e02fedeb63ec156b7943c88f6e95"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0040/response.json",
+            "sha256": "9bc6787409029df74481ea901165546e755f3cc8c9be0b0ae52d3b9760df662b"
+          },
+          "rendered_frame_sha256": "3adce3f9c94314c20a7b0a7ba4c6a2f804f8c89730a882ffa6d71376ddd36db2"
+        },
+        {
+          "ordinal": 40,
+          "decision": 41,
+          "observation_frame": 50,
+          "held_object_id": 48,
+          "object_nodes": 162,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateRight",
+            "repeat": 1
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0041/current.png",
+            "sha256": "06e27561d8b704923760e1e96dc91fe37431517b9363e5f1b72821ab92cd0ba8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0041/bev.png",
+            "sha256": "2c8d07c6ce7e0bf41143023870a9ebf8ab357b89de1a566e12e2e7e1fffb5673"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0041/request.json",
+            "sha256": "3497e5d75d707c62cfa24bbd3399e0af8ca348ef38f6cce092b846ad7fa9c576"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0041/response.json",
+            "sha256": "e89428e7e776a0d160e173edbdf5a5daf8f271b081cc7a63a19fd72d72e823d8"
+          },
+          "rendered_frame_sha256": "1662b6d452574fda3e212f2c8b4190d2b5f731b5c3aa86882c9b77d2699f34e0"
+        },
+        {
+          "ordinal": 41,
+          "decision": 42,
+          "observation_frame": 51,
+          "held_object_id": 48,
+          "object_nodes": 162,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookDown",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 51: RotateRight; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0042/current.png",
+            "sha256": "49521a342f5bcfe0115f922f882a386ee261677856b38905065a6150259cfd0b"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0042/bev.png",
+            "sha256": "a13cf2c959f6a6d4a8c626d1e81b0066603f34c9dcb9d9c81122a6296e9a828c"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0042/request.json",
+            "sha256": "43397e34db6f07444f23747878a26be395ffc9b13c8ec79f8e84f8dab3029e41"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0042/response.json",
+            "sha256": "3a847686dbe1eac66f0427decdf95915f1a1c266b506b09681db012461e0d8e9"
+          },
+          "rendered_frame_sha256": "a8dc39cf607c5bcb0cffd42517cc74b89b56397d7913a96c89838d3beabfbb5a"
+        },
+        {
+          "ordinal": 42,
+          "decision": 43,
+          "observation_frame": 52,
+          "held_object_id": 48,
+          "object_nodes": 167,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 52: LookDown; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0043/current.png",
+            "sha256": "9f7b50dac5f1ce9614d7c0f69342678716e11985698f509046da187b333efe84"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0043/bev.png",
+            "sha256": "1f2d240f91b355be75fdde92c73a567678fbd3cfca515d8b10e9ff8aa7520f43"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0043/request.json",
+            "sha256": "e8bb3a3388ead865234167c0144c143ff10e896e9f2a2d6d40834dcdd115b7b2"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0043/response.json",
+            "sha256": "989c4284cde8aa72dba603de5260c65214c732dd0db0faad687722e00193c442"
+          },
+          "rendered_frame_sha256": "8bf8e29387f4b6b80e4be607c81cef386322b79fc1a6aaa14ca9879bcd00c8dd"
+        },
+        {
+          "ordinal": 43,
+          "decision": 44,
+          "observation_frame": 53,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "LookUp",
+            "repeat": 1
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0044/current.png",
+            "sha256": "d92530eeafa3b8dda5795c774758f66316b0069475f3657fcb02dc98f91ab105"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0044/bev.png",
+            "sha256": "4b40680c9815137c958d9b1a4c31e61ab11d71eca62988fd94db0644584c6159"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0044/request.json",
+            "sha256": "48a3bd81ee0589b8a15f67c61e047debec0ca610c27be31c31ab204627abc425"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0044/response.json",
+            "sha256": "5c13d8f8fa781bd67205e0ae12d02e910d359ecdb1e9260c9b2b527e5e04ac91"
+          },
+          "rendered_frame_sha256": "09cab866b8362c473762e71be252d2b5bfd3ac3ef8757cba39f26b50a2156d19"
+        },
+        {
+          "ordinal": 44,
+          "decision": 45,
+          "observation_frame": 54,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateLeft",
+            "repeat": 1
+          },
+          "previous_feedback": "Action 54: LookUp; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0045/current.png",
+            "sha256": "38ea9d33aee9e2022d8890e2a3b87be2f744475e43c6981873eef308bdd22e29"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0045/bev.png",
+            "sha256": "c2f1c7f21dfbe2deabfabe7018af15ba62378ff1116051939b5fc62ed8a5cc11"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0045/request.json",
+            "sha256": "49b0cef3dbd82286afffdf0ad41f4dd3f6a1c4dae76d8aa3ac4160bd8d39872e"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0045/response.json",
+            "sha256": "cde2349f865fb2f1984fc6fa1dc5345f8791808471b689a7b3f1bc6e94c2907f"
+          },
+          "rendered_frame_sha256": "8a567d1c7f764b83476cc585fe49bc42439e96996b059dae59a712da96d1dc1f"
+        },
+        {
+          "ordinal": 45,
+          "decision": 46,
+          "observation_frame": 55,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 94
+            }
+          },
+          "previous_feedback": "Action 55: RotateLeft; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0046/current.png",
+            "sha256": "bdfc5a5c3635085d27ea5a6b75e5de4aa5af935c406bf1f794c4779eaed3b98e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0046/bev.png",
+            "sha256": "10dca8bb3349cd50222660314dbf866123a64ae677119de1284bec39dec5706c"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0046/request.json",
+            "sha256": "d8910ebdfb13b602d97a6198777666d18e59ccf93d7a59d5af23968626bd8ee5"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0046/response.json",
+            "sha256": "2ad4102fd7464cda0b1a5270b1da8cc0fea409f3db82d254c1e68d1fb4983c2c"
+          },
+          "rendered_frame_sha256": "a038e3cb65f4005e8dbd2b71b1070ebeefce5a57244a5b81b3934d836b002077"
+        },
+        {
+          "ordinal": 46,
+          "decision": 47,
+          "observation_frame": 55,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0047/current.png",
+            "sha256": "bdfc5a5c3635085d27ea5a6b75e5de4aa5af935c406bf1f794c4779eaed3b98e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0047/bev.png",
+            "sha256": "10dca8bb3349cd50222660314dbf866123a64ae677119de1284bec39dec5706c"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0047/request.json",
+            "sha256": "6fbffc3b586f16ca054e131e0e8acd028d8c2553e0d64f07a3d7f7f43897389b"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0047/response.json",
+            "sha256": "5e74c5906935ab3228feb9caf876afad948e8f8f5bf0f854f27cdc577c2fd389"
+          },
+          "rendered_frame_sha256": "6487addb61a5e2fd3c0550161d6b5c3553e595bcf93d8f37d55a1b275c02b8e8"
+        },
+        {
+          "ordinal": 47,
+          "decision": 48,
+          "observation_frame": 56,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0048/current.png",
+            "sha256": "25a30f5a27d0bbfdfdec1f6c0ee617ad7322ac3c4a4da2e39fba19413f053692"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0048/bev.png",
+            "sha256": "52ffb9dc979c72925e1886639e6127772b5ade245981dcc8d7f9bf3ba343293a"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0048/request.json",
+            "sha256": "e06000e1a5393860dc49023d217ac7c6345bd1fc4ddeaaa362deba7a71936ef6"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0048/response.json",
+            "sha256": "70921ea7dcff4454e95c6e74b3f4687dd15205dd86b378194bd535818af226b9"
+          },
+          "rendered_frame_sha256": "a5442a478fd372da47456672efd953289fa5f606e3af8d75cee429792bdd6049"
+        },
+        {
+          "ordinal": 48,
+          "decision": 49,
+          "observation_frame": 56,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateRight",
+            "repeat": 1
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0049/current.png",
+            "sha256": "25a30f5a27d0bbfdfdec1f6c0ee617ad7322ac3c4a4da2e39fba19413f053692"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0049/bev.png",
+            "sha256": "52ffb9dc979c72925e1886639e6127772b5ade245981dcc8d7f9bf3ba343293a"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0049/request.json",
+            "sha256": "6583eea6a0238930cdfdf9940b60ca8f3cca091d5051e8186434aa810b668b99"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0049/response.json",
+            "sha256": "75635de80590bfe9faf77e5a28b4bdd76f1e498fc3bc0e092dfa67de3cfe4299"
+          },
+          "rendered_frame_sha256": "235d685d95bab3535fc5db0f1ba04bd99612b8720ac13b59cfd67b4a6b632ee6"
+        },
+        {
+          "ordinal": 49,
+          "decision": 50,
+          "observation_frame": 57,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 57: RotateRight; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0050/current.png",
+            "sha256": "49521a342f5bcfe0115f922f882a386ee261677856b38905065a6150259cfd0b"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0050/bev.png",
+            "sha256": "be0bc4e1c2be97285610627318edf67fa69f17da71beea7e36acfc140a5e1c72"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0050/request.json",
+            "sha256": "c1b34df0dbdfd2d7a8bf009f0718602f71d04f60b6caea0c6a148a98aedcbe8b"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0050/response.json",
+            "sha256": "3dcbbb6baf6a719afb7ed688f5cb4bfa41f7d4971f47054599fb8b59a653d9d8"
+          },
+          "rendered_frame_sha256": "350ee8f2fcfc54d40833f14ca4b60bdc8f9b891698b69d11299ce5ef27065946"
+        },
+        {
+          "ordinal": 50,
+          "decision": 51,
+          "observation_frame": 58,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 94
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0051/current.png",
+            "sha256": "06e27561d8b704923760e1e96dc91fe37431517b9363e5f1b72821ab92cd0ba8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0051/bev.png",
+            "sha256": "a9a1d5aaf5e61c06cc1330749e73b6d114cf732ff01e2aa57007d89695419316"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0051/request.json",
+            "sha256": "c593688d03a1b63382825436668ed4b128f64eb76a16e58633dd33572f3c8903"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0051/response.json",
+            "sha256": "0ece972925906de5ec88b9b93261faf80dcd43b19afb72ac395ace8cdba02806"
+          },
+          "rendered_frame_sha256": "7580a98541d72f48540cd660b5aa1dac8be2de3f6d69e940ce0d8590f912321e"
+        },
+        {
+          "ordinal": 51,
+          "decision": 52,
+          "observation_frame": 58,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "retrieve",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0052/current.png",
+            "sha256": "06e27561d8b704923760e1e96dc91fe37431517b9363e5f1b72821ab92cd0ba8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0052/bev.png",
+            "sha256": "a9a1d5aaf5e61c06cc1330749e73b6d114cf732ff01e2aa57007d89695419316"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0052/request.json",
+            "sha256": "3d6cfebf2722449348ed2af19b78a0dd526acb70158c3feae350e98dd770a5ba"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0052/response.json",
+            "sha256": "702e3c09ad783aec33599007d9b5a16fc3a0b22977c740af8b9a606f4eb38dbb"
+          },
+          "rendered_frame_sha256": "5764352568d72d9c88d9398d21477b606a8e29c661dbfbfe033adf28578cc9d0"
+        },
+        {
+          "ordinal": 52,
+          "decision": 53,
+          "observation_frame": 58,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Retrieved observed frames [6, 33, 35]; no action performed.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0053/current.png",
+            "sha256": "06e27561d8b704923760e1e96dc91fe37431517b9363e5f1b72821ab92cd0ba8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0053/bev.png",
+            "sha256": "a9a1d5aaf5e61c06cc1330749e73b6d114cf732ff01e2aa57007d89695419316"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0053/request.json",
+            "sha256": "9b1db015422c5ed2e2e61d880efa72995f26f5f8f01555e00c91cfeae5088688"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0053/response.json",
+            "sha256": "246ec7b63349cffa4f42db855b2a78aed5dfde523c2cbb38cd6d27ee4990ec7c"
+          },
+          "rendered_frame_sha256": "c0ceb3df77bae353cf5383cd9edd22e090003c890bf78f0c8344c44da5a53bf8"
+        },
+        {
+          "ordinal": 53,
+          "decision": 54,
+          "observation_frame": 58,
+          "held_object_id": 48,
+          "object_nodes": 174,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateLeft",
+            "repeat": 1
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0054/current.png",
+            "sha256": "06e27561d8b704923760e1e96dc91fe37431517b9363e5f1b72821ab92cd0ba8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0054/bev.png",
+            "sha256": "a9a1d5aaf5e61c06cc1330749e73b6d114cf732ff01e2aa57007d89695419316"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0054/request.json",
+            "sha256": "c38ac9a4e896c4c7bb2fc37191f750eb2882b02372e6d6bffb081a8732d13b75"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0054/response.json",
+            "sha256": "bdbfe2cd3a974985dcef5b49e55a5d97d7bc7bc2dbdd53c6040a7b371a0f1f5d"
+          },
+          "rendered_frame_sha256": "434ed338782416571c1733224307c0ebcba9323c749a530423f2c2e0e91c591d"
+        },
+        {
+          "ordinal": 54,
+          "decision": 55,
+          "observation_frame": 59,
+          "held_object_id": 48,
+          "object_nodes": 172,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 94
+            }
+          },
+          "previous_feedback": "Action 59: RotateLeft; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0055/current.png",
+            "sha256": "bdfc5a5c3635085d27ea5a6b75e5de4aa5af935c406bf1f794c4779eaed3b98e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0055/bev.png",
+            "sha256": "7ffe4a0e99a0cf828d926a1bad9427fd0ac0afb4f8913f1b4e7210e6a3b8b55e"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0055/request.json",
+            "sha256": "0f14528a4ecca68fe471dc33652eb83754e4d8065684abc36c312305fecb3e30"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0055/response.json",
+            "sha256": "6cb8f48f68b13b0bc9cfde3c273c124d4dd0a27c6bd04b5911dc0a9683a7e684"
+          },
+          "rendered_frame_sha256": "7934d0518548c8959851fadd51cb0caa419d2b58ddce121d376cc124a2add9e0"
+        },
+        {
+          "ordinal": 55,
+          "decision": 56,
+          "observation_frame": 59,
+          "held_object_id": 48,
+          "object_nodes": 172,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0056/current.png",
+            "sha256": "bdfc5a5c3635085d27ea5a6b75e5de4aa5af935c406bf1f794c4779eaed3b98e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0056/bev.png",
+            "sha256": "7ffe4a0e99a0cf828d926a1bad9427fd0ac0afb4f8913f1b4e7210e6a3b8b55e"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0056/request.json",
+            "sha256": "5d823de8547d56ccdc812005fc50504be2a790a53b55d415593b158e15fc60b3"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0056/response.json",
+            "sha256": "96e654c11f9fff661a25ac6ef2bb11b2bb6bbf405427a972c78be93f51ade8d9"
+          },
+          "rendered_frame_sha256": "44eed2cc7023ebd61267d5a5592ddc0a49c2e704fc483944aca12b9891e330c4"
+        },
+        {
+          "ordinal": 56,
+          "decision": 57,
+          "observation_frame": 60,
+          "held_object_id": 48,
+          "object_nodes": 172,
+          "upcoming_command": {
+            "kind": "motion",
+            "motion_action": "RotateLeft",
+            "repeat": 1
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0057/current.png",
+            "sha256": "4e03578c809a50faa3dcde8a23b1426820640cb14fd28a93c1f001dc95ec4ae8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0057/bev.png",
+            "sha256": "a542e7e630368e7d8e8c8938579fda0c9da6552aa600d06ba9f8e1c7bedf4721"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0057/request.json",
+            "sha256": "5c0284f10b5eb024c5803436d57b052451c01a1a15b47d89658361caf5e2f541"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0057/response.json",
+            "sha256": "7cba7f3ec89cc9bfebb77e606aa2c07d3d8a7cc2cfe557dc087087b16292e17c"
+          },
+          "rendered_frame_sha256": "899e693128ec6890267e812014c740a868018a3eb3ef49ec8fa8c67930cfbb61"
+        },
+        {
+          "ordinal": 57,
+          "decision": 58,
+          "observation_frame": 61,
+          "held_object_id": 48,
+          "object_nodes": 172,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 36
+            }
+          },
+          "previous_feedback": "Action 61: RotateLeft; object_id=None; success=True; error=(none)",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0058/current.png",
+            "sha256": "bdfc5a5c3635085d27ea5a6b75e5de4aa5af935c406bf1f794c4779eaed3b98e"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0058/bev.png",
+            "sha256": "7507a4a92993337761aba87b580173f6ddb6e680fa6fcec4bfeed0f7fac17e2f"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0058/request.json",
+            "sha256": "b9fc7d5fa3ef0cc3804ed96283d1b4c56c7e42a9025810160804c955a45cf680"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0058/response.json",
+            "sha256": "c4cba38b5aa25fd616d7a50e9c801c35514ac2cee6152612341713f817a61f15"
+          },
+          "rendered_frame_sha256": "9c94e07e696bdc5cbb67a85f0dfbde6641c24f8d3b0e06eae901010f8326f025"
+        },
+        {
+          "ordinal": 58,
+          "decision": 59,
+          "observation_frame": 62,
+          "held_object_id": 48,
+          "object_nodes": 172,
+          "upcoming_command": {
+            "kind": "navigate",
+            "target": {
+              "type": "object",
+              "object_id": 94
+            }
+          },
+          "previous_feedback": "Reached an observed stance; visibility and interaction readiness remain unverified.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0059/current.png",
+            "sha256": "4e03578c809a50faa3dcde8a23b1426820640cb14fd28a93c1f001dc95ec4ae8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0059/bev.png",
+            "sha256": "022d0b97d5e3b264422bd044b2466d8e98f2b0f57681749704b60076a17addba"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0059/request.json",
+            "sha256": "2851d5b3af2861b399d572d2b96ec357f3223db7d90d76c373cea983a18265bb"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0059/response.json",
+            "sha256": "7bc67ebb2f9b53c4e709c4b65782133f3a0de98b2309de7d103d53e208cb8bc8"
+          },
+          "rendered_frame_sha256": "5520badf4f0214826500bf330f0e767f8dba87bd96936c7aeaa2ff9812cfe019"
+        },
+        {
+          "ordinal": 59,
+          "decision": 60,
+          "observation_frame": 62,
+          "held_object_id": 48,
+          "object_nodes": 172,
+          "upcoming_command": {
+            "kind": "explore"
+          },
+          "previous_feedback": "No reachable stance through observed space with body clearance.",
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0060/current.png",
+            "sha256": "4e03578c809a50faa3dcde8a23b1426820640cb14fd28a93c1f001dc95ec4ae8"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0060/bev.png",
+            "sha256": "022d0b97d5e3b264422bd044b2466d8e98f2b0f57681749704b60076a17addba"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "request": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0060/request.json",
+            "sha256": "d98b1059060a2f8d0f948774d090ae75d87bcc4346d97faaa96ee66b1739a980"
+          },
+          "response": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0060/response.json",
+            "sha256": "fe3c6abbff4e9cab059764d150c81707f761d42078f42179d5b1d4cdb7c12748"
+          },
+          "rendered_frame_sha256": "4eb7cf326144abb8f543a844d0c130a5acd958848ec08d12a75166d102ef3579"
+        },
+        {
+          "ordinal": 60,
+          "decision": null,
+          "observation_frame": 74,
+          "held_object_id": 48,
+          "object_nodes": 208,
+          "upcoming_command": null,
+          "rgb": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/simulator/frames/000074.png",
+            "sha256": "db46caedbd161526114a6336f5a2fa0eafe81438fa7890164e65856e676b6b9d"
+          },
+          "bev": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/final_bev.png",
+            "sha256": "202e80fa47a9725c3420f40925fd903c8ae3541710c372f64a77c38caf9ea1ec"
+          },
+          "bev_crop_xyxy": [
+            0,
+            0,
+            946,
+            938
+          ],
+          "attempt": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/attempt.json",
+            "sha256": "e762b31c17b0ba5c8603e57485d2094e34fecf1e2d1b6cbde80ceb315b788230"
+          },
+          "execution": {
+            "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/execution.json",
+            "sha256": "a66b4cfedbf274fd1ca70b814e7b52bc9a6054a19e1ba539105b6a4d38b4ea08"
+          },
+          "rendered_frame_sha256": "47c007e45b66b7cef468bb534a2aa56bccce512c0174481f8582a8cbb8bd6180"
+        }
+      ],
+      "video": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i03_decision_replay.mp4",
+        "sha256": "7a9cbd4cf3d580867650f4ca20f39d4e069bde558fc0c860452f52e04475ee1e"
+      },
+      "duration_seconds": 61,
+      "encoding_command": [
+        "ffmpeg",
+        "-hide_banner",
+        "-nostdin",
+        "-n",
+        "-framerate",
+        "1",
+        "-i",
+        "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/replay_frames_i03/%04d.png",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "20",
+        "-threads",
+        "2",
+        "-pix_fmt",
+        "yuv420p",
+        "-r",
+        "24",
+        "-movflags",
+        "+faststart",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i03_decision_replay.mp4"
+      ],
+      "ffprobe": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1600,
+            "height": 1080,
+            "r_frame_rate": "24/1",
+            "nb_frames": "1464"
+          }
+        ],
+        "format": {
+          "duration": "61.000000"
+        }
+      }
+    }
+  ],
+  "static_copies": [
+    {
+      "source": {
+        "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/i02_visual_timeline.png",
+        "sha256": "7aa7047276efde8240dfa1306dce646f04986cbaf0f2be59e85d9f8192f6c9d1"
+      },
+      "copy": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i02_visual_timeline.png",
+        "sha256": "7aa7047276efde8240dfa1306dce646f04986cbaf0f2be59e85d9f8192f6c9d1"
+      }
+    },
+    {
+      "source": {
+        "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/i03_visual_timeline.png",
+        "sha256": "ee831762f47d25ee40171a1a7fa61cdcd4230530af180982ce0896ca835f096f"
+      },
+      "copy": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i03_visual_timeline.png",
+        "sha256": "ee831762f47d25ee40171a1a7fa61cdcd4230530af180982ce0896ca835f096f"
+      }
+    },
+    {
+      "source": {
+        "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/i02_saved_mask_comparison.png",
+        "sha256": "32649328111242d85ffc59c77b88849054eff16d036c667fa19bd5a7338a1ad4"
+      },
+      "copy": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i02_saved_mask_comparison.png",
+        "sha256": "32649328111242d85ffc59c77b88849054eff16d036c667fa19bd5a7338a1ad4"
+      }
+    },
+    {
+      "source": {
+        "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/i02_visual_timeline_sources.json",
+        "sha256": "3d782c7dd013980dc496126d12d5b2d7d856a9b18a499c76b8da766552db301b"
+      },
+      "copy": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i02_visual_timeline_sources.json",
+        "sha256": "3d782c7dd013980dc496126d12d5b2d7d856a9b18a499c76b8da766552db301b"
+      }
+    },
+    {
+      "source": {
+        "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/i03_visual_timeline_sources.json",
+        "sha256": "c39f543433c703656c380234e333cd32ff15cb7bf5b034051e3a5d9a640b8bb1"
+      },
+      "copy": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i03_visual_timeline_sources.json",
+        "sha256": "c39f543433c703656c380234e333cd32ff15cb7bf5b034051e3a5d9a640b8bb1"
+      }
+    },
+    {
+      "source": {
+        "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/i02_terminal_failure_cases.json",
+        "sha256": "d1ca93bd5de2e35554d35ca2c197cfa1c72c3061885450c220c29e16a661a28b"
+      },
+      "copy": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i02_terminal_failure_cases.json",
+        "sha256": "d1ca93bd5de2e35554d35ca2c197cfa1c72c3061885450c220c29e16a661a28b"
+      }
+    },
+    {
+      "source": {
+        "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/i02_terminal_failure_cases.md",
+        "sha256": "dd5847507ce19dbea84eaef61508153d26b72266f671468332020875cd4617b3"
+      },
+      "copy": {
+        "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/visualizations_prefix5_20261105/i02_terminal_failure_cases.md",
+        "sha256": "dd5847507ce19dbea84eaef61508153d26b72266f671468332020875cd4617b3"
+      }
+    }
+  ]
+}

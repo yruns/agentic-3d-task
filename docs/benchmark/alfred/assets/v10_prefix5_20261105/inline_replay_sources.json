@@ -1,0 +1,248 @@
+{
+  "scope": "Saved actor decision snapshots and final evidence, no recomputation or model call",
+  "selection": "i02 container search and i03 observed pickup/state update",
+  "image_transform": "BEV catalog cropped using the recorded object count and frozen rendering layout; proportional downsampling and WEBP compression only",
+  "sources": [
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0001/request.json",
+      "sha256": "fe121c82645118e6f5a768193690eb59dcf9a2ef410f2601301decfa4311d768"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0001/response.json",
+      "sha256": "311203888771adbf1c3aa2edc372c90ec52df9ea07a178febb9634ac36fa9ae5"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0001/current.png",
+      "sha256": "bb06a1be5b3134fc0cf23db878d1e154286195a3482cf2e3891f0bfaa0b61229"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0001/bev.png",
+      "sha256": "f4200407067e724f39613aa58eaf93a2fdf5e5a5e78718fda81a79e2997f51e0"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0008/request.json",
+      "sha256": "dc403700205e107e44e577a5aa14ced86736fb910ab96f1e5e973bbd611d27c3"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0008/response.json",
+      "sha256": "d388d9b97841889a99710d260e4084cfa08a96c0f1cca4e9c6704f88dc2b4dfb"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0008/current.png",
+      "sha256": "85a5c5052fdd5df53b327ab5f0ce08eb94887fab241a401c3785fb737b79cf5e"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0008/bev.png",
+      "sha256": "d07fe8a2b60c432feb58703e35649e1d6af9c6b57079b4fb848e3858cd330362"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0015/request.json",
+      "sha256": "6fcc62886ebc5d3bfb9bc5c25356f1b22b44a6a0a1375372c2ac31d78d4ecb6b"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0015/response.json",
+      "sha256": "3b0611fa9885b1d993aba8c05ff779b0d1aff2e5193b9d20b47871cffaeaf1aa"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0015/current.png",
+      "sha256": "220f2ebb5a402c39bc4acbab7f5fef1edcbd6d9a47839f42394d8212913928d7"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0015/bev.png",
+      "sha256": "1489b77f21291027d905222eb5516ca5c8fc55298f15aeefcd9b84406781a7bc"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/request.json",
+      "sha256": "43b109b6cea66d0172cd4a6424626ac99eb6a7cc0913d0941b575fb8cc3b0bcc"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/response.json",
+      "sha256": "ae0de57f4bb0b060492c674f2c69403e37fc1bc3a93c2f9be558546e752a27c4"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/current.png",
+      "sha256": "7199aed7fd92a3ebddd42aeaa6f64d4beb2f02655f77d090dbda9134779dafbd"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0021/bev.png",
+      "sha256": "69845826638e02ff4f37c273b9b1bdab97d9f590474a7d1d1713f09eb38b40e2"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/request.json",
+      "sha256": "405776b9d128a24bbd5badecfd79f439a2e479529a416ab1e782738c12c798c8"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/response.json",
+      "sha256": "6d4b0b69af0131f9034916ac36dfdd74a50e48efa6bc968920c964bd2b924c21"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/current.png",
+      "sha256": "544597f3596538a41b40a70d274601b82862309739ffe17e29b7f113796dc701"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0029/bev.png",
+      "sha256": "5cc9f11cc8900045d997eeae67fbbeccca53e0bfcbbc540b865a7e288d806151"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/request.json",
+      "sha256": "f78b1e31c44af91e5b977f6c16b16d6f53a203143f9e7180076d21c4bfee59db"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/response.json",
+      "sha256": "404f2f41252bca9f11b8fa7633607b6b4be0037b11c277db4779fbe5ef1349e1"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/current.png",
+      "sha256": "b839f36157e61a5972e1d1d0594ebcf7e42fe707f7796b4f9a084e880c33810b"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/decisions/0038/bev.png",
+      "sha256": "79cd0ce75bfe40c87a5fd3620cb8c84702ac2235be26a42c6aedad111460ede6"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0001/request.json",
+      "sha256": "1fd015c26796ca9cc8b4e782884bea3bf2319bd78f886bc352078b2ce72b8529"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0001/response.json",
+      "sha256": "0a1abfdc2200810b6d5c0adc746c661818ee00cba60bbaf866c7fb506a4e1ba1"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0001/current.png",
+      "sha256": "eba9e3622d98359a87aa4aae47efd51376fd5381a32e104da59388bfabf3f390"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0001/bev.png",
+      "sha256": "c9dd777f7884b104b5255b013c30f46cc277a62bf539a695e5ade0e74b620140"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/request.json",
+      "sha256": "cdc3407114b8754ea68463883fdd92e177040c3071d410d5eab90c83884327c3"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/response.json",
+      "sha256": "f72379f4514d1ed081acc3abc82d538c456ec338a2afff797328844292ca0991"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/current.png",
+      "sha256": "8cc94e859ce691d35b251ec4b180b2b274c28dbb32c6eb7a951cce2d5bafd029"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0004/bev.png",
+      "sha256": "362cf8e88ac0f4861b6b542ed23272b04e4d6401b27065451028cc50ae840c62"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/request.json",
+      "sha256": "ac14a5227c363627439063b5e6fa9a11be91ed98a49c58e9c39ff6642919309c"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/response.json",
+      "sha256": "b001fc7f435215518fb8d031eeafcc3b63df44594ed95da3ef85f7f047147e55"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/current.png",
+      "sha256": "4d3077dc54cb6927069f15a2eafc2fe8540a93ddecd7c33fcce79ef61f2797fc"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0005/bev.png",
+      "sha256": "958b70ec7763fb444950eaf050855b0c1b4f0867e57b810a2bd30ec445842d56"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0015/request.json",
+      "sha256": "0d0724963800e18e443d7c8502da4e6e6a6a9490e2a9b41ce0ae964dcd803b4d"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0015/response.json",
+      "sha256": "af50a3b11ffa0b502dab52d310baaaa2285af00a69d11f5f6aa259df6c5c8d92"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0015/current.png",
+      "sha256": "4bc29f504d4c396be97ba0a4cfcd88f90a64eed16cc7d345e2d9c69b75aa0259"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0015/bev.png",
+      "sha256": "8430dab10c5a9b60daee0a981eb9fa78e39aff9c6914859577e0feec402b11c1"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0035/request.json",
+      "sha256": "ff3b9c47a3573053a096f6ba293d332c66c73ff31b9c29cf5ae41c6a625bb2bc"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0035/response.json",
+      "sha256": "83b1a9ccc608c968a3bda702251deff66caf4372e3a199d70482e3c4188cb471"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0035/current.png",
+      "sha256": "a1a6b5b0fd873150597c713c4671d11361de89e6b472f23de3fab09c63d48a8d"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0035/bev.png",
+      "sha256": "32e0ef31a06f327ab14e43b290d841c413f78c313cb9bc77044a11d31e9aec58"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0060/request.json",
+      "sha256": "d98b1059060a2f8d0f948774d090ae75d87bcc4346d97faaa96ee66b1739a980"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0060/response.json",
+      "sha256": "fe3c6abbff4e9cab059764d150c81707f761d42078f42179d5b1d4cdb7c12748"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0060/current.png",
+      "sha256": "4e03578c809a50faa3dcde8a23b1426820640cb14fd28a93c1f001dc95ec4ae8"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/decisions/0060/bev.png",
+      "sha256": "022d0b97d5e3b264422bd044b2466d8e98f2b0f57681749704b60076a17addba"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/attempt.json",
+      "sha256": "662045a7ba2a65f14d455cb9d7c4e09ed900073fb36907a2bc7b387898528854"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/execution.json",
+      "sha256": "9c6160d32d08d82baf3afe61839ec9b0b5373965c4359e9efcb38ae0cb6f4244"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/memory.json",
+      "sha256": "e1b854ce84b51a157974b4c801684e7b3a8ab9dcfc3832a9a17d9398dbb4a6f5"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/observations.jsonl",
+      "sha256": "a8958c8edef477682988463c97561a850a67428fda03e0c86f55e15bdb568899"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/final_bev.png",
+      "sha256": "60ecc1ca895761c9c9c6d9de92e8381c1abfad16030784d627cac130669bf2fd"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001/simulator/frames/000033.png",
+      "sha256": "d193e887a0b77c9549ee6ba9d26014a83d894e08b123e3559cbe84c5d43aa870"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/attempt.json",
+      "sha256": "e762b31c17b0ba5c8603e57485d2094e34fecf1e2d1b6cbde80ceb315b788230"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/execution.json",
+      "sha256": "a66b4cfedbf274fd1ca70b814e7b52bc9a6054a19e1ba539105b6a4d38b4ea08"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/memory.json",
+      "sha256": "5e6aa8376ee775a780159b725fefad0e70132f81c709ce5dbe53e9c66540f113"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/observations.jsonl",
+      "sha256": "4eb12c9e6c2f272401413ece593f3a0a8a09977cfb9fed68dd772844f9de78b7"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/final_bev.png",
+      "sha256": "202e80fa47a9725c3420f40925fd903c8ae3541710c372f64a77c38caf9ea1ec"
+    },
+    {
+      "path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001/simulator/frames/000074.png",
+      "sha256": "db46caedbd161526114a6336f5a2fa0eafe81438fa7890164e65856e676b6b9d"
+    }
+  ],
+  "generator_source_sha256": "5b8a5b8f6f2619cdf697038b3031314a225779202354a3573a60eb045c102caa"
+}

@@ -1,0 +1,49 @@
+{
+  "selected": 1,
+  "completed": 1,
+  "errors": 0,
+  "interrupted": 0,
+  "pending": 0,
+  "metrics": {
+    "num_evals": 1,
+    "num_successes": 0,
+    "completed_goal_conditions": 1,
+    "total_goal_conditions": 3,
+    "expert_actions": 42,
+    "executed_actions": 74,
+    "success_rate": 0.0,
+    "goal_condition_success_rate": 0.3333333333333333,
+    "path_length_weighted_success_rate": 0.0,
+    "path_length_weighted_goal_condition_success_rate": 0.1891891891891892
+  },
+  "by_split": {
+    "valid_seen": {
+      "num_evals": 1,
+      "num_successes": 0,
+      "completed_goal_conditions": 1,
+      "total_goal_conditions": 3,
+      "expert_actions": 42,
+      "executed_actions": 74,
+      "success_rate": 0.0,
+      "goal_condition_success_rate": 0.3333333333333333,
+      "path_length_weighted_success_rate": 0.0,
+      "path_length_weighted_goal_condition_success_rate": 0.1891891891891892
+    },
+    "valid_unseen": null
+  },
+  "attempts": [
+    {
+      "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-4/trial_T20190909_164840_568811#2",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 1,
+        "total_goal_conditions": 3,
+        "expert_actions": 42,
+        "executed_actions": 74
+      },
+      "error": null
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "kind": "user_requested_scope_descriptor_not_new_fold",
+  "created_at_utc": "2026-11-05T09:44:39.111159+00:00",
+  "source_fold": {
+    "path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/folds/pilot15.json",
+    "sha256": "2fa0520b130ec9748762b31b7dc1c3aeeb072edbb5bb7e9393ea4c406da1f34a",
+    "original_size": 15
+  },
+  "selection": {
+    "mode": "user_requested_original_prefix",
+    "full_fold_size": 15,
+    "selected_prefix_length": 5,
+    "global_indices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "episode_ids": [
+      "valid_seen/look_at_obj_in_light-Pillow-None-DeskLamp-302/trial_T20190909_150916_682139#0",
+      "valid_seen/pick_and_place_simple-SprayBottle-None-Toilet-415/trial_T20190909_075955_678702#0",
+      "valid_seen/pick_and_place_with_movable_recep-Fork-Cup-DiningTable-23/trial_T20190906_205421_980666#2",
+      "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-4/trial_T20190909_164840_568811#2",
+      "valid_seen/pick_cool_then_place_in_recep-Plate-None-CounterTop-1/trial_T20190906_205324_559361#0"
+    ],
+    "fold_unchanged": true,
+    "scope_note": "The user reduced the run count to the first5 original identities; no replacement/resampling of identities or scored retries"
+  },
+  "selected_runs": [
+    {
+      "global_index": 0,
+      "run_id": "ALFRED_V9_20261105_pilot15_i00",
+      "episode_id": "valid_seen/look_at_obj_in_light-Pillow-None-DeskLamp-302/trial_T20190909_150916_682139#0",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i00/episodes/0001",
+      "status": "completed",
+      "first_official_score_retained": true
+    },
+    {
+      "global_index": 1,
+      "run_id": "ALFRED_V9_20261105_pilot15_i01",
+      "episode_id": "valid_seen/pick_and_place_simple-SprayBottle-None-Toilet-415/trial_T20190909_075955_678702#0",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i01/episodes/0001",
+      "status": "completed",
+      "first_official_score_retained": true
+    },
+    {
+      "global_index": 2,
+      "run_id": "ALFRED_V9_20261105_pilot15_i02",
+      "episode_id": "valid_seen/pick_and_place_with_movable_recep-Fork-Cup-DiningTable-23/trial_T20190906_205421_980666#2",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i02/episodes/0001",
+      "status": "completed",
+      "first_official_score_retained": true
+    },
+    {
+      "global_index": 3,
+      "run_id": "ALFRED_V9_20261105_pilot15_i03",
+      "episode_id": "valid_seen/pick_clean_then_place_in_recep-Ladle-None-DiningTable-4/trial_T20190909_164840_568811#2",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i03/episodes/0001",
+      "status": "completed",
+      "first_official_score_retained": true
+    },
+    {
+      "global_index": 4,
+      "run_id": "ALFRED_V9_20261105_pilot15_i04",
+      "episode_id": "valid_seen/pick_cool_then_place_in_recep-Plate-None-CounterTop-1/trial_T20190906_205324_559361#0",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i04/episodes/0001",
+      "status": "completed",
+      "first_official_score_retained": true
+    }
+  ],
+  "excluded_cancelled_runs": [
+    {
+      "global_index": 5,
+      "run_id": "ALFRED_V9_20261105_pilot15_i05",
+      "episode_id": "valid_seen/pick_heat_then_place_in_recep-Tomato-None-DiningTable-16/trial_T20190907_201243_698086#0",
+      "raw_run_status": "running",
+      "artifact_state": "externally_cancelled_raw_checkpoint_unfinalized",
+      "official_score": null,
+      "counts_as_infrastructure_error": false
+    },
+    {
+      "global_index": 6,
+      "run_id": "ALFRED_V9_20261105_pilot15_i06",
+      "episode_id": "valid_seen/pick_two_obj_and_place-SprayBottle-None-Toilet-429/trial_T20190907_033843_707544#3",
+      "raw_run_status": "interrupted",
+      "artifact_state": "normally_archived_interrupted",
+      "official_score": null,
+      "counts_as_infrastructure_error": false
+    },
+    {
+      "global_index": 7,
+      "run_id": "ALFRED_V9_20261105_pilot15_i07",
+      "episode_id": "valid_unseen/look_at_obj_in_light-RemoteControl-None-FloorLamp-219/trial_T20190909_032721_511027#0",
+      "raw_run_status": "running",
+      "artifact_state": "externally_cancelled_raw_checkpoint_unfinalized",
+      "official_score": null,
+      "counts_as_infrastructure_error": false
+    },
+    {
+      "global_index": 8,
+      "run_id": "ALFRED_V9_20261105_pilot15_i08",
+      "episode_id": "valid_unseen/pick_and_place_simple-Plunger-None-Cabinet-424/trial_T20190908_021537_611374#0",
+      "raw_run_status": "running",
+      "artifact_state": "externally_cancelled_raw_checkpoint_unfinalized",
+      "official_score": null,
+      "counts_as_infrastructure_error": false
+    }
+  ],
+  "cancellation_evidence_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/pilot5_excluded_user_cancellations_v2.json",
+  "cancellation_evidence_sha256": "21609aba9e33a8c9d1a5e9a662ada7ae8526b683880439bc020bcc93b62b9061",
+  "unstarted_excluded_indices": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+  ],
+  "source": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "62e9f18a6654bbedb1558b3ae2a08cc7f2207a6f",
+    "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+    "tracked_worktree_drift": ""
+  },
+  "final_audit_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/pilot5_final_audit_02.json",
+  "final_audit_sha256": "bfee7581698b298c33a71bfbdfab67d35e41fa6aa60ad5b727eaea8d4d5954a3",
+  "notes": [
+    "Original15 fold bytes and per-episode settings remain unchanged. This descriptor is not a new fold.",
+    "Initial queue supervisor suspension was not persistent; extra indices5/7/8 started and incurred cost before final cancellation, in addition to already cancelled index6.",
+    "Three externally cancelled runs retain raw running/pending checkpoints. SQLite separately records interrupted attempts with score NULL and explicit external-receipt metadata, raw hashes and unknown timing; no native files were rewritten.",
+    "No scored task was replaced or retried. The initial15 cohort was not completed."
+  ],
+  "previous_descriptor_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/pilot5_selection_20261105.json",
+  "previous_descriptor_sha256": "f6eec29ee24a52cce38e545c69fbfcff3617292c5a09cc65ede5a8baecbd7908",
+  "external_sqlite_ingestion_verification": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/external_cancellation_sqlite_01.json"
+}

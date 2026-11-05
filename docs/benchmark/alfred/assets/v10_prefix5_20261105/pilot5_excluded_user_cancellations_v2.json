@@ -1,0 +1,375 @@
+{
+  "checked_at_utc": "2026-11-05T09:44:06.931550+00:00",
+  "status": "verified_user_cancellations_with_external_sqlite_records",
+  "requested_cohort_size": 5,
+  "excluded_attempts": 4,
+  "normally_archived_interrupted": 1,
+  "unfinalized_raw_checkpoints": 3,
+  "scored": 0,
+  "official_metrics": null,
+  "infrastructure_errors": 0,
+  "process_check": {
+    "matching_runner_processes": [],
+    "scope": "Only matching ALFRED runner processes; detached simulator/perception workers are covered by parent cleanup checks separately"
+  },
+  "cleanup_receipt_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/queue_cleanup_final.json",
+  "cleanup_receipt_sha256": "b96df5f073c494b8e544599846338c57dce9b224adc07db1ccb12de1bfc29338",
+  "first_cleanup_receipt_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/queue_cleanup.json",
+  "first_cleanup_receipt_sha256": "85f09673a8bcde0d8da16f5e2e1e47c678b9d11ef857b80ec8820c07bc7b791e",
+  "scope_failure": "Initial queue supervisor suspension was not persistent: extra indices5/7/8 started after the requested reduction, consuming additional actions and model usage before final cancellation. Their cost remains visible here.",
+  "counts": {
+    "actions": 77,
+    "failed_actions": 1,
+    "observations": 79,
+    "requests": 51,
+    "responses": 49,
+    "sdk_attempts_observed": 49,
+    "decision_image_attachments": 105,
+    "historical_image_attachments": 3,
+    "unanswered_decisions": 2
+  },
+  "reported_usage_lower_bound": {
+    "cache_write_input_tokens": 0,
+    "cached_input_tokens": 5632,
+    "input_tokens": 966591,
+    "output_tokens": 55182,
+    "reasoning_output_tokens": 48209,
+    "total_tokens": 1021773
+  },
+  "exact_input_tokens": null,
+  "exact_output_tokens": null,
+  "usage_limit": "Two unanswered saved model requests have unknown usage; reported totals are lower bounds, not zero-cost cancellations.",
+  "episodes": [
+    {
+      "global_index": 5,
+      "run_id": "ALFRED_V9_20261105_pilot15_i05",
+      "episode_id": "valid_seen/pick_heat_then_place_in_recep-Tomato-None-DiningTable-16/trial_T20190907_201243_698086#0",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i05/episodes/0001",
+      "classification": "user_requested_scope_reduction_cancellation",
+      "artifact_state": "externally_cancelled_raw_checkpoint_unfinalized",
+      "raw_run_status": "running",
+      "raw_summary_counts": {
+        "completed": 0,
+        "errors": 0,
+        "interrupted": 0,
+        "pending": 1
+      },
+      "official_score": null,
+      "included_in_requested_scores": false,
+      "included_in_infrastructure_errors": false,
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "62e9f18a6654bbedb1558b3ae2a08cc7f2207a6f",
+        "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+        "tracked_worktree_drift": ""
+      },
+      "counts": {
+        "actions": 16,
+        "failed_actions": 0,
+        "observations": 16,
+        "requests": 9,
+        "responses": 9,
+        "sdk_attempts_observed": 9,
+        "decision_image_attachments": 18,
+        "historical_image_attachments": 0,
+        "unanswered_decisions": 0
+      },
+      "usage": {
+        "requests": 9,
+        "responses": 9,
+        "sdk_attempts_observed": 9,
+        "reported_usage_lower_bound": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 1408,
+          "input_tokens": 224567,
+          "output_tokens": 7725,
+          "reasoning_output_tokens": 6439,
+          "total_tokens": 232292
+        },
+        "exact_input_tokens": 224567,
+        "exact_output_tokens": 7725,
+        "unknown_usage_decisions": [],
+        "unanswered_decisions": [],
+        "decision_image_attachments": 18,
+        "historical_image_attachments": 0,
+        "operations": {
+          "Explore": 2,
+          "NavigateObject": 1,
+          "NavigateCell": 6
+        }
+      },
+      "sqlite": {
+        "run_id": "ALFRED_V9_20261105_pilot15_i05",
+        "metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "status": "interrupted",
+        "score_is_null": true,
+        "record_origin": "derived_external_user_cancellation",
+        "native_artifact_status": "running"
+      },
+      "source_sha256": {
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i05/run.json": "af97a9312aa79a94b871363f4903869916c7bb7595a46dbc7c40e2e9679a6aca",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i05/summary.json": "3d8b3af447c1b0d46f68d3a028bb2bb997385aa9982e4c108e8a3c66ee6dc2b1",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i05/episodes/0001/actions.jsonl": "5bd5fac61f003d602cf55c9e9e6656e89524b164e524385c1da72e2c5de90cc4",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i05/episodes/0001/observations.jsonl": "db191d68da14916e1d23edfd3f294f48deff79c997774a95a6c44265f1c3716c"
+      },
+      "sqlite_native_terminal_archive_matches": false,
+      "sqlite_derivation_note": "Derived external cancellation record; original running/pending files remain unchanged"
+    },
+    {
+      "global_index": 6,
+      "run_id": "ALFRED_V9_20261105_pilot15_i06",
+      "episode_id": "valid_seen/pick_two_obj_and_place-SprayBottle-None-Toilet-429/trial_T20190907_033843_707544#3",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i06/episodes/0001",
+      "classification": "user_requested_scope_reduction_cancellation",
+      "artifact_state": "normally_archived_interrupted",
+      "raw_run_status": "interrupted",
+      "raw_summary_counts": {
+        "completed": 0,
+        "errors": 0,
+        "interrupted": 1,
+        "pending": 0
+      },
+      "official_score": null,
+      "included_in_requested_scores": false,
+      "included_in_infrastructure_errors": false,
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "62e9f18a6654bbedb1558b3ae2a08cc7f2207a6f",
+        "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+        "tracked_worktree_drift": ""
+      },
+      "counts": {
+        "actions": 27,
+        "failed_actions": 1,
+        "observations": 27,
+        "requests": 17,
+        "responses": 17,
+        "sdk_attempts_observed": 17,
+        "decision_image_attachments": 34,
+        "historical_image_attachments": 0,
+        "unanswered_decisions": 0
+      },
+      "usage": {
+        "requests": 17,
+        "responses": 17,
+        "sdk_attempts_observed": 17,
+        "reported_usage_lower_bound": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 498216,
+          "output_tokens": 24372,
+          "reasoning_output_tokens": 21934,
+          "total_tokens": 522588
+        },
+        "exact_input_tokens": 498216,
+        "exact_output_tokens": 24372,
+        "unknown_usage_decisions": [],
+        "unanswered_decisions": [],
+        "decision_image_attachments": 34,
+        "historical_image_attachments": 0,
+        "operations": {
+          "Explore": 2,
+          "NavigateObject": 5,
+          "MoveAhead": 2,
+          "PickupObject": 3,
+          "NavigateCell": 3,
+          "PutObject": 1,
+          "RotateLeft": 1
+        }
+      },
+      "sqlite": {
+        "run_id": "ALFRED_V9_20261105_pilot15_i06",
+        "metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1
+      },
+      "source_sha256": {
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i06/run.json": "cac0ec1ac6b1ff16e3743cce81f392acfb29e5fde4173e2eeef05a30439b3e49",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i06/summary.json": "7d69f0481b3d1b3f385a68f2d8a118df106bbd38787abb73618f425b0272499b",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i06/episodes/0001/actions.jsonl": "90f1580c2e3f2113c0550fa781a3c87e593595ff21fdadd3a85ac0060c20662b",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i06/episodes/0001/observations.jsonl": "bd59dcb31c58883bb9a57606c7dfc3710bf790a035ddcfc3557f126ad4d8a028",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i06/episodes/0001/attempt.json": "b6b6b35feb50757addc2257ba8ea25702e2a6594d2108777b0fdaae845836838",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i06/episodes/0001/partial_execution.json": "b22c27d8d381323b0b0e9d094c7669f1ef73ccb8adabb4f91a5280015f568399"
+      }
+    },
+    {
+      "global_index": 7,
+      "run_id": "ALFRED_V9_20261105_pilot15_i07",
+      "episode_id": "valid_unseen/look_at_obj_in_light-RemoteControl-None-FloorLamp-219/trial_T20190909_032721_511027#0",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i07/episodes/0001",
+      "classification": "user_requested_scope_reduction_cancellation",
+      "artifact_state": "externally_cancelled_raw_checkpoint_unfinalized",
+      "raw_run_status": "running",
+      "raw_summary_counts": {
+        "completed": 0,
+        "errors": 0,
+        "interrupted": 0,
+        "pending": 1
+      },
+      "official_score": null,
+      "included_in_requested_scores": false,
+      "included_in_infrastructure_errors": false,
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "62e9f18a6654bbedb1558b3ae2a08cc7f2207a6f",
+        "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+        "tracked_worktree_drift": ""
+      },
+      "counts": {
+        "actions": 9,
+        "failed_actions": 0,
+        "observations": 10,
+        "requests": 9,
+        "responses": 8,
+        "sdk_attempts_observed": 8,
+        "decision_image_attachments": 21,
+        "historical_image_attachments": 3,
+        "unanswered_decisions": 1
+      },
+      "usage": {
+        "requests": 9,
+        "responses": 8,
+        "sdk_attempts_observed": 8,
+        "reported_usage_lower_bound": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 4224,
+          "input_tokens": 111720,
+          "output_tokens": 9211,
+          "reasoning_output_tokens": 8013,
+          "total_tokens": 120931
+        },
+        "exact_input_tokens": null,
+        "exact_output_tokens": null,
+        "unknown_usage_decisions": [],
+        "unanswered_decisions": [
+          9
+        ],
+        "decision_image_attachments": 21,
+        "historical_image_attachments": 3,
+        "operations": {
+          "NavigateObject": 4,
+          "Explore": 1,
+          "RetrieveObject": 2,
+          "NavigateCell": 1
+        }
+      },
+      "sqlite": {
+        "run_id": "ALFRED_V9_20261105_pilot15_i07",
+        "metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "status": "interrupted",
+        "score_is_null": true,
+        "record_origin": "derived_external_user_cancellation",
+        "native_artifact_status": "running"
+      },
+      "source_sha256": {
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i07/run.json": "48f8bad3ee2cc166989c9675e6b49619046ad47092d28a0284bc263f80e4226f",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i07/summary.json": "3d8b3af447c1b0d46f68d3a028bb2bb997385aa9982e4c108e8a3c66ee6dc2b1",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i07/episodes/0001/actions.jsonl": "43084871f35b080d89e802cb9fca9521fef2c863d58408b48b4d5acb38abbfde",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i07/episodes/0001/observations.jsonl": "be6e1c37417891124ae677ff1a716b1bd6c8965dba82d656e3ed937c71af1a46"
+      },
+      "sqlite_native_terminal_archive_matches": false,
+      "sqlite_derivation_note": "Derived external cancellation record; original running/pending files remain unchanged"
+    },
+    {
+      "global_index": 8,
+      "run_id": "ALFRED_V9_20261105_pilot15_i08",
+      "episode_id": "valid_unseen/pick_and_place_simple-Plunger-None-Cabinet-424/trial_T20190908_021537_611374#0",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i08/episodes/0001",
+      "classification": "user_requested_scope_reduction_cancellation",
+      "artifact_state": "externally_cancelled_raw_checkpoint_unfinalized",
+      "raw_run_status": "running",
+      "raw_summary_counts": {
+        "completed": 0,
+        "errors": 0,
+        "interrupted": 0,
+        "pending": 1
+      },
+      "official_score": null,
+      "included_in_requested_scores": false,
+      "included_in_infrastructure_errors": false,
+      "code": {
+        "branch": "feat/alfred-benchmark",
+        "head_sha": "62e9f18a6654bbedb1558b3ae2a08cc7f2207a6f",
+        "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+        "tracked_worktree_drift": ""
+      },
+      "counts": {
+        "actions": 25,
+        "failed_actions": 0,
+        "observations": 26,
+        "requests": 16,
+        "responses": 15,
+        "sdk_attempts_observed": 15,
+        "decision_image_attachments": 32,
+        "historical_image_attachments": 0,
+        "unanswered_decisions": 1
+      },
+      "usage": {
+        "requests": 16,
+        "responses": 15,
+        "sdk_attempts_observed": 15,
+        "reported_usage_lower_bound": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 132088,
+          "output_tokens": 13874,
+          "reasoning_output_tokens": 11823,
+          "total_tokens": 145962
+        },
+        "exact_input_tokens": null,
+        "exact_output_tokens": null,
+        "unknown_usage_decisions": [],
+        "unanswered_decisions": [
+          16
+        ],
+        "decision_image_attachments": 32,
+        "historical_image_attachments": 0,
+        "operations": {
+          "NavigateObject": 8,
+          "RotateLeft": 4,
+          "RotateRight": 2,
+          "Explore": 1
+        }
+      },
+      "sqlite": {
+        "run_id": "ALFRED_V9_20261105_pilot15_i08",
+        "metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "status": "interrupted",
+        "score_is_null": true,
+        "record_origin": "derived_external_user_cancellation",
+        "native_artifact_status": "running"
+      },
+      "source_sha256": {
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i08/run.json": "8c2c284eb7c45aa98fb8e588092b1089214279cdf1dfd0f047635ef8ae59e3c7",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i08/summary.json": "3d8b3af447c1b0d46f68d3a028bb2bb997385aa9982e4c108e8a3c66ee6dc2b1",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i08/episodes/0001/actions.jsonl": "21c49257267d41704742544fc50eb4bf7f84ace3a78a246fba10ef9f7d368c09",
+        "/home/ysh/codebase/agentic-3d-task/outputs/alfred/ALFRED_V9_20261105_pilot15_i08/episodes/0001/observations.jsonl": "b88d7ebb9659acd6d5cbb473bd9cfc3478c31f2cdacd7ff651c372d01a9bf4b2"
+      },
+      "sqlite_native_terminal_archive_matches": false,
+      "sqlite_derivation_note": "Derived external cancellation record; original running/pending files remain unchanged"
+    }
+  ],
+  "source_sha256": {
+    "audit_user_cancellations.py": "207e89f60fe65a2ff0839c93a6da06b80134514136d91f3d8f646e4c077d8ccf",
+    "audit_pilot15.py": "488f1a68da8c0e4cd765cf84aef8db6bd15ed36366f0f3c9b7623636576dbdd3"
+  },
+  "limits": [
+    "Raw artifacts remain unchanged: three cancelled runs retain running/pending checkpoints. SQLite now separately records their external user cancellation with raw hashes, receipt/exit proof, null scores and unknown timing.",
+    "These are user cancellations outside the selected first5, not scored failures or infrastructure failures.",
+    "This report does not claim all original15 tasks were attempted or completed."
+  ],
+  "previous_report_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/pilot5_excluded_user_cancellations.json",
+  "previous_report_sha256": "9f4355ace15a1aa6adc2cf2e99a89520d60ff732f689ff8363e10726f4dc847e",
+  "external_sqlite_ingestion": {
+    "records": 3,
+    "verification_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_v9/external_cancellation_sqlite_01.json",
+    "verification_sha256": "525c321d864ea36c0b168a1927840b9d30954c8295faa3558195cf25eabfec95",
+    "method": "Existing ingest_run/EpisodeAttempt; interrupted with score NULL and explicit derived external receipt metadata"
+  }
+}

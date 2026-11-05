@@ -12,6 +12,9 @@ Historical code/configuration and 50 official scores remain archived in
 [v8](../benchmark/alfred/v8_pilot50_complete_20261105.md). The new experiment uses
 [frozen pilot15](../benchmark/alfred/folds/pilot15.json): seven seen and eight unseen,
 selected deterministically from the original pilot50 without reading scores.
+The user ultimately requested only the original first five entries, all seen;
+5/5 scored with SR0/5 and GC1/12. [v10 results and replays](../benchmark/alfred/v10_prefix5_20261105.md)
+record this diagnostic prefix and all excluded cancellations.
 See [v9 setup and protocol](../benchmark/alfred/v9_online_mapping_20261105.md) for
 actual validation status; old scores are not results of this implementation.
 
@@ -123,7 +126,7 @@ python -m codex_agent.cli.run_alfred \
   --alfred-root /home/ysh/Datasets/FILM/alfred \
   --scene-config configs/alfred/scene.toml --x-display 5 \
   --model gpt-5.4-2026-03-05 --reasoning-effort medium \
-  --max-actions 1000 --max-failures 10 --max-decisions 60 \
+  --max-actions 1000 --max-failures 10 --max-decisions 60 --limit 5 \
   --preflight-only
 ```
 
