@@ -82,6 +82,7 @@ every episode attempt without overwriting old run IDs.
 
 | Record | Date | Scope | Result |
 |---|---|---|---|
+| [v12 macro tools + 85 categories prefix5](v12_macro_tools_85cats_prefix5_20261105.md) | 2026-11-05 | Single-turn Codex macro-tool loop, 85 task categories, GPU-resident perception, AABB/OBB caching on `prefix5` (`gemini-3.8-flash`) | **5/5 scored, SR 1/5 (20.00%), GC 3/12 (25.00%), PLW-SR 7.68%, PLW-GC 14.34%**; perception **4.6× faster (0.73 s/frame)** |
 | [v10 online mapping prefix5](v10_prefix5_20261105.md) | 2026-11-05 | User reduced the run to original indices0–4, all seen; two visualized episodes | 5/5 scored, SR0/5, GC1/12; 5/5 official rechecks agree; four excluded cancellations separately archived |
 | [v9 online mapping](v9_online_mapping_20261105.md) | 2026-11-05 | New mapper, train-only depth comparison, frozen pilot15 | Setup, train-depth comparison and full gates passed; task results in v10 |
 | [v8 completed pilot50](v8_pilot50_complete_20261105.md) | 2026-11-05 | Original41 + nine unchanged-configuration recoveries | 50/50 scored, 5 successes; SR 10.00%, GC 15.87%; independent scores 50/50 agree |
