@@ -116,7 +116,7 @@ def test_suppression_matches_torchvision_class_agnostic_reference() -> None:
         GroundedBox("Apple", (-2, 0, 10, 10), 0.7),
         GroundedBox("AppleSliced", (0, 0, 10, 10), 0.9),
         GroundedBox("Faucet", (20, 20, 30, 30), 0.8),
-        GroundedBox("Sink", (21, 21, 31, 31), 0.6),
+        GroundedBox("SinkBasin", (21, 21, 31, 31), 0.6),
     ]
     expected = nms(
         torch.tensor([box.xyxy for box in boxes], dtype=torch.float32),

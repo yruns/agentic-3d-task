@@ -757,9 +757,21 @@ class MacroActionController:
                     f"clean_in_sink failed at PutObject: {msg}",
                 )
 
-            faucet_id = self._find_nearest_category(
-                receptacle_id, ("Faucet", "Sink", "SinkBasin")
-            )
+            faucet_id = self._find_nearest_category(receptacle_id, ("Faucet",))
+            if (
+                faucet_id is None
+                and self.executor.can_step()
+                and self.executor.current_observation.horizon_degrees >= 15.0
+            ):
+                up_ok = self.executor.step_primitive("LookUp", object_id=None)
+                total_steps += 1
+                if not up_ok:
+                    total_failed += 1
+                faucet_id = self._find_nearest_category(receptacle_id, ("Faucet",))
+            if faucet_id is None:
+                faucet_id = self._find_nearest_category(
+                    receptacle_id, ("Faucet", "Sink", "SinkBasin")
+                )
             if faucet_id is None:
                 return (
                     total_steps,

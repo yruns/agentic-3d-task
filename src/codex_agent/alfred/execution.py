@@ -21,6 +21,8 @@ from typing import Protocol
 
 import numpy as np
 
+from codex_agent.errors import CodexResponseError, CodexTurnError
+from codex_agent.models import CodexTaskResult
 from codex_agent.runtime import CodexAgentRuntime
 from codex_agent.tasks.base import CodexExecutor
 
@@ -33,7 +35,7 @@ from .macro_controller import MacroActionController
 from .memory import IncrementalSceneMemory, MappingConfig, MemoryConfig
 from .odometry import ActionOdometry, camera_intrinsics
 from .perception import PerceptionObservation
-from .policy import NAVIGATION_ACTIONS, AlfredPolicyTask
+from .policy import NAVIGATION_ACTIONS, AlfredEpisodeTurnOutcome, AlfredPolicyTask
 from .provenance import file_sha256
 from .simulator import SimulatorObservation
 from .spatial_map import SpatialMap, SpatialMapConfig
@@ -190,9 +192,15 @@ class EpisodeExecutor:
             )
             if isinstance(self.runtime, CodexAgentRuntime) and orig_cfg is not None:
                 self.runtime.config = replace(orig_cfg, project_root=self.workspace_dir)
+            result: CodexTaskResult[AlfredEpisodeTurnOutcome] | None = None
+            turn_interrupted_error: str | None = None
             try:
                 with EpisodeToolServer(self):
                     result = self.runtime.execute(task)
+            except (CodexTurnError, CodexResponseError) as exc:
+                if self.decisions == 0:
+                    raise
+                turn_interrupted_error = f"{type(exc).__name__}: {exc}"
             finally:
                 if isinstance(self.runtime, CodexAgentRuntime) and orig_cfg is not None:
                     self.runtime.config = orig_cfg
@@ -202,28 +210,48 @@ class EpisodeExecutor:
         if self.decisions == 0:
             self.decisions = 1
 
-        usage = result.turn.metadata.usage
-        totals = usage.get("total") if usage else None
-        if (
-            isinstance(totals, dict)
-            and isinstance(totals.get("input_tokens"), int)
-            and isinstance(totals.get("output_tokens"), int)
-        ):
-            self.input_tokens += totals["input_tokens"]
-            self.output_tokens += totals["output_tokens"]
+        if result is not None:
+            usage = result.turn.metadata.usage
+            totals = usage.get("total") if usage else None
+            if (
+                isinstance(totals, dict)
+                and isinstance(totals.get("input_tokens"), int)
+                and isinstance(totals.get("output_tokens"), int)
+            ):
+                self.input_tokens += totals["input_tokens"]
+                self.output_tokens += totals["output_tokens"]
+            else:
+                self._usage_complete = False
+
+            write_json(
+                decisions_dir / "response.json",
+                {
+                    "decision": result.outcome.model_dump(mode="json"),
+                    "metadata": result.turn.metadata.as_dict(),
+                    "raw_response": result.turn.final_response,
+                },
+            )
+            completed_by_policy = (
+                self.finish_requested or result.outcome.status == "completed"
+            )
         else:
             self._usage_complete = False
+            write_json(
+                decisions_dir / "response.json",
+                {
+                    "decision": {
+                        "status": "incomplete",
+                        "summary": self.finish_summary
+                        or "Turn interrupted at budget limit.",
+                        "completed_subgoals": [],
+                    },
+                    "metadata": {"interrupted_error": turn_interrupted_error},
+                    "raw_response": None,
+                },
+            )
+            completed_by_policy = self.finish_requested
 
-        write_json(
-            decisions_dir / "response.json",
-            {
-                "decision": result.outcome.model_dump(mode="json"),
-                "metadata": result.turn.metadata.as_dict(),
-                "raw_response": result.turn.final_response,
-            },
-        )
-
-        if self.finish_requested or result.outcome.status == "completed":
+        if completed_by_policy:
             reason = "policy_stop"
         elif self.actions >= self.config.max_actions:
             reason = "action_budget"

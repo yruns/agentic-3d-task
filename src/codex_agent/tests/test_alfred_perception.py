@@ -24,6 +24,7 @@ from codex_agent.alfred.perception import (
     validate_prediction_artifacts,
 )
 from codex_agent.alfred.perception_worker import PredictionRequest
+from codex_agent.alfred.vocabulary import ALFRED_CATEGORIES
 
 
 def _configuration(root: Path) -> ScenePerceptionConfig:
@@ -107,8 +108,8 @@ def _observation(
         features_path=features_path,
         detections=detections,
         diagnostics=PerceptionDiagnostics(
-            vocabulary_categories=114,
-            caption_batches=5,
+            vocabulary_categories=len(ALFRED_CATEGORIES),
+            caption_batches=3,
             candidate_boxes=len(detections),
             nms_suppressed=0,
             capped_detections=0,

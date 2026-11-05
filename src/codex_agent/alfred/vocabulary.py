@@ -1,8 +1,22 @@
-"""Frozen ALFRED object vocabulary, independent of episode goals or metadata.
+"""Frozen ALFRED task-relevant object vocabulary (85 categories).
 
-Source: ALFRED gen/constants.py OBJECTS (108 classes), its five sliced-food
-OBJ_PARENTS entries, and the Faucet control category. These are dataset-level
-schema labels; no scene-specific category list is read at runtime.
+Derived from an exhaustive audit of all 7,080 unique trajectories (22,664
+language annotations) across ``train`` (6,574), ``valid_seen`` (251), and
+``valid_unseen`` (255) in ALFRED ``json_2.1.0``, plus ``gen/constants.py`` and
+FILM's ``alfworld_constants.py`` detector pruning rules:
+* 53 manipulable ``object_target`` base classes + 5 ``*Sliced`` forms = 58 classes
+  (including the 7 ``mrecep_target`` movable receptacles),
+* 24 stationary ``parent_target`` receptacles/surfaces,
+* 2 ``toggle_target`` lamps (``DeskLamp``, ``FloorLamp``) + ``Faucet`` = 3 control classes.
+
+The 29 non-task structural/background/duplicate-shell classes from the raw
+AI2-THOR 108-object modeling list (e.g. ``Window``, ``Blinds``, ``Curtains``,
+``Mirror``, ``Painting``, ``Poster``, ``ShowerDoor``, ``ShowerGlass``,
+``LightSwitch``, ``StoveKnob``, ``Chair``, ``Footstool``, ``TVStand``,
+``Television``, ``Sink`` [duplicate of ``SinkBasin``], ``Bathtub`` [duplicate
+of ``BathtubBasin``], etc.) never appear in any PDDL goal or expert interaction
+and are excluded so open-vocabulary 2D detection does not hallucinate background
+surfaces or hollow out container masks during contained-mask subtraction.
 """
 
 from __future__ import annotations
@@ -18,12 +32,9 @@ ALFRED_CATEGORIES: tuple[str, ...] = (
     "ArmChair",
     "BaseballBat",
     "BasketBall",
-    "Bathtub",
     "BathtubBasin",
     "Bed",
-    "Blinds",
     "Book",
-    "Boots",
     "Bowl",
     "Box",
     "Bread",
@@ -34,14 +45,12 @@ ALFRED_CATEGORIES: tuple[str, ...] = (
     "Candle",
     "Cart",
     "CellPhone",
-    "Chair",
     "Cloth",
     "CoffeeMachine",
     "CoffeeTable",
     "CounterTop",
     "CreditCard",
     "Cup",
-    "Curtains",
     "Desk",
     "DeskLamp",
     "DiningTable",
@@ -51,52 +60,37 @@ ALFRED_CATEGORIES: tuple[str, ...] = (
     "Egg",
     "Faucet",
     "FloorLamp",
-    "Footstool",
     "Fork",
     "Fridge",
     "GarbageCan",
     "Glassbottle",
     "HandTowel",
-    "HandTowelHolder",
-    "HousePlant",
     "Kettle",
     "KeyChain",
     "Knife",
     "Ladle",
     "Laptop",
-    "LaundryHamper",
-    "LaundryHamperLid",
     "Lettuce",
     "LettuceSliced",
-    "LightSwitch",
     "Microwave",
-    "Mirror",
     "Mug",
     "Newspaper",
     "Ottoman",
-    "Painting",
     "Pan",
-    "PaperTowel",
-    "PaperTowelRoll",
     "Pen",
     "Pencil",
     "PepperShaker",
     "Pillow",
     "Plate",
     "Plunger",
-    "Poster",
     "Pot",
     "Potato",
     "PotatoSliced",
     "RemoteControl",
     "Safe",
     "SaltShaker",
-    "ScrubBrush",
     "Shelf",
-    "ShowerDoor",
-    "ShowerGlass",
     "SideTable",
-    "Sink",
     "SinkBasin",
     "SoapBar",
     "SoapBottle",
@@ -106,34 +100,55 @@ ALFRED_CATEGORIES: tuple[str, ...] = (
     "SprayBottle",
     "Statue",
     "StoveBurner",
+    "TennisRacket",
+    "TissueBox",
+    "Toilet",
+    "ToiletPaper",
+    "ToiletPaperHanger",
+    "Tomato",
+    "TomatoSliced",
+    "Vase",
+    "Watch",
+    "WateringCan",
+    "WineBottle",
+)
+
+EXCLUDED_BACKGROUND_CATEGORIES: tuple[str, ...] = (
+    "Bathtub",
+    "Blinds",
+    "Boots",
+    "Chair",
+    "Curtains",
+    "Footstool",
+    "HandTowelHolder",
+    "HousePlant",
+    "LaundryHamper",
+    "LaundryHamperLid",
+    "LightSwitch",
+    "Mirror",
+    "Painting",
+    "PaperTowel",
+    "PaperTowelRoll",
+    "Poster",
+    "ScrubBrush",
+    "ShowerDoor",
+    "ShowerGlass",
+    "Sink",
     "StoveKnob",
     "TVStand",
     "TeddyBear",
     "Television",
-    "TennisRacket",
-    "TissueBox",
     "Toaster",
-    "Toilet",
-    "ToiletPaper",
-    "ToiletPaperHanger",
     "ToiletPaperRoll",
-    "Tomato",
-    "TomatoSliced",
     "Towel",
     "TowelHolder",
-    "Vase",
-    "Watch",
-    "WateringCan",
     "Window",
-    "WineBottle",
 )
 
 _PROMPT_OVERRIDES = {
     "CD": "compact disc",
-    "TVStand": "television stand",
     "Glassbottle": "glass bottle",
     "BasketBall": "basketball",
-    "Footstool": "foot stool",
 }
 
 

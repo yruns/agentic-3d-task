@@ -1,120 +1,174 @@
-# ALFRED: online OpenEQA scene mapping and execution
+# ALFRED: online OpenEQA scene mapping, single-turn Codex loop, and high-level macro tools
 
-ALFRED uses our OpenEQA object–view mapping method incrementally. Each new RGB
-observation supplies fixed-vocabulary detections, instance masks, CLIP features
-and predicted metric depth. An episode-local memory associates and fuses objects,
-retains original views, updates the exploration map and serves the next decision.
-This iteration implements incremental mapping and bounded typed actions; generated
-local Python policy programs remain future work.
+ALFRED uses our OpenEQA object–view mapping method incrementally inside a
+**single interactive Codex Agent SDK turn per episode**:
 
-The implementation replaces the earlier FILM perception and RGB-histogram mapper.
-Historical code/configuration and 50 official scores remain archived in
-[v8](../benchmark/alfred/v8_pilot50_complete_20261105.md). The new experiment uses
-[frozen pilot15](../benchmark/alfred/folds/pilot15.json): seven seen and eight unseen,
-selected deterministically from the original pilot50 without reading scores.
-The user ultimately requested only the original first five entries, all seen;
-5/5 scored with SR0/5 and GC1/12. [v10 results and replays](../benchmark/alfred/v10_prefix5_20261105.md)
-record this diagnostic prefix and all excluded cancellations.
-See [v9 setup and protocol](../benchmark/alfred/v9_online_mapping_20261105.md) for
-actual validation status; old scores are not results of this implementation.
+1. **Map-First Turn 0 Initialization:** Before the Codex turn begins,
+   `EpisodeExecutor` automatically performs an initial 360-degree scan at a
+   $30^\circ$ downward pitch, integrating the surrounding room geometry, 3D
+   objects, and 5 cm traversability grid, and attaches the initial annotated
+   first-person RGB image + top-down BEV map alongside the inlined 3D Object
+   Catalog and Scene Region Layout.
+2. **High-Level Macro Tool Loop (`codex_agent.alfred.tools`):** Codex never
+   issues low-level atomic movements (`MoveAhead`, `RotateLeft`, `LookUp`,
+   `LookDown`) directly. Instead, Codex invokes semantic CLI tools
+   (`navigate_to`, `explore_frontier`, `scan_surroundings`, `interact_object`,
+   `list_objects`, `keyframe_selector`, `view_crop`, `view_frame`, `view_bev`,
+   `finish_episode`) which communicate over loopback HTTP with an in-process
+   `EpisodeToolServer` owned by `EpisodeExecutor`.
+3. **Closed-Loop FMM Execution & Incremental `SceneDelta` Updates:** When Codex
+   invokes a macro tool (e.g., `navigate_to(object_id=14)` or
+   `interact_object(action="clean_in_sink", object_id=14)`),
+   `MacroActionController` steps AI2-THOR closed-loop, runs neural perception
+   and 3D mapping on every intermediate frame (persisting all raw frames, depth
+   maps, masks, and CLIP features to disk), and returns **only a compact
+   incremental `SceneDelta` JSON** (`delta.py`) computed against the previous
+   `RevisionWatermark`.
+
+The implementation replaces the earlier FILM perception and per-step reactive
+JSON polling loop. Historical code/configuration and 50 official scores remain
+archived in [v8](../benchmark/alfred/v8_pilot50_complete_20261105.md) and
+[v10](../benchmark/alfred/v10_prefix5_20261105.md).
+
+---
 
 ## Inputs and information boundary
 
-The actor receives the high-level language instruction, current RGB, predicted
-scene geometry, historical RGB evidence, gridded BEV, yaw/pitch proprioception,
-successful-action odometry and action-success feedback. H+L is an explicit option.
-The pose setting is unchanged: successful MoveAhead advances 0.25 m, the standing
-camera is 1.576 m high, and calibrated vertical FOV is 60 degrees.
+The actor receives the high-level language instruction, initial/requested RGB
+views, gridded BEV maps, yaw/pitch proprioception, successful-action odometry
+and action-success feedback. H+L is an explicit option. Each episode turn runs
+inside an isolated temporary workspace (`/tmp/alfred_actor_ws_*`) containing
+only `session_endpoint.json` and published tool images so the agent cannot
+inspect parent run directories or dataset files on disk.
+The pose setting is unchanged: successful `MoveAhead` advances 0.25 m, the
+standing camera is 1.576 m high, and calibrated vertical FOV is 60 degrees.
 
 Simulator object identities, world positions, reachable-position lists, true
 masks/depth, expert plans, task types, PDDL parameters and terminal goal conditions
 remain behind the evaluator boundary. Action error strings redact coordinate-bearing
-object IDs but can contain native category/GameObject names. A separate train-only
-depth calibration process reads true depth offline; it is never an actor input.
-This is a declared validation research setting, not a strict RGB-only submission.
+object IDs. A separate train-only depth calibration process reads true depth
+offline; it is never an actor input.
+The existing official simulator and scorer stay pinned to AI2-THOR 2.1.0, build
+`201909061227`.
 
-The actor uses native Responses through the registered adapter, with an empty
-host-tool catalog. Typed decisions are the only path to retrieval and actions.
-GPT requests never fall back to Chat Completions. The existing official simulator
-and scorer stay pinned to AI2-THOR 2.1.0, build 201909061227.
+---
 
-## Perception and incremental memory
+## Why the detector vocabulary is pruned from 114 to 85 task-relevant categories
 
-The fixed vocabulary contains ALFRED's 108 global object categories plus Faucet
-and five sliced forms. Human-readable phrases are deterministic; no current-scene
-metadata or task target prunes the list. Since categories are provided, RAM's
-automatic category proposal is omitted. GroundingDINO SwinT-OGC detects boxes,
-SAM1 ViT-H chooses the highest-quality multimask candidate for each box, and
-OpenCLIP ViT-H-14 / laion2b_s32b_b79k encodes the original detector crop with 20-pixel
-padding and the category phrase. Full-frame CLIP features are retained as well.
+### 1. Where the original 114 categories came from
+The initial 114-class list (`OBJECTS_WSLICED` in FILM's `alfworld_constants.py`)
+was formed by taking all **108 Unity GameObject modeling categories** from
+ALFRED's `gen/constants.py` (`OBJECTS`), adding the **5 sliced food forms**
+(`AppleSliced`, `BreadSliced`, `LettuceSliced`, `PotatoSliced`, `TomatoSliced`),
+and adding **`Faucet`**.
 
-Our mapper combines geometric point overlap and CLIP cosine similarity, performs
-voxel reduction and DBSCAN, and periodically merges duplicate objects. Online
-extensions preserve stable IDs and aliases, distinguish provisional objects,
-and start new geometry epochs after affected interactions. Original RGB, predicted
-depth, intrinsics, poses, detections and feature arrays are retained. Object/view
-and grid/view associations support retrieval even when a requested target was
-not detected. Successful actions are recorded as action-derived state evidence,
-not mislabeled as visual confirmation. Interactions use the effective target mask
-from the current observation, with its saved path and hash in the action log.
+### 2. Full dataset audit across all 7,080 ALFRED trajectories (`train` + `valid_seen` + `valid_unseen`)
+An exhaustive scan of `pddl_params` (`object_target`, `mrecep_target`,
+`parent_target`, `toggle_target`, `object_sliced`) and `plan.low_actions` across
+all **7,080 unique trajectories (22,664 annotations)** in `json_2.1.0`
+establishes the exact set of categories that ever participate in any ALFRED task:
 
-The navigation map uses a 5 cm grid; semantic BEV regions are 50 cm. Known free,
-occupied/collision and unknown space are separate from visual observation coverage.
-The agent body and a successful traversal provide free-space evidence without
-claiming that surrounding regions have been visually inspected. FMM plans on
-observed space with explicit body clearance. Explore selects a reachable frontier,
-keeps it across a bounded action chunk, reobserves every step and uses bounded
-camera scans when travel cannot expose more space. Navigation, interaction and
-exploration report failures explicitly.
+| Split | Unique trajectories / annotations | `object_target` (base) | `mrecep_target` | `parent_target` | `toggle_target` | Union of PDDL targets (incl. `*Sliced`) | Union of all interacted categories (incl. `Faucet`) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `train` | 6,574 / 21,023 | 53 | 7 | 24 | 2 | 84 | **85** |
+| `valid_seen` | 251 / 820 | 49 | 7 | 24 | 2 | 80 | 81 |
+| `valid_unseen` | 255 / 821 | 42 | 6 | 15 | 2 | 64 | 65 |
+| **All Splits Union** | **7,080 / 22,664** | **53** | **7** | **24** | **2** | **84** | **85** |
+
+Every category appearing in `valid_seen` or `valid_unseen` is a strict subset of
+the **85 task-relevant categories** in `train` (53 pickup targets + 5 `*Sliced`
+forms + 24 stationary receptacles + 2 lamps + `Faucet`).
+
+### 3. Why the 29 non-task background/duplicate-shell categories are excluded (`EXCLUDED_BACKGROUND_CATEGORIES`)
+The remaining **29 categories** in the raw 114-class list have **zero
+occurrences** across all 7,080 trajectories:
+- **Architectural & wall background (10):** `Blinds`, `Curtains`, `Window`,
+  `Mirror`, `Painting`, `Poster`, `ShowerDoor`, `ShowerGlass`, `LightSwitch`,
+  `StoveKnob`.
+- **Non-target background furniture (7):** `Chair` (tasks only use `ArmChair`),
+  `Footstool` (tasks only use `Ottoman`), `TVStand`, `Television`, `HousePlant`,
+  `LaundryHamper`, `LaundryHamperLid`.
+- **Duplicate outer fixture shells (2):** `Sink` (tasks exclusively target
+  `SinkBasin`) and `Bathtub` (tasks exclusively target `BathtubBasin`).
+- **Unused props/variants (10):** `Boots`, `HandTowelHolder`, `PaperTowel`,
+  `PaperTowelRoll`, `ScrubBrush`, `TeddyBear`, `Toaster`, `ToiletPaperRoll`
+  (tasks use `ToiletPaper`), `Towel`, `TowelHolder`.
+
+*(Note: FILM's own detector `alfworld_constants.py:1202` similarly strips
+`Blinds`, `Boots`, `Chair`, `Curtains`, `Footstool`, `Mirror`, `LightSwitch`,
+`Painting`, `Poster`, `ShowerGlass`, and `Window` from `OBJECTS_DETECTOR`.)*
+
+When queried with GroundingDINO at `box_threshold = 0.20`, those 29 categories
+caused three concrete failure modes observed in `v10` and `v11`:
+1. **Severe false-positive box clutter & mask hollowing:** Large background
+   detections (`Window`, `Curtains`, `Mirror`, `Footstool`) overlapped
+   appliances and hollowed out `Fridge` / `CounterTop` masks during
+   contained-mask subtraction (`v10` `i02`).
+2. **Duplicate outer-shell confusion:** Detecting both `Sink` and `SinkBasin`
+   on the same fixture caused the agent to target `Sink` (whose mask swallowed
+   the `Faucet`) instead of `SinkBasin` (`v11` `i03`).
+3. **Caption batch overhead & 3D clutter:** Pruning 114 $\rightarrow$ 85
+   categories with `caption_batch_size = 29` reduces GroundingDINO forward
+   passes from **5 batches/frame to 3 batches/frame (-40%)** and cuts spurious
+   provisional 3D object fragments by more than half.
+
+---
+
+## Perception and 3D mapping performance optimizations
+
+Profiling of the 5-task runs identified two dominant latency bottlenecks in
+perception and 3D mapping (while AI2-THOR simulation itself takes `< 0.08 s/step`):
+
+1. **GPU-Resident Perception Models (`model_runtime.py`):**
+   - Previously, `active_model()` moved all four neural models (~8.5 GB total:
+     `DA3Metric-Large` 1.34 GB, `GroundingDINO` 0.70 GB, `SAM1 ViT-H` 2.56 GB,
+     `OpenCLIP ViT-H-14` 3.94 GB) from CPU to GPU and back to CPU—followed by a
+     synchronous `torch.cuda.empty_cache()`—four times on every single frame,
+     adding ~2.5 s/frame of pure PCIe transfer and synchronization overhead.
+   - `active_model()` now keeps each model resident on its assigned 24 GB RTX
+     4090 GPU (~9.2 GB total footprint), eliminating per-frame CPU$\leftrightarrow$GPU
+     weight thrashing.
+2. **Fast AABB Rejection & OBB Caching in 3D Mapping (`object_mapping.py`):**
+   - Previously, `oriented_envelopes_overlap()` fitted a 3D `ConvexHull` + PCA
+     from scratch on both point clouds for every candidate pair in
+     `_assign_regions()` and `maintain_objects()`, causing $O(N^2)$ latency
+     spikes up to 33–73 s/step at frame 40 (`>60,000` convex-hull fits).
+   - `oriented_envelopes_overlap()` now performs an $O(1)$ axis-aligned bounding
+     box (AABB) disjointness check before touching `ConvexHull`, and caches
+     computed OBB envelopes per immutable point-cloud array in `_ENVELOPE_CACHE`.
+3. **Raw SAM Mask Preservation for Containers (`memory.py`):**
+   - `IncrementalSceneMemory` stores both child-subtracted `current_detection_masks`
+     (used for 3D point projection, `PickupObject`, and empty-surface `PutObject`)
+     and unsubtracted `current_raw_detection_masks` (used by
+     `select_interaction_mask` for `OpenObject` / `CloseObject` so container
+     doors are never hollowed out by items inside).
+
+---
+
+## Module responsibilities
 
 | Module | Responsibility |
 |---|---|
-| `dataset`, `settings` | Frozen fold and strict public scene configuration |
-| `perception`, `perception_worker`, `vision_models`, `depth_models` | Local detector, masks, CLIP and meter-scale depth |
-| `geometry`, `object_mapping`, `object_store`, `memory` | Registered observations, object fusion and indexed evidence |
-| `spatial_map`, `navigation`, `exploration`, `rendering` | Coverage, traversability, FMM, frontier selection and BEV |
-| `policy`, `execution`, `actor_runtime` | Typed decisions, action budgets and isolated native Responses turns |
-| `simulator`, `simulator_worker` | Official scene lifecycle, mask dispatch and terminal scoring |
+| `dataset`, `settings`, `vocabulary` | Frozen fold, strict scene TOML config, and 85 task-relevant ALFRED categories |
+| `perception`, `perception_worker`, `vision_models`, `depth_models` | Local GPU-resident GroundingDINO, SAM1, OpenCLIP, and DA3Metric-Large depth |
+| `geometry`, `object_mapping`, `object_store`, `memory` | Registered observations, AABB/OBB-cached object fusion, raw/effective masks, and indexed evidence |
+| `delta` | `RevisionWatermark` snapshots and compact incremental `SceneDelta` computation |
+| `spatial_map`, `navigation`, `exploration`, `rendering` | Coverage, traversability, progressive FMM, frontier selection, and BEV rendering |
+| `macro_controller`, `episode_server`, `tools`, `playbook` | Closed-loop FMM navigation + Auto-Framing, compound appliance macros, loopback RPC server, and 10 CLI tools |
+| `policy`, `execution`, `actor_runtime` | Single-turn Map-First prompt, isolated temporary workspace, and tool-enabled Codex SDK runtime |
+| `simulator`, `simulator_worker` | Official AI2-THOR 2.1.0 scene lifecycle, mask dispatch, and terminal scoring |
 | `calibration_capture`, `depth_calibration`, `depth_calibration_runner` | Private train observations and independent raw metric depth comparison |
-| `metrics`, `results`, `provenance` | Official aggregation, immutable attempts and code/asset provenance |
+| `metrics`, `results`, `provenance` | Official aggregation, immutable attempts, `tool_calls.jsonl`, and code/asset provenance |
 
-## Local model setup
-
-Use the existing `agentic3d` environment for the runner and perception. The older
-`/home/ysh/codebase/FILM/.venv/bin/python` is used only for the existing official
-simulator worker. It supplies no FILM perception or navigation code. Checkpoint
-and source locations are explicit in `configs/alfred/scene.toml`; inference does
-not download assets. Weights stay outside Git under `/home/ysh/Models/agentic3d`.
-Pinned source revisions, model revisions and hashes are in the v9 record.
-
-GroundingDINO's native CUDA extension needs the recorded
-`scripts/alfred/patches/groundingdino_torch28_scalar_type.patch` for Torch 2.8.
-Build with the environment's CUDA 12.6, GCC 11, explicit compute capability 8.9,
-and NVIDIA package include directories. The patch changes the dispatch scalar
-type API, not model computation. Install source packages without their full
-training/export dependency stacks: those stacks conflict with the shared NumPy
-version. Do not upgrade Torch/NumPy/Transformers or modify the legacy environment.
-
-The current run uses physical GPU 4, explicitly configured and resolved to its
-GPU UUID before process launch (logical `cuda:0`). Models move between CPU and GPU by stage;
-a shared file lock serializes inference across ALFRED workers. Inspect GPU
-availability before launching. Physical GPU 1 is forbidden. The current display
-`:5` renders on GPU 6; its authentication is
-`/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/Xauthority`.
-
-<a id="run-the-frozen-validation-fold"></a>
+---
 
 ## Frozen pilot15 invocation
-
-Activate the environment, verify adapter health and one native upstream Responses
-turn, then run inside tmux. All executable source and configuration must be
-committed before evaluation; dirty tracked code and untracked source are rejected.
-Use a unique run ID/output directory for every invocation, including retries.
 
 ```bash
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate agentic3d
 curl -fsS http://127.0.0.1:8787/health
+export XAUTHORITY=/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/Xauthority
 NO_PROXY="127.0.0.1,localhost,::1${NO_PROXY:+,$NO_PROXY}" \
 no_proxy="127.0.0.1,localhost,::1${no_proxy:+,$no_proxy}" \
 python -m codex_agent.cli.run_alfred \
@@ -124,21 +178,11 @@ python -m codex_agent.cli.run_alfred \
   --output-dir outputs/alfred/pilot15_<date>_<attempt> \
   --simulator-python /home/ysh/codebase/FILM/.venv/bin/python \
   --alfred-root /home/ysh/Datasets/FILM/alfred \
-  --scene-config configs/alfred/scene.toml --x-display 5 \
-  --model gpt-5.4-2026-03-05 --reasoning-effort medium \
-  --max-actions 1000 --max-failures 10 --max-decisions 60 --limit 5 \
+  --scene-config configs/alfred/scene.toml \
+  --x-display 5 \
+  --physical-gpu 4 \
+  --model gemini-3.8-flash \
+  --reasoning-effort provider-default \
+  --max-actions 1000 --max-failures 10 --max-decisions 35 --limit 5 \
   --preflight-only
 ```
-
-`--preflight-only` checks paths, fold and service readiness without starting
-inference. Remove it to run. A diagnostic may use `--limit 1` on the same frozen
-fold; it must have a separate record. Sharding selects `manifest[index::num_shards]`.
-The runner archives every completed/failed attempt into the benchmark SQLite DB.
-Keep per-episode observations, predictions, actions, decisions, memory and official
-terminal snapshots. Report scored/requested coverage and infrastructure errors
-beside SR, GC, PLWSR, PLWGC, actions, model calls, tokens and timings. Do not count
-unscored infrastructure failures as synthetic zero-goal task failures.
-
-The adapter's existing SOCKS forward on 10800 must be healthy; its local health
-endpoint alone does not prove upstream connectivity. Keep loopback proxy exclusions
-local to the new run and do not restart unrelated services.

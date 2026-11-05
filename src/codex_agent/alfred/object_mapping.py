@@ -300,8 +300,22 @@ def point_overlap(
     return float(np.count_nonzero(np.isfinite(distances)) / len(observed))
 
 
+_ENVELOPE_CACHE: dict[
+    tuple[int, int, float, float], tuple[FloatArray, FloatArray, FloatArray]
+] = {}
+
+
 def _oriented_envelope(points: FloatArray) -> tuple[FloatArray, FloatArray, FloatArray]:
     """Fit hull-PCA axes, using deterministic PCA for degenerate point sets."""
+    key = (
+        id(points),
+        len(points),
+        float(points[0, 0]),
+        float(points[-1, -1]),
+    )
+    cached = _ENVELOPE_CACHE.get(key)
+    if cached is not None:
+        return cached
     support = points
     if len(points) >= 4 and np.linalg.matrix_rank(points - points.mean(axis=0)) == 3:
         try:
@@ -315,7 +329,11 @@ def _oriented_envelope(points: FloatArray) -> tuple[FloatArray, FloatArray, Floa
     axes = axes[:, ::-1]
     coordinates = points @ axes
     minimum, maximum = coordinates.min(axis=0), coordinates.max(axis=0)
-    return axes @ ((minimum + maximum) / 2), axes, (maximum - minimum) / 2
+    result = axes @ ((minimum + maximum) / 2), axes, (maximum - minimum) / 2
+    if len(_ENVELOPE_CACHE) > 2048:
+        _ENVELOPE_CACHE.clear()
+    _ENVELOPE_CACHE[key] = result
+    return result
 
 
 def oriented_envelopes_overlap(first: FloatArray, second: FloatArray) -> bool:
@@ -333,6 +351,12 @@ def oriented_envelopes_overlap(first: FloatArray, second: FloatArray) -> bool:
             or not np.isfinite(points).all()
         ):
             raise ValueError("oriented envelopes require nonempty finite Nx3 clouds")
+    # Fast AABB rejection: if the axis-aligned bounding boxes of the two point
+    # clouds are disjoint, their tighter convex-hull OBBs cannot overlap.
+    if np.any(first.min(axis=0) > second.max(axis=0) + 1e-9) or np.any(
+        second.min(axis=0) > first.max(axis=0) + 1e-9
+    ):
+        return False
     first_center, first_axes, first_extent = _oriented_envelope(first)
     second_center, second_axes, second_extent = _oriented_envelope(second)
     axes = [first_axes[:, axis] for axis in range(3)] + [

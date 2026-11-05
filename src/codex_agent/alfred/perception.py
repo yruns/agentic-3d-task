@@ -42,7 +42,7 @@ class ScenePerceptionConfig:
     box_threshold: float = 0.2
     text_threshold: float = 0.2
     nms_iou_threshold: float = 0.5
-    caption_batch_size: int = 24
+    caption_batch_size: int = 29
     max_detections: int = 100
     timeout_seconds: float = 180.0
 

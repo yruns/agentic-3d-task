@@ -14,7 +14,7 @@ physical_gpu_index = 4
 box_threshold = 0.2
 text_threshold = 0.2
 nms_iou_threshold = 0.5
-caption_batch_size = 24
+caption_batch_size = 29
 max_detections = 100
 timeout_seconds = 300.0
 
