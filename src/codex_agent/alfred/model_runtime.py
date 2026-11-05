@@ -68,18 +68,30 @@ def active_model(model: Any, device: str) -> Iterator[Any]:
     On 24 GB RTX 4090 GPUs, all four perception models (DA3Metric-Large,
     GroundingDINO SwinT, SAM1 ViT-H, OpenCLIP ViT-H-14) occupy ~9.2 GB in total.
     Keeping weights resident on the target device avoids transferring 17 GB
-    across PCIe and calling synchronous ``torch.cuda.empty_cache()`` four times
-    on every single 300x300 frame (~2.5 s/frame overhead).
+    across PCIe on every single 300x300 frame (~2.5 s/frame overhead). If
+    another worker already occupies half of the 24 GB GPU, ``active_model``
+    falls back cleanly to staging weights back to CPU.
     """
     torch = importlib.import_module("torch")
     try:
         first_param = next(model.parameters(), None)
     except Exception:  # noqa: BLE001
         first_param = None
-    if first_param is None or str(first_param.device) != device:
+    already_on_device = first_param is not None and str(first_param.device) == device
+    staged_for_low_vram = False
+    if not already_on_device:
+        if device.startswith("cuda") and torch.cuda.is_available():
+            free_bytes, _ = torch.cuda.mem_get_info()
+            if free_bytes < 10 * 1024**3:
+                staged_for_low_vram = True
         model.to(device)
-    with torch.inference_mode():
-        yield model
+    try:
+        with torch.inference_mode():
+            yield model
+    finally:
+        if staged_for_low_vram and device.startswith("cuda"):
+            model.to("cpu")
+            torch.cuda.empty_cache()
 
 
 @contextmanager
