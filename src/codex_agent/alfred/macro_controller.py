@@ -66,12 +66,12 @@ def _box_distance_2d(point_xy: np.ndarray, bounds: np.ndarray) -> float:
 def _is_fov_aligned(
     stance_xy: tuple[float, float] | np.ndarray, target_xy: np.ndarray
 ) -> bool:
-    """Return whether ``target_xy`` falls within the +/-27 deg cardinal camera FOV cone."""
+    """Return whether ``target_xy`` falls within the +/-22 deg cardinal camera FOV cone."""
     dx = abs(float(target_xy[0] - stance_xy[0]))
     dy = abs(float(target_xy[1] - stance_xy[1]))
     major = max(dx, dy)
     minor = min(dx, dy)
-    return major <= 0.15 or (minor / major) <= math.tan(math.radians(27.0))
+    return major <= 0.15 or (minor / major) <= math.tan(math.radians(22.0))
 
 
 class MacroActionController:
@@ -437,27 +437,22 @@ class MacroActionController:
             if _is_fov_aligned(spatial_map.cell_center(cell), target_xy)
         }
         if aligned_close:
-            close_goals = aligned_close
-        elif 0.25 <= current_box_dist <= 0.85:
-            return None, "Reached an observed interaction stance near target."
-
-        if close_goals:
             action, feedback = navigation_step(
-                spatial_map, close_goals, yaw_degrees=yaw_degrees
+                spatial_map, aligned_close, yaw_degrees=yaw_degrees
             )
             if action is not None or feedback.startswith("Reached"):
                 return action, feedback
 
-        # Progressive approach: if the 0.25-0.85m band is still in unobserved space,
-        # advance to the reachable lattice cell that gets closest to the target's bounds
-        # while preferring cardinal-FOV-aligned stances!
+        # Progressive approach: if an aligned 0.25-0.85m stance is still in unobserved space,
+        # advance to the reachable lattice cell that improves (distance + alignment penalty).
+        align_penalty = 0.32
         scored = [
             (
                 _box_distance_2d(np.asarray(spatial_map.cell_center(cell)), bounds)
                 + (
                     0.0
                     if _is_fov_aligned(spatial_map.cell_center(cell), target_xy)
-                    else 0.22
+                    else align_penalty
                 ),
                 _box_distance_2d(np.asarray(spatial_map.cell_center(cell)), bounds),
                 cell,
@@ -466,12 +461,12 @@ class MacroActionController:
         ]
         if scored:
             min_score = min(item[0] for item in scored)
-            cur_score = current_box_dist + (0.0 if current_aligned else 0.22)
-            if min_score < cur_score - 0.12:
+            cur_score = current_box_dist + (0.0 if current_aligned else align_penalty)
+            if min_score < cur_score - 0.10:
                 progressive_goals = {
                     cell for sc, _, cell in scored if sc <= min_score + 0.15
                 }
-                prog_action, prog_feedback = navigation_step(
+                prog_action, _ = navigation_step(
                     spatial_map, progressive_goals, yaw_degrees=yaw_degrees
                 )
                 if prog_action is not None:
@@ -479,6 +474,15 @@ class MacroActionController:
                         prog_action,
                         f"Advancing along FMM toward #{resolved_id} (target score={min_score:.2f}m).",
                     )
+
+        if close_goals:
+            if 0.25 <= current_box_dist <= 0.85:
+                return None, "Reached an observed interaction stance near target."
+            action, feedback = navigation_step(
+                spatial_map, close_goals, yaw_degrees=yaw_degrees
+            )
+            if action is not None or feedback.startswith("Reached"):
+                return action, feedback
 
         # At the boundary of currently known free floor, orient toward the target and
         # look down (30-45 deg) so the depth sensor clears the floor ahead!
@@ -560,27 +564,62 @@ class MacroActionController:
                     )
         return None, feedback
 
-    def _auto_frame_object(self, resolved_id: int) -> tuple[int, int]:
-        """Orient camera toward ``resolved_id`` and probe pitch if mask is missing."""
+    def _auto_frame_object(
+        self, resolved_id: int, *, action: str = "PickupObject"
+    ) -> tuple[int, int]:
+        """Orient camera toward ``resolved_id`` and probe pitches without oscillation."""
         memory = self.executor.memory
         if resolved_id not in memory.objects:
             return 0, 0
+        steps = 0
+        failed = 0
         node = memory.objects[resolved_id]
-        steps, failed = self._orient_towards_point(node.centroid)
+        pos = memory.agent_position
+        horiz_dist = 0.5
+        if pos is not None:
+            dx = float(node.centroid[0] - pos[0])
+            dy = float(node.centroid[1] - pos[1])
+            horiz_dist = math.hypot(dx, dy)
+            if horiz_dist > 1e-3:
+                desired_yaw = math.degrees(math.atan2(dx, dy)) % 360.0
+                for _ in range(2):
+                    if not self.executor.can_step():
+                        break
+                    rot = rotation_towards(
+                        self.executor.current_observation.yaw_degrees, desired_yaw
+                    )
+                    if rot is None:
+                        break
+                    ok = self.executor.step_primitive(rot, object_id=None)
+                    steps += 1
+                    if not ok:
+                        failed += 1
+                        break
+
         resolved_id = memory.resolve_object_id(resolved_id)
-        if (
-            memory.select_interaction_mask(resolved_id, action="PickupObject")
-            is not None
-        ):
+        if memory.select_interaction_mask(resolved_id, action=action) is not None:
             return steps, failed
 
-        current_h = self.executor.current_observation.horizon_degrees
-        probe_action = "LookDown" if current_h < 30.0 else "LookUp"
-        if self.executor.can_step():
-            ok = self.executor.step_primitive(probe_action, object_id=None)
-            steps += 1
-            if not ok:
-                failed += 1
+        node = memory.objects[resolved_id]
+        desired_pitch = math.degrees(
+            math.atan2(1.576 - float(node.centroid[2]), max(0.20, horiz_dist))
+        )
+        clamped_desired = max(-30.0, min(60.0, round(desired_pitch / 15.0) * 15.0))
+        candidate_pitches = [clamped_desired]
+        for delta in (15.0, -15.0, 30.0, -30.0):
+            cand_p = max(-30.0, min(60.0, clamped_desired + delta))
+            if cand_p not in candidate_pitches:
+                candidate_pitches.append(cand_p)
+
+        for target_p in candidate_pitches[:3]:
+            if not self.executor.can_step():
+                break
+            p_steps, p_fail = self._adjust_pitch_to(target_p)
+            steps += p_steps
+            failed += p_fail
+            resolved_id = memory.resolve_object_id(resolved_id)
+            if memory.select_interaction_mask(resolved_id, action=action) is not None:
+                return steps, failed
         return steps, failed
 
     def interact_object(
@@ -634,7 +673,11 @@ class MacroActionController:
         )
 
     def _execute_single_interaction(
-        self, sim_action: str, resolved_id: int
+        self,
+        sim_action: str,
+        resolved_id: int,
+        *,
+        allow_navigation: bool = True,
     ) -> tuple[int, int, bool, str]:
         memory = self.executor.memory
         steps = 0
@@ -643,8 +686,11 @@ class MacroActionController:
         pos = np.asarray((memory.agent_position or (0.0, 0.0, 0.0))[:2])
         node = memory.objects[resolved_id]
         box_dist = _box_distance_2d(pos, node.bounds)
+        aligned = _is_fov_aligned(pos, node.centroid[:2])
         mask_info = memory.select_interaction_mask(resolved_id, action=sim_action)
-        if mask_info is None or box_dist > 1.05:
+        if allow_navigation and (
+            mask_info is None or box_dist > 0.90 or (box_dist > 0.55 and not aligned)
+        ):
             nav_steps, nav_fail, _, _ = self._execute_navigation(
                 object_id=resolved_id, region=None, max_steps=32
             )
@@ -661,7 +707,7 @@ class MacroActionController:
             )
 
         if memory.select_interaction_mask(resolved_id, action=sim_action) is None:
-            o_steps, o_fail = self._auto_frame_object(resolved_id)
+            o_steps, o_fail = self._auto_frame_object(resolved_id, action=sim_action)
             steps += o_steps
             failed += o_fail
             resolved_id = memory.resolve_object_id(resolved_id)
@@ -726,16 +772,21 @@ class MacroActionController:
                 "No valid positions" in first_err
                 or node.category in {"Fridge", "Cabinet", "Shelf", "Microwave"}
             ):
-                adj_action = "LookUp" if cur_h >= 15.0 else "LookDown"
+                adj_actions = (
+                    ["LookUp", "LookDown"] if cur_h >= 15.0 else ["LookDown", "LookUp"]
+                )
             elif box_dist > 0.50:
-                adj_action = "MoveAhead"
+                adj_actions = ["MoveAhead"]
             else:
-                adj_action = "LookDown" if cur_h < 30.0 else "LookUp"
-            adj_ok = self.executor.step_primitive(adj_action, object_id=None)
-            steps += 1
-            if not adj_ok:
-                failed += 1
-            else:
+                adj_actions = ["LookDown" if cur_h < 30.0 else "LookUp"]
+            for adj_action in adj_actions:
+                if not self.executor.can_step():
+                    break
+                adj_ok = self.executor.step_primitive(adj_action, object_id=None)
+                steps += 1
+                if not adj_ok:
+                    failed += 1
+                    continue
                 resolved_id = memory.resolve_object_id(resolved_id)
                 if (
                     self.executor.can_step()
@@ -754,6 +805,7 @@ class MacroActionController:
                             f"{sim_action} on #{resolved_id} ({node.category}) succeeded after micro-adjustment ({adj_action}).",
                         )
                     failed += 1
+                    break
 
         return (
             steps,
@@ -781,6 +833,20 @@ class MacroActionController:
             s, f, ok, msg = self._execute_single_interaction("PutObject", receptacle_id)
             total_steps += s
             total_failed += f
+            if not ok and self.executor.can_step():
+                alt_sink = self._find_nearest_category(
+                    receptacle_id, ("SinkBasin", "BathtubBasin")
+                )
+                if alt_sink is not None and alt_sink != memory.resolve_object_id(
+                    receptacle_id
+                ):
+                    s2, f2, ok, msg = self._execute_single_interaction(
+                        "PutObject", alt_sink, allow_navigation=False
+                    )
+                    total_steps += s2
+                    total_failed += f2
+                    if ok:
+                        receptacle_id = alt_sink
             if not ok:
                 return (
                     total_steps,
@@ -812,7 +878,9 @@ class MacroActionController:
                     "Placed object in sink, but no Faucet was detected nearby to toggle.",
                 )
             for toggle_act in ("ToggleObjectOn", "ToggleObjectOff"):
-                s, f, ok, msg = self._execute_single_interaction(toggle_act, faucet_id)
+                s, f, ok, msg = self._execute_single_interaction(
+                    toggle_act, faucet_id, allow_navigation=False
+                )
                 total_steps += s
                 total_failed += f
                 if not ok:
@@ -825,10 +893,18 @@ class MacroActionController:
 
             target_pickup = memory.resolve_object_id(held_id)
             s, f, ok, msg = self._execute_single_interaction(
-                "PickupObject", target_pickup
+                "PickupObject", target_pickup, allow_navigation=False
             )
             total_steps += s
             total_failed += f
+            if not ok and self.executor.can_step():
+                alt_pick = self._find_pickupable_near(receptacle_id)
+                if alt_pick is not None and alt_pick != target_pickup:
+                    s2, f2, ok, msg = self._execute_single_interaction(
+                        "PickupObject", alt_pick, allow_navigation=False
+                    )
+                    total_steps += s2
+                    total_failed += f2
             return (
                 total_steps,
                 total_failed,
@@ -859,6 +935,7 @@ class MacroActionController:
                 ("PickupObject", held_id, True),
             ]
 
+        arrived_at_appliance = False
         for sim_act, target_id, mandatory in seq:
             resolved_target = memory.resolve_object_id(target_id)
             if (
@@ -869,9 +946,23 @@ class MacroActionController:
                 and memory.objects[resolved_target].action_states["open"].value
             ):
                 continue
-            s, f, ok, msg = self._execute_single_interaction(sim_act, resolved_target)
+            s, f, ok, msg = self._execute_single_interaction(
+                sim_act,
+                resolved_target,
+                allow_navigation=not arrived_at_appliance,
+            )
             total_steps += s
             total_failed += f
+            if ok:
+                arrived_at_appliance = True
+            elif sim_act == "PickupObject" and self.executor.can_step():
+                alt_pick = self._find_pickupable_near(receptacle_id)
+                if alt_pick is not None and alt_pick != resolved_target:
+                    s2, f2, ok, msg = self._execute_single_interaction(
+                        "PickupObject", alt_pick, allow_navigation=False
+                    )
+                    total_steps += s2
+                    total_failed += f2
             if not ok and mandatory:
                 return (
                     total_steps,
@@ -884,8 +975,33 @@ class MacroActionController:
             total_steps,
             total_failed,
             True,
-            f"Completed {macro_name} with receptacle #{receptacle_id} and retrieved item #{memory.resolve_object_id(held_id)}.",
+            f"Completed {macro_name} with receptacle #{receptacle_id} and retrieved item #{memory.held_object_id or memory.resolve_object_id(held_id)}.",
         )
+
+    def _find_pickupable_near(self, anchor_id: int) -> int | None:
+        """Find a currently visible pickupable object inside or near ``anchor_id``."""
+        from .memory import _STATIONARY_RECEPTACLE_CATEGORIES
+
+        memory = self.executor.memory
+        anchor = memory.objects[memory.resolve_object_id(anchor_id)]
+        candidates: list[tuple[float, int]] = []
+        for obj_id in memory.current_detection_objects.values():
+            resolved = memory.resolve_object_id(obj_id)
+            if resolved not in memory.objects:
+                continue
+            node = memory.objects[resolved]
+            if (
+                node.category in _STATIONARY_RECEPTACLE_CATEGORIES
+                or node.category == "Faucet"
+            ):
+                continue
+            dist = float(np.linalg.norm(node.centroid - anchor.centroid))
+            if dist <= 0.65:
+                candidates.append((dist, resolved))
+        if candidates:
+            candidates.sort(key=lambda pair: (pair[0], pair[1]))
+            return candidates[0][1]
+        return None
 
     def _find_nearest_category(
         self, anchor_id: int, categories: Sequence[str]
@@ -950,6 +1066,9 @@ class MacroActionController:
             remaining_actions=self.executor.config.max_actions - self.executor.actions,
             remaining_failures=self.executor.config.max_failures
             - self.executor.failures,
+            remaining_decisions=max(
+                0, self.executor.config.max_decisions - self.executor.decisions
+            ),
         )
 
 

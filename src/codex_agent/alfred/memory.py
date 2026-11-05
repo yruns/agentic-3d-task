@@ -46,6 +46,109 @@ from .spatial_map import SpatialMap
 if TYPE_CHECKING:
     from keyframe.models.scene import SceneObject
 
+_STATIONARY_RECEPTACLE_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "ArmChair",
+        "BathtubBasin",
+        "Bed",
+        "Cabinet",
+        "CoffeeMachine",
+        "CoffeeTable",
+        "CounterTop",
+        "Desk",
+        "DiningTable",
+        "Drawer",
+        "Dresser",
+        "FloorLamp",
+        "Fridge",
+        "GarbageCan",
+        "Microwave",
+        "Ottoman",
+        "Safe",
+        "Shelf",
+        "SideTable",
+        "SinkBasin",
+        "Sofa",
+        "StoveBurner",
+        "Toilet",
+        "ToiletPaperHanger",
+    }
+)
+
+_COMPATIBLE_FALLBACK_FAMILIES: tuple[frozenset[str], ...] = (
+    frozenset({"SinkBasin", "BathtubBasin"}),
+    frozenset(
+        {
+            "CounterTop",
+            "DiningTable",
+            "Desk",
+            "SideTable",
+            "CoffeeTable",
+            "Dresser",
+            "Shelf",
+        }
+    ),
+    frozenset({"Cabinet", "Drawer", "Shelf"}),
+    frozenset({"DeskLamp", "FloorLamp"}),
+    frozenset({"Ladle", "Spoon", "Fork", "Knife", "ButterKnife", "Spatula"}),
+    frozenset(
+        {
+            "Cup",
+            "Mug",
+            "Bowl",
+            "Glassbottle",
+            "WineBottle",
+            "SprayBottle",
+            "SoapBottle",
+            "SaltShaker",
+            "PepperShaker",
+        }
+    ),
+    frozenset({"Pan", "Pot", "Plate", "Bowl"}),
+    frozenset({"Pillow", "Cloth", "HandTowel"}),
+)
+
+
+def _is_compatible_spatial_fallback(
+    target_node: ObjectMemory, cand_node: ObjectMemory, action: str
+) -> bool:
+    """Return whether ``cand_node`` can safely supply a fallback mask for ``target_node``."""
+    target_cat = target_node.category
+    cand_cat = cand_node.category
+    if target_cat.casefold() == cand_cat.casefold():
+        return True
+    if action in {"PickupObject", "SliceObject"}:
+        if cand_cat in _STATIONARY_RECEPTACLE_CATEGORIES or cand_cat == "Faucet":
+            return False
+        if target_cat not in _STATIONARY_RECEPTACLE_CATEGORIES:
+            return True
+        return False
+    if action in {"ToggleObjectOn", "ToggleObjectOff"}:
+        if target_cat == "Faucet":
+            return cand_cat in {"Faucet", "SinkBasin", "BathtubBasin"}
+        return cand_cat in {"DeskLamp", "FloorLamp"}
+    if action in {"OpenObject", "CloseObject"}:
+        if target_cat in {"Cabinet", "Drawer"}:
+            return cand_cat in {"Cabinet", "Drawer"}
+        if (
+            target_cat == "Fridge"
+            and action == "CloseObject"
+            and target_node.action_states.get("open") is not None
+            and target_node.action_states["open"].value
+        ):
+            return cand_cat in {"Fridge", "Shelf", "CounterTop"}
+        return False
+    if action == "PutObject":
+        if target_cat in {"SinkBasin", "BathtubBasin"}:
+            return cand_cat in {"SinkBasin", "BathtubBasin"}
+        if target_cat == "Fridge":
+            return cand_cat in {"Fridge", "Shelf", "CounterTop"}
+        for family in _COMPATIBLE_FALLBACK_FAMILIES:
+            if target_cat in family and cand_cat in family:
+                return True
+        return False
+    return False
+
 
 @dataclass(frozen=True)
 class MemoryConfig:
@@ -171,6 +274,12 @@ class IncrementalSceneMemory:
         assignments = self._assign_regions(regions, observation)
         for region in regions:
             existing_id = assignments.get(region.index)
+            if (
+                existing_id is None
+                and self.held_object_id is not None
+                and self._is_held_self_occlusion(region, observation)
+            ):
+                existing_id = self.held_object_id
             if existing_id is None:
                 node = self._store.create(region, observation.frame_id)
                 self._set_slice_parent(node)
@@ -226,6 +335,14 @@ class IncrementalSceneMemory:
         for index, object_id in self.current_detection_objects.items():
             if object_id == self.held_object_id:
                 held_mask |= self.current_detection_masks[index]
+                held_mask |= self.current_raw_detection_masks.get(
+                    index, self.current_detection_masks[index]
+                )
+        if self.held_object_id is not None:
+            h_rows = observation.depth_m.shape[0]
+            near_fg = (observation.depth_m > 0) & (observation.depth_m <= 0.56)
+            near_fg[: int(0.30 * h_rows), :] = False
+            held_mask |= near_fg
         cells = set(self.spatial_map.update(observation, ignored_mask=held_mask))
         object_ids = set(self.current_detection_objects.values())
         frame = FrameRecord(
@@ -370,12 +487,33 @@ class IncrementalSceneMemory:
                 used.add(object_id)
         return assigned
 
+    def _is_held_self_occlusion(
+        self, region: MappedDetection, observation: Observation
+    ) -> bool:
+        """Return whether ``region`` is a close-up foreground view of the held item."""
+        if self.held_object_id is None:
+            return False
+        camera_pos = observation.camera_to_world[:3, 3]
+        center = region.points.mean(axis=0)
+        cam_dist = float(np.linalg.norm(center - camera_pos))
+        if cam_dist > 0.58:
+            return False
+        height = observation.depth_m.shape[0]
+        _, y1, _, y2 = region.box_xyxy
+        return y2 >= 0.50 * height and y1 >= 0.10 * height
+
     def _association_score(
         self, region: MappedDetection, node: ObjectMemory, observation: Observation
     ) -> float | None:
         if node.state == "sliced":
             return None
         if not node.geometry_valid:
+            if node.object_id == self.held_object_id and self._is_held_self_occlusion(
+                region, observation
+            ):
+                return 3.5 + (
+                    0.5 if region.detection.category == node.category else 0.0
+                )
             image_similarity = feature_cosine(
                 region.detection.image_feature, node.image_feature
             )
@@ -411,6 +549,22 @@ class IncrementalSceneMemory:
                 if np.linalg.norm(gap) <= self.config.mapping.reacquire_margin_m
                 else None
             )
+        if self.held_object_id is not None and self._is_held_self_occlusion(
+            region, observation
+        ):
+            return None
+        if (
+            node.category not in _STATIONARY_RECEPTACLE_CATEGORIES
+            and region.detection.category != node.category
+        ):
+            if region.detection.category in _STATIONARY_RECEPTACLE_CATEGORIES:
+                return None
+            if (
+                int(observation.detections[region.index].mask.sum())
+                > 0.25 * observation.depth_m.size
+                and float(np.ptp(node.points, axis=0).max()) <= 0.45
+            ):
+                return None
         margin = self.config.mapping.envelope_margin_m
         if not oriented_envelopes_overlap(region.points, node.points, margin_m=margin):
             return None
@@ -455,6 +609,12 @@ class IncrementalSceneMemory:
         node.points, node.colors = process_cloud(
             points, colors, self.config.mapping, denoise=False
         )
+        node.last_seen = frame_id
+        if (
+            node.object_id == self.held_object_id
+            and region.detection.category != node.category
+        ):
+            return
         node.image_feature = fuse_features(
             node.image_feature, region.detection.image_feature, node.detection_count, 1
         )
@@ -462,7 +622,6 @@ class IncrementalSceneMemory:
             node.text_feature, region.detection.text_feature, node.detection_count, 1
         )
         node.detection_count += 1
-        node.last_seen = frame_id
         evidence = node.category_evidence
         evidence[region.detection.category] = (
             evidence.get(region.detection.category, 0) + 1
@@ -645,18 +804,27 @@ class IncrementalSceneMemory:
             )
         elif allow_spatial_fallback and resolved_id in self.objects:
             target_node = self.objects[resolved_id]
-            fallback_candidates: list[tuple[float, int]] = []
+            fallback_candidates: list[tuple[int, float, int]] = []
+            max_dist = 0.25 if action in {"PickupObject", "SliceObject"} else 0.42
             for idx, identity in self.current_detection_objects.items():
                 cand_id = self.resolve_object_id(identity)
-                if cand_id not in self.objects:
+                if cand_id not in self.objects or cand_id == self.held_object_id:
                     continue
                 cand_node = self.objects[cand_id]
+                if not _is_compatible_spatial_fallback(target_node, cand_node, action):
+                    continue
                 dist = float(np.linalg.norm(cand_node.centroid - target_node.centroid))
-                if dist <= 0.42:
-                    fallback_candidates.append((dist, idx))
+                if dist <= max_dist:
+                    exact_cat_rank = (
+                        0
+                        if cand_node.category.casefold()
+                        == target_node.category.casefold()
+                        else 1
+                    )
+                    fallback_candidates.append((exact_cat_rank, dist, idx))
             if fallback_candidates:
-                fallback_candidates.sort(key=lambda item: (item[0], item[1]))
-                chosen_idx = fallback_candidates[0][1]
+                fallback_candidates.sort(key=lambda item: (item[0], item[1], item[2]))
+                chosen_idx = fallback_candidates[0][2]
                 mask_source = "current_spatial_fallback_mask"
 
         if chosen_idx is None:
@@ -720,17 +888,25 @@ class IncrementalSceneMemory:
             self.objects[object_id].action_states[name] = ActionState(
                 value, self._latest_frame_id
             )
-        spatial_change = action not in {"ToggleObjectOn", "ToggleObjectOff"}
+        spatial_change = action not in {
+            "ToggleObjectOn",
+            "ToggleObjectOff",
+            "OpenObject",
+            "CloseObject",
+        }
         invalidated: set[GridCell] = set()
         for affected_id in affected:
             node = self.objects[affected_id]
             node.stale_through_frame = self._latest_frame_id
-            node.state = "held" if affected_id == self.held_object_id else "changed"
+            if action in {"OpenObject", "CloseObject"}:
+                node.state = (
+                    "held" if affected_id == self.held_object_id else "observed"
+                )
+            else:
+                node.state = "held" if affected_id == self.held_object_id else "changed"
             if action == "SliceObject" and affected_id == object_id:
                 node.state = "sliced"
-            if spatial_change:
-                node.geometry_valid = False
-                node.geometry_epoch += 1
+            if spatial_change or action in {"OpenObject", "CloseObject"}:
                 cells = {
                     self.world_to_region(float(point[0]), float(point[1]))
                     for point in node.points
@@ -738,6 +914,9 @@ class IncrementalSceneMemory:
                 invalidated.update(cells)
                 for cell in cells:
                     self._grid_stale_through[cell] = self._latest_frame_id
+            if spatial_change:
+                node.geometry_valid = False
+                node.geometry_epoch += 1
         self.spatial_map.invalidate_region(invalidated)
         self._record_event(
             {

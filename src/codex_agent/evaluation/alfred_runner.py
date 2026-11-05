@@ -158,8 +158,8 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
             sandbox_network_access=True,
             restrict_skills_to_project=True,
             keep_run_home=True,
-            max_tool_calls=config.execution.max_decisions,
-            max_repeated_tool_calls=4,
+            max_tool_calls=config.execution.max_decisions * 2,
+            max_repeated_tool_calls=5,
         )
     )
     attempts: list[EpisodeAttempt] = []

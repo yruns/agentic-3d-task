@@ -405,3 +405,64 @@ def test_contained_mask_subtraction_preserves_raw_evidence_and_supplies_interact
     with np.load(index["effective_masks_path"], allow_pickle=False) as effective:
         assert effective["masks"][0].sum() == 75
         assert effective["detection_indices"].tolist() == [0, 1]
+
+
+def test_held_object_self_occlusion_suppresses_misclassified_ghosts_and_obstacles(
+    tmp_path: Path,
+) -> None:
+    memory = IncrementalSceneMemory(
+        tmp_path / "memory",
+        MemoryConfig(mapping=MappingConfig(max_bbox_area_ratio=1.0)),
+    )
+    memory.integrate(_observation(tmp_path, 0, category="Plate"))
+    memory.record_interaction("PickupObject", 0, success=True)
+
+    # Frame 1: while holding Plate (#0), close-up detector hallucinates both CD and Ladle at 0.40m.
+    base = _observation(tmp_path, 1, translation_x=1.0, with_detection=False)
+    depth = np.full((10, 10), 2.5, dtype=float)
+    depth[5:10, 2:8] = 0.40
+    mask_cd = np.zeros((10, 10), dtype=bool)
+    mask_cd[5:10, 2:8] = True
+    mask_ladle = np.zeros((10, 10), dtype=bool)
+    mask_ladle[6:9, 3:7] = True
+    det_cd = Detection(
+        "CD",
+        mask_cd,
+        0.85,
+        np.array([0.0, 1.0, 0.0]),
+        np.array([0.0, 1.0, 0.0]),
+        bbox_xyxy=(2, 5, 8, 10),
+    )
+    det_ladle = Detection(
+        "Ladle",
+        mask_ladle,
+        0.75,
+        np.array([0.0, 0.0, 1.0]),
+        np.array([0.0, 0.0, 1.0]),
+        bbox_xyxy=(3, 6, 7, 9),
+    )
+    memory.integrate(replace(base, depth_m=depth, detections=(det_cd, det_ladle)))
+    assert len(memory.objects) == 1
+    assert memory.objects[0].category == "Plate"
+    assert set(memory.current_detection_objects.values()) == {0}
+
+
+def test_spatial_fallback_rejects_incompatible_categories(tmp_path: Path) -> None:
+    memory = IncrementalSceneMemory(
+        tmp_path / "memory",
+        MemoryConfig(mapping=MappingConfig(max_bbox_area_ratio=1.0)),
+    )
+    # Frame 0: observe SinkBasin (#0)
+    memory.integrate(_observation(tmp_path, 0, category="SinkBasin"))
+    # Frame 1: SinkBasin is missed, but a SaltShaker (#1) is detected at the same spot
+    memory.integrate(
+        _observation(
+            tmp_path,
+            1,
+            category="SaltShaker",
+            feature=(0.0, 1.0, 0.0),
+        )
+    )
+    assert len(memory.objects) == 2
+    # SaltShaker must NOT be used as a fallback mask for PutObject on SinkBasin (#0)
+    assert memory.select_interaction_mask(0, action="PutObject") is None

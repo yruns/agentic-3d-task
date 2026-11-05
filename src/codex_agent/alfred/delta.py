@@ -170,6 +170,7 @@ def compute_scene_delta(
     bev_path: Path | None = None,
     remaining_actions: int = 1000,
     remaining_failures: int = 10,
+    remaining_decisions: int = 40,
 ) -> dict[str, object]:
     """Compute a compact incremental SceneDelta from ``before`` to ``memory``."""
     after = capture_watermark(memory)
@@ -308,6 +309,7 @@ def compute_scene_delta(
             "total_observed_regions": len(after.regions),
         },
         "budget": {
+            "remaining_decisions": remaining_decisions,
             "remaining_actions": remaining_actions,
             "remaining_failures": remaining_failures,
         },

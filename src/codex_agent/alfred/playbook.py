@@ -99,14 +99,30 @@ has ALREADY been executed for you before Turn 0! Check the inlined 3D Object \
 Catalog before calling ``explore_frontier``. If the target object and \
 destination receptacle are already in the catalog, jump straight to \
 ``interact_object`` or ``navigate_to``!
+- Conserve your decision budget (``budget.remaining_decisions``): Every \
+``navigate_to``, ``explore_frontier``, ``scan_surroundings``, and \
+``interact_object`` call ALREADY returns ``current_view.visible_objects_now``, \
+``current_view.annotated_rgb_path``, and ``current_view.bev_path``. Do NOT \
+waste calls on ``view_frame({"frame_ids": ["current"]})`` or ``view_bev({})`` \
+right after a movement tool; if you need to see the image, pass \
+``current_view.annotated_rgb_path`` directly to ``view_image``.
 - Use ``stop_on_categories`` when exploring: If the target object is not yet in \
 the catalog, call ``explore_frontier({"stop_on_categories": [...]})`` or check \
 closed containers (``Fridge``, ``Cabinet``, ``Drawer``, ``Microwave``) by \
 calling ``interact_object({"action": "open", "object_id": ...})``.
 - Verify small or ambiguous objects with ``view_crop`` + ``view_image``: \
-Open-vocabulary 2D detectors can confuse small utensils or shakers. Before \
-picking up a small item, check its high-res crop if multiple candidates exist.
-- Compound task workflows:
+Open-vocabulary 2D detectors can confuse small utensils, glasses, or shakers. \
+If ``pickup`` on a candidate ID fails with ``CanPickup`` (because that ID was \
+attached to the underlying shelf/table), check ``visible_objects_now`` or \
+``list_objects(region=...)`` for another overlapping pickupable object ID at \
+the same 3D location!
+- Items already inside ``Fridge`` are ALREADY chilled: If a task asks for a \
+"chilled" glass/cup/food and you find and pick it up from inside the \
+``Fridge``, it is ALREADY chilled — do NOT call ``cool_in_fridge`` again!
+- Compound task workflows (NEVER finish a clean/heat/cool task while still \
+holding the object — even if the goal instruction only says "cool off a plate" \
+or "heat an apple", ALFRED always requires placing the processed item onto a \
+destination receptacle such as ``CounterTop`` or ``DiningTable``!):
   * **Clean & Place**: ``interact_object(pickup, item)`` -> \
 ``interact_object(clean_in_sink, sink_basin)`` -> \
 ``interact_object(put, destination_receptacle)``.
@@ -115,7 +131,9 @@ picking up a small item, check its high-res crop if multiple candidates exist.
 ``interact_object(put, destination_receptacle)``.
   * **Cool & Place**: ``interact_object(pickup, item)`` -> \
 ``interact_object(cool_in_fridge, fridge)`` -> \
-``interact_object(put, destination_receptacle)``.
+``interact_object(put, destination_receptacle)`` (if the goal does not name a \
+specific destination receptacle, place it back on the ``CounterTop`` or \
+``DiningTable`` near the fridge/sink!).
   * **Slice & Place**: Pick up ``Knife`` / ``ButterKnife`` -> \
 ``interact_object(slice, food_id)`` -> ``interact_object(put, counter_id)`` \
 (put the knife down!) -> check ``scene_delta.new_objects`` for the newly created \
@@ -124,11 +142,15 @@ the sliced object as instructed.
   * **Examine / Look at object in light**: ``interact_object(pickup, item)`` -> \
 ``navigate_to(lamp_id)`` -> ``interact_object(toggle_on, lamp_id)`` (while \
 still holding the item in hand!).
-  * **Place with movable receptacle (e.g. "Put a fork in a cup on the table")**: \
+  * **Place with movable receptacle (e.g. "Put a fork in a cup/glass on the table")**: \
 Pick up the small object (`Fork`) -> put it into the movable receptacle (`Cup` \
 / `Bowl` / `Pan` / `Plate`) -> pick up the movable receptacle (`Cup`) -> \
-navigate to the destination surface (`DiningTable`) -> put the movable \
-receptacle on the destination surface.
+navigate to the destination surface (`DiningTable` / `Desk` / `CounterTop`) -> \
+put the movable receptacle on the destination surface. If you first retrieved \
+the movable receptacle (`Cup`) from inside a `Fridge` or `Cabinet`, place the \
+`Cup` onto a nearby `CounterTop` or `DiningTable`, pick up the `Fork`, put the \
+`Fork` into the `Cup`, and ensure the `Cup` (containing the `Fork`) rests on \
+the destination table!
 """
 
 __all__ = ["ALFRED_TOOLS_PLAYBOOK", "ALFRED_TOOL_NAMES"]

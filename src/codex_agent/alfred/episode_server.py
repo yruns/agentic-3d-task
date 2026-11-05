@@ -120,6 +120,14 @@ class EpisodeToolServer:
             actions_before = self.executor.actions
             started = time.monotonic()
             try:
+                if (
+                    tool_name != "finish_episode"
+                    and self.executor.decisions > self.executor.config.max_decisions
+                ):
+                    raise EpisodeToolError(
+                        f"Decision budget ({self.executor.config.max_decisions}) reached. "
+                        "Call finish_episode immediately and emit your final JSON response."
+                    )
                 if tool_name == "navigate_to":
                     response = self._handle_navigate_to(args)
                 elif tool_name == "explore_frontier":

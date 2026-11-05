@@ -327,6 +327,7 @@ class EpisodeExecutor:
             "visible_objects_now": format_visible_objects_now(self.memory),
             "top_frontiers": frontiers,
             "budget": {
+                "remaining_decisions": self.config.max_decisions - self.decisions,
                 "remaining_actions": self.config.max_actions - self.actions,
                 "remaining_failures": self.config.max_failures - self.failures,
             },
