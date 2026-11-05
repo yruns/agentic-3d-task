@@ -1,0 +1,22 @@
+{"index": 1, "action": "RotateRight", "object_id": null, "source_frame": 0, "result_frame": 1, "success": true, "error": ""}
+{"index": 2, "action": "RotateLeft", "object_id": null, "source_frame": 1, "result_frame": 2, "success": true, "error": ""}
+{"index": 3, "action": "MoveAhead", "object_id": null, "source_frame": 2, "result_frame": 3, "success": true, "error": ""}
+{"index": 4, "action": "RotateRight", "object_id": null, "source_frame": 3, "result_frame": 4, "success": true, "error": ""}
+{"index": 5, "action": "RotateRight", "object_id": null, "source_frame": 4, "result_frame": 5, "success": true, "error": ""}
+{"index": 6, "action": "RotateRight", "object_id": null, "source_frame": 5, "result_frame": 6, "success": true, "error": ""}
+{"index": 7, "action": "MoveAhead", "object_id": null, "source_frame": 6, "result_frame": 7, "success": true, "error": ""}
+{"index": 8, "action": "MoveAhead", "object_id": null, "source_frame": 7, "result_frame": 8, "success": true, "error": ""}
+{"index": 9, "action": "MoveAhead", "object_id": null, "source_frame": 8, "result_frame": 9, "success": true, "error": ""}
+{"index": 10, "action": "RotateRight", "object_id": null, "source_frame": 9, "result_frame": 10, "success": true, "error": ""}
+{"index": 11, "action": "RotateRight", "object_id": null, "source_frame": 10, "result_frame": 11, "success": true, "error": ""}
+{"index": 12, "action": "RotateRight", "object_id": null, "source_frame": 11, "result_frame": 12, "success": true, "error": ""}
+{"index": 13, "action": "RotateRight", "object_id": null, "source_frame": 12, "result_frame": 13, "success": true, "error": ""}
+{"index": 14, "action": "RotateRight", "object_id": null, "source_frame": 13, "result_frame": 14, "success": true, "error": ""}
+{"index": 15, "action": "RotateRight", "object_id": null, "source_frame": 14, "result_frame": 15, "success": true, "error": ""}
+{"index": 16, "action": "RotateLeft", "object_id": null, "source_frame": 15, "result_frame": 16, "success": true, "error": ""}
+{"index": 17, "action": "OpenObject", "object_id": 28, "source_frame": 16, "result_frame": 17, "success": false, "error": {"redacted": true, "classification": "error text withheld", "error_sha256": "515a99164fb949f60f2285ebd0e5b4a5f6cc6b820bd942988d24927ce860f22e"}}
+{"index": 18, "action": "MoveAhead", "object_id": null, "source_frame": 17, "result_frame": 18, "success": true, "error": ""}
+{"index": 19, "action": "OpenObject", "object_id": 28, "source_frame": 18, "result_frame": 19, "success": false, "error": {"redacted": true, "classification": "error text withheld", "error_sha256": "515a99164fb949f60f2285ebd0e5b4a5f6cc6b820bd942988d24927ce860f22e"}}
+{"index": 20, "action": "OpenObject", "object_id": 46, "source_frame": 19, "result_frame": 20, "success": false, "error": {"redacted": true, "classification": "error text withheld", "error_sha256": "7c2298d25c1498b085095b99776e2fa25ba62d0e4f31c825b317eb845c122c66"}}
+{"index": 21, "action": "MoveAhead", "object_id": null, "source_frame": 20, "result_frame": 21, "success": true, "error": ""}
+{"index": 22, "action": "OpenObject", "object_id": 28, "source_frame": 21, "result_frame": 22, "success": false, "error": {"redacted": true, "classification": "error text withheld", "error_sha256": "515a99164fb949f60f2285ebd0e5b4a5f6cc6b820bd942988d24927ce860f22e"}}

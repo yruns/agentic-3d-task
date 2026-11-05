@@ -1,0 +1,49 @@
+{
+  "selected": 1,
+  "completed": 1,
+  "errors": 0,
+  "interrupted": 0,
+  "pending": 0,
+  "metrics": {
+    "num_evals": 1,
+    "num_successes": 0,
+    "completed_goal_conditions": 0,
+    "total_goal_conditions": 4,
+    "expert_actions": 74,
+    "executed_actions": 45,
+    "success_rate": 0.0,
+    "goal_condition_success_rate": 0.0,
+    "path_length_weighted_success_rate": 0.0,
+    "path_length_weighted_goal_condition_success_rate": 0.0
+  },
+  "by_split": {
+    "valid_seen": null,
+    "valid_unseen": {
+      "num_evals": 1,
+      "num_successes": 0,
+      "completed_goal_conditions": 0,
+      "total_goal_conditions": 4,
+      "expert_actions": 74,
+      "executed_actions": 45,
+      "success_rate": 0.0,
+      "goal_condition_success_rate": 0.0,
+      "path_length_weighted_success_rate": 0.0,
+      "path_length_weighted_goal_condition_success_rate": 0.0
+    }
+  },
+  "attempts": [
+    {
+      "episode_id": "valid_unseen/pick_cool_then_place_in_recep-BreadSliced-None-Microwave-10/trial_T20190906_224631_058932#0",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i43_recovery1/episodes/0001",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 4,
+        "expert_actions": 74,
+        "executed_actions": 45
+      },
+      "error": null
+    }
+  ]
+}

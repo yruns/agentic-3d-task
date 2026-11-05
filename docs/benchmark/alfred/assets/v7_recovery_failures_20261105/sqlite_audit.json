@@ -1,0 +1,92 @@
+[
+  {
+    "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+    "history_role": "original_direct",
+    "metadata_matches": true,
+    "attempts_match": true,
+    "attempt_count": 9,
+    "scored_count": 8,
+    "null_score_errors": 1
+  },
+  {
+    "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+    "history_role": "original_direct",
+    "metadata_matches": true,
+    "attempts_match": true,
+    "attempt_count": 12,
+    "scored_count": 11,
+    "null_score_errors": 1
+  },
+  {
+    "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+    "history_role": "original_direct",
+    "metadata_matches": true,
+    "attempts_match": true,
+    "attempt_count": 12,
+    "scored_count": 12,
+    "null_score_errors": 0
+  },
+  {
+    "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+    "history_role": "original_direct",
+    "metadata_matches": true,
+    "attempts_match": true,
+    "attempt_count": 11,
+    "scored_count": 10,
+    "null_score_errors": 1
+  },
+  {
+    "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery1",
+    "history_role": "recovery1_failed",
+    "metadata_matches": true,
+    "attempts_match": true,
+    "attempt_count": 1,
+    "scored_count": 0,
+    "null_score_errors": 1
+  },
+  {
+    "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery1",
+    "history_role": "recovery1_failed",
+    "metadata_matches": true,
+    "attempts_match": true,
+    "attempt_count": 1,
+    "scored_count": 0,
+    "null_score_errors": 1
+  },
+  {
+    "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery1",
+    "history_role": "recovery1_failed",
+    "metadata_matches": true,
+    "attempts_match": true,
+    "attempt_count": 1,
+    "scored_count": 0,
+    "null_score_errors": 1
+  },
+  {
+    "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery2",
+    "history_role": "recovery2_failed",
+    "metadata_matches": true,
+    "attempts_match": true,
+    "attempt_count": 1,
+    "scored_count": 0,
+    "null_score_errors": 1
+  },
+  {
+    "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery2",
+    "history_role": "recovery2_failed",
+    "metadata_matches": true,
+    "attempts_match": true,
+    "attempt_count": 1,
+    "scored_count": 0,
+    "null_score_errors": 1
+  },
+  {
+    "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery2",
+    "history_role": "recovery2_failed",
+    "metadata_matches": true,
+    "attempts_match": true,
+    "attempt_count": 1,
+    "scored_count": 0,
+    "null_score_errors": 1
+  }
+]

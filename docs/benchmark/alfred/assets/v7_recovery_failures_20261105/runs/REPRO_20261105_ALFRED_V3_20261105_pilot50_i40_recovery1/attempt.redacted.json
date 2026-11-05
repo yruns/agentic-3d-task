@@ -1,0 +1,11 @@
+{
+  "episode_id": "valid_unseen/pick_and_place_simple-SaltShaker-None-Drawer-10/trial_T20190909_021613_077537#1",
+  "status": "error",
+  "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery1/episodes/0001",
+  "score": null,
+  "error": {
+    "redacted": true,
+    "classification": "HTTP502 / upstream unavailable",
+    "error_sha256": "170bf1ad08580d64703aa6160b6d4b09e2818f148723faecbd010d22b33b85a7"
+  }
+}

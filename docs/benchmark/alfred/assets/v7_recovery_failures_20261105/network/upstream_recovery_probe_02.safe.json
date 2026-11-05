@@ -1,0 +1,21 @@
+{
+  "started_at_utc": "2026-11-05T01:57:42.823302+00:00",
+  "scope": "Synthetic native Responses vision/schema transport probe; no simulator or task score",
+  "model": "gpt-5.4-2026-03-05",
+  "reasoning_effort": "medium",
+  "turn_timeout_s": 90,
+  "max_finalization_retries": 0,
+  "succeeded": true,
+  "wall_seconds": 4.850366437807679,
+  "code": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+    "tracked_worktree_drift": ""
+  },
+  "source_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/upstream_recovery_probe_02/report.json",
+  "source_sha256": "7c1d67c58a05d9e6101350207990e1af881972169b87c35eaa146fe0cef83099",
+  "archive_kind": "allowlisted diagnostic metadata; no SDK metadata, config, raw prompt, response, or image content",
+  "returned_actions_executed": false,
+  "task_score_produced": false
+}

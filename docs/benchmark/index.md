@@ -7,8 +7,8 @@ and other assets stay beside the records that cite them.
 ## Benchmarks
 
 - [ALFRED Timeline](alfred/README.md): incremental scene memory and interactive
-  task execution; 41/50 scored pilot tasks, independent audits, and upstream
-  outage/recovery records for the frozen validation fold.
+  task execution; completed pilot50 (5 successes), independent terminal audits,
+  and preserved outage/recovery records for the frozen validation fold.
 - [NR3D Timeline](nr3d/README.md): visual grounding evaluations, stage-1
   keyframe coverage, tool-loop runs, and reasoning-path ablations.
 - [OpenEQA Timeline](openeqa/README.md): embodied QA evaluations, no-frame

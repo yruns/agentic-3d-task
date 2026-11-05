@@ -1,0 +1,49 @@
+{
+  "selected": 1,
+  "completed": 1,
+  "errors": 0,
+  "interrupted": 0,
+  "pending": 0,
+  "metrics": {
+    "num_evals": 1,
+    "num_successes": 0,
+    "completed_goal_conditions": 0,
+    "total_goal_conditions": 2,
+    "expert_actions": 35,
+    "executed_actions": 38,
+    "success_rate": 0.0,
+    "goal_condition_success_rate": 0.0,
+    "path_length_weighted_success_rate": 0.0,
+    "path_length_weighted_goal_condition_success_rate": 0.0
+  },
+  "by_split": {
+    "valid_seen": null,
+    "valid_unseen": {
+      "num_evals": 1,
+      "num_successes": 0,
+      "completed_goal_conditions": 0,
+      "total_goal_conditions": 2,
+      "expert_actions": 35,
+      "executed_actions": 38,
+      "success_rate": 0.0,
+      "goal_condition_success_rate": 0.0,
+      "path_length_weighted_success_rate": 0.0,
+      "path_length_weighted_goal_condition_success_rate": 0.0
+    }
+  },
+  "attempts": [
+    {
+      "episode_id": "valid_unseen/look_at_obj_in_light-Box-None-FloorLamp-219/trial_T20190907_102952_001375#1",
+      "status": "completed",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery3/episodes/0001",
+      "score": {
+        "success": false,
+        "completed_goal_conditions": 0,
+        "total_goal_conditions": 2,
+        "expert_actions": 35,
+        "executed_actions": 38
+      },
+      "error": null
+    }
+  ]
+}

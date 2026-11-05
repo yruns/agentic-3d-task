@@ -1,0 +1,64 @@
+{
+  "checked_at_utc": "2026-11-05T05:14:35.597200+00:00",
+  "current_code": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+    "tracked_worktree_drift": ""
+  },
+  "reference_code": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "fb408c34ab85284b32387002e92745b92983a173",
+    "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+    "tracked_worktree_drift": ""
+  },
+  "source_identity_policy": {
+    "version": 1,
+    "allow_head_sha_difference": true,
+    "require_same_branch": true,
+    "require_clean_tracked_tree": true,
+    "require_identical_executed_code_sha256": true,
+    "actual_head_recorded_per_run": true,
+    "reason": "documentation-only commits may change HEAD without changing executed source/config bytes"
+  },
+  "all_19_runs_have_identical_executed_source": true,
+  "actual_run_heads": {
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct": "fb408c34ab85284b32387002e92745b92983a173",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct": "fb408c34ab85284b32387002e92745b92983a173",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct": "fb408c34ab85284b32387002e92745b92983a173",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct": "fb408c34ab85284b32387002e92745b92983a173",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery1": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery1": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery1": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery2": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery2": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery2": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i43_recovery1": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i44_recovery1": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i47_recovery1": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i48_recovery1": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i49_recovery1": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery3": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery3": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery3": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6"
+  },
+  "external_sources": {
+    "alfred": {
+      "path": "/home/ysh/Datasets/FILM/alfred",
+      "head_sha": "f91f4c0c96c7a29f33d0557f86b0a21035379b3b",
+      "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_dirty": false,
+      "python_source_sha256": "412cc3dba05844c40f7a9c673ac1a23f7b6d32695a1b0b0bf977ef1e8d692074",
+      "python_source_count": 55
+    },
+    "film": {
+      "path": "/home/ysh/codebase/FILM",
+      "head_sha": "63abf9599bbcfae0b2ab91695da86fcca751f044",
+      "tracked_diff_sha256": "78c3d94ab3d61e6b3b387b5aed97f01028277b73310bfc2d7a835033f71395c1",
+      "tracked_dirty": true,
+      "python_source_sha256": "d5c06183eb11d4be5f1034f76e70cfb1ddf7b4cccb54c6e8116ef87976902806",
+      "python_source_count": 115
+    }
+  }
+}

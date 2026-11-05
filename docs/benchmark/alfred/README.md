@@ -4,11 +4,12 @@ This track evaluates incremental scene memory during interactive ALFRED task
 execution. [Implementation and setup](../../codex_agent/alfred.md) describe the
 actor's observations and external dependencies.
 
-**The frozen pilot reached 41/50 official terminal scores before an upstream
-transport outage.** Five tasks succeeded; three error attempts remain unscored
-and six tasks were not attempted. [v6](v6_upstream_outage_20261105.md) records
-the partial results, independent score/boundary audits, costs, and exact nine-task
-recovery plan. This is not a completed pilot50 result.
+**The frozen pilot now has 50/50 official terminal scores: five successes,
+SR 10.00%, and GC 20/126 = 15.87%.** [v8](v8_pilot50_complete_20261105.md)
+combines the unchanged 41 scores from v6 with nine newly completed tasks under
+the same configuration. All 50 saved terminal scores passed independent
+rechecking. [v7](v7_recovery_failures_20261105.md) preserves the unsuccessful
+recovery attempts separately; none became synthetic zero-score tasks.
 
 ## Protocol
 
@@ -73,6 +74,8 @@ every episode attempt without overwriting old run IDs.
 
 | Record | Date | Scope | Result |
 |---|---|---|---|
+| [v8 completed pilot50](v8_pilot50_complete_20261105.md) | 2026-11-05 | Original41 + nine unchanged-configuration recoveries | 50/50 scored, 5 successes; SR 10.00%, GC 15.87%; independent scores 50/50 agree |
+| [v7 failed recovery rounds](v7_recovery_failures_20261105.md) | 2026-11-05 | Two recovery rounds; three unscored attempts each | No new scores; nine historical error attempts retained across five identities |
 | [v6 partial pilot and upstream outage](v6_upstream_outage_20261105.md) | 2026-11-05 | Frozen50, predicted perception, H input | 41/50 scored, 5 successes; 3 upstream errors and 6 pending; 41/41 independent score checks agree |
 | [v5 loopback routing](v5_loopback_proxy_20261105.md) | 2026-11-05 | Physical scalar-wire rollout and first pilot launch | Transient local health 502; pilot interrupted unscored; run-local proxy bypass verified |
 | [v4 schema compatibility](v4_schema_compatibility_20261105.md) | 2026-11-05 | Same-code medium retry and controlled command probes | Medium retry 0 actions; scalar wire format passes 7/7 command families |
@@ -83,6 +86,7 @@ every episode attempt without overwriting old run IDs.
 See the [local leaderboard](leaderboard.md). Before launching evaluation,
 `AGENTS.md` requires a clean tracked tree and recorded branch, HEAD and executed
 code hash; new executable files must also be committed. The reviewed
-implementation was evaluated from a clean committed tree. Remaining recovery
-requires the existing upstream forwarding connection to work; task failures
-will not be rerun or replaced to improve the result.
+implementation was evaluated from a clean committed tree. The completed
+cohort retains the first terminal score for each frozen identity; scored task
+failures were not rerun or replaced to improve the result. Future comparisons
+require a new version record and the same frozen fold.

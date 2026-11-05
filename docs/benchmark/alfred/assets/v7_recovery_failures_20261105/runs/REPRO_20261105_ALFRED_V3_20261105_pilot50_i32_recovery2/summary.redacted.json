@@ -1,0 +1,25 @@
+{
+  "selected": 1,
+  "completed": 0,
+  "errors": 1,
+  "interrupted": 0,
+  "pending": 0,
+  "metrics": null,
+  "by_split": {
+    "valid_seen": null,
+    "valid_unseen": null
+  },
+  "attempts": [
+    {
+      "episode_id": "valid_unseen/look_at_obj_in_light-Box-None-FloorLamp-219/trial_T20190907_102952_001375#1",
+      "status": "error",
+      "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery2/episodes/0001",
+      "score": null,
+      "error": {
+        "redacted": true,
+        "classification": "HTTP403 / ROW5004 / dependency timeout / processing_error",
+        "error_sha256": "a8888f10c8067b0664805c246dd8413bf934b40c28f3083d79f1ade1afb9fc85"
+      }
+    }
+  ]
+}

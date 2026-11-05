@@ -7,12 +7,13 @@ the current image, a gridded BEV, and retrieved historical views to choose its
 next action. The first implementation is an integration baseline, not a claim
 that the proposed program-generation method is complete.
 
-**Status on 2026-11-05:** 41/50 frozen validation tasks reached official scoring,
-with five successes. Three upstream transport failures and six unattempted
-tasks remain; the exact nine-task recovery plan is prepared. All 41 scores
-passed an independent official-goal recheck. This is an integration baseline
-with partial pilot coverage, not completed pilot50 accuracy.
-See the [results and failure evidence](../benchmark/alfred/v6_upstream_outage_20261105.md) and
+**Status on 2026-11-05:** all 50 frozen validation tasks reached official scoring,
+with five successes (SR 10.00%; GC 20/126 = 15.87%). The nine missing tasks
+completed under the original configuration; the earlier 41 scores were not
+rerun. All 50 saved terminal scores passed an independent official-goal recheck.
+This completes the integration pilot; it does not establish a controlled
+performance gain from scene memory or generated local programs.
+See the [complete results and evidence](../benchmark/alfred/v8_pilot50_complete_20261105.md) and
 [benchmark protocol](../benchmark/alfred/README.md).
 
 ## Inputs and information boundary
@@ -25,8 +26,9 @@ object identities, world positions, reachable-position lists, or true masks and
 depth. Simulator mask-to-object dispatch and official scoring remain inside the
 simulator worker.
 
-Native action-error feedback can still contain obstacle names/categories after
-simulator IDs are redacted; it is part of the declared action-feedback input.
+Native action-error feedback redacts coordinate-bearing ALFRED `objectId`
+strings but can still contain obstacle categories and GameObject names with
+instance-like suffixes. This is part of the declared action-feedback input.
 
 The first policy runtime explicitly supports registered **native Responses**
 models through `codex_adapter`. Its per-turn SDK catalog removes all host tools;

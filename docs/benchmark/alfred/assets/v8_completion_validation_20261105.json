@@ -1,0 +1,400 @@
+{
+  "checked_at_utc": "2026-11-05T05:17:40.825875+00:00",
+  "scope": "Read-only completion verification of existing reports, cohort SQLite records, source diff and current process lifecycle; no model, simulator, rescoring or full boundary audit was run",
+  "passed": true,
+  "evidence_files": {
+    "pilot50_cohort_recovery3.json": {
+      "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot50_cohort_recovery3.json",
+      "sha256": "d0f619b9de8efe18cf01bf778b8c2398d1c254bf901379bc4f2b5781b20f2ff1"
+    },
+    "pilot50_actor_boundary_recovery3_final.json": {
+      "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot50_actor_boundary_recovery3_final.json",
+      "sha256": "0d2e7c9aa75d08308b8e585d59b75774007787c5cf4bbd7ba94e7aeeae4d9893"
+    },
+    "pilot50_recovery3_analysis.json": {
+      "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot50_recovery3_analysis.json",
+      "sha256": "cc204d33d8e796c3912346a79533688ba43eb631790758dfb4146e5281f0f2cc"
+    },
+    "pilot50_recovery3_terminal_rescore.json": {
+      "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot50_recovery3_terminal_rescore.json",
+      "sha256": "5b71a6872ce5b5b90bb179e03f5756eee173b5947fae79abd7837f59dfa8413f"
+    },
+    "recovery3_end_source_audit.json": {
+      "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/recovery3_end_source_audit.json",
+      "sha256": "7aeedf6db3ad8e94f7dea8c7ee0d6f4da1950d1cc3c7acf6ecac04ad24950aa2"
+    },
+    "recovery3_final_audit_results.json": {
+      "path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/recovery3_final_audit_results.json",
+      "sha256": "8526779a77a4bd1d0ba70e5ead7d02231b4fc2fafaaa422dc15e27f86fa1071e"
+    }
+  },
+  "terminal_boundary": {
+    "counts": {
+      "observations": 2005,
+      "interactions": 344,
+      "image_references": 4748,
+      "saved_requests": 2349,
+      "completed_responses": 2349,
+      "catalogs": 2349,
+      "sdk_trace_files": 2349,
+      "episodes": 50
+    },
+    "violation_count": 0,
+    "historical_image_references": 50,
+    "sdk_response_item_types": {
+      "message": 9396,
+      "reasoning": 2349
+    },
+    "host_tool_execution_evidence_count": 0
+  },
+  "historical_error_prefixes": {
+    "attempt_count": 9,
+    "unique_episode_identities": 5,
+    "counts": {
+      "observations": 172,
+      "interactions": 23,
+      "image_references": 487,
+      "saved_requests": 242,
+      "completed_responses": 233,
+      "catalogs": 233,
+      "sdk_trace_files": 233,
+      "episodes": 9
+    },
+    "unanswered_request_count": 9,
+    "violation_count": 0,
+    "included_in_scored_denominator": false,
+    "sdk_response_item_types": {
+      "message": 933,
+      "reasoning": 233
+    }
+  },
+  "metrics": {
+    "num_evals": 50,
+    "num_successes": 5,
+    "completed_goal_conditions": 20,
+    "total_goal_conditions": 126,
+    "expert_actions": 2311,
+    "executed_actions": 1955,
+    "success_rate": 0.1,
+    "goal_condition_success_rate": 0.15873015873015872,
+    "path_length_weighted_success_rate": 0.06187797490263955,
+    "path_length_weighted_goal_condition_success_rate": 0.12611235263766635
+  },
+  "official_terminal_recheck": {
+    "checked": 50,
+    "matching": 50,
+    "all_match": true
+  },
+  "sqlite": {
+    "path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/runs.sqlite",
+    "run_count": 19,
+    "attempt_count": 59,
+    "status_counts": {
+      "completed": 50,
+      "error": 9
+    },
+    "selected_scored_pairs_exact_match": true,
+    "all_historical_errors_score_null": true,
+    "runs": [
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 9,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 12,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 12,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 11,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery1",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery1",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery1",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery2",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery2",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery2",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i43_recovery1",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i44_recovery1",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i47_recovery1",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i48_recovery1",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i49_recovery1",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery3",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery3",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery3",
+        "run_metadata_matches": true,
+        "attempts_match": true,
+        "attempt_count": 1,
+        "run_terminal": true
+      }
+    ]
+  },
+  "source": {
+    "all_19_runs_have_identical_executed_source": true,
+    "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+    "end_audit_head": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "current_head": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "pre_alfred_baseline": "debd961b7d6d848518d415635afd55b85dc1f41b",
+    "protected_paths": [
+      "src/codex_agent/nr3d",
+      "src/codex_agent/openeqa",
+      "src/codex_agent/scenefunc3d",
+      "src/codex_agent/cli/run_nr3d.py",
+      "src/codex_agent/cli/run_openeqa.py",
+      "src/codex_agent/cli/run_scenefunc3d.py",
+      "src/keyframe",
+      "src/codex_agent/runtime.py",
+      "src/codex_adapter"
+    ],
+    "changed_since_pre_alfred_baseline": [],
+    "current_worktree_changes_to_protected_paths": []
+  },
+  "lifecycle": {
+    "exact_active_alfred_runner_or_worker_matches": [],
+    "active_unity_executable_matches": [],
+    "unreadable_process_cmdline_count": 0,
+    "recorded_runner_pids": [
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s0_direct",
+        "pid": null,
+        "status_path": null,
+        "verification": "Exact active runner argv scan; initial direct launch did not persist a runner PID status file"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s1_direct",
+        "pid": null,
+        "status_path": null,
+        "verification": "Exact active runner argv scan; initial direct launch did not persist a runner PID status file"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s2_direct",
+        "pid": null,
+        "status_path": null,
+        "verification": "Exact active runner argv scan; initial direct launch did not persist a runner PID status file"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_s3_direct",
+        "pid": null,
+        "status_path": null,
+        "verification": "Exact active runner argv scan; initial direct launch did not persist a runner PID status file"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery1",
+        "pid": 1615000,
+        "pid_present_now": false,
+        "recorded_exit_code": 1,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery1.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery1",
+        "pid": 1615012,
+        "pid_present_now": false,
+        "recorded_exit_code": 1,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery1.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery1",
+        "pid": 1615164,
+        "pid_present_now": false,
+        "recorded_exit_code": 1,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery1.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery2",
+        "pid": 1654359,
+        "pid_present_now": false,
+        "recorded_exit_code": 1,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery2.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery2",
+        "pid": 1654521,
+        "pid_present_now": false,
+        "recorded_exit_code": 1,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery2.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery2",
+        "pid": 1654546,
+        "pid_present_now": false,
+        "recorded_exit_code": 1,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery2.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i43_recovery1",
+        "pid": 1703623,
+        "pid_present_now": false,
+        "recorded_exit_code": 0,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i43_recovery1.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i44_recovery1",
+        "pid": 1703630,
+        "pid_present_now": false,
+        "recorded_exit_code": 0,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i44_recovery1.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1",
+        "pid": 1703627,
+        "pid_present_now": false,
+        "recorded_exit_code": 0,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i47_recovery1",
+        "pid": 1761152,
+        "pid_present_now": false,
+        "recorded_exit_code": 0,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i47_recovery1.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i48_recovery1",
+        "pid": 1753526,
+        "pid_present_now": false,
+        "recorded_exit_code": 0,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i48_recovery1.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i49_recovery1",
+        "pid": 1741669,
+        "pid_present_now": false,
+        "recorded_exit_code": 0,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i49_recovery1.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery3",
+        "pid": 1803094,
+        "pid_present_now": false,
+        "recorded_exit_code": 0,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i32_recovery3.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery3",
+        "pid": 1808196,
+        "pid_present_now": false,
+        "recorded_exit_code": 0,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery3.status.json"
+      },
+      {
+        "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery3",
+        "pid": 1790642,
+        "pid_present_now": false,
+        "recorded_exit_code": 0,
+        "status_path": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/REPRO_20261105_ALFRED_V3_20261105_pilot50_i40_recovery3.status.json"
+      }
+    ],
+    "scope": "Exact -m codex_agent.cli.run_alfred, exact project simulator/perception worker script arguments, and actual Unity executable basename; generic Codex/documentation tools and unrelated services are excluded. No process was stopped."
+  },
+  "scope_caveats": [
+    "The 50 terminal denominator contains only completed scored identities selected explicitly in the cohort manifest; errors and pending attempts are not zero-filled.",
+    "Each unanswered original-prefix request is recorded separately as incomplete; without response metadata its failed SDK run home's catalog/trace cannot be verified by this join.",
+    "Fresh-mask proof joins action source frame/memory identity to the corresponding prediction and saved memory NPZ; original simulator RPC mask arguments were not separately persisted.",
+    "Catalogs verify declared host-tool isolation and preserved SDK traces verify no host-tool executions; full wire tool lists were not captured for every pilot request.",
+    "No runtime config, process environment, credentials, simulator terminal metadata or dataset trajectory contents are read; image pixels are not re-rendered or semantically judged.",
+    "4748 counts submitted image references, including repeated current and BEV images; it is not a count of distinct image files.",
+    "The four initial direct runs lack persisted runner PID status files; current absence is verified by exact active runner/worker argv rather than a historical PID map."
+  ]
+}

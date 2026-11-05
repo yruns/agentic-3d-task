@@ -68,6 +68,8 @@ nav:
           - v4 Schema Compatibility: benchmark/alfred/v4_schema_compatibility_20261105.md
           - v5 Loopback Proxy Routing: benchmark/alfred/v5_loopback_proxy_20261105.md
           - v6 Partial Pilot and Upstream Outage: benchmark/alfred/v6_upstream_outage_20261105.md
+          - v7 Failed Recovery Rounds: benchmark/alfred/v7_recovery_failures_20261105.md
+          - v8 Complete Pilot50: benchmark/alfred/v8_pilot50_complete_20261105.md
       - Adapter Protocol Diagnostics:
           - Timeline: benchmark/adapter/README.md
           - v1 ModelHub Tool and State Probe: benchmark/adapter/v1_modelhub_tool_state_20261103.md

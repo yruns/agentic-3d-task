@@ -1,0 +1,35 @@
+{
+  "finished_at_utc": "2026-11-05T05:14:47.041219+00:00",
+  "status": "verified",
+  "checks": [
+    {
+      "command": [
+        "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+        "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/analyze_recovered_pilot50_v3.py"
+      ],
+      "exit_code": 0,
+      "log": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/recovery3_analyze_recovered_pilot50_v3_final.txt"
+    },
+    {
+      "command": [
+        "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+        "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/rescore_recovered_pilot50_v3.py"
+      ],
+      "exit_code": 0,
+      "log": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/recovery3_rescore_recovered_pilot50_v3_final.txt"
+    },
+    {
+      "command": [
+        "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+        "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/audit_recovery3_pilot_boundary.py",
+        "--manifest",
+        "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot50_cohort_recovery3.json",
+        "--output",
+        "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot50_actor_boundary_recovery3_final.json"
+      ],
+      "exit_code": 0,
+      "log": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/recovery3_audit_recovery3_pilot_boundary_final.txt"
+    }
+  ],
+  "all_passed": true
+}

@@ -1,0 +1,437 @@
+{
+  "created_at_utc": "2026-11-05T03:52:44.718423+00:00",
+  "scope": "Posthoc read-only evidence from a completed scored episode. No replay, model call, simulator call, or feedback to active actors. No ground-truth object metadata was inspected for this case.",
+  "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1",
+  "global_index": 45,
+  "episode_id": "valid_unseen/pick_two_obj_and_place-PepperShaker-None-Drawer-10/trial_T20190908_010306_215435#0",
+  "task": "pick_two_obj_and_place-PepperShaker-None-Drawer-10/trial_T20190908_010306_215435",
+  "task_type": "pick_two_obj_and_place",
+  "split": "valid_unseen",
+  "repeat_idx": 0,
+  "actor_instruction": {
+    "goal": "Put two shakers in a drawer."
+  },
+  "artifact_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001",
+  "execution": {
+    "stop_reason": "failure_budget",
+    "actions": 47,
+    "failures": 10,
+    "decisions": 44,
+    "input_tokens": 517978,
+    "output_tokens": 51495,
+    "perception_seconds": 5.676326520740986,
+    "policy_seconds": 1560.250875717029
+  },
+  "official_saved_score": {
+    "success": false,
+    "completed_goal_conditions": 0,
+    "total_goal_conditions": 2,
+    "expert_actions": 73,
+    "executed_actions": 47
+  },
+  "action_count": 47,
+  "successful_action_count": 37,
+  "failed_action_count": 10,
+  "failed_open_object_count": 10,
+  "action_types": {
+    "RotateRight": 11,
+    "MoveAhead": 6,
+    "RotateLeft": 5,
+    "LookDown": 7,
+    "OpenObject": 10,
+    "LookUp": 8
+  },
+  "failed_action_errors": {
+    "Bad interact mask. Couldn't locate target object": 4,
+    "object not found: object": 6
+  },
+  "proposed_memory_object_ids": {
+    "40": 2,
+    "48": 6,
+    "84": 1,
+    "113": 1
+  },
+  "observations": 48,
+  "failed_interaction_evidence": [
+    {
+      "action": {
+        "index": 13,
+        "action": "OpenObject",
+        "object_id": 40,
+        "source_frame": 12,
+        "result_frame": 13,
+        "success": false,
+        "error": "Bad interact mask. Couldn't locate target object"
+      },
+      "source_observation_frame_id": 12,
+      "prediction_frame_id": "12",
+      "source_rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/frames/000012.png",
+      "source_rgb_sha256": "b5fbe02f7a62e205ae94aa8ed725ddc6b2c3a80fc93878f1b79767bb1d3981be",
+      "predicted_detection_index": 17,
+      "all_detection_indices_for_memory_id": [
+        17
+      ],
+      "predicted_category": "Cabinet",
+      "confidence": 0.7487484812736511,
+      "bbox_xyxy": [
+        172,
+        109,
+        286,
+        200
+      ],
+      "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/perception/12_mask_017.npy",
+      "mask_sha256": "f4da6205d142ed51a651692f062a42974249c3dec8219096f391e76480ccf48f",
+      "mask_shape": [
+        300,
+        300
+      ],
+      "mask_nonzero_pixels": 7188,
+      "same_frame_detection_to_memory_association": true,
+      "selection_basis": "execution.py _step chooses the first current_detection_objects index matching the proposed memory object ID; persisted observations preserve that mapping and predicted mask path."
+    },
+    {
+      "action": {
+        "index": 15,
+        "action": "OpenObject",
+        "object_id": 48,
+        "source_frame": 14,
+        "result_frame": 15,
+        "success": false,
+        "error": "object not found: object"
+      },
+      "source_observation_frame_id": 14,
+      "prediction_frame_id": "14",
+      "source_rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/frames/000014.png",
+      "source_rgb_sha256": "3853ddea6cf06aeda23acc1a76b0c4f567d0cb00bfb57130a148c6792a9e8123",
+      "predicted_detection_index": 26,
+      "all_detection_indices_for_memory_id": [
+        26
+      ],
+      "predicted_category": "Drawer",
+      "confidence": 0.9330910444259644,
+      "bbox_xyxy": [
+        144,
+        71,
+        182,
+        87
+      ],
+      "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/perception/14_mask_026.npy",
+      "mask_sha256": "5a734b8dd70564e732ab67d4e5ed68835629e02f750aa1480428f1bcea584cc3",
+      "mask_shape": [
+        300,
+        300
+      ],
+      "mask_nonzero_pixels": 502,
+      "same_frame_detection_to_memory_association": true,
+      "selection_basis": "execution.py _step chooses the first current_detection_objects index matching the proposed memory object ID; persisted observations preserve that mapping and predicted mask path."
+    },
+    {
+      "action": {
+        "index": 21,
+        "action": "OpenObject",
+        "object_id": 48,
+        "source_frame": 20,
+        "result_frame": 21,
+        "success": false,
+        "error": "object not found: object"
+      },
+      "source_observation_frame_id": 20,
+      "prediction_frame_id": "20",
+      "source_rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/frames/000020.png",
+      "source_rgb_sha256": "fd73ff0c6455b7aad621fdcdb398976b22ff6ac99ef47673890baef74f9967ec",
+      "predicted_detection_index": 36,
+      "all_detection_indices_for_memory_id": [
+        36
+      ],
+      "predicted_category": "Drawer",
+      "confidence": 0.90669184923172,
+      "bbox_xyxy": [
+        130,
+        147,
+        160,
+        162
+      ],
+      "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/perception/20_mask_036.npy",
+      "mask_sha256": "6952f1130e5f712d6cbce74a64c45720501dad8cca5a07068abb8b9e7eca7827",
+      "mask_shape": [
+        300,
+        300
+      ],
+      "mask_nonzero_pixels": 427,
+      "same_frame_detection_to_memory_association": true,
+      "selection_basis": "execution.py _step chooses the first current_detection_objects index matching the proposed memory object ID; persisted observations preserve that mapping and predicted mask path."
+    },
+    {
+      "action": {
+        "index": 24,
+        "action": "OpenObject",
+        "object_id": 40,
+        "source_frame": 23,
+        "result_frame": 24,
+        "success": false,
+        "error": "Bad interact mask. Couldn't locate target object"
+      },
+      "source_observation_frame_id": 23,
+      "prediction_frame_id": "23",
+      "source_rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/frames/000023.png",
+      "source_rgb_sha256": "fe44c363477e88e79a429e2151d0dc61d1c23563890e3eec7a78cae270dfc0f3",
+      "predicted_detection_index": 19,
+      "all_detection_indices_for_memory_id": [
+        19
+      ],
+      "predicted_category": "Cabinet",
+      "confidence": 0.7551528215408325,
+      "bbox_xyxy": [
+        132,
+        145,
+        242,
+        236
+      ],
+      "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/perception/23_mask_019.npy",
+      "mask_sha256": "dc27a3a3d1d76a8bbd21c8fc390b45827672911aad369847ceaf2dd26f8b008e",
+      "mask_shape": [
+        300,
+        300
+      ],
+      "mask_nonzero_pixels": 8006,
+      "same_frame_detection_to_memory_association": true,
+      "selection_basis": "execution.py _step chooses the first current_detection_objects index matching the proposed memory object ID; persisted observations preserve that mapping and predicted mask path."
+    },
+    {
+      "action": {
+        "index": 36,
+        "action": "OpenObject",
+        "object_id": 48,
+        "source_frame": 35,
+        "result_frame": 36,
+        "success": false,
+        "error": "object not found: object"
+      },
+      "source_observation_frame_id": 35,
+      "prediction_frame_id": "35",
+      "source_rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/frames/000035.png",
+      "source_rgb_sha256": "9fad6c7f48eb8b0fcfef64e59c69f950f59442c46f3e8a835dd468f8b700bb3f",
+      "predicted_detection_index": 28,
+      "all_detection_indices_for_memory_id": [
+        28
+      ],
+      "predicted_category": "Drawer",
+      "confidence": 0.9400042295455933,
+      "bbox_xyxy": [
+        144,
+        146,
+        173,
+        162
+      ],
+      "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/perception/35_mask_028.npy",
+      "mask_sha256": "d5300827c7e509804a78ae5a556f0881e54a53909a1481cb93ca9e3f019cbca9",
+      "mask_shape": [
+        300,
+        300
+      ],
+      "mask_nonzero_pixels": 427,
+      "same_frame_detection_to_memory_association": true,
+      "selection_basis": "execution.py _step chooses the first current_detection_objects index matching the proposed memory object ID; persisted observations preserve that mapping and predicted mask path."
+    },
+    {
+      "action": {
+        "index": 37,
+        "action": "OpenObject",
+        "object_id": 84,
+        "source_frame": 36,
+        "result_frame": 37,
+        "success": false,
+        "error": "Bad interact mask. Couldn't locate target object"
+      },
+      "source_observation_frame_id": 36,
+      "prediction_frame_id": "36",
+      "source_rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/frames/000036.png",
+      "source_rgb_sha256": "9fad6c7f48eb8b0fcfef64e59c69f950f59442c46f3e8a835dd468f8b700bb3f",
+      "predicted_detection_index": 31,
+      "all_detection_indices_for_memory_id": [
+        31
+      ],
+      "predicted_category": "Drawer",
+      "confidence": 0.7934936881065369,
+      "bbox_xyxy": [
+        204,
+        291,
+        300,
+        300
+      ],
+      "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/perception/36_mask_031.npy",
+      "mask_sha256": "539e4aef3327d4ef825a3e06b983018c53bc7dc5a3a43852020d03edf062e6e5",
+      "mask_shape": [
+        300,
+        300
+      ],
+      "mask_nonzero_pixels": 863,
+      "same_frame_detection_to_memory_association": true,
+      "selection_basis": "execution.py _step chooses the first current_detection_objects index matching the proposed memory object ID; persisted observations preserve that mapping and predicted mask path."
+    },
+    {
+      "action": {
+        "index": 39,
+        "action": "OpenObject",
+        "object_id": 48,
+        "source_frame": 38,
+        "result_frame": 39,
+        "success": false,
+        "error": "object not found: object"
+      },
+      "source_observation_frame_id": 38,
+      "prediction_frame_id": "38",
+      "source_rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/frames/000038.png",
+      "source_rgb_sha256": "747886baf8b398e39cda3c86324d65c1b156bdc27af82c2013f74fe1d00986cf",
+      "predicted_detection_index": 24,
+      "all_detection_indices_for_memory_id": [
+        24
+      ],
+      "predicted_category": "Drawer",
+      "confidence": 0.9690809845924377,
+      "bbox_xyxy": [
+        146,
+        76,
+        173,
+        91
+      ],
+      "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/perception/38_mask_024.npy",
+      "mask_sha256": "cfa14d74816caeec4696048d53b9d23e8924416cc8011bdcf657e0b7485befce",
+      "mask_shape": [
+        300,
+        300
+      ],
+      "mask_nonzero_pixels": 373,
+      "same_frame_detection_to_memory_association": true,
+      "selection_basis": "execution.py _step chooses the first current_detection_objects index matching the proposed memory object ID; persisted observations preserve that mapping and predicted mask path."
+    },
+    {
+      "action": {
+        "index": 41,
+        "action": "OpenObject",
+        "object_id": 113,
+        "source_frame": 40,
+        "result_frame": 41,
+        "success": false,
+        "error": "Bad interact mask. Couldn't locate target object"
+      },
+      "source_observation_frame_id": 40,
+      "prediction_frame_id": "40",
+      "source_rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/frames/000040.png",
+      "source_rgb_sha256": "9fad6c7f48eb8b0fcfef64e59c69f950f59442c46f3e8a835dd468f8b700bb3f",
+      "predicted_detection_index": 33,
+      "all_detection_indices_for_memory_id": [
+        33
+      ],
+      "predicted_category": "Drawer",
+      "confidence": 0.565700352191925,
+      "bbox_xyxy": [
+        55,
+        291,
+        182,
+        300
+      ],
+      "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/perception/40_mask_033.npy",
+      "mask_sha256": "1702d487203238f67c86ef279219a242726d7af6da1a341c3c34b892d8dd5c36",
+      "mask_shape": [
+        300,
+        300
+      ],
+      "mask_nonzero_pixels": 1126,
+      "same_frame_detection_to_memory_association": true,
+      "selection_basis": "execution.py _step chooses the first current_detection_objects index matching the proposed memory object ID; persisted observations preserve that mapping and predicted mask path."
+    },
+    {
+      "action": {
+        "index": 45,
+        "action": "OpenObject",
+        "object_id": 48,
+        "source_frame": 44,
+        "result_frame": 45,
+        "success": false,
+        "error": "object not found: object"
+      },
+      "source_observation_frame_id": 44,
+      "prediction_frame_id": "44",
+      "source_rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/frames/000044.png",
+      "source_rgb_sha256": "747886baf8b398e39cda3c86324d65c1b156bdc27af82c2013f74fe1d00986cf",
+      "predicted_detection_index": 24,
+      "all_detection_indices_for_memory_id": [
+        24
+      ],
+      "predicted_category": "Drawer",
+      "confidence": 0.9690809845924377,
+      "bbox_xyxy": [
+        146,
+        76,
+        173,
+        91
+      ],
+      "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/perception/44_mask_024.npy",
+      "mask_sha256": "cfa14d74816caeec4696048d53b9d23e8924416cc8011bdcf657e0b7485befce",
+      "mask_shape": [
+        300,
+        300
+      ],
+      "mask_nonzero_pixels": 373,
+      "same_frame_detection_to_memory_association": true,
+      "selection_basis": "execution.py _step chooses the first current_detection_objects index matching the proposed memory object ID; persisted observations preserve that mapping and predicted mask path."
+    },
+    {
+      "action": {
+        "index": 47,
+        "action": "OpenObject",
+        "object_id": 48,
+        "source_frame": 46,
+        "result_frame": 47,
+        "success": false,
+        "error": "object not found: object"
+      },
+      "source_observation_frame_id": 46,
+      "prediction_frame_id": "46",
+      "source_rgb_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/frames/000046.png",
+      "source_rgb_sha256": "9fad6c7f48eb8b0fcfef64e59c69f950f59442c46f3e8a835dd468f8b700bb3f",
+      "predicted_detection_index": 28,
+      "all_detection_indices_for_memory_id": [
+        28
+      ],
+      "predicted_category": "Drawer",
+      "confidence": 0.9400042295455933,
+      "bbox_xyxy": [
+        144,
+        146,
+        173,
+        162
+      ],
+      "mask_path": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/perception/46_mask_028.npy",
+      "mask_sha256": "d5300827c7e509804a78ae5a556f0881e54a53909a1481cb93ca9e3f019cbca9",
+      "mask_shape": [
+        300,
+        300
+      ],
+      "mask_nonzero_pixels": 427,
+      "same_frame_detection_to_memory_association": true,
+      "selection_basis": "execution.py _step chooses the first current_detection_objects index matching the proposed memory object ID; persisted observations preserve that mapping and predicted mask path."
+    }
+  ],
+  "interpretation": "All ten attempted interactions used a predicted mask associated with the proposed memory ID in the immediately preceding source observation. Four failed during target lookup from the mask; six returned object-not-found. This establishes current-frame association, not correct simulator instance alignment or interaction readiness. The evidence does not identify a single causal failure without further controlled analysis.",
+  "limits": [
+    "Predicted category and memory ID are actor-side estimates, not ground truth.",
+    "No per-step simulator instance masks or ground-truth object distances were read.",
+    "No independent official rescore was run here; final cohort audit owns that check."
+  ],
+  "raw_artifact_sha256": {
+    "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot50_cohort_recovery3.json": "d0f619b9de8efe18cf01bf778b8c2398d1c254bf901379bc4f2b5781b20f2ff1",
+    "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/run.json": "8d23c7c80215b8414e7e07d712ef9f128777ba6c5dd97a571c50c5fbe52b6aab",
+    "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/summary.json": "a40174af423d1eccaf124532f76e7f463dabfdaf939dd41af7ba31960dd65dc0",
+    "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/attempt.json": "293fb6a87f2c8c3ea07df3b4885fa8150007aa9787dd687b649ee3e0e00004c6",
+    "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/execution.json": "9205b27bf883c2718bf8c3f1695c047d08e00a69a847f52ffcb580298364169e",
+    "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/actions.jsonl": "f5c9bce59b624425888f7da48321569dc156bbba3aa1056d5a6c6b64ec469f11",
+    "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/observations.jsonl": "3b05ef645088b2b907faf9225eaa48ec90301d4bda1066708660fa1c6915ad31",
+    "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/simulator/terminal_evaluation.json": "aa04132996d5d6418aaf55abd8393e1ae167e6692031390b2d7ad311c0f1a9c3",
+    "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i45_recovery1/episodes/0001/decisions/0001/request.json": "15ada5263b877597e3538fb0fe98d9d8bf950a34e09b78211c85485cdc780dc3",
+    "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred/execution.py": "7907cdde8167ff9b951235052c4c8ce2456b5a6a39d6b5ad025698aeed1cd9e4",
+    "/home/ysh/codebase/agentic-3d-task/src/codex_agent/alfred/simulator_worker.py": "7f1e40c6f5e4e0ee6c7eb0fa9596e46955b4512812fb5395ca80f9649ae8c376",
+    "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/archive_recovery3_i45_case.py": "72fb640fd0632849c66b43f5651563999b5e06939b1c72512c6938f41361b239"
+  }
+}

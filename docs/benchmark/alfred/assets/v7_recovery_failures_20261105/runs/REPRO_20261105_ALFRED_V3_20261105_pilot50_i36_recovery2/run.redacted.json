@@ -1,0 +1,156 @@
+{
+  "run_id": "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery2",
+  "status": "error",
+  "started_at_utc": "2026-11-05T02:32:07.425097+00:00",
+  "code": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "7010ba8f54088bdad50ad30ba8ac709765c0d1c6",
+    "executed_code_sha256": "24f41534d1c3929a2ef65eb0f6626dedebafe6131eb78f2342c933eb19ea7370",
+    "tracked_worktree_drift": ""
+  },
+  "command": [
+    "/home/ysh/miniconda3/envs/agentic3d/bin/python",
+    "-m",
+    "codex_agent.cli.run_alfred",
+    "--data-root",
+    "/home/ysh/Datasets/FILM/alfred/data/json_2.1.0",
+    "--splits",
+    "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+    "--fold",
+    "docs/benchmark/alfred/folds/pilot50.json",
+    "--output-dir",
+    "outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery2",
+    "--run-id",
+    "REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery2",
+    "--simulator-python",
+    "/home/ysh/codebase/FILM/.venv/bin/python",
+    "--alfred-root",
+    "/home/ysh/Datasets/FILM/alfred",
+    "--film-root",
+    "/home/ysh/codebase/FILM",
+    "--weights-root",
+    "/home/ysh/Datasets/FILM/Pretrained_Models_FILM",
+    "--x-display",
+    "5",
+    "--device",
+    "cuda:0",
+    "--model",
+    "gpt-5.4-2026-03-05",
+    "--reasoning-effort",
+    "medium",
+    "--max-actions",
+    "1000",
+    "--max-failures",
+    "10",
+    "--max-decisions",
+    "60",
+    "--navigation-chunk",
+    "12",
+    "--retrieved-images",
+    "3",
+    "--worker-timeout",
+    "180",
+    "--turn-timeout",
+    "300",
+    "--num-shards",
+    "50",
+    "--shard-index",
+    "36"
+  ],
+  "output_dir": "/home/ysh/codebase/agentic-3d-task/outputs/alfred/REPRO_20261105_ALFRED_V3_20261105_pilot50_i36_recovery2",
+  "fold_path": "/home/ysh/codebase/agentic-3d-task/docs/benchmark/alfred/folds/pilot50.json",
+  "fold_sha256": "1d22afc51da128395a6d65a250d9dc603c8f50f0252942ca28b335568f646d4e",
+  "full_fold_size": 50,
+  "shard_index": 36,
+  "num_shards": 50,
+  "splits_path": "/home/ysh/Datasets/FILM/alfred_data_small/splits/oct21.json",
+  "splits_sha256": "c27918c1f64f58d047cb2a26d477dfdb8935bacde3504ec1ce9cb52cd2c72c83",
+  "limit": null,
+  "diagnostic_prefix": false,
+  "episodes": [
+    {
+      "episode_id": "valid_unseen/pick_cool_then_place_in_recep-LettuceSliced-None-GarbageCan-10/trial_T20190909_213642_049125#1",
+      "split": "valid_unseen",
+      "task_type": "pick_cool_then_place_in_recep",
+      "trajectory_sha256": "d7d34d4d8202d292d3bc43f4dd29b7fe23ef7520e5f6308f45f39288f126a5f3",
+      "expert_actions": 62
+    }
+  ],
+  "model": "gpt-5.4-2026-03-05",
+  "model_provider": "codex_adapter",
+  "reasoning_effort": "medium",
+  "execution": {
+    "max_actions": 1000,
+    "max_failures": 10,
+    "max_decisions": 60,
+    "navigation_chunk": 12,
+    "retrieved_images": 3,
+    "use_step_instructions": false
+  },
+  "geometry": {
+    "camera_height_m": 1.576,
+    "step_size_m": 0.25,
+    "vertical_fov_degrees": 60.0,
+    "intrinsics": [
+      [
+        259.8076211353316,
+        0.0,
+        149.5
+      ],
+      [
+        0.0,
+        259.8076211353316,
+        149.5
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "pose_source": "successful-action odometry and yaw/horizon proprioception",
+    "world_axes": "episode-relative THOR X/Z/Y (Z-up)"
+  },
+  "perception_profile": "film_predicted_rgb_v1",
+  "perception": {
+    "device": "cuda:0",
+    "score_threshold": 0.5,
+    "mask_threshold": 0.5,
+    "checkpoints": {
+      "maskrcnn_alfworld/objects_lr5e-3_005.pth": "1a996559aaf093d3aece1da456266843899eda03da49d5f56cd7a48d18ea67f4",
+      "maskrcnn_alfworld/receps_lr5e-3_003.pth": "3caf3a0a3eca76081b91fedf2bbdd9ff42937ca63ec9660852a9dd47d73d66d2",
+      "depth_models/valts0/model-102500-best_silog_17.00430": "55fe43a4701f8c9646ebeb2d7740b61073efa3af3da6fe0824183938d1222953",
+      "depth_models/valts/model-2000-best_silog_10.13741": "b7371f578160e23e6255f3f1907ba247fdda240a1bb0019f2ca36556f0164420"
+    }
+  },
+  "simulator": {
+    "python_executable": "/home/ysh/codebase/FILM/.venv/bin/python",
+    "x_display": "5",
+    "ai2thor_version": "2.1.0",
+    "build": "201909061227"
+  },
+  "external_sources": {
+    "alfred": {
+      "path": "/home/ysh/Datasets/FILM/alfred",
+      "head_sha": "f91f4c0c96c7a29f33d0557f86b0a21035379b3b",
+      "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_dirty": false,
+      "python_source_sha256": "412cc3dba05844c40f7a9c673ac1a23f7b6d32695a1b0b0bf977ef1e8d692074",
+      "python_source_count": 55
+    },
+    "film": {
+      "path": "/home/ysh/codebase/FILM",
+      "head_sha": "63abf9599bbcfae0b2ab91695da86fcca751f044",
+      "tracked_diff_sha256": "78c3d94ab3d61e6b3b387b5aed97f01028277b73310bfc2d7a835033f71395c1",
+      "tracked_dirty": true,
+      "python_source_sha256": "d5c06183eb11d4be5f1034f76e70cfb1ddf7b4cccb54c6e8116ef87976902806",
+      "python_source_count": 115
+    }
+  },
+  "error": {
+    "redacted": true,
+    "classification": "HTTP403 / ROW5004 / dependency timeout / processing_error",
+    "error_sha256": "0ff9ac2ab056d9183e76fac1effbd365a555105e3eb0dbd53258edc0e4d63d95"
+  },
+  "finished_at_utc": "2026-11-05T02:51:29.917089+00:00"
+}
