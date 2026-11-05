@@ -75,6 +75,7 @@ nav:
           - v10 Container Failure Cases: benchmark/alfred/assets/v10_prefix5_20261105/i02_terminal_failure_cases.md
           - v10 Mapping Performance Review: benchmark/alfred/assets/v10_prefix5_20261105/mapping_performance_review.md
           - v12 Macro Tools and 85 Categories Prefix5: benchmark/alfred/v12_macro_tools_85cats_prefix5_20261105.md
+          - v13 Mapping and Perception Upgrade Prefix5: benchmark/alfred/v13_mapping_perception_upgrade_20261105.md
       - Adapter Protocol Diagnostics:
           - Timeline: benchmark/adapter/README.md
           - v1 ModelHub Tool and State Probe: benchmark/adapter/v1_modelhub_tool_state_20261103.md

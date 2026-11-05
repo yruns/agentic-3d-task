@@ -114,12 +114,14 @@ caused three concrete failure modes observed in `v10` and `v11`:
 
 ---
 
-## Perception and 3D mapping performance optimizations
+## Perception and 3D mapping performance optimizations (`v12` & `v13`)
 
-Profiling of the 5-task runs identified two dominant latency bottlenecks in
-perception and 3D mapping (while AI2-THOR simulation itself takes `< 0.08 s/step`):
+Profiling of the 5-task runs identified four major structural bottlenecks across
+the GPU perception worker, 2D open-vocabulary grounding, 3D point-cloud
+association, and CPU raycasting (while AI2-THOR simulation itself takes
+`< 0.08 s/step`):
 
-1. **GPU-Resident Perception Models (`model_runtime.py`):**
+1. **GPU-Resident Perception Models & `bfloat16` Batching (`model_runtime.py`, `vision_models.py`):**
    - Previously, `active_model()` moved all four neural models (~8.5 GB total:
      `DA3Metric-Large` 1.34 GB, `GroundingDINO` 0.70 GB, `SAM1 ViT-H` 2.56 GB,
      `OpenCLIP ViT-H-14` 3.94 GB) from CPU to GPU and back to CPU—followed by a
@@ -128,20 +130,54 @@ perception and 3D mapping (while AI2-THOR simulation itself takes `< 0.08 s/step
    - `active_model()` now keeps each model resident on its assigned 24 GB RTX
      4090 GPU (~9.2 GB total footprint), eliminating per-frame CPU$\leftrightarrow$GPU
      weight thrashing.
-2. **Fast AABB Rejection & OBB Caching in 3D Mapping (`object_mapping.py`):**
-   - Previously, `oriented_envelopes_overlap()` fitted a 3D `ConvexHull` + PCA
-     from scratch on both point clouds for every candidate pair in
-     `_assign_regions()` and `maintain_objects()`, causing $O(N^2)$ latency
-     spikes up to 33–73 s/step at frame 40 (`>60,000` convex-hull fits).
-   - `oriented_envelopes_overlap()` now performs an $O(1)$ axis-aligned bounding
-     box (AABB) disjointness check before touching `ConvexHull`, and caches
-     computed OBB envelopes per immutable point-cloud array in `_ENVELOPE_CACHE`.
-3. **Raw SAM Mask Preservation for Containers (`memory.py`):**
-   - `IncrementalSceneMemory` stores both child-subtracted `current_detection_masks`
-     (used for 3D point projection, `PickupObject`, and empty-surface `PutObject`)
-     and unsubtracted `current_raw_detection_masks` (used by
-     `select_interaction_mask` for `OpenObject` / `CloseObject` so container
-     doors are never hollowed out by items inside).
+   - In `v13`, `GroundingDetector` precomputes and caches the BERT text encoder
+     features (`_cached_text_dict`) for the 3 fixed vocabulary batches once at
+     startup, runs the Swin-T image backbone once per frame, expands the
+     multi-scale visual pyramid to `batch_size=3`, and evaluates only the final
+     decoder layer (`111 ms/frame`, **2.0$\times$ faster**).
+   - `PromptedSegmenter` (`SAM1 ViT-H`) and `ClipEncoder` (`OpenCLIP ViT-H-14`)
+     now run under `torch.autocast(bfloat16)` with batched `predict_torch` box
+     prompts (`140 ms/frame` for SAM1 and `75 ms/frame` for OpenCLIP, cutting
+     total perception RPC time from `3.48 s/frame` in `v11` $\rightarrow$
+     `0.75 s/frame` in `v12` $\rightarrow$ **`0.38 s/frame` in `v13`**).
+
+2. **Compound Token Span Scoring & CLIP Semantic Gating (`vision_models.py`, `object_mapping.py`):**
+   - Previously, `decode_grounded_boxes()` scored multi-word categories by
+     `sub_tokens.max()` and assigned `logits.max()` (across all 256 tokens
+     including punctuation) as box confidence, causing `*Sliced` categories to
+     hijack base categories (`41%–53%` hallucinated room categories) and wasting
+     `26%–30%` of SAM1+CLIP compute on `0.20 < conf < 0.25` boxes that were
+     immediately discarded by `MappingConfig(min_mask_confidence=0.25)`.
+   - `v13` aligns `box_threshold = text_threshold = 0.25`, requires all tokens in
+     compound spans (`require_all_span_tokens=True`), and gates low-confidence
+     detections in `mapping_masks()` using OpenCLIP image-text cosine similarity
+     (`min_clip_similarity = 0.185`).
+
+3. **Monocular-Scale 3D Point-Cloud Association & Veil Removal (`object_mapping.py`, `memory.py`):**
+   - Previously, `point_overlap()` used a `2.5 cm` (`voxel_size_m`) radius with
+     `association_threshold = 1.2` and zero-margin `oriented_envelopes_overlap()`.
+     Under monocular depth (`DA3Metric-Large`, RMSE `~0.31 m`), 2.5D surface
+     shells drift by `5–15 cm` across viewpoints, causing `99.2%` of cross-view
+     merges to fail (fragmenting 1 Fridge into 7 IDs and 1 Bed into 19 IDs).
+   - `v13` erodes SAM masks by 1 px (`erode_mask_pixels = 1`) and trims the
+     farthest 15% depth veil points (`depth_trim_quantile = 0.15`) before 3D
+     projection, decouples `association_distance_m = 0.12 m` and
+     `envelope_margin_m = 0.10 m` from `voxel_size_m`, caches `cKDTree` and
+     AABB/OBB envelopes per point cloud, and incorporates `same_category_bonus = 0.20`
+     during both frame-to-frame association and `maintain_objects()` consolidation—cutting
+     duplicate 3D object fragmentation by **60%–73%**.
+
+4. **Adaptive Ground-Plane Calibration & Vectorized 2D Ray Rasterization (`depth_models.py`, `spatial_map.py`):**
+   - When `DA3Metric-Large` underestimates range by `8%–18%` on indoor floors,
+     back-projected floor pixels from a `1.576 m` camera land at $z = +0.12\text{..}+0.24\text{ m}$,
+     exceeding `obstacle_min_height_m = 0.12 m` and causing `80%–100%` of open
+     floor to be misclassified as obstacle walls.
+   - `SpatialMap._ray_evidence()` now detects flat horizontal floor modes to
+     calibrate local floor elevation (`floor_offset`), protects physically
+     traversed agent footprints (`_visited_footprint`) from noisy遠-range depth
+     overwrites, and replaces 80 per-frame 2D `np.unique(..., axis=0)` calls
+     with 64-bit integer key packing (`_pack` / `_unpack_set`), reducing CPU
+     raycasting latency from **`340–510 ms/frame` to `~20 ms/frame` (20$\times$ faster)**.
 
 ---
 
