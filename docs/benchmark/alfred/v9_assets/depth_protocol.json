@@ -1,0 +1,77 @@
+{
+  "scope": "Frozen train frames only; raw meters; no model sees GT, pose, task goals, or pilot validation data",
+  "started_at_utc": "2026-11-05T08:26:14.897751+00:00",
+  "configuration": {
+    "manifest_path": "outputs/alfred_depth_calibration/train60_v1/manifest.json",
+    "da3_model_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large",
+    "unidepth_model_dir": "/home/ysh/Models/agentic3d/models/alfred_vision/unidepth-v2-vitl14",
+    "output_dir": "outputs/alfred_depth_calibration/compare_train60_v2",
+    "gpu_lock_path": "/tmp/agentic3d-alfred-gpu4.lock",
+    "project_root": "/home/ysh/codebase/agentic-3d-task",
+    "device": "cuda:0",
+    "physical_gpu_index": 4,
+    "lock_timeout_seconds": 180
+  },
+  "manifest_sha256": "ad55c84172a085445f196e1ed2083097980c19b9f13586b7110e68ac310ad084",
+  "capture_source_sha256": "9bbb8ab74c89b923885ada46d0d849cb0dece05f6c3cd1b8a2187d7b2a727e54",
+  "cuda_visible_devices": "GPU-bd6fb183-b27d-9364-0456-94c1d3ddf9a8",
+  "selection_rule": {
+    "version": 1,
+    "minimum_frame_coverage": 0.99,
+    "aggregation": "equal-weight macro average of frames",
+    "ranking": [
+      "abs_rel",
+      "near_abs_rel",
+      "edge_gradient_mae_m",
+      "rmse_m"
+    ],
+    "tie_tolerance": 1e-08,
+    "near_range_m": [
+      0.3,
+      2.0
+    ],
+    "gt_depth_range_m_exclusive": [
+      0.0,
+      5.0
+    ],
+    "gt_saturation_m": 5.0,
+    "edge_depth_jump_m": 0.1,
+    "ground_truth_scale_alignment": false,
+    "geometry_metrics": "diagnostic only; excluded from model selection"
+  },
+  "code": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "0e8951134150f4c108806ca72adcd5bb59fd6b67",
+    "executed_code_sha256": "547bf610324ba30dcdc76e4e4cfe9ccf8d01d593df8f84c4f0dddaaf3d0107aa",
+    "tracked_worktree_drift": ""
+  },
+  "backend_sources": {
+    "depth_anything_3": {
+      "package_roots": [
+        "/data1/ysh/Models/agentic3d/third_party/alfred_vision/depth_anything_3/src/depth_anything_3"
+      ],
+      "source_config_sha256": "3a733a303030340501bdc885905b0080eb3a963b16976640c8c5277f492a4688",
+      "files": 93
+    },
+    "unidepth": {
+      "package_roots": [
+        "/data1/ysh/Models/agentic3d/third_party/alfred_vision/unidepth/unidepth",
+        "/home/ysh/codebase/agentic-3d-task/__editable__.unidepth-0.1.finder.__path_hook__"
+      ],
+      "source_config_sha256": "20c78ae73b8e10c7586aef2071cb6da01f17228c93827171323d918c6f95bb78",
+      "files": 157
+    }
+  },
+  "checkpoint_sha256": {
+    "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/config.json": "a336f3e76fe375aaae17a9aed9130c9f2aa061535d317ec57dcb2f1f02e1dd53",
+    "/home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large/model.safetensors": "bbea5b0b3ee389849cffa7ddae89de064a90abd2b055fc5aa99aac68db324776",
+    "/home/ysh/Models/agentic3d/models/alfred_vision/unidepth-v2-vitl14/config.json": "09eb0ea8de53a6c9a1d428ac98c79847fe2602ea417701261f3f628099a30816",
+    "/home/ysh/Models/agentic3d/models/alfred_vision/unidepth-v2-vitl14/model.safetensors": "ba73d3de735302ccc64a50f1e557122050c4b1893e6060b28dba05d6af3e67c6"
+  },
+  "library_versions": {
+    "torch": "2.8.0+cu126",
+    "numpy": "1.26.4",
+    "safetensors": "0.8.0",
+    "huggingface-hub": "0.36.2"
+  }
+}

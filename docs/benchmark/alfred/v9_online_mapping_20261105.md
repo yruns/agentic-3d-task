@@ -172,8 +172,24 @@ MkDocs and lock validation pass
 ([post-fix verification](v9_assets/quality_gates_frame_id_fix.json)).
 [Failed comparison launch and fix](v9_assets/depth_compare_launch_attempt1.json).
 
-Pending: measured depth comparison, real perception/mapping checks and pilot15
-official scoring. Run IDs,
+The second comparison completed on clean HEAD `0e89511`, using unchanged frozen
+frames and physical GPU 4. Both models cover all valid GT pixels. DA3Metric-Large
+wins the predeclared primary AbsRel criterion; its existing production setting
+remains frozen. Neither model received GT or a fitted scale factor.
+
+| Backend | AbsRel | Near AbsRel (0.3–2 m) | RMSE (m) | Edge gradient MAE (m) | 60-frame inference (s) |
+|---|---:|---:|---:|---:|---:|
+| DA3Metric-Large | 0.19530 | 0.19976 | 0.31422 | 0.24870 | 20.44 |
+| UniDepthV2 ViT-L/14 | 0.41473 | 0.43347 | 0.51951 | 0.23543 | 18.28 |
+
+GT saturation excludes 366,755/5,400,000 pixels (6.79%); 5,033,245 valid pixels
+remain. Edge metrics exist for 51 frames. UniDepth has the lower edge error,
+which does not override the predeclared AbsRel ranking. These are four-room,
+60-frame train diagnostics, not a claim of ALFRED-wide depth superiority.
+[Full per-frame/scene/pitch comparison](v9_assets/depth_comparison.json) and
+[executed code, model hashes and command configuration](v9_assets/depth_protocol.json).
+
+Pending: real perception/mapping checks and pilot15 official scoring. Run IDs,
 code hashes, commands, artifacts and actual outcomes will be added as each stage
 executes; no pending stage is presented as passed. Historical v1–v8 and the old
 50 scores remain unchanged.
