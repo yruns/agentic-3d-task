@@ -63,6 +63,17 @@ def _box_distance_2d(point_xy: np.ndarray, bounds: np.ndarray) -> float:
     return float(np.linalg.norm(point_xy - nearest))
 
 
+def _is_fov_aligned(
+    stance_xy: tuple[float, float] | np.ndarray, target_xy: np.ndarray
+) -> bool:
+    """Return whether ``target_xy`` falls within the +/-27 deg cardinal camera FOV cone."""
+    dx = abs(float(target_xy[0] - stance_xy[0]))
+    dy = abs(float(target_xy[1] - stance_xy[1]))
+    major = max(dx, dy)
+    minor = min(dx, dy)
+    return major <= 0.15 or (minor / major) <= math.tan(math.radians(27.0))
+
+
 class MacroActionController:
     """Drive multi-step navigation, scanning, exploration, and object interactions."""
 
@@ -391,8 +402,10 @@ class MacroActionController:
 
         pos_xy = np.asarray(position[:2], dtype=np.float64)
         bounds = node.bounds
+        target_xy = node.centroid[:2]
         current_box_dist = _box_distance_2d(pos_xy, bounds)
-        if 0.25 <= current_box_dist <= 0.85:
+        current_aligned = _is_fov_aligned(pos_xy, target_xy)
+        if 0.25 <= current_box_dist <= 0.85 and current_aligned:
             return None, "Reached an observed interaction stance near target."
 
         raster = spatial_map.navigation_raster()
@@ -418,6 +431,16 @@ class MacroActionController:
             <= _box_distance_2d(np.asarray(spatial_map.cell_center(cell)), bounds)
             <= 0.85
         }
+        aligned_close = {
+            cell
+            for cell in close_goals
+            if _is_fov_aligned(spatial_map.cell_center(cell), target_xy)
+        }
+        if aligned_close:
+            close_goals = aligned_close
+        elif 0.25 <= current_box_dist <= 0.85:
+            return None, "Reached an observed interaction stance near target."
+
         if close_goals:
             action, feedback = navigation_step(
                 spatial_map, close_goals, yaw_degrees=yaw_degrees
@@ -426,19 +449,27 @@ class MacroActionController:
                 return action, feedback
 
         # Progressive approach: if the 0.25-0.85m band is still in unobserved space,
-        # advance to the reachable lattice cell that gets closest to the target's bounds!
+        # advance to the reachable lattice cell that gets closest to the target's bounds
+        # while preferring cardinal-FOV-aligned stances!
         scored = [
             (
+                _box_distance_2d(np.asarray(spatial_map.cell_center(cell)), bounds)
+                + (
+                    0.0
+                    if _is_fov_aligned(spatial_map.cell_center(cell), target_xy)
+                    else 0.22
+                ),
                 _box_distance_2d(np.asarray(spatial_map.cell_center(cell)), bounds),
                 cell,
             )
             for cell in lattice_cells
         ]
         if scored:
-            min_dist = min(item[0] for item in scored)
-            if min_dist < current_box_dist - 0.12:
+            min_score = min(item[0] for item in scored)
+            cur_score = current_box_dist + (0.0 if current_aligned else 0.22)
+            if min_score < cur_score - 0.12:
                 progressive_goals = {
-                    cell for dist, cell in scored if dist <= min_dist + 0.15
+                    cell for sc, _, cell in scored if sc <= min_score + 0.15
                 }
                 prog_action, prog_feedback = navigation_step(
                     spatial_map, progressive_goals, yaw_degrees=yaw_degrees
@@ -446,7 +477,7 @@ class MacroActionController:
                 if prog_action is not None:
                     return (
                         prog_action,
-                        f"Advancing along FMM toward #{resolved_id} (target box_dist={min_dist:.2f}m).",
+                        f"Advancing along FMM toward #{resolved_id} (target score={min_score:.2f}m).",
                     )
 
         # At the boundary of currently known free floor, orient toward the target and
