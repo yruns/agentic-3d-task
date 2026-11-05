@@ -45,8 +45,13 @@ class ScenePerceptionConfig:
     caption_batch_size: int = 29
     max_detections: int = 100
     timeout_seconds: float = 180.0
+    depth_source: Literal["da3metric-large", "simulator_gt"] = "da3metric-large"
 
     def __post_init__(self) -> None:
+        if self.depth_source not in ("da3metric-large", "simulator_gt"):
+            raise ValueError(
+                f"depth_source={self.depth_source!r} must be 'da3metric-large' or 'simulator_gt'"
+            )
         if (
             type(self.physical_gpu_index) is not int
             or self.physical_gpu_index < 0
@@ -158,7 +163,7 @@ class PerceptionObservation(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     frame_id: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
     depth_path: Path
-    depth_model: Literal["da3metric-large"]
+    depth_model: Literal["da3metric-large", "simulator_gt"]
     image_width: int = Field(gt=0)
     image_height: int = Field(gt=0)
     features_path: Path

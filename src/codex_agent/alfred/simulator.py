@@ -81,6 +81,7 @@ class SimulatorConfig:
     output_dir: Path
     x_display: str = "5"
     timeout_seconds: float = 120.0
+    render_depth: bool = False
 
     def __post_init__(self) -> None:
         for name in ("python_executable", "alfred_root", "output_dir"):
@@ -97,6 +98,8 @@ class SimulatorConfig:
             )
         if not math.isfinite(self.timeout_seconds) or self.timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be finite and positive")
+        if not isinstance(self.render_depth, bool):
+            raise ValueError("render_depth must be bool")
 
 
 class ThorSimulator:
@@ -120,18 +123,21 @@ class ThorSimulator:
             )
         if not worker.is_file():
             raise FileNotFoundError(f"simulator worker missing: {worker}")
+        cmd = [
+            str(config.python_executable),
+            "-u",
+            str(worker),
+            "--alfred-root",
+            str(config.alfred_root),
+            "--output-dir",
+            str(config.output_dir),
+            "--x-display",
+            config.x_display.lstrip(":"),
+        ]
+        if config.render_depth:
+            cmd.append("--render-depth")
         self._worker = JsonWorker(
-            command=[
-                str(config.python_executable),
-                "-u",
-                str(worker),
-                "--alfred-root",
-                str(config.alfred_root),
-                "--output-dir",
-                str(config.output_dir),
-                "--x-display",
-                config.x_display.lstrip(":"),
-            ],
+            command=cmd,
             cwd=config.alfred_root,
             env=os.environ,
             log_path=config.output_dir / "simulator.stderr.log",

@@ -59,7 +59,11 @@ class SceneModels:
             if not self.torch.cuda.is_available():
                 raise RuntimeError("device=cuda:0 requested but CUDA is unavailable")
             self.torch.cuda.reset_peak_memory_stats()
-        self.depth = DA3MetricDepth(config.depth_model_dir, device=config.device)
+        self.depth = (
+            DA3MetricDepth(config.depth_model_dir, device=config.device)
+            if config.depth_source == "da3metric-large"
+            else None
+        )
         self.detector = GroundingDetector(config)
         self.segmenter = PromptedSegmenter(config)
         self.features = ClipEncoder(config)
@@ -108,7 +112,21 @@ class SceneModels:
                 f"prediction artifacts already exist: frame_id={request.frame_id}"
             )
         stage = time.monotonic()
-        depth = self.depth.predict(rgb, intrinsics)
+        if self.depth is not None:
+            depth = self.depth.predict(rgb, intrinsics)
+        else:
+            gt_depth_candidate = (
+                request.rgb_path.resolve().parent.parent
+                / "depths"
+                / f"{request.rgb_path.stem}.npy"
+            )
+            if gt_depth_candidate.is_file():
+                raw_gt = np.load(gt_depth_candidate, allow_pickle=False).astype(
+                    np.float32
+                )
+                depth = np.asarray(np.clip(raw_gt, 1e-3, 5.0), dtype=np.float32)
+            else:
+                depth = np.ones((rgb.shape[0], rgb.shape[1]), dtype=np.float32)
         self.depth_seconds += time.monotonic() - stage
         stage = time.monotonic()
         boxes, candidates, suppressed, capped = self.detector.predict(rgb)
@@ -164,7 +182,7 @@ class SceneModels:
         observation = PerceptionObservation(
             frame_id=request.frame_id,
             depth_path=depth_path,
-            depth_model="da3metric-large",
+            depth_model=self.config.depth_source,
             image_width=rgb.shape[1],
             image_height=rgb.shape[0],
             features_path=features_path,

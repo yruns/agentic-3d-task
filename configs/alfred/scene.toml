@@ -17,6 +17,7 @@ nms_iou_threshold = 0.5
 caption_batch_size = 29
 max_detections = 100
 timeout_seconds = 300.0
+depth_source = "simulator_gt"
 
 [memory]
 max_depth_m = 8.0
@@ -28,11 +29,11 @@ visibility_depth_tolerance_m = 0.15
 # the image. The reusable mapper keeps the OpenEQA default of 0.5.
 max_bbox_area_ratio = 1.0
 voxel_size_m = 0.025
-dbscan_eps_m = 0.1
+dbscan_eps_m = 0.08
 dbscan_min_points = 10
-association_distance_m = 0.12
-envelope_margin_m = 0.10
-association_threshold = 0.92
+association_distance_m = 0.06
+envelope_margin_m = 0.05
+association_threshold = 0.95
 merge_overlap_threshold = 0.35
 merge_image_similarity = 0.75
 merge_text_similarity = 0.78
@@ -40,7 +41,7 @@ maintenance_interval = 8
 confirmation_observations = 3
 min_clip_similarity = 0.185
 erode_mask_pixels = 1
-depth_trim_quantile = 0.15
+depth_trim_quantile = 0.12
 same_category_bonus = 0.20
 
 [spatial]

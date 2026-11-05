@@ -97,6 +97,29 @@ def test_worker_exports_only_rgb_and_proprioception(tmp_path: Path) -> None:
     assert list(tmp_path.rglob("*")) == [tmp_path / "frames", observation.rgb_path]
 
 
+def test_worker_exports_depth_meters_when_render_depth_enabled(tmp_path: Path) -> None:
+    worker = _SimulatorWorker(
+        alfred_root=tmp_path,
+        output_dir=tmp_path,
+        x_display="5",
+        render_depth=True,
+    )
+    worker.environment = SimpleNamespace(
+        last_event=SimpleNamespace(
+            frame=np.full((2, 2, 3), 120, dtype=np.uint8),
+            metadata={"agent": {"rotation": {"y": 90.0}, "cameraHorizon": 30.0}},
+            depth_frame=np.full((2, 2), 1500.0, dtype=np.float32),
+        )
+    )
+    observation = SimulatorObservation.model_validate(
+        worker._observe(success=True, error="")
+    )
+    assert observation.rgb_path.is_file()
+    depth_file = tmp_path / "depths" / "000000.npy"
+    assert depth_file.is_file()
+    np.testing.assert_allclose(np.load(depth_file), 1.5, rtol=1e-6)
+
+
 def test_terminal_score_preserves_state_history_and_ends_episode(
     tmp_path: Path,
 ) -> None:

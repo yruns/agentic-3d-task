@@ -245,7 +245,9 @@ def _run_episode(
     executor: EpisodeExecutor | None = None
     try:
         simulator_config = replace(
-            config.simulator, output_dir=artifact_dir / "simulator"
+            config.simulator,
+            output_dir=artifact_dir / "simulator",
+            render_depth=(config.perception.depth_source == "simulator_gt"),
         )
         with ThorSimulator(simulator_config) as environment:
             initial = environment.reset(episode.trajectory_path)

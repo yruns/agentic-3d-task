@@ -85,10 +85,18 @@ def load_interaction_mask(path: Path, *, shape: tuple[int, int]) -> Any:
 class _SimulatorWorker:
     """Single-episode owner; ``Any`` is confined to the external ThorEnv API."""
 
-    def __init__(self, *, alfred_root: Path, output_dir: Path, x_display: str) -> None:
+    def __init__(
+        self,
+        *,
+        alfred_root: Path,
+        output_dir: Path,
+        x_display: str,
+        render_depth: bool = False,
+    ) -> None:
         self.alfred_root = alfred_root
         self.output_dir = output_dir
         self.x_display = x_display
+        self.render_depth = render_depth
         self.environment: Any = None
         self.frame_id = 0
         self.trajectory_path: Path | None = None
@@ -108,7 +116,7 @@ class _SimulatorWorker:
         from gen import constants
 
         # These are process-local settings in the official simulator wrapper.
-        constants.RENDER_DEPTH_IMAGE = False
+        constants.RENDER_DEPTH_IMAGE = self.render_depth
         constants.RENDER_CLASS_IMAGE = False
         constants.RENDER_OBJECT_IMAGE = True
         constants.RENDER_IMAGE = True
@@ -122,7 +130,7 @@ class _SimulatorWorker:
         self.environment = ThorEnv(x_display=self.x_display)
         self.environment.reset(
             scene["floor_plan"],
-            render_depth_image=False,
+            render_depth_image=self.render_depth,
             render_class_image=False,
             render_object_image=True,
         )
@@ -161,7 +169,9 @@ class _SimulatorWorker:
             from gen import constants
 
             angle = constants.AGENT_HORIZON_ADJ * (-1 if action == "LookUp" else 1)
-            event = self.environment.look_angle(angle, render_settings=_RENDER_SETTINGS)
+            settings = dict(_RENDER_SETTINGS)
+            settings["renderDepthImage"] = self.render_depth
+            event = self.environment.look_angle(angle, render_settings=settings)
             success = bool(event.metadata["lastActionSuccess"])
             error = str(event.metadata["errorMessage"])
             api_action: object = {"action": action}
@@ -239,6 +249,16 @@ class _SimulatorWorker:
         frame_dir.mkdir(parents=True, exist_ok=True)
         rgb_path = frame_dir / f"{self.frame_id:06d}.png"
         Image.fromarray(frame).save(str(rgb_path))
+        if self.render_depth and getattr(event, "depth_frame", None) is not None:
+            raw_depth = np.asarray(event.depth_frame, dtype=np.float32)
+            depth_m = np.asarray(raw_depth / 1000.0, dtype=np.float32)
+            depth_dir = self.output_dir / "depths"
+            depth_dir.mkdir(parents=True, exist_ok=True)
+            np.save(
+                str(depth_dir / f"{self.frame_id:06d}.npy"),
+                depth_m,
+                allow_pickle=False,
+            )
         agent = event.metadata["agent"]
         yaw = float(agent["rotation"]["y"])
         horizon = float(agent["cameraHorizon"])
@@ -308,11 +328,13 @@ def main() -> int:
     parser.add_argument("--alfred-root", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--x-display", required=True)
+    parser.add_argument("--render-depth", action="store_true")
     args = parser.parse_args()
     worker = _SimulatorWorker(
         alfred_root=args.alfred_root.resolve(strict=True),
         output_dir=args.output_dir.absolute(),
         x_display=args.x_display,
+        render_depth=bool(args.render_depth),
     )
     args.output_dir.mkdir(parents=True, exist_ok=True)
     # Unity inherits OS descriptors rather than Python's sys.stdout object.

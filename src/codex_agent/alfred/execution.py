@@ -343,6 +343,21 @@ class EpisodeExecutor:
         )
         self.perception_seconds += time.monotonic() - started
         depth = np.load(prediction.depth_path, allow_pickle=False)
+        if prediction.depth_model == "simulator_gt":
+            gt_file = (
+                observation.rgb_path.resolve().parent.parent
+                / "depths"
+                / f"{observation.frame_id:06d}.npy"
+            )
+            if gt_file.is_file():
+                depth = np.load(gt_file, allow_pickle=False).astype(np.float32)
+                np.save(
+                    prediction.depth_path,
+                    np.asarray(np.clip(depth, 1e-3, 5.0), dtype=np.float32),
+                    allow_pickle=False,
+                )
+            if np.any((depth > 0) & (depth < 4.99)):
+                depth = np.where(depth >= 4.99, 0.0, depth)
         with np.load(prediction.features_path, allow_pickle=False) as features:
             detections = tuple(
                 Detection(
