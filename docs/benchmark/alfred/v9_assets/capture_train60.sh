@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 source /home/ysh/miniconda3/etc/profile.d/conda.sh
 conda activate agentic3d
+set -u
 export DISPLAY=:5
 export XAUTHORITY=/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/Xauthority
 python -m codex_agent.cli.capture_alfred_calibration plan \

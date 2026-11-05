@@ -1,0 +1,71 @@
+{
+  "started_at_utc": "2026-11-05T08:14:26.279451+00:00",
+  "code": {
+    "branch": "feat/alfred-benchmark",
+    "head_sha": "ea444a0ff8bd982ad082a38d7d5df8b927fb3eb0",
+    "executed_code_sha256": "d4ccbe9f5e77a4e23844f3173720e13c1d8ef1aab20ced195dae3e0ec1b4ddec",
+    "tracked_worktree_drift": ""
+  },
+  "model": "gpt-5.4-2026-03-05",
+  "reasoning_effort": "medium",
+  "turn_timeout_s": 90,
+  "max_finalization_retries": 0,
+  "scope": "Synthetic native Responses vision/schema transport probe; no simulator or task score",
+  "expected": {
+    "operation": "Stop",
+    "object_id": 0,
+    "cell_x": 0,
+    "cell_y": 0,
+    "repeat": 1,
+    "rationale": "Synthetic transport check",
+    "memory_note": "No simulator task was run"
+  },
+  "request": "This is a synthetic connectivity check, not an embodied task. Return exactly: {\"operation\": \"Stop\", \"object_id\": 0, \"cell_x\": 0, \"cell_y\": 0, \"repeat\": 1, \"rationale\": \"Synthetic transport check\", \"memory_note\": \"No simulator task was run\"}",
+  "actual": {
+    "operation": "Stop",
+    "object_id": 0,
+    "cell_x": 0,
+    "cell_y": 0,
+    "repeat": 1,
+    "rationale": "Synthetic transport check",
+    "memory_note": "No simulator task was run"
+  },
+  "metadata": {
+    "turn_id": "01a1aac6-0513-7860-9739-76ace88b4fae",
+    "status": "completed",
+    "duration_ms": 4895,
+    "usage": {
+      "last": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 1860,
+        "output_tokens": 70,
+        "reasoning_output_tokens": 18,
+        "total_tokens": 1930
+      },
+      "total": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 1860,
+        "output_tokens": 70,
+        "reasoning_output_tokens": 18,
+        "total_tokens": 1930
+      }
+    },
+    "input_tokens": 1860,
+    "cached_input_tokens": 0,
+    "reasoning_summary": null,
+    "run_home": "/home/ysh/codebase/agentic-3d-task/.codex-home/runs/be311c88c796497eba3fb6d012726f26",
+    "attempts": [
+      {
+        "turn_id": "01a1aac6-0513-7860-9739-76ace88b4fae",
+        "status": "completed",
+        "duration_ms": 4895,
+        "has_final_response": true,
+        "adapter_session_id": "7adb0173-460b-4636-a25f-b253b015b148"
+      }
+    ]
+  },
+  "succeeded": true,
+  "wall_seconds": 5.240036839619279
+}

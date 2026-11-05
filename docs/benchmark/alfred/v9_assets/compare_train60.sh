@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 source /home/ysh/miniconda3/etc/profile.d/conda.sh
 conda activate agentic3d
+set -u
 python -m codex_agent.cli.run_alfred_depth_calibration \
  --manifest outputs/alfred_depth_calibration/train60_v1/manifest.json \
  --da3-model-dir /home/ysh/Models/agentic3d/models/alfred_vision/da3metric-large \

@@ -1,0 +1,9 @@
+{
+  "status": "setup_error_before_python",
+  "command": "bash docs/benchmark/alfred/v9_assets/capture_train60.sh",
+  "launcher_sha256": "000bb5f496ac13a7ce5c191859cd331daf2649bc81e6fcc4cacb65fc4ac5c482",
+  "log": "tmp/alfred_v9/capture_train60.log",
+  "log_sha256": "ae0042c70b009e0a6c2a20bbd564c8d8e90476122220dcf64f214cd1b64e415d",
+  "error": "Conda compiler activation references unset SYS_SYSROOT under shell nounset. No capture plan, simulator, or frames started.",
+  "fix": "Enable nounset after conda activation; retain errexit and pipefail throughout."
+}

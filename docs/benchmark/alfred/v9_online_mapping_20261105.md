@@ -151,8 +151,18 @@ normalized CLIP features. Its reported GPU UUID and source digest were verified;
 GPU memory returned to baseline after shutdown.
 [GPU execution and actual worker environment](v9_assets/synthetic_gpu_forward.json).
 
-Pending: source commit, private train capture, measured depth comparison, real
-perception/mapping checks and pilot15 official scoring. Run IDs,
+Implementation commit: `ea444a0ff8bd982ad082a38d7d5df8b927fb3eb0`; executed-source
+SHA-256 `d4ccbe9f5e77a4e23844f3173720e13c1d8ef1aab20ced195dae3e0ec1b4ddec`,
+with a clean tracked tree. A real native Responses synthetic vision/schema probe
+passed in 5.24 seconds on that commit ([receipt](v9_assets/native_responses_probe.json)).
+
+The first capture launcher stopped during conda activation because shell nounset
+rejected an unset compiler variable; Python and the simulator were not started.
+The corrected launcher enables nounset after activation.
+[Failed launch and fix](v9_assets/capture_launch_attempt1.json).
+
+Pending: private train capture, measured depth comparison, real perception/mapping
+checks and pilot15 official scoring. Run IDs,
 code hashes, commands, artifacts and actual outcomes will be added as each stage
 executes; no pending stage is presented as passed. Historical v1–v8 and the old
 50 scores remain unchanged.
