@@ -7,6 +7,8 @@ SKILL.md re-read loop and always benefits from prompt prefix caching.
 from __future__ import annotations
 
 ALFRED_TOOL_NAMES: tuple[str, ...] = (
+    "execute_subgoal_program",
+    "verify_task_goal",
     "navigate_to",
     "explore_frontier",
     "scan_surroundings",
@@ -41,6 +43,34 @@ the 3D scene memory and 5cm FMM occupancy grid, and returns ONLY a compact \
 incremental ``SceneDelta`` JSON!
 
 High-Level Tool Catalog
+0. execute_subgoal_program — Execute a complete guarded subgoal policy block \
+in ONE decision turn (preconditions -> ranked candidate selection -> FMM approach \
+& multi-pitch framing -> automatic 3D sibling candidate fallback -> postcondition \
+verification)! Prefer this whenever targets/receptacles are in memory!
+   Supported ``subgoal`` values:
+   - ``"acquire_target"``: Pick up a target object by ``target_id`` and/or \
+``target_categories`` (automatically unloads occupied hands and opens closed \
+parent containers if needed, with automatic fallback across up to 3 candidates).
+   - ``"place_held"``: Place the currently held item into/onto ``receptacle_id`` \
+or ``receptacle_categories`` (auto-opens closed containers and falls back across \
+sibling receptacles).
+   - ``"clean_held"`` / ``"heat_held"`` / ``"cool_held"``: Optionally acquire \
+``target_id``/``target_categories``, run the full sink/microwave/fridge macro on \
+``receptacle_id``/``receptacle_categories``, and optionally place the processed \
+item directly onto ``destination_id``/``destination_categories`` in ONE call!
+   - ``"slice_target"``: Automatically acquire a ``Knife``/``ButterKnife`` if not \
+held, slice ``target_id``/``target_categories``, and put the knife down onto a \
+surface (``receptacle_id``/``receptacle_categories``) so your hand is free to \
+pick up the newly created ``*Sliced`` object!
+   - ``"examine_in_light"``: Acquire ``target_id``/``target_categories`` if not \
+held, navigate to ``DeskLamp``/``FloorLamp`` (``receptacle_id``), and toggle it \
+on while holding the object.
+   - ``"transfer_with_movable_receptacle"``: Complete the 4-stage movable \
+receptacle workflow in one turn: (1) pick up content ``target_id``/``target_categories``, \
+(2) put it inside movable receptacle ``receptacle_id``/``receptacle_categories`` \
+(``Bowl``/``Cup``/``Mug``/``Pan``/``Plate``/``Pot``), (3) pick up the movable \
+receptacle, and (4) place the movable receptacle onto ``destination_id``/``destination_categories``!
+   args: ``{"subgoal": "clean_held", "target_id": 48, "receptacle_id": 14, "destination_categories": ["CounterTop", "DiningTable"]}``
 1. navigate_to — Plan and execute a full FMM path to an observed object's \
 interaction stance OR a coarse 0.5m map region ``[x, y]``, progressively \
 revealing floor along the way, then automatically rotate and tilt the camera \
@@ -89,8 +119,16 @@ SaltShaker vs. PepperShaker, Apple vs. Tomato). Zero simulator steps!
    args: ``{"frame_ids": ["current"]}`` or ``{"frame_ids": [1, 3]}``
 9. view_bev — Re-render the latest top-down BEV map and list top frontiers.
    args: ``{}``
-10. finish_episode — Call this once all goal conditions are satisfied by \
-verified simulator actions, then immediately emit your final JSON response.
+10. verify_task_goal — Check whether all goal predicates (held-object invariant, \
+state ledger for cleaned/heated/cooled/sliced/toggled_on, two-object placement \
+count, and receptacle containment) are satisfied before finishing. Zero simulator \
+steps!
+   args: ``{}``
+11. finish_episode — Call this once all goal conditions are satisfied by \
+verified simulator actions, then immediately emit your final JSON response. \
+Note: ``finish_episode`` runs the Pre-Commit Goal Verifier automatically; if it \
+returns ``status: "verification_failed"``, DO NOT stop — execute the suggested \
+remediation steps first and then call ``finish_episode`` again!
    args: ``{"summary": "Cleaned the ladle in sink #14 and placed it on table #8"}``
 
 Critical ALFRED Task Rules

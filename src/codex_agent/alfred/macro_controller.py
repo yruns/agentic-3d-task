@@ -748,6 +748,17 @@ class MacroActionController:
             self.executor.completed_macros.add(sim_action)
             resolved_id = memory.resolve_object_id(resolved_id)
             node = memory.objects[resolved_id]
+            if (
+                sim_action == "OpenObject"
+                and node.category in _OPENABLE_CATEGORIES
+                and self.executor.can_step()
+                and self.executor.current_observation.horizon_degrees < 30.0 - 1e-3
+            ):
+                p_steps, p_fail = self._adjust_pitch_to(30.0)
+                steps += p_steps
+                failed += p_fail
+                resolved_id = memory.resolve_object_id(resolved_id)
+                node = memory.objects[resolved_id]
             top_ev = dict(
                 sorted(node.category_evidence.items(), key=lambda kv: (-kv[1], kv[0]))[
                     :3
@@ -863,10 +874,22 @@ class MacroActionController:
             cur_h = self.executor.current_observation.horizon_degrees
             if sim_action == "PutObject" and (
                 "No valid positions" in first_err
-                or node.category in {"Fridge", "Cabinet", "Shelf", "Microwave"}
+                or node.category
+                in {
+                    "Fridge",
+                    "Cabinet",
+                    "Shelf",
+                    "Microwave",
+                    "CounterTop",
+                    "DiningTable",
+                    "Desk",
+                    "SinkBasin",
+                }
             ):
                 adj_actions = (
-                    ["LookUp", "LookDown"] if cur_h >= 15.0 else ["LookDown", "LookUp"]
+                    ["LookUp", "LookDown", "RotateLeft"]
+                    if cur_h >= 30.0
+                    else ["LookDown", "LookUp", "RotateRight"]
                 )
             elif box_dist > 0.50:
                 adj_actions = ["MoveAhead"]
@@ -899,7 +922,6 @@ class MacroActionController:
                             f"{sim_action} on #{resolved_id} ({node.category}) succeeded after micro-adjustment ({adj_action}).",
                         )
                     failed += 1
-                    break
 
         if "Bad interact mask" in first_err:
             node.action_states[f"invalid_{sim_action}"] = ActionState(

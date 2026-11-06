@@ -262,21 +262,39 @@ def test_single_turn_episode_executes_high_level_tools_and_returns_scene_delta(
         assert clean_delta["status"] == "completed"
         assert clean_delta["agent_state"]["held_object"]["category"] == "Mug"
 
-        # 5. Finish episode via CLI main entry point
+        # 5. Calling finish_episode while still holding Mug on a non-examine task is rejected by Pre-Commit Verifier!
+        premature_finish = call_episode_server(
+            episode_dir,
+            "finish_episode",
+            {"summary": "Cleaned the mug (still holding it)"},
+        )
+        assert premature_finish["status"] == "verification_failed"
+
+        # 6. Place the cleaned Mug down via execute_subgoal_program, verify_task_goal, then finish_episode
+        place_delta = call_episode_server(
+            episode_dir,
+            "execute_subgoal_program",
+            {"subgoal": "place_held", "receptacle_id": objs_by_cat["SinkBasin"]},
+        )
+        assert place_delta["status"] == "completed"
+
+        ver = call_episode_server(episode_dir, "verify_task_goal", {})
+        assert ver["passed"] is True
+
         rc = tools_cli_main(
             [
                 "finish_episode",
                 "--episode-dir",
                 str(episode_dir),
                 "--args",
-                '{"summary": "Cleaned the mug"}',
+                '{"summary": "Cleaned and placed the mug"}',
             ]
         )
         assert rc == 0
         return AlfredEpisodeTurnOutcome(
             status="completed",
-            summary="Picked up mug and cleaned it in sink.",
-            completed_subgoals=["pickup mug", "clean mug in sink"],
+            summary="Picked up mug, cleaned it in sink, and placed it down.",
+            completed_subgoals=["pickup mug", "clean mug in sink", "place mug"],
         )
 
     runtime = ScriptedTurnRuntime(run_agent_tools)
@@ -311,6 +329,9 @@ def test_single_turn_episode_executes_high_level_tools_and_returns_scene_delta(
         "view_bev",
         "interact_object",
         "interact_object",
+        "finish_episode",
+        "execute_subgoal_program",
+        "verify_task_goal",
         "finish_episode",
     ]
 

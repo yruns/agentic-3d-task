@@ -327,6 +327,12 @@ class IncrementalSceneMemory:
             else:
                 node = self.objects[existing_id]
                 self._fuse_observation(node, region, observation.frame_id)
+            if (
+                node.category not in _STATIONARY_RECEPTACLE_CATEGORIES
+                and node.parent_receptacle_id is None
+                and node.object_id != self.held_object_id
+            ):
+                self._infer_spatial_containment(node, observation.frame_id)
             node.provisional = (
                 node.detection_count < self.config.mapping.confirmation_observations
             )
@@ -683,9 +689,49 @@ class IncrementalSceneMemory:
             <= self.config.mapping.reacquire_margin_m
         ]
         if parents:
-            child.parent_object_id = min(
+            parent_node = min(
                 parents, key=lambda node: np.linalg.norm(node.centroid - child.centroid)
-            ).object_id
+            )
+            child.parent_object_id = parent_node.object_id
+            child.action_states["sliced"] = ActionState(True, self._latest_frame_id)
+            if parent_node.parent_receptacle_id is not None:
+                child.parent_receptacle_id = parent_node.parent_receptacle_id
+                if parent_node.parent_receptacle_id in self.objects:
+                    self.objects[
+                        parent_node.parent_receptacle_id
+                    ].contained_object_ids.add(child.object_id)
+
+    def _infer_spatial_containment(self, child: ObjectMemory, frame_id: int) -> None:
+        """Bind newly observed small objects inside open receptacles to their container."""
+        if not child.geometry_valid:
+            return
+        c_xyz = child.centroid
+        best_recep: ObjectMemory | None = None
+        best_dist = 0.65
+        for node in self.objects.values():
+            if (
+                node.object_id == child.object_id
+                or node.category not in _STATIONARY_RECEPTACLE_CATEGORIES
+                or not node.geometry_valid
+            ):
+                continue
+            b = node.bounds
+            in_xy = (
+                b[0, 0] - 0.12 <= c_xyz[0] <= b[1, 0] + 0.12
+                and b[0, 1] - 0.12 <= c_xyz[1] <= b[1, 1] + 0.12
+            )
+            in_z = b[0, 2] - 0.10 <= c_xyz[2] <= b[1, 2] + 0.35
+            if not (in_xy and in_z):
+                continue
+            dist = float(np.linalg.norm(node.centroid - c_xyz))
+            if dist < best_dist:
+                best_dist = dist
+                best_recep = node
+        if best_recep is not None:
+            child.parent_receptacle_id = best_recep.object_id
+            best_recep.contained_object_ids.add(child.object_id)
+            if best_recep.category == "Fridge" and "cooled" not in child.action_states:
+                child.action_states["cooled"] = ActionState(True, frame_id)
 
     def maintain_objects(self) -> None:
         """Denoise and consolidate overlapping identities without reusing IDs.
@@ -774,6 +820,30 @@ class IncrementalSceneMemory:
             previous = survivor.action_states.get(name)
             if previous is None or evidence.frame_id > previous.frame_id:
                 survivor.action_states[name] = evidence
+        if (
+            survivor.parent_receptacle_id is None
+            and retired.parent_receptacle_id is not None
+        ):
+            survivor.parent_receptacle_id = self.resolve_object_id(
+                retired.parent_receptacle_id
+            )
+        for child_id in list(retired.contained_object_ids):
+            try:
+                resolved_child = self.resolve_object_id(child_id)
+            except KeyError:
+                continue
+            if resolved_child != left:
+                survivor.contained_object_ids.add(resolved_child)
+                if resolved_child in self.objects:
+                    self.objects[resolved_child].parent_receptacle_id = left
+        for node in self.objects.values():
+            if node.parent_receptacle_id == right:
+                node.parent_receptacle_id = left
+                survivor.contained_object_ids.add(node.object_id)
+            if right in node.contained_object_ids:
+                node.contained_object_ids.discard(right)
+                if left != node.object_id:
+                    node.contained_object_ids.add(left)
         survivor.views = sorted(
             survivor.views + retired.views, key=lambda view: view.frame_id
         )[-self.config.max_object_views :]
@@ -883,10 +953,17 @@ class IncrementalSceneMemory:
 
         eff_mask = self.current_detection_masks[chosen_idx]
         raw_mask = self.current_raw_detection_masks.get(chosen_idx, eff_mask)
-        if action in {"OpenObject", "CloseObject", "PutObject"} and int(
-            raw_mask.sum()
-        ) > int(eff_mask.sum()):
+        if action in {"OpenObject", "CloseObject"} and int(raw_mask.sum()) > int(
+            eff_mask.sum()
+        ):
             return chosen_idx, raw_mask, "current_raw_sam_mask"
+        if action == "PutObject":
+            # Prefer child-subtracted effective mask when it still has usable area (>= 150 px)
+            # so AI2-THOR places onto empty receptacle surface rather than colliding with items on it.
+            if int(eff_mask.sum()) >= 150:
+                return chosen_idx, eff_mask, mask_source
+            if int(raw_mask.sum()) > int(eff_mask.sum()):
+                return chosen_idx, raw_mask, "current_raw_sam_mask"
         return chosen_idx, eff_mask, mask_source
 
     def record_interaction(
@@ -907,15 +984,34 @@ class IncrementalSceneMemory:
         if action == "PickupObject":
             if object_id is None:
                 raise ValueError("PickupObject requires an observed object_id")
+            picked = self.objects[object_id]
+            if (
+                picked.parent_receptacle_id is not None
+                and picked.parent_receptacle_id in self.objects
+            ):
+                self.objects[picked.parent_receptacle_id].contained_object_ids.discard(
+                    object_id
+                )
+            picked.parent_receptacle_id = None
             self.held_object_id = object_id
         elif action == "PutObject":
             if self.held_object_id is not None:
                 held = self.objects[self.held_object_id]
+                if (
+                    held.parent_receptacle_id is not None
+                    and held.parent_receptacle_id in self.objects
+                ):
+                    self.objects[
+                        held.parent_receptacle_id
+                    ].contained_object_ids.discard(held.object_id)
                 held.reacquire_bounds = (
                     self.objects[object_id].bounds.copy()
                     if object_id is not None
                     else None
                 )
+                held.parent_receptacle_id = object_id
+                if object_id is not None and object_id in self.objects:
+                    self.objects[object_id].contained_object_ids.add(held.object_id)
                 affected.add(held.object_id)
             self.held_object_id = None
         elif action in {"OpenObject", "CloseObject"} and object_id is not None:
@@ -926,7 +1022,45 @@ class IncrementalSceneMemory:
                 if node.geometry_valid
                 and np.linalg.norm(node.centroid - target.centroid) <= 0.8
             )
-        elif action not in {"SliceObject", "ToggleObjectOn", "ToggleObjectOff"}:
+            if action == "CloseObject" and target.category == "Fridge":
+                for child_id in list(target.contained_object_ids):
+                    resolved_child = self.resolve_object_id(child_id)
+                    if resolved_child in self.objects:
+                        self.objects[resolved_child].action_states["cooled"] = (
+                            ActionState(True, self._latest_frame_id)
+                        )
+        elif action == "SliceObject" and object_id is not None:
+            self.objects[object_id].action_states["sliced"] = ActionState(
+                True, self._latest_frame_id
+            )
+        elif action in {"ToggleObjectOn", "ToggleObjectOff"} and object_id is not None:
+            toggled_node = self.objects[object_id]
+            if action == "ToggleObjectOn":
+                if toggled_node.category in {"Faucet", "Sink", "SinkBasin"}:
+                    for node in self.objects.values():
+                        if (
+                            node.parent_receptacle_id is not None
+                            and node.parent_receptacle_id in self.objects
+                            and self.objects[node.parent_receptacle_id].category
+                            in {"SinkBasin", "BathtubBasin", "Sink"}
+                        ) or (
+                            node.geometry_valid
+                            and float(
+                                np.linalg.norm(node.centroid - toggled_node.centroid)
+                            )
+                            <= 0.75
+                        ):
+                            node.action_states["cleaned"] = ActionState(
+                                True, self._latest_frame_id
+                            )
+                elif toggled_node.category == "Microwave":
+                    for child_id in list(toggled_node.contained_object_ids):
+                        resolved_child = self.resolve_object_id(child_id)
+                        if resolved_child in self.objects:
+                            self.objects[resolved_child].action_states["heated"] = (
+                                ActionState(True, self._latest_frame_id)
+                            )
+        else:
             return
         state_actions = {
             "OpenObject": ("open", True),
@@ -1134,6 +1268,9 @@ class IncrementalSceneMemory:
                     "stale_through_frame": node.stale_through_frame,
                     "visible_now": node.object_id in current_ids,
                     "parent_object_id": node.parent_object_id,
+                    "parent_receptacle_id": node.parent_receptacle_id,
+                    "contained_object_ids": sorted(node.contained_object_ids),
+                    "evidence_summary": node.evidence_summary,
                     "action_states": {
                         name: {
                             "value": evidence.value,

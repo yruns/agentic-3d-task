@@ -4,9 +4,10 @@ This track evaluates incremental scene memory during interactive ALFRED task
 execution. [Implementation and setup](../../codex_agent/alfred.md) describe the
 actor's observations and external dependencies.
 
-**Latest online-mapping run: the user-requested original prefix5 has 5/5 scores,
-SR 0/5 and GC 1/12 (8.33%).** See [v10 results and two replays](v10_prefix5_20261105.md).
-The remaining planned tasks were cancelled; pilot15 is not a completed cohort.
+**Latest full-validation run (`1,641 / 1,641`): SR 24.50% (`402 / 1,641`), GC 33.70% (`1,425 / 4,229`), `valid_seen` SR 30.37% (`249 / 820`) / GC 36.94%, and `valid_unseen` SR 18.64% (`153 / 821`) / GC 30.47%.** On the matched `pilot50` subset (`50/50`), `v16` reaches **SR 32.00% (`16/50`), `valid_seen` SR 44.00% (`11/25`), `valid_unseen` SR 20.00% (`5/25`)** (`3.2×` over `v8`). See [v16 full validation results and bottleneck analysis](v16_full_valid1641_20261107.md).
+
+**Earlier online-mapping prefix5 (`v15`): 5/5 scores, SR 3/5 (60.00%) and GC 7/12 (58.33%).** See [v15 root-cause fixes](v15_root_cause_fixes_prefix5_20261106.md) and [v10 results and two replays](v10_prefix5_20261105.md).
+The remaining planned tasks in pilot15 were cancelled; pilot15 is not a completed cohort.
 
 **The historical integration pilot has 50/50 official terminal scores: five successes,
 SR 10.00%, and GC 20/126 = 15.87%.** [v8](v8_pilot50_complete_20261105.md)
@@ -82,6 +83,7 @@ every episode attempt without overwriting old run IDs.
 
 | Record | Date | Scope | Result |
 |---|---|---|---|
+| [v16 full validation 1641](v16_full_valid1641_20261107.md) | 2026-11-07 | Full official `oct21` validation (`820 valid_seen + 821 valid_unseen = 1,641`), resilient gateway pre-commit lease rejection + retries, 11-slot multi-GPU perception server, and 84-worker evaluation (`gemini-3.8-flash`) | **`1,641/1,641` scored (`0` errors): Overall SR 24.50% (`402/1,641`), GC 33.70% (`1,425/4,229`), PLW-SR 12.83%, PLW-GC 20.39%; `valid_seen` SR 30.37% (`249/820`), GC 36.94%; `valid_unseen` SR 18.64% (`153/821`), GC 30.47%; matched `pilot50` SR 32.00% (`16/50`)** |
 | [v15 root-cause fixes prefix5](v15_root_cause_fixes_prefix5_20261106.md) | 2026-11-06 | Held-object self-occlusion suppression, category-compatible spatial fallback, multi-pitch auto-framing, container geometry preservation, and CLI/SDK budget decoupling on `prefix5` | **5/5 scored, SR 3/5 (60.00%, `i00`, `i01`, `i04` solved), GC 7/12 (58.33%), PLW-SR 44.7%** |
 | [v14 simulator GT depth RGB-D prefix5](v14_simulator_gt_depth_prefix5_20261105.md) | 2026-11-05 | `depth_source = "simulator_gt"` RGB-D mode (`0.34s/f`), `6cm` 3D association on `prefix5` (`gemini-3.8-flash`) | **5/5 scored, SR 1/5 (20.00%, `i01` solved in 30 steps), GC 3/12 (25.00%)**; 3D XY error **0.19–0.24m**, Free/Occupied ratio **+183% (`0.66` $\rightarrow$ `1.87`)** |
 | [v13 mapping & perception upgrade prefix5](v13_mapping_perception_upgrade_20261105.md) | 2026-11-05 | Batched `bfloat16` perception (`0.38s/f`), CLIP semantic gate, `12cm` monocular association + mask erosion, adaptive floor calibration & vectorized raycast (`18ms/f`) | **Step latency 2.4× faster (`0.85–1.13s/step`), 3D object fragmentation reduced by 66.4% (`247.8` $\rightarrow$ `83.3` nodes/50f), free/occupied floor ratio +89%** |

@@ -499,3 +499,8 @@ def test_spatial_fallback_rejects_unrelated_pickupables_and_updates_placed_bound
     np.testing.assert_allclose(
         memory.objects[0].centroid, memory.objects[2].centroid, atol=0.05
     )
+    # Verify receptacle-content topology and state ledger on CloseObject(Fridge)
+    assert memory.objects[0].parent_receptacle_id == 2
+    assert 0 in memory.objects[2].contained_object_ids
+    memory.record_interaction("CloseObject", 2, success=True)
+    assert memory.objects[0].action_states["cooled"].value is True

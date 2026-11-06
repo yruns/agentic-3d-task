@@ -59,7 +59,42 @@ class ObjectMemory:
     views: list[ObjectView] = field(default_factory=list)
     reacquire_bounds: FloatArray | None = None
     parent_object_id: int | None = None
+    parent_receptacle_id: int | None = None
+    contained_object_ids: set[int] = field(default_factory=set)
     action_states: dict[str, ActionState] = field(default_factory=dict)
+
+    @property
+    def evidence_summary(self) -> dict[str, object]:
+        """Compute multi-view category stability metrics from distinct-frame votes."""
+        if not self.category_evidence:
+            return {
+                "primary_category": self.category,
+                "primary_votes": 1,
+                "total_votes": 1,
+                "evidence_confidence": 1.0,
+                "margin_votes": 1,
+                "is_stable": False,
+                "top_alternatives": {},
+            }
+        ordered = sorted(self.category_evidence.items(), key=lambda kv: (-kv[1], kv[0]))
+        primary_cat, primary_votes = ordered[0]
+        total_votes = max(1, sum(v for _, v in ordered))
+        second_votes = ordered[1][1] if len(ordered) > 1 else 0
+        margin_votes = primary_votes - second_votes
+        confidence = round(primary_votes / total_votes, 3)
+        is_stable = primary_votes >= 2 and (
+            second_votes == 0 or primary_votes >= 2 * second_votes
+        )
+        alts = dict(ordered[1:3])
+        return {
+            "primary_category": primary_cat,
+            "primary_votes": primary_votes,
+            "total_votes": total_votes,
+            "evidence_confidence": confidence,
+            "margin_votes": margin_votes,
+            "is_stable": is_stable,
+            "top_alternatives": alts,
+        }
 
     @property
     def centroid(self) -> FloatArray:

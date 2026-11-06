@@ -8,6 +8,13 @@ v6 rows remain partial snapshots and are not matched full-cohort comparisons.
 
 | Version | Fold | Observation setting | Scored episodes | SR / GC / PLWSR / PLWGC |
 |---|---|---|---:|---|
+| [v16 full seen](v16_full_valid1641_20261107.md) | Official `valid_seen` (full 820) | H; simulator GT depth + GroundingDINO/SAM/CLIP, online 3D memory/FMM + macro tools | 820/820 | **30.37% / 36.94% / 15.99% / 23.00%** |
+| [v16 full unseen](v16_full_valid1641_20261107.md) | Official `valid_unseen` (full 821) | Same setting | 821/821 | **18.64% / 30.47% / 9.38% / 17.54%** |
+| [v16 full combined](v16_full_valid1641_20261107.md) | Official `valid_full1641` (1,641) | Same setting | 1641/1641 | **24.50% / 33.70% / 12.83% / 20.39%** |
+| [v16 matched pilot50 seen](v16_full_valid1641_20261107.md) | Frozen pilot seen25 | Same setting | 25/25 | **44.00% / 42.86% / 30.62% / 35.42%** |
+| [v16 matched pilot50 unseen](v16_full_valid1641_20261107.md) | Frozen pilot unseen25 | Same setting | 25/25 | **20.00% / 28.57% / 8.93% / 15.40%** |
+| [v16 matched pilot50 combined](v16_full_valid1641_20261107.md) | Frozen pilot50 | Same setting | 50/50 | **32.00% / 35.71% / 20.28% / 25.87%** |
+| [v15 root-cause fixes](v15_root_cause_fixes_prefix5_20261106.md) | Original pilot15 prefix5, all seen | Same setting | 5/5 | **60.00% / 58.33% / 44.70% / 44.11%** |
 | [v10 online mapping](v10_prefix5_20261105.md) | Original pilot15 prefix5, all seen | H; DA3Metric + fixed-vocabulary GroundingDINO/SAM/CLIP, online memory/FMM | 5/5 | 0.00% / 8.33% / 0.00% / 3.78% |
 | [v8 matched prefix5](v10_prefix5_20261105.md#official-results-and-matched-reference) | Same five identities, saved scores | Historical FILM perception; same foundation model and medium effort | 5/5 | 20.00% / 25.00% / 15.71% / 31.44% |
 | [v8 seen](v8_pilot50_complete_20261105.md) | Frozen pilot seen25 | H; predicted FILM depth/masks, odometry and proprioception | 25/25 | 12.00% / 14.29% / 7.78% / 12.16% |

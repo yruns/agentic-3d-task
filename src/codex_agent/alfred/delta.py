@@ -40,6 +40,8 @@ class ObjectDigest:
     provisional: bool
     geometry_valid: bool
     action_states: tuple[tuple[str, bool], ...]
+    parent_receptacle_id: int | None
+    contained_object_ids: tuple[int, ...]
 
 
 @dataclass(frozen=True)
@@ -76,6 +78,8 @@ def _digest_object(memory: IncrementalSceneMemory, node: ObjectMemory) -> Object
         provisional=node.provisional,
         geometry_valid=node.geometry_valid,
         action_states=action_states,
+        parent_receptacle_id=node.parent_receptacle_id,
+        contained_object_ids=tuple(sorted(node.contained_object_ids)),
     )
 
 
@@ -147,6 +151,8 @@ def format_visible_objects_now(
                 "raw_mask_pixels": raw_pixels,
                 "bbox_norm": bbox_norm,
                 "state": node.state,
+                "is_stable": bool(node.evidence_summary["is_stable"]),
+                "parent_receptacle_id": node.parent_receptacle_id,
                 "action_states": {
                     name: state.value for name, state in node.action_states.items()
                 },
@@ -197,6 +203,7 @@ def compute_scene_delta(
                     "object_id": obj_id,
                     "category": digest.category,
                     "category_evidence": top_evidence,
+                    "is_stable": bool(node.evidence_summary["is_stable"]),
                     "region": (
                         list(digest.region) if digest.region is not None else None
                     ),
@@ -205,6 +212,8 @@ def compute_scene_delta(
                     ),
                     "provisional": digest.provisional,
                     "state": digest.state,
+                    "parent_receptacle_id": digest.parent_receptacle_id,
+                    "action_states": dict(digest.action_states),
                     "best_frames": recent_frames,
                 }
             )
@@ -220,6 +229,12 @@ def compute_scene_delta(
             changes.append("confirmed")
         if prev.action_states != digest.action_states:
             changes.append(f"action_states:{dict(digest.action_states)}")
+        if prev.parent_receptacle_id != digest.parent_receptacle_id:
+            changes.append(
+                f"parent_receptacle:{prev.parent_receptacle_id}->{digest.parent_receptacle_id}"
+            )
+        if prev.contained_object_ids != digest.contained_object_ids:
+            changes.append(f"contained:{list(digest.contained_object_ids)}")
         if prev.region != digest.region:
             changes.append(f"region:{prev.region}->{digest.region}")
         elif (
@@ -235,6 +250,7 @@ def compute_scene_delta(
                     "object_id": obj_id,
                     "category": digest.category,
                     "category_evidence": top_evidence,
+                    "is_stable": bool(node.evidence_summary["is_stable"]),
                     "region": (
                         list(digest.region) if digest.region is not None else None
                     ),
@@ -242,6 +258,8 @@ def compute_scene_delta(
                         list(digest.centroid) if digest.centroid is not None else None
                     ),
                     "state": digest.state,
+                    "parent_receptacle_id": digest.parent_receptacle_id,
+                    "contained_object_ids": list(digest.contained_object_ids),
                     "action_states": dict(digest.action_states),
                     "changes": changes,
                     "best_frames": recent_frames,

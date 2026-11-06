@@ -147,6 +147,10 @@ class EpisodeToolServer:
                     response = self._handle_view_crop(args)
                 elif tool_name == "view_bev":
                     response = self._handle_view_bev(args)
+                elif tool_name == "execute_subgoal_program":
+                    response = self._handle_execute_subgoal_program(args)
+                elif tool_name == "verify_task_goal":
+                    response = self._handle_verify_task_goal(args)
                 elif tool_name == "finish_episode":
                     response = self._handle_finish_episode(args)
                 else:
@@ -366,7 +370,10 @@ class EpisodeToolServer:
                         "centroid": [round(float(v), 3) for v in node.centroid],
                         "geometry_valid": node.geometry_valid,
                         "provisional": node.provisional,
+                        "is_stable": bool(node.evidence_summary["is_stable"]),
                         "state": node.state,
+                        "parent_receptacle_id": node.parent_receptacle_id,
+                        "contained_object_ids": sorted(node.contained_object_ids),
                         "visible_now": obj_id in current_ids,
                         "action_states": {
                             name: state.value
@@ -443,7 +450,9 @@ class EpisodeToolServer:
     def _handle_view_frame(self, args: dict[str, object]) -> dict[str, object]:
         memory = self.executor.memory
         annotate = bool(args.get("annotate", True))
-        fids_raw = args.get("frame_ids") or args.get("frame_id")
+        fids_raw = args.get("frame_ids")
+        if fids_raw is None:
+            fids_raw = args.get("frame_id")
         frame_ids: list[int] = []
         if fids_raw == "current" or fids_raw is None:
             if memory._latest_frame_id >= 0:
@@ -615,14 +624,66 @@ class EpisodeToolServer:
             "top_frontiers": frontiers,
         }
 
+    def _handle_execute_subgoal_program(
+        self, args: dict[str, object]
+    ) -> dict[str, object]:
+        from .subgoal_program import execute_subgoal_program, parse_subgoal_program
+
+        try:
+            spec = parse_subgoal_program(args)
+        except ValueError as exc:
+            raise EpisodeToolError(str(exc)) from exc
+        return execute_subgoal_program(self.executor.macro, spec)
+
+    def _handle_verify_task_goal(self, args: dict[str, object]) -> dict[str, object]:
+        del args
+        from .subgoal_program import verify_goal_predicates
+
+        report = verify_goal_predicates(self.executor)
+        payload = report.to_payload()
+        payload["tool"] = "verify_task_goal"
+        payload["held_object_id"] = self.executor.memory.held_object_id
+        payload["verified_macros_completed"] = sorted(self.executor.completed_macros)
+        return payload
+
     def _handle_finish_episode(self, args: dict[str, object]) -> dict[str, object]:
+        from .subgoal_program import verify_goal_predicates
+
         summary = str(args.get("summary", "")).strip()
+        force = bool(args.get("force", False))
+        report = verify_goal_predicates(self.executor)
+        can_remediate = (
+            self.executor.can_step()
+            and self.executor.decisions < self.executor.config.max_decisions
+            and self.executor.finish_rejections < 2
+            and not force
+        )
+        if not report.passed and can_remediate:
+            self.executor.finish_rejections += 1
+            return {
+                "tool": "finish_episode",
+                "status": "verification_failed",
+                "message": (
+                    "Pre-commit goal verification FAILED — episode NOT marked complete yet! "
+                    + " ".join(report.remediation_hints)
+                ),
+                "verification": report.to_payload(),
+                "held_object_id": self.executor.memory.held_object_id,
+                "verified_macros_completed": sorted(self.executor.completed_macros),
+                "remaining_decisions": max(
+                    0, self.executor.config.max_decisions - self.executor.decisions
+                ),
+                "remaining_actions": max(
+                    0, self.executor.config.max_actions - self.executor.actions
+                ),
+            }
         self.executor.finish_requested = True
         self.executor.finish_summary = summary
         return {
             "tool": "finish_episode",
             "status": "episode_marked_complete",
             "summary": summary,
+            "verification": report.to_payload(),
             "actions_taken": self.executor.actions,
             "failures": self.executor.failures,
             "held_object_id": self.executor.memory.held_object_id,

@@ -139,6 +139,8 @@ class EpisodeExecutor:
         self._recent_actions: list[dict[str, object]] = []
         self._current: SimulatorObservation | None = None
         self._predicted: PerceptionObservation | None = None
+        self.current_instruction: AlfredInstruction | None = None
+        self.finish_rejections: int = 0
 
     @property
     def current_observation(self) -> SimulatorObservation:
@@ -159,6 +161,7 @@ class EpisodeExecutor:
     ) -> ExecutionOutcome:
         """Perform initial scan, start tool server, and run a single Codex turn."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.current_instruction = instruction
         self._observe(initial)
         with tempfile.TemporaryDirectory(prefix="alfred_actor_ws_") as tmp_ws:
             self.workspace_dir = Path(tmp_ws).resolve()
@@ -335,7 +338,10 @@ class EpisodeExecutor:
                     "distance_m": dist_m,
                     "centroid": [round(float(v), 2) for v in node.centroid],
                     "provisional": node.provisional,
+                    "is_stable": bool(node.evidence_summary["is_stable"]),
                     "state": node.state,
+                    "parent_receptacle_id": node.parent_receptacle_id,
+                    "contained_object_ids": sorted(node.contained_object_ids),
                     "action_states": {
                         name: st.value for name, st in node.action_states.items()
                     },
