@@ -182,18 +182,7 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
     attempts: list[EpisodeAttempt] = []
     completed_indices: set[int] = set()
     if config.resume:
-        for index in range(len(episodes)):
-            attempt_file = (
-                config.output_dir / "episodes" / f"{index + 1:04d}" / "attempt.json"
-            )
-            if attempt_file.is_file():
-                try:
-                    prev = EpisodeAttempt.model_validate_json(attempt_file.read_text())
-                    if prev.status == "completed":
-                        attempts.append(prev)
-                        completed_indices.add(index)
-                except Exception:  # noqa: BLE001
-                    pass
+        completed_indices = _sync_disk_attempts(config, episodes, attempts)
     _checkpoint(config, metadata, episodes, attempts)
     perception: ScenePerception | None = None
     try:
@@ -213,7 +202,10 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
         }
         perception_metadata["provenance_status"] = "worker_reported"
         _checkpoint(config, metadata, episodes, attempts)
-        for index, episode in enumerate(episodes):
+        indexed_episodes = list(enumerate(episodes))
+        if os.environ.get("ALFRED_REVERSE_EPISODES") == "1":
+            indexed_episodes.reverse()
+        for index, episode in indexed_episodes:
             if index in completed_indices:
                 logger.info(
                     "ALFRED episode %s/%s: %s (already completed on resume, skipping)",
@@ -222,30 +214,41 @@ def run_validation(config: AlfredRunConfig) -> AlfredRunSummary:
                     episode.episode_id,
                 )
                 continue
-            logger.info(
-                "ALFRED episode %s/%s: %s",
-                index + 1,
-                len(episodes),
-                episode.episode_id,
-            )
-            with _adaptive_concurrency_slot(config) as slot_report:
-                perception, ep_status, had_retry = _run_episode_with_resilience(
-                    config,
-                    episode,
-                    index=index,
-                    perception=perception,
-                    runtime=runtime,
-                    attempts=attempts,
+            with _try_claim_episode(config, index) as claimed:
+                if not claimed:
+                    logger.info(
+                        "ALFRED episode %s/%s: %s (completed or claimed by peer worker, skipping)",
+                        index + 1,
+                        len(episodes),
+                        episode.episode_id,
+                    )
+                    continue
+                logger.info(
+                    "ALFRED episode %s/%s: %s",
+                    index + 1,
+                    len(episodes),
+                    episode.episode_id,
                 )
-                slot_report["status"] = ep_status
-                slot_report["had_retry"] = had_retry
-            try:
-                metadata["perception_statistics"] = perception.statistics().model_dump(
-                    mode="json"
-                )
-            except Exception:  # noqa: BLE001
-                pass
-            _checkpoint(config, metadata, episodes, attempts)
+                with _adaptive_concurrency_slot(config) as slot_report:
+                    perception, ep_status, had_retry = _run_episode_with_resilience(
+                        config,
+                        episode,
+                        index=index,
+                        perception=perception,
+                        runtime=runtime,
+                        attempts=attempts,
+                    )
+                    slot_report["status"] = ep_status
+                    slot_report["had_retry"] = had_retry
+                try:
+                    metadata["perception_statistics"] = (
+                        perception.statistics().model_dump(mode="json")
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+                _checkpoint(config, metadata, episodes, attempts)
+        if config.resume:
+            _sync_disk_attempts(config, episodes, attempts)
         metadata["status"] = (
             "completed"
             if all(a.status == "completed" for a in attempts)
@@ -741,12 +744,104 @@ def _run_metadata(
     }
 
 
+def _sync_disk_attempts(
+    config: AlfredRunConfig,
+    episodes: Sequence[AlfredEpisode],
+    attempts: list[EpisodeAttempt],
+) -> set[int]:
+    by_id: dict[str, EpisodeAttempt] = {a.episode_id: a for a in attempts}
+    completed_indices: set[int] = set()
+    for index, ep in enumerate(episodes):
+        attempt_file = (
+            config.output_dir / "episodes" / f"{index + 1:04d}" / "attempt.json"
+        )
+        if attempt_file.is_file():
+            try:
+                prev = EpisodeAttempt.model_validate_json(attempt_file.read_text())
+                if prev.status == "completed":
+                    by_id[ep.episode_id] = prev
+                    completed_indices.add(index)
+                elif ep.episode_id not in by_id:
+                    by_id[ep.episode_id] = prev
+            except Exception:  # noqa: BLE001
+                pass
+    attempts[:] = [by_id[ep.episode_id] for ep in episodes if ep.episode_id in by_id]
+    return completed_indices
+
+
+@contextmanager
+def _try_claim_episode(config: AlfredRunConfig, index: int) -> Iterator[bool]:
+    if not config.resume:
+        yield True
+        return
+    ep_dir = config.output_dir / "episodes" / f"{index + 1:04d}"
+    attempt_file = ep_dir / "attempt.json"
+    if attempt_file.is_file():
+        try:
+            prev = EpisodeAttempt.model_validate_json(attempt_file.read_text())
+            if prev.status == "completed":
+                yield False
+                return
+        except Exception:  # noqa: BLE001
+            pass
+    lock_path = config.output_dir / "episodes" / f".{index + 1:04d}.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a", encoding="utf-8") as lock_stream:
+        try:
+            fcntl.flock(lock_stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            yield False
+            return
+        try:
+            if attempt_file.is_file():
+                try:
+                    prev = EpisodeAttempt.model_validate_json(attempt_file.read_text())
+                    if prev.status == "completed":
+                        yield False
+                        return
+                except Exception:  # noqa: BLE001
+                    pass
+            elif ep_dir.exists():
+                # Guard against an older worker running without .lock file
+                try:
+                    latest_mtime = max(
+                        (p.stat().st_mtime for p in ep_dir.rglob("*")),
+                        default=ep_dir.stat().st_mtime,
+                    )
+                    if time.time() - latest_mtime < 300.0:
+                        yield False
+                        return
+                except OSError:
+                    pass
+            yield True
+        finally:
+            try:
+                fcntl.flock(lock_stream.fileno(), fcntl.LOCK_UN)
+            except OSError:
+                pass
+
+
 def _checkpoint(
     config: AlfredRunConfig,
     metadata: dict[str, object],
     episodes: Sequence[AlfredEpisode],
-    attempts: Sequence[EpisodeAttempt],
+    attempts: list[EpisodeAttempt],
 ) -> None:
+    if config.resume:
+        ckpt_lock = config.output_dir / ".checkpoint.lock"
+        ckpt_lock.parent.mkdir(parents=True, exist_ok=True)
+        with ckpt_lock.open("a", encoding="utf-8") as stream:
+            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+            try:
+                _sync_disk_attempts(config, episodes, attempts)
+                write_json(config.output_dir / "run.json", metadata)
+                write_json(
+                    config.output_dir / "summary.json",
+                    summarize_attempts(episodes, attempts).model_dump(mode="json"),
+                )
+            finally:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+        return
     write_json(config.output_dir / "run.json", metadata)
     write_json(
         config.output_dir / "summary.json",
