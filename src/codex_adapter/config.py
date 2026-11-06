@@ -113,6 +113,10 @@ class ServerSettings(_Document):
     requests_per_minute: int = Field(default=600, gt=0)
     upstream_timeout_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
     connect_timeout_seconds: float = Field(default=15.0, gt=0, allow_inf_nan=False)
+    upstream_max_retries: int = Field(default=0, ge=0, le=5)
+    upstream_retry_backoff_seconds: float = Field(
+        default=1.0, ge=0.0, allow_inf_nan=False
+    )
 
 
 class _SettingsDocument(_Document):

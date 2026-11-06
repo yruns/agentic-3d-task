@@ -69,6 +69,8 @@ class SQLiteDatabase:
 
     def ready(self) -> bool:
         """Verify schema on open without creating a DB; return whether reopened."""
+        if self._connection is not None and not self._closing.is_set():
+            return False
         with self._lock:
             reopened = self._connection is None
             if not reopened and self._closing.is_set():

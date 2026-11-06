@@ -290,6 +290,9 @@ async def _respond(
                 else await operation
             )
         except asyncio.CancelledError:
+            abandon = getattr(gateway, "abandon_request", None)
+            if callable(abandon):
+                abandon(call.request_id)
             pending.abandon(operation, admission, cancel=model.protocol == "responses")
             transferred = True
             raise

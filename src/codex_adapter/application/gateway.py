@@ -29,6 +29,19 @@ from codex_adapter.domain.state import (
 logger = logging.getLogger(__name__)
 _T = TypeVar("_T")
 _MAX_TOKEN_COUNT = (1 << 63) - 1
+_RETRYABLE_UPSTREAM_STATUSES = frozenset({429, 500, 502, 503, 504})
+_RETRYABLE_UPSTREAM_CODES = frozenset(
+    {
+        "upstream_unavailable",
+        "upstream_timeout",
+        "upstream_stream_interrupted",
+        "invalid_upstream_response",
+    }
+)
+
+
+def _is_retryable_upstream_error(exc: BaseException) -> bool:
+    return isinstance(exc, AdapterError) and exc.code in _RETRYABLE_UPSTREAM_CODES
 
 
 @dataclass(frozen=True)
@@ -64,6 +77,14 @@ class Gateway:
         self.store = store
         self.transport = transport
         self._store_tasks: set[asyncio.Task[object]] = set()
+        self._inflight_gemini: dict[
+            str, tuple[str, str, str | None, asyncio.Task[BufferedReply]]
+        ] = {}
+        self._abandoned_requests: set[str] = set()
+
+    def abandon_request(self, request_id: str) -> None:
+        """Mark a request whose HTTP client disconnected before response delivery."""
+        self._abandoned_requests.add(request_id)
 
     async def _store_call(
         self, function: Callable[..., _T], *args: object, **kwargs: object
@@ -117,22 +138,62 @@ class Gateway:
 
         body = decode_object(request.envelope.raw)
         digest = hashlib.sha256(encode_json(body)).hexdigest()
-        reserved = await self._store_call(
-            self.store.reserve,
-            route.binding,
-            digest,
-            previous_carrier=last_carrier(body),
-            idempotency_key=request.idempotency_key,
-        )
-        if isinstance(reserved, Replay):
-            return BufferedReply(reserved.response, replayed=True)
+        previous = last_carrier(body)
+        existing = self._inflight_gemini.get(route.binding.id)
+        if existing is not None:
+            prev_req_id, prev_digest, prev_previous, prev_task = existing
+            if not prev_task.done():
+                if (
+                    prev_digest == digest
+                    and prev_previous == previous
+                    and request.idempotency_key is None
+                ):
+                    self._abandoned_requests.discard(prev_req_id)
+                    try:
+                        reply = await asyncio.shield(prev_task)
+                        return BufferedReply(
+                            reply.body,
+                            status_code=reply.status_code,
+                            media_type=reply.media_type,
+                            replayed=True,
+                        )
+                    except BaseException:
+                        pass
+                else:
+                    self._abandoned_requests.add(prev_req_id)
+                    prev_task.cancel()
+                    await asyncio.gather(prev_task, return_exceptions=True)
+
+        current_task = asyncio.current_task()
+        if current_task is not None:
+            self._inflight_gemini[route.binding.id] = (
+                request.request_id,
+                digest,
+                previous,
+                current_task,
+            )
         try:
-            turns = await self._store_call(self.store.turns, route.binding)
-            prepared = prepare_request(body, route.model, turns)
-        except BaseException:
-            await self._cleanup_lease(self.store.reject, reserved)
-            raise
-        return await self._generate(request, route, reserved, prepared)
+            reserved = await self._store_call(
+                self.store.reserve,
+                route.binding,
+                digest,
+                previous_carrier=previous,
+                idempotency_key=request.idempotency_key,
+            )
+            if isinstance(reserved, Replay):
+                return BufferedReply(reserved.response, replayed=True)
+            try:
+                turns = await self._store_call(self.store.turns, route.binding)
+                prepared = prepare_request(body, route.model, turns)
+            except BaseException:
+                await self._cleanup_lease(self.store.reject, reserved)
+                raise
+            return await self._generate(request, route, reserved, prepared)
+        finally:
+            self._abandoned_requests.discard(request.request_id)
+            active = self._inflight_gemini.get(route.binding.id)
+            if active is not None and active[0] == request.request_id:
+                self._inflight_gemini.pop(route.binding.id, None)
 
     async def _generate(
         self,
@@ -141,18 +202,63 @@ class Gateway:
         lease: RequestLease,
         prepared: PreparedGemini,
     ) -> BufferedReply:
-        try:
-            upstream = await self.transport.open(
-                route, prepared.payload, request_id=request.request_id
+        max_retries = self.settings.server.upstream_max_retries
+        backoff = self.settings.server.upstream_retry_backoff_seconds
+        completion: Completion | None = None
+        for attempt in range(max_retries + 1):
+            try:
+                upstream = await self.transport.open(
+                    route, prepared.payload, request_id=request.request_id
+                )
+            except BaseException as exc:
+                if (
+                    attempt < max_retries
+                    and request.request_id not in self._abandoned_requests
+                    and _is_retryable_upstream_error(exc)
+                ):
+                    if backoff > 0:
+                        await asyncio.sleep(backoff * (attempt + 1))
+                    continue
+                await self._cleanup_lease(self.store.reject, lease)
+                raise
+            if upstream.status_code >= 300:
+                if (
+                    attempt < max_retries
+                    and request.request_id not in self._abandoned_requests
+                    and upstream.status_code in _RETRYABLE_UPSTREAM_STATUSES
+                ):
+                    try:
+                        await self.transport.close(upstream)
+                    except BaseException:
+                        pass
+                    if backoff > 0:
+                        await asyncio.sleep(backoff * (attempt + 1))
+                    continue
+                await self._reject_upstream(upstream, lease)
+            try:
+                raw = await self.transport.read(upstream)
+                completion = _convert_upstream(raw, prepared, lease, route.model)
+                break
+            except BaseException as exc:
+                if (
+                    attempt < max_retries
+                    and request.request_id not in self._abandoned_requests
+                    and _is_retryable_upstream_error(exc)
+                ):
+                    if backoff > 0:
+                        await asyncio.sleep(backoff * (attempt + 1))
+                    continue
+                await self._cleanup_lease(self.store.reject, lease)
+                raise
+        assert completion is not None
+        if request.request_id in self._abandoned_requests:
+            await self._cleanup_lease(self.store.reject, lease)
+            raise AdapterError(
+                "client_disconnected",
+                "Client disconnected before response delivery; binding is unchanged",
+                status_code=499,
             )
-        except BaseException:
-            await self._cleanup_lease(self.store.indeterminate, lease)
-            raise
-        if upstream.status_code >= 300:
-            await self._reject_upstream(upstream, lease)
         try:
-            raw = await self.transport.read(upstream)
-            completion = _convert_upstream(raw, prepared, lease, route.model)
             await self._store_call(self.store.commit, lease, completion)
         except BaseException:
             await self._cleanup_lease(self.store.indeterminate, lease)

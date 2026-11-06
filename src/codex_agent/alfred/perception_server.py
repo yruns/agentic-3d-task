@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 def validate_gpu_pool_indices(gpu_indices: Sequence[int]) -> tuple[int, ...]:
-    """Require at least one unique nonnegative physical GPU index, forbidding GPU 1."""
+    """Require at least one nonnegative physical GPU index, forbidding GPU 1."""
     if not gpu_indices:
         raise ValueError("gpu_indices must contain at least one physical GPU index")
     normalized: list[int] = []
@@ -45,8 +45,7 @@ def validate_gpu_pool_indices(gpu_indices: Sequence[int]) -> tuple[int, ...]:
             raise ValueError(
                 f"physical_gpu_index={index!r} must be a nonnegative integer other than forbidden GPU 1"
             )
-        if index not in normalized:
-            normalized.append(index)
+        normalized.append(index)
     return tuple(normalized)
 
 
@@ -371,7 +370,7 @@ class ScenePerceptionServer:
                     self.config,
                     physical_gpu_index=gpu_idx,
                     gpu_lock_path=(
-                        Path(f"/tmp/agentic3d-alfred-gpu{gpu_idx}.lock")
+                        Path(f"/tmp/agentic3d-alfred-gpu{gpu_idx}-slot{slot_id}.lock")
                         if self.config.device == "cuda:0"
                         else self.config.gpu_lock_path
                     ),
@@ -474,11 +473,14 @@ class ScenePerceptionServer:
                 encoded = json.dumps(body, ensure_ascii=False, allow_nan=False).encode(
                     "utf-8"
                 )
-                self.send_response(status)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.send_header("Content-Length", str(len(encoded)))
-                self.end_headers()
-                self.wfile.write(encoded)
+                try:
+                    self.send_response(status)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.send_header("Content-Length", str(len(encoded)))
+                    self.end_headers()
+                    self.wfile.write(encoded)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
 
         return ThreadingHTTPServer((host, port), _Handler)
 

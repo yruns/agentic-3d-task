@@ -234,7 +234,7 @@ async def test_explicit_http_rejection_does_not_read_body_and_releases_lease(
 
 
 @pytest.mark.asyncio
-async def test_invalid_upstream_json_is_safe_502_and_indeterminate(
+async def test_invalid_upstream_json_is_safe_502_and_releases_lease(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     codec(monkeypatch)
@@ -247,7 +247,7 @@ async def test_invalid_upstream_json_is_safe_502_and_indeterminate(
     assert raised.value.code == "invalid_upstream_response"
     assert raised.value.__context__ is None
     assert "sensitive-marker" not in "".join(format_exception(raised.value))
-    assert store.events == ["bind", "reserve", "turns", "indeterminate"]
+    assert store.events == ["bind", "reserve", "turns", "reject"]
 
 
 @pytest.mark.asyncio
@@ -266,11 +266,11 @@ async def test_codec_upstream_error_is_safe_502(
     assert raised.value.status_code == 502
     assert raised.value.code == "invalid_upstream_response"
     assert "sensitive-marker" not in str(raised.value)
-    assert store.events[-1] == "indeterminate"
+    assert store.events[-1] == "reject"
 
 
 @pytest.mark.asyncio
-async def test_network_failure_marks_indeterminate(
+async def test_network_failure_releases_lease(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     codec(monkeypatch)
@@ -281,7 +281,52 @@ async def test_network_failure_marks_indeterminate(
     with pytest.raises(AdapterError) as raised:
         await Gateway(config(), store, transport).forward(request())
     assert raised.value.code == "upstream_timeout"
-    assert store.events == ["bind", "reserve", "turns", "indeterminate"]
+    assert store.events == ["bind", "reserve", "turns", "reject"]
+
+
+@pytest.mark.asyncio
+async def test_transient_upstream_failure_retries_when_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    codec(monkeypatch)
+    store = RecordingStore()
+    attempts = 0
+
+    class FlakyTransport(FakeTransport):
+        async def open(self, *args: Any, **kwargs: Any) -> httpx.Response:
+            nonlocal attempts
+            attempts += 1
+            self.events.append("open")
+            if attempts == 1:
+                raise AdapterError("upstream_timeout", "timed out", status_code=504)
+            if attempts == 2:
+                return httpx.Response(502)
+            return httpx.Response(200)
+
+    settings = AdapterSettings(
+        Registry((model(),)),
+        StateSettings(Path("/unused")),
+        ServerSettings(upstream_max_retries=2, upstream_retry_backoff_seconds=0.0),
+    )
+    result = await Gateway(settings, store, FlakyTransport()).forward(request())
+    assert isinstance(result, BufferedReply) and result.body == b'{"id":"response"}'
+    assert attempts == 3
+    assert store.events == ["bind", "reserve", "turns", "commit"]
+
+
+@pytest.mark.asyncio
+async def test_abandoned_request_rejects_lease_instead_of_committing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    codec(monkeypatch)
+    store, transport = RecordingStore(), FakeTransport()
+    gateway = Gateway(config(), store, transport)
+    req = request()
+    gateway.abandon_request(req.request_id)
+    with pytest.raises(AdapterError) as raised:
+        await gateway.forward(req)
+    assert raised.value.code == "client_disconnected"
+    assert store.events == ["bind", "reserve", "turns", "reject"]
 
 
 @pytest.mark.asyncio
