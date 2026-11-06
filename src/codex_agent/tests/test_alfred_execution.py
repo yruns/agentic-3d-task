@@ -402,3 +402,74 @@ def test_navigate_to_and_explore_frontier_with_early_stop(tmp_path: Path) -> Non
     )
     assert outcome.stop_reason == "policy_stop"
     assert outcome.decisions >= 4
+
+
+def test_episode_executor_resumes_after_mid_turn_409_interruption(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    import codex_agent.alfred.execution as exec_mod
+    from codex_agent.errors import CodexTurnError
+
+    monkeypatch.setattr(exec_mod.time, "sleep", lambda _: None)  # type: ignore[attr-defined]
+    env = FakeEnvironment(tmp_path / "sim")
+    perception = FakePerception(include_sink_and_faucet=True)
+    ep_dir = tmp_path / "episode"
+    attempt_counter = 0
+
+    def run_with_409_on_first_turn(episode_dir: Path) -> AlfredEpisodeTurnOutcome:
+        nonlocal attempt_counter
+        attempt_counter += 1
+        if attempt_counter == 1:
+            listed = call_episode_server(
+                episode_dir, "list_objects", {"query": "mug sink garbage"}
+            )
+            assert listed["count"] >= 2
+            mug_id = next(
+                o["object_id"] for o in listed["objects"] if o["category"] == "Mug"
+            )
+            pickup_delta = call_episode_server(
+                episode_dir,
+                "interact_object",
+                {"action": "pickup", "object_id": mug_id},
+            )
+            assert pickup_delta["status"] == "completed"
+            raise CodexTurnError(
+                "unexpected status 409 Conflict: Session has an unfinished or indeterminate request"
+            )
+
+        # Second turn (continuation): verify held_object is preserved in memory
+        listed2 = call_episode_server(episode_dir, "list_objects", {})
+        assert listed2["held_object_id"] is not None
+        sink_id = next(
+            o["object_id"] for o in listed2["objects"] if o["category"] == "SinkBasin"
+        )
+        put_delta = call_episode_server(
+            episode_dir,
+            "interact_object",
+            {"action": "put", "object_id": sink_id},
+        )
+        assert put_delta["status"] == "completed"
+        call_episode_server(
+            episode_dir, "finish_episode", {"summary": "Resumed and placed mug"}
+        )
+        return AlfredEpisodeTurnOutcome(
+            status="completed",
+            summary="Resumed after 409 and placed mug in sink.",
+            completed_subgoals=["pickup mug", "place mug in sink"],
+        )
+
+    runtime = ScriptedTurnRuntime(run_with_409_on_first_turn)
+    executor = EpisodeExecutor(
+        environment=env,
+        perception=perception,
+        runtime=runtime,
+        output_dir=ep_dir,
+        config=ExecutionConfig(max_actions=40, initial_scan=False),
+    )
+    outcome = executor.run(
+        AlfredInstruction("Put the mug in the sink.", ()),
+        env.observe(),
+    )
+    assert runtime.turns == 2
+    assert outcome.stop_reason == "policy_stop"
+    assert outcome.decisions == 5

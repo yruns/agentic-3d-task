@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import threading
 import time
 from datetime import datetime, timezone
@@ -208,6 +209,16 @@ class EpisodeToolServer:
         ) as stream:
             stream.write(json.dumps(record, ensure_ascii=False, allow_nan=False) + "\n")
             stream.flush()
+        status_str = str(
+            response.get("status")
+            or response.get("tool")
+            or ("error" if "error" in response else "ok")
+        )
+        msg_str = str(response.get("message") or response.get("error") or "")[:120]
+        self.executor._tool_call_summaries.append(
+            f"d{decision_index:02d} [f{frame_before}->f{frame_after}] "
+            f"{tool_name}({json.dumps(args, ensure_ascii=False)}) -> {status_str}: {msg_str}"
+        )
 
     def _handle_navigate_to(self, args: dict[str, object]) -> dict[str, object]:
         obj_id_raw = args.get("object_id")
@@ -300,15 +311,22 @@ class EpisodeToolServer:
             for oid in memory.current_detection_objects.values()
         }
         agent_pos = np.asarray(memory.agent_position or (0.0, 0.0, 0.0))
-        scored_items: list[tuple[float, int, dict[str, object]]] = []
+        q_tokens = [tok for tok in re.split(r"[\s,|]+", query) if tok]
+        scored_items: list[tuple[int, float, int, dict[str, object]]] = []
         for obj_id, node in sorted(memory.objects.items()):
             if id_filter is not None and obj_id not in id_filter:
                 continue
             if only_visible and obj_id not in current_ids:
                 continue
-            if cat_filter and node.category.casefold() not in cat_filter:
+            if cat_filter:
+                candidate_labels = [
+                    node.category.casefold(),
+                    *(ev.casefold() for ev in node.category_evidence),
+                ]
                 if not any(
-                    ev.casefold() in cat_filter for ev in node.category_evidence
+                    cf == lbl or (len(cf) >= 3 and (cf in lbl or lbl in cf))
+                    for cf in cat_filter
+                    for lbl in candidate_labels
                 ):
                     continue
             obj_region = (
@@ -322,8 +340,11 @@ class EpisodeToolServer:
                 f"{node.object_id} {node.category} "
                 f"{' '.join(node.category_evidence.keys())} {node.state}"
             ).casefold()
-            if query and not all(tok in searchable for tok in query.split()):
-                continue
+            matched_tokens = 0
+            if q_tokens:
+                matched_tokens = sum(1 for tok in q_tokens if tok in searchable)
+                if matched_tokens == 0:
+                    continue
 
             dist_m = round(float(np.linalg.norm(node.centroid - agent_pos)), 2)
             recent_frames = [
@@ -333,6 +354,7 @@ class EpisodeToolServer:
             ][-4:]
             scored_items.append(
                 (
+                    -matched_tokens,
                     dist_m,
                     node.object_id,
                     {
@@ -355,8 +377,8 @@ class EpisodeToolServer:
                 )
             )
 
-        scored_items.sort(key=lambda entry: (entry[0], entry[1]))
-        items = [entry[2] for entry in scored_items]
+        scored_items.sort(key=lambda entry: (entry[0], entry[1], entry[2]))
+        items = [entry[3] for entry in scored_items]
         return {
             "tool": "list_objects",
             "count": len(items),
@@ -604,6 +626,7 @@ class EpisodeToolServer:
             "actions_taken": self.executor.actions,
             "failures": self.executor.failures,
             "held_object_id": self.executor.memory.held_object_id,
+            "verified_macros_completed": sorted(self.executor.completed_macros),
         }
 
     def _render_frames_and_sheet(

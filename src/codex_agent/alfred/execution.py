@@ -133,6 +133,8 @@ class EpisodeExecutor:
         self.policy_seconds = 0.0
         self.finish_requested = False
         self.finish_summary = ""
+        self.completed_macros: set[str] = set()
+        self._tool_call_summaries: list[str] = []
         self.workspace_dir: Path | None = None
         self._recent_actions: list[dict[str, object]] = []
         self._current: SimulatorObservation | None = None
@@ -194,13 +196,53 @@ class EpisodeExecutor:
                 self.runtime.config = replace(orig_cfg, project_root=self.workspace_dir)
             result: CodexTaskResult[AlfredEpisodeTurnOutcome] | None = None
             turn_interrupted_error: str | None = None
+            max_turn_continuations = 2
             try:
                 with EpisodeToolServer(self):
-                    result = self.runtime.execute(task)
-            except (CodexTurnError, CodexResponseError) as exc:
-                if self.decisions == 0:
-                    raise
-                turn_interrupted_error = f"{type(exc).__name__}: {exc}"
+                    for cont_idx in range(max_turn_continuations + 1):
+                        try:
+                            if cont_idx > 0:
+                                time.sleep(2.0 * cont_idx)
+                                cont_rgb, cont_bev = self.render_latest_artifacts(
+                                    prefix=f"cont{cont_idx}"
+                                )
+                                cont_context = self._build_initial_context()
+                                task = AlfredPolicyTask(
+                                    instruction=instruction,
+                                    episode_dir=self.workspace_dir,
+                                    initial_context=cont_context,
+                                    image_paths=(cont_rgb, cont_bev),
+                                    use_step_instructions=self.config.use_step_instructions,
+                                )
+                            turn_res = self.runtime.execute(task)
+                            result = turn_res
+                            turn_interrupted_error = None
+                            usage = turn_res.turn.metadata.usage
+                            totals = usage.get("total") if usage else None
+                            if (
+                                isinstance(totals, dict)
+                                and isinstance(totals.get("input_tokens"), int)
+                                and isinstance(totals.get("output_tokens"), int)
+                            ):
+                                self.input_tokens += totals["input_tokens"]
+                                self.output_tokens += totals["output_tokens"]
+                            else:
+                                self._usage_complete = False
+                            break
+                        except (CodexTurnError, CodexResponseError) as exc:
+                            turn_interrupted_error = f"{type(exc).__name__}: {exc}"
+                            budget_exhausted = (
+                                self.finish_requested
+                                or not self.can_step()
+                                or self.decisions >= self.config.max_decisions
+                            )
+                            if budget_exhausted:
+                                break
+                            if (
+                                self.decisions == 0
+                                and isinstance(exc, CodexResponseError)
+                            ) or cont_idx >= max_turn_continuations:
+                                raise
             finally:
                 if isinstance(self.runtime, CodexAgentRuntime) and orig_cfg is not None:
                     self.runtime.config = orig_cfg
@@ -211,18 +253,6 @@ class EpisodeExecutor:
             self.decisions = 1
 
         if result is not None:
-            usage = result.turn.metadata.usage
-            totals = usage.get("total") if usage else None
-            if (
-                isinstance(totals, dict)
-                and isinstance(totals.get("input_tokens"), int)
-                and isinstance(totals.get("output_tokens"), int)
-            ):
-                self.input_tokens += totals["input_tokens"]
-                self.output_tokens += totals["output_tokens"]
-            else:
-                self._usage_complete = False
-
             write_json(
                 decisions_dir / "response.json",
                 {
@@ -291,14 +321,24 @@ class EpisodeExecutor:
             recent_frames = [
                 v.frame_id for v in node.views if v.frame_id > node.stale_through_frame
             ][-3:]
+            top_evidence = dict(
+                sorted(node.category_evidence.items(), key=lambda kv: (-kv[1], kv[0]))[
+                    :3
+                ]
+            )
             catalog.append(
                 {
                     "object_id": obj_id,
                     "category": node.category,
+                    "category_evidence": top_evidence,
                     "region": list(reg),
                     "distance_m": dist_m,
                     "centroid": [round(float(v), 2) for v in node.centroid],
                     "provisional": node.provisional,
+                    "state": node.state,
+                    "action_states": {
+                        name: st.value for name, st in node.action_states.items()
+                    },
                     "best_frames": recent_frames,
                 }
             )
@@ -314,24 +354,44 @@ class EpisodeExecutor:
             }
             for c in suggest_frontiers(self.memory, limit=5)
         ]
-        return {
+        held_payload: dict[str, object] | None = None
+        if (
+            self.memory.held_object_id is not None
+            and self.memory.held_object_id in self.memory.objects
+        ):
+            held_node = self.memory.objects[self.memory.held_object_id]
+            held_payload = {
+                "object_id": held_node.object_id,
+                "category": held_node.category,
+            }
+        context: dict[str, object] = {
             "agent_state": {
                 "position_xy": [round(agent_pos[0], 3), round(agent_pos[1], 3)],
                 "region": list(agent_region),
                 "yaw_degrees": round(obs.yaw_degrees, 1),
                 "horizon_degrees": round(obs.horizon_degrees, 1),
-                "held_object": None,
+                "held_object": held_payload,
             },
             "scene_region_layout": region_layout,
             "object_catalog": catalog,
             "visible_objects_now": format_visible_objects_now(self.memory),
             "top_frontiers": frontiers,
             "budget": {
-                "remaining_decisions": self.config.max_decisions - self.decisions,
-                "remaining_actions": self.config.max_actions - self.actions,
-                "remaining_failures": self.config.max_failures - self.failures,
+                "remaining_decisions": max(
+                    0, self.config.max_decisions - self.decisions
+                ),
+                "remaining_actions": max(0, self.config.max_actions - self.actions),
+                "remaining_failures": max(0, self.config.max_failures - self.failures),
             },
         }
+        if self._tool_call_summaries:
+            context["continuation_note"] = (
+                "Resuming interrupted turn in the same episode. Do NOT repeat "
+                "completed steps; continue from the current agent_state and held_object."
+            )
+            context["completed_macros"] = sorted(self.completed_macros)
+            context["recent_tool_calls"] = self._tool_call_summaries[-12:]
+        return context
 
     def _observe(self, observation: SimulatorObservation) -> None:
         started = time.monotonic()

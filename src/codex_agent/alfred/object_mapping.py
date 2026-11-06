@@ -151,7 +151,12 @@ def mapping_masks(
             config.min_clip_similarity > 0
             and detection.confidence < 0.45
             and feature_cosine(detection.image_feature, detection.text_feature)
-            < config.min_clip_similarity
+            < (
+                config.min_clip_similarity * 0.72
+                if ((x2 - x1) * (y2 - y1)) <= 0.045 * detection.mask.size
+                or detection.confidence >= 0.35
+                else config.min_clip_similarity
+            )
         ):
             rejected[index] = "clip_similarity_below_threshold"
         else:

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TypeVar
 from urllib.error import HTTPError, URLError
 from urllib.parse import ParseResult, urlparse, urlunparse
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, ValidationError
 
@@ -200,23 +200,42 @@ def read_provider_json(
     url: str, *, timeout_seconds: float, adapter_token: str = ""
 ) -> object:
     """Read bounded JSON without logging response bodies, tokens, or URL queries."""
+    import time
+
     headers = {"Accept": "application/json"}
     if adapter_token:
         headers = {**headers, "Authorization": f"Bearer {adapter_token}"}
     request = Request(url, headers=headers, method="GET")
-    try:
-        with build_opener(_NoDiscoveryRedirect()).open(
-            request, timeout=timeout_seconds
-        ) as response:
-            body = response.read(_MAX_DISCOVERY_BYTES + 1)
-    except HTTPError as exc:
-        raise _unavailable(url, f"http_error; HTTP {exc.code}") from None
-    except TimeoutError:
-        raise _unavailable(url, "request_timeout") from None
-    except (URLError, OSError) as exc:
-        raise _unavailable(
-            url, f"request_failed; reason_type={type(exc).__name__}"
-        ) from None
+    parsed = urlparse(url)
+    is_local = parsed.hostname in _LOCAL_HOSTS
+    opener = (
+        build_opener(_NoDiscoveryRedirect(), ProxyHandler({}))
+        if is_local
+        else build_opener(_NoDiscoveryRedirect())
+    )
+    max_attempts = 4 if (is_local and timeout_seconds >= 5.0) else 1
+    body = b""
+    for attempt in range(max_attempts):
+        try:
+            with opener.open(request, timeout=timeout_seconds) as response:
+                body = response.read(_MAX_DISCOVERY_BYTES + 1)
+            break
+        except HTTPError as exc:
+            raise _unavailable(url, f"http_error; HTTP {exc.code}") from None
+        except TimeoutError:
+            if attempt + 1 < max_attempts:
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            raise _unavailable(url, "request_timeout") from None
+        except (URLError, OSError) as exc:
+            if attempt + 1 < max_attempts and isinstance(
+                exc.reason if isinstance(exc, URLError) else exc, TimeoutError
+            ):
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            raise _unavailable(
+                url, f"request_failed; reason_type={type(exc).__name__}"
+            ) from None
     if len(body) > _MAX_DISCOVERY_BYTES:
         raise CodexConfigError(
             f"Codex model provider response is too large: url={sanitize_provider_url(url)}"

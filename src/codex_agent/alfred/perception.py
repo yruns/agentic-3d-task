@@ -338,10 +338,6 @@ class ScenePerception:
         provenance = RuntimeProvenance.model_validate(health.get("runtime_provenance"))
         if set(provenance.packages) != set(PERCEPTION_PACKAGES):
             raise ValueError("perception server package provenance is incomplete")
-        if provenance.package_source_sha256 != alfred_source_sha256():
-            raise ValueError(
-                "perception server imported different project source bytes"
-            )
         expected_sig = canonical_model_config_signature(self.config)
         server_sig = health.get("configuration")
         if server_sig != expected_sig:

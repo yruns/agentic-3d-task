@@ -93,7 +93,7 @@ def discover_adapter_model(
     config: CodexAgentConfig,
     *,
     provider: ProviderSettings | None = None,
-    timeout_seconds: float = 1.0,
+    timeout_seconds: float = 30.0,
 ) -> AdapterModelProfile:
     """Verify service identity and exact model before constructing an SDK client."""
     settings = provider or load_provider_settings(config)

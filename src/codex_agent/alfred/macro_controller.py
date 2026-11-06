@@ -32,6 +32,8 @@ from .navigation import (
     next_navigation_action,
     rotation_towards,
 )
+from .object_mapping import feature_cosine
+from .object_store import ActionState
 
 if TYPE_CHECKING:
     from .execution import EpisodeExecutor
@@ -405,7 +407,10 @@ class MacroActionController:
         target_xy = node.centroid[:2]
         current_box_dist = _box_distance_2d(pos_xy, bounds)
         current_aligned = _is_fov_aligned(pos_xy, target_xy)
-        if 0.25 <= current_box_dist <= 0.85 and current_aligned:
+        is_large_appliance = node.category in {"Fridge", "Cabinet", "Microwave"}
+        min_stance = 0.45 if is_large_appliance else 0.25
+        max_stance = 0.95 if is_large_appliance else 0.85
+        if min_stance <= current_box_dist <= max_stance and current_aligned:
             return None, "Reached an observed interaction stance near target."
 
         raster = spatial_map.navigation_raster()
@@ -427,10 +432,18 @@ class MacroActionController:
         close_goals = {
             cell
             for cell in lattice_cells
-            if 0.25
+            if min_stance
             <= _box_distance_2d(np.asarray(spatial_map.cell_center(cell)), bounds)
-            <= 0.85
+            <= max_stance
         }
+        if not close_goals and is_large_appliance:
+            close_goals = {
+                cell
+                for cell in lattice_cells
+                if 0.25
+                <= _box_distance_2d(np.asarray(spatial_map.cell_center(cell)), bounds)
+                <= 0.95
+            }
         aligned_close = {
             cell
             for cell in close_goals
@@ -712,28 +725,106 @@ class MacroActionController:
             failed += o_fail
             resolved_id = memory.resolve_object_id(resolved_id)
 
-        if memory.select_interaction_mask(resolved_id, action=sim_action) is None:
+        mask_sel = memory.select_interaction_mask(resolved_id, action=sim_action)
+        if mask_sel is None:
+            alt_hint = self._format_alternative_candidates_hint(resolved_id, sim_action)
             return (
                 steps,
                 failed,
                 False,
-                f"Target #{resolved_id} ({memory.objects[resolved_id].category}) has no detection mask in current view after framing.",
+                f"Target #{resolved_id} ({memory.objects[resolved_id].category}) has no detection mask in current view after framing.{alt_hint}",
             )
+
+        det_idx = mask_sel[0]
+        det_cat: str | None = None
+        if self.executor._predicted is not None and 0 <= det_idx < len(
+            self.executor._predicted.detections
+        ):
+            det_cat = self.executor._predicted.detections[det_idx].category
 
         ok = self.executor.step_primitive(sim_action, object_id=resolved_id)
         steps += 1
         if ok:
+            self.executor.completed_macros.add(sim_action)
+            resolved_id = memory.resolve_object_id(resolved_id)
+            node = memory.objects[resolved_id]
+            top_ev = dict(
+                sorted(node.category_evidence.items(), key=lambda kv: (-kv[1], kv[0]))[
+                    :3
+                ]
+            )
+            mismatch_note = ""
+            if (
+                sim_action == "PickupObject"
+                and det_cat is not None
+                and det_cat.casefold() != node.category.casefold()
+            ):
+                mismatch_note = (
+                    f" (note: current-frame detector labeled mask {det_cat!r}, "
+                    f"evidence={top_ev})"
+                )
+            elif len(top_ev) > 1:
+                mismatch_note = f" (evidence={top_ev})"
             return (
                 steps,
                 failed,
                 True,
-                f"{sim_action} on #{resolved_id} ({memory.objects[resolved_id].category}) succeeded.",
+                f"{sim_action} on #{resolved_id} ({node.category}) succeeded.{mismatch_note}",
             )
         failed += 1
         first_err = self.executor.current_observation.last_action_error
 
         resolved_id = memory.resolve_object_id(resolved_id)
         node = memory.objects[resolved_id]
+        is_invalid_target_err = any(
+            phrase in first_err
+            for phrase in (
+                "must have the property CanPickup",
+                "NOT a receptacle",
+                "object not found: object",
+            )
+        )
+        if is_invalid_target_err:
+            node.action_states[f"invalid_{sim_action}"] = ActionState(
+                True, memory._latest_frame_id
+            )
+            if (
+                sim_action == "PickupObject"
+                and "must have the property CanPickup" in first_err
+                and self.executor.can_step()
+            ):
+                alt_pick = self._find_pickupable_near(
+                    resolved_id, expected_id=resolved_id
+                )
+                if alt_pick is not None and alt_pick != resolved_id:
+                    if (
+                        memory.select_interaction_mask(alt_pick, action="PickupObject")
+                        is not None
+                    ):
+                        retry_ok = self.executor.step_primitive(
+                            "PickupObject", object_id=alt_pick
+                        )
+                        steps += 1
+                        if retry_ok:
+                            self.executor.completed_macros.add("PickupObject")
+                            alt_node = memory.objects[
+                                memory.resolve_object_id(alt_pick)
+                            ]
+                            return (
+                                steps,
+                                failed,
+                                True,
+                                f"PickupObject on #{alt_node.object_id} ({alt_node.category}) succeeded after #{resolved_id} was non-pickupable.",
+                            )
+                        failed += 1
+            alt_hint = self._format_alternative_candidates_hint(resolved_id, sim_action)
+            return (
+                steps,
+                failed,
+                False,
+                f"{sim_action} on #{resolved_id} ({node.category}) failed: {first_err}.{alt_hint}",
+            )
+
         if (
             sim_action == "PutObject"
             and node.category in _OPENABLE_CATEGORIES
@@ -749,11 +840,13 @@ class MacroActionController:
                 )
                 steps += 1
                 if open_ok and self.executor.can_step():
+                    self.executor.completed_macros.add("OpenObject")
                     put_ok = self.executor.step_primitive(
                         "PutObject", object_id=resolved_id
                     )
                     steps += 1
                     if put_ok:
+                        self.executor.completed_macros.add("PutObject")
                         return (
                             steps,
                             failed,
@@ -764,7 +857,7 @@ class MacroActionController:
                 elif not open_ok:
                     failed += 1
 
-        if self.executor.can_step():
+        if self.executor.can_step() and "Bad interact mask" not in first_err:
             pos = np.asarray((memory.agent_position or (0.0, 0.0, 0.0))[:2])
             box_dist = _box_distance_2d(pos, node.bounds)
             cur_h = self.executor.current_observation.horizon_degrees
@@ -798,6 +891,7 @@ class MacroActionController:
                     )
                     steps += 1
                     if retry_ok:
+                        self.executor.completed_macros.add(sim_action)
                         return (
                             steps,
                             failed,
@@ -807,11 +901,16 @@ class MacroActionController:
                     failed += 1
                     break
 
+        if "Bad interact mask" in first_err:
+            node.action_states[f"invalid_{sim_action}"] = ActionState(
+                True, memory._latest_frame_id
+            )
+        alt_hint = self._format_alternative_candidates_hint(resolved_id, sim_action)
         return (
             steps,
             failed,
             False,
-            f"{sim_action} on #{resolved_id} ({node.category}) failed: {first_err or self.executor.current_observation.last_action_error}",
+            f"{sim_action} on #{resolved_id} ({node.category}) failed: {first_err or self.executor.current_observation.last_action_error}.{alt_hint}",
         )
 
     def _run_compound_interaction(
@@ -830,12 +929,15 @@ class MacroActionController:
         total_failed = 0
 
         if macro_name == "clean_in_sink":
+            put_frame = memory._latest_frame_id
             s, f, ok, msg = self._execute_single_interaction("PutObject", receptacle_id)
             total_steps += s
             total_failed += f
             if not ok and self.executor.can_step():
                 alt_sink = self._find_nearest_category(
-                    receptacle_id, ("SinkBasin", "BathtubBasin")
+                    receptacle_id,
+                    ("SinkBasin", "BathtubBasin"),
+                    exclude_ids={memory.resolve_object_id(receptacle_id)},
                 )
                 if alt_sink is not None and alt_sink != memory.resolve_object_id(
                     receptacle_id
@@ -898,24 +1000,29 @@ class MacroActionController:
             total_steps += s
             total_failed += f
             if not ok and self.executor.can_step():
-                alt_pick = self._find_pickupable_near(receptacle_id)
+                alt_pick = self._find_pickupable_near(
+                    receptacle_id, expected_id=held_id, min_frame_id=put_frame
+                )
                 if alt_pick is not None and alt_pick != target_pickup:
                     s2, f2, ok, msg = self._execute_single_interaction(
                         "PickupObject", alt_pick, allow_navigation=False
                     )
                     total_steps += s2
                     total_failed += f2
+            if ok:
+                self.executor.completed_macros.add("clean_in_sink")
             return (
                 total_steps,
                 total_failed,
                 ok,
                 (
-                    "Cleaned object in sink and picked it back up."
+                    f"Cleaned object in sink and picked #{memory.held_object_id or target_pickup} back up."
                     if ok
                     else f"Cleaned object in sink, but failed to pick #{target_pickup} back up: {msg}"
                 ),
             )
 
+        put_frame = memory._latest_frame_id
         if macro_name == "heat_in_microwave":
             seq = [
                 ("OpenObject", receptacle_id, False),
@@ -926,6 +1033,7 @@ class MacroActionController:
                 ("OpenObject", receptacle_id, True),
                 ("PickupObject", held_id, True),
             ]
+            fallback_cats: tuple[str, ...] = ("Microwave",)
         else:  # cool_in_fridge
             seq = [
                 ("OpenObject", receptacle_id, False),
@@ -934,10 +1042,15 @@ class MacroActionController:
                 ("OpenObject", receptacle_id, True),
                 ("PickupObject", held_id, True),
             ]
+            fallback_cats = ("Fridge", "Cabinet", "Shelf")
 
         arrived_at_appliance = False
+        current_receptacle_id = receptacle_id
         for sim_act, target_id, mandatory in seq:
-            resolved_target = memory.resolve_object_id(target_id)
+            actual_target = (
+                current_receptacle_id if target_id == receptacle_id else target_id
+            )
+            resolved_target = memory.resolve_object_id(actual_target)
             if (
                 sim_act == "OpenObject"
                 and not mandatory
@@ -956,13 +1069,36 @@ class MacroActionController:
             if ok:
                 arrived_at_appliance = True
             elif sim_act == "PickupObject" and self.executor.can_step():
-                alt_pick = self._find_pickupable_near(receptacle_id)
+                alt_pick = self._find_pickupable_near(
+                    current_receptacle_id,
+                    expected_id=held_id,
+                    min_frame_id=put_frame,
+                )
                 if alt_pick is not None and alt_pick != resolved_target:
                     s2, f2, ok, msg = self._execute_single_interaction(
                         "PickupObject", alt_pick, allow_navigation=False
                     )
                     total_steps += s2
                     total_failed += f2
+            elif (
+                sim_act in {"OpenObject", "PutObject", "CloseObject", "ToggleObjectOn"}
+                and self.executor.can_step()
+            ):
+                alt_app = self._find_nearest_category(
+                    current_receptacle_id,
+                    fallback_cats,
+                    exclude_ids={resolved_target},
+                    max_distance_m=0.85,
+                )
+                if alt_app is not None and alt_app != resolved_target:
+                    s2, f2, ok, msg = self._execute_single_interaction(
+                        sim_act, alt_app, allow_navigation=False
+                    )
+                    total_steps += s2
+                    total_failed += f2
+                    if ok:
+                        current_receptacle_id = alt_app
+                        arrived_at_appliance = True
             if not ok and mandatory:
                 return (
                     total_steps,
@@ -971,20 +1107,35 @@ class MacroActionController:
                     f"{macro_name} stopped at {sim_act}(#{resolved_target}): {msg}",
                 )
 
+        self.executor.completed_macros.add(macro_name)
         return (
             total_steps,
             total_failed,
             True,
-            f"Completed {macro_name} with receptacle #{receptacle_id} and retrieved item #{memory.held_object_id or memory.resolve_object_id(held_id)}.",
+            f"Completed {macro_name} with receptacle #{current_receptacle_id} and retrieved item #{memory.held_object_id or memory.resolve_object_id(held_id)}.",
         )
 
-    def _find_pickupable_near(self, anchor_id: int) -> int | None:
+    def _find_pickupable_near(
+        self,
+        anchor_id: int,
+        *,
+        expected_id: int | None = None,
+        min_frame_id: int = -1,
+    ) -> int | None:
         """Find a currently visible pickupable object inside or near ``anchor_id``."""
-        from .memory import _STATIONARY_RECEPTACLE_CATEGORIES
+        from .memory import (
+            _COMPATIBLE_FALLBACK_FAMILIES,
+            _STATIONARY_RECEPTACLE_CATEGORIES,
+        )
 
         memory = self.executor.memory
         anchor = memory.objects[memory.resolve_object_id(anchor_id)]
-        candidates: list[tuple[float, int]] = []
+        expected_node = (
+            memory.objects.get(memory.resolve_object_id(expected_id))
+            if expected_id is not None
+            else None
+        )
+        candidates: list[tuple[int, int, float, float, int]] = []
         for obj_id in memory.current_detection_objects.values():
             resolved = memory.resolve_object_id(obj_id)
             if resolved not in memory.objects:
@@ -993,26 +1144,63 @@ class MacroActionController:
             if (
                 node.category in _STATIONARY_RECEPTACLE_CATEGORIES
                 or node.category == "Faucet"
+                or node.action_states.get("invalid_PickupObject") is not None
             ):
                 continue
             dist = float(np.linalg.norm(node.centroid - anchor.centroid))
-            if dist <= 0.65:
-                candidates.append((dist, resolved))
+            if dist > 0.70:
+                continue
+            id_rank = (
+                0 if (expected_node and resolved == expected_node.object_id) else 1
+            )
+            cat_rank = 1
+            vis_sim = 0.0
+            if expected_node is not None:
+                vis_sim = feature_cosine(
+                    node.image_feature, expected_node.image_feature
+                )
+                same_cat = (
+                    node.category.casefold() == expected_node.category.casefold()
+                    or expected_node.category in node.category_evidence
+                    or node.category in expected_node.category_evidence
+                    or any(
+                        expected_node.category in fam and node.category in fam
+                        for fam in _COMPATIBLE_FALLBACK_FAMILIES
+                    )
+                )
+                if same_cat:
+                    cat_rank = 0
+                elif node.first_seen >= min_frame_id and min_frame_id >= 0:
+                    cat_rank = 1
+                elif vis_sim < 0.65:
+                    # Reject pre-existing unrelated objects (e.g. a Tomato already
+                    # sitting in the sink when retrieving a Spatula).
+                    continue
+            candidates.append((id_rank, cat_rank, -vis_sim, dist, resolved))
         if candidates:
-            candidates.sort(key=lambda pair: (pair[0], pair[1]))
-            return candidates[0][1]
+            candidates.sort()
+            return candidates[0][4]
         return None
 
     def _find_nearest_category(
-        self, anchor_id: int, categories: Sequence[str]
+        self,
+        anchor_id: int,
+        categories: Sequence[str],
+        *,
+        exclude_ids: set[int] | None = None,
+        max_distance_m: float = 1.5,
     ) -> int | None:
         memory = self.executor.memory
         anchor = memory.objects[memory.resolve_object_id(anchor_id)]
+        excluded = exclude_ids or set()
         for cat in categories:
             matches = [
                 node
                 for node in memory.objects.values()
-                if node.category.casefold() == cat.casefold()
+                if node.object_id not in excluded
+                and node.category.casefold() == cat.casefold()
+                and float(np.linalg.norm(node.centroid - anchor.centroid))
+                <= max_distance_m
             ]
             if matches:
                 best = min(
@@ -1024,6 +1212,47 @@ class MacroActionController:
                 return best.object_id
         return None
 
+    def _format_alternative_candidates_hint(
+        self, failed_id: int, sim_action: str
+    ) -> str:
+        from .memory import _COMPATIBLE_FALLBACK_FAMILIES
+
+        memory = self.executor.memory
+        if failed_id not in memory.objects:
+            return ""
+        target = memory.objects[failed_id]
+        agent_pos = np.asarray(memory.agent_position or (0.0, 0.0, 0.0))
+        compatible_cats = {target.category.casefold()}
+        for fam in _COMPATIBLE_FALLBACK_FAMILIES:
+            if target.category in fam:
+                compatible_cats.update(c.casefold() for c in fam)
+        alts: list[tuple[int, float, str]] = []
+        for oid, node in sorted(memory.objects.items()):
+            if (
+                oid == failed_id
+                or oid == memory.held_object_id
+                or node.action_states.get(f"invalid_{sim_action}") is not None
+            ):
+                continue
+            has_cat = node.category.casefold() in compatible_cats or any(
+                ev.casefold() in compatible_cats for ev in node.category_evidence
+            )
+            if not has_cat:
+                continue
+            exact = 0 if node.category.casefold() == target.category.casefold() else 1
+            dist = round(float(np.linalg.norm(node.centroid - agent_pos)), 2)
+            reg = memory.world_to_region(
+                float(node.centroid[0]), float(node.centroid[1])
+            )
+            alts.append(
+                (exact, dist, f"#{oid} {node.category}@[{reg[0]},{reg[1]}]({dist}m)")
+            )
+        if not alts:
+            return ""
+        alts.sort()
+        formatted = ", ".join(item[2] for item in alts[:4])
+        return f" Alternative candidates in memory: [{formatted}] — try another candidate instead of repeating #{failed_id}."
+
     def _find_newly_visible_category(
         self, before: RevisionWatermark, stop_cats: set[str]
     ) -> int | None:
@@ -1032,7 +1261,16 @@ class MacroActionController:
             resolved = memory.resolve_object_id(obj_id)
             if resolved in memory.objects:
                 node = memory.objects[resolved]
-                if node.category.casefold() in stop_cats and (
+                labels = [
+                    node.category.casefold(),
+                    *(ev.casefold() for ev in node.category_evidence),
+                ]
+                matched = any(
+                    sc == lbl or (len(sc) >= 3 and (sc in lbl or lbl in sc))
+                    for sc in stop_cats
+                    for lbl in labels
+                )
+                if matched and (
                     resolved not in before.objects
                     or int(memory.current_detection_masks[det_idx].sum()) >= 40
                 ):

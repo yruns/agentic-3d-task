@@ -278,6 +278,12 @@ class CodexAgentRuntime:
                 result.final_response, response_validator
             ):
                 break
+            if _status_str(result.status) == "failed" and result.final_response is None:
+                # A hard transport/session failure (e.g. 409/429/upstream_rejected)
+                # must not trigger a "stop calling tools" finalization prompt on a
+                # broken session; surface CodexTurnError so callers can resume on
+                # a fresh session with tool execution intact.
+                break
             logger.info(
                 "codex turn response unusable; finalization re-ask {}/{}",
                 retry + 1,

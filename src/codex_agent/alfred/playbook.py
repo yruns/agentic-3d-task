@@ -111,11 +111,16 @@ the catalog, call ``explore_frontier({"stop_on_categories": [...]})`` or check \
 closed containers (``Fridge``, ``Cabinet``, ``Drawer``, ``Microwave``) by \
 calling ``interact_object({"action": "open", "object_id": ...})``.
 - Verify small or ambiguous objects with ``view_crop`` + ``view_image``: \
-Open-vocabulary 2D detectors can confuse small utensils, glasses, or shakers. \
-If ``pickup`` on a candidate ID fails with ``CanPickup`` (because that ID was \
-attached to the underlying shelf/table), check ``visible_objects_now`` or \
-``list_objects(region=...)`` for another overlapping pickupable object ID at \
-the same 3D location!
+Open-vocabulary 2D detectors can confuse small utensils, glasses, shakers, or \
+cloths/pillows. Check ``category_evidence`` on candidate objects! If a \
+candidate has mixed evidence (e.g. ``{"Cloth": 1, "HandTowel": 1}`` on a bed vs \
+another ``Cloth`` on the floor, or ``Candle`` vs ``TissueBox``), use \
+``view_crop`` + ``view_image`` to visually confirm before picking it up!
+- Never repeat a disqualified ``object_id``: If ``interact_object`` fails with \
+``Bad interact mask`` (often a mirror reflection!), ``CanPickup``, \
+``NOT a receptacle``, or ``no detection mask``, do NOT retry the exact same \
+``object_id`` from the same spot — immediately switch to one of the \
+``Alternative candidates in memory`` listed in the tool error message!
 - Items already inside ``Fridge`` are ALREADY chilled: If a task asks for a \
 "chilled" glass/cup/food and you find and pick it up from inside the \
 ``Fridge``, it is ALREADY chilled — do NOT call ``cool_in_fridge`` again!
@@ -142,15 +147,14 @@ the sliced object as instructed.
   * **Examine / Look at object in light**: ``interact_object(pickup, item)`` -> \
 ``navigate_to(lamp_id)`` -> ``interact_object(toggle_on, lamp_id)`` (while \
 still holding the item in hand!).
-  * **Place with movable receptacle (e.g. "Put a fork in a cup/glass on the table")**: \
-Pick up the small object (`Fork`) -> put it into the movable receptacle (`Cup` \
-/ `Bowl` / `Pan` / `Plate`) -> pick up the movable receptacle (`Cup`) -> \
-navigate to the destination surface (`DiningTable` / `Desk` / `CounterTop`) -> \
-put the movable receptacle on the destination surface. If you first retrieved \
-the movable receptacle (`Cup`) from inside a `Fridge` or `Cabinet`, place the \
-`Cup` onto a nearby `CounterTop` or `DiningTable`, pick up the `Fork`, put the \
-`Fork` into the `Cup`, and ensure the `Cup` (containing the `Fork`) rests on \
-the destination table!
+  * **Place with movable receptacle (e.g. "Put a fork in a cup/glass on the table" or "Cut an apple inside a pot")**: \
+Pick up the small object (`Fork` / `AppleSliced`) -> put it into the movable \
+receptacle (`Cup` / `Bowl` / `Pan` / `Pot` / `Plate`) -> pick up the movable \
+receptacle (`Cup` / `Pot` / `Pan`) -> navigate to the destination surface \
+(`DiningTable` / `Desk` / `CounterTop`) -> put the movable receptacle on the \
+destination surface. Even if a short prompt only says "Cut an apple inside a pot", \
+if the `Pot` / `Pan` is sitting on a `StoveBurner` or in a `SinkBasin`, always \
+move the `Pot` / `Pan` (with the sliced item inside) onto the `CounterTop`!
 """
 
 __all__ = ["ALFRED_TOOLS_PLAYBOOK", "ALFRED_TOOL_NAMES"]

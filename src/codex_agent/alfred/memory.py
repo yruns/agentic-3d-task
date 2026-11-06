@@ -89,6 +89,7 @@ _COMPATIBLE_FALLBACK_FAMILIES: tuple[frozenset[str], ...] = (
         }
     ),
     frozenset({"Cabinet", "Drawer", "Shelf"}),
+    frozenset({"Fridge", "Cabinet", "Shelf"}),
     frozenset({"DeskLamp", "FloorLamp"}),
     frozenset({"Ladle", "Spoon", "Fork", "Knife", "ButterKnife", "Spatula"}),
     frozenset(
@@ -105,7 +106,34 @@ _COMPATIBLE_FALLBACK_FAMILIES: tuple[frozenset[str], ...] = (
         }
     ),
     frozenset({"Pan", "Pot", "Plate", "Bowl"}),
-    frozenset({"Pillow", "Cloth", "HandTowel"}),
+    frozenset({"Pillow", "Cloth", "HandTowel", "DishSponge", "SoapBar"}),
+    frozenset(
+        {
+            "Apple",
+            "Tomato",
+            "Potato",
+            "Egg",
+            "Lettuce",
+            "Bread",
+            "AppleSliced",
+            "TomatoSliced",
+            "PotatoSliced",
+            "LettuceSliced",
+            "BreadSliced",
+        }
+    ),
+    frozenset(
+        {
+            "KeyChain",
+            "Watch",
+            "CreditCard",
+            "CD",
+            "RemoteControl",
+            "CellPhone",
+            "Pen",
+            "Pencil",
+        }
+    ),
 )
 
 
@@ -120,9 +148,21 @@ def _is_compatible_spatial_fallback(
     if action in {"PickupObject", "SliceObject"}:
         if cand_cat in _STATIONARY_RECEPTACLE_CATEGORIES or cand_cat == "Faucet":
             return False
-        if target_cat not in _STATIONARY_RECEPTACLE_CATEGORIES:
+        if target_cat in _STATIONARY_RECEPTACLE_CATEGORIES:
+            return False
+        if (
+            target_cat in cand_node.category_evidence
+            or cand_cat in target_node.category_evidence
+        ):
             return True
-        return False
+        for family in _COMPATIBLE_FALLBACK_FAMILIES:
+            if target_cat in family and cand_cat in family:
+                return True
+        if not target_node.geometry_valid and target_node.reacquire_bounds is not None:
+            return True
+        return (
+            feature_cosine(target_node.image_feature, cand_node.image_feature) >= 0.78
+        )
     if action in {"ToggleObjectOn", "ToggleObjectOff"}:
         if target_cat == "Faucet":
             return cand_cat in {"Faucet", "SinkBasin", "BathtubBasin"}
@@ -130,19 +170,20 @@ def _is_compatible_spatial_fallback(
     if action in {"OpenObject", "CloseObject"}:
         if target_cat in {"Cabinet", "Drawer"}:
             return cand_cat in {"Cabinet", "Drawer"}
-        if (
-            target_cat == "Fridge"
-            and action == "CloseObject"
-            and target_node.action_states.get("open") is not None
-            and target_node.action_states["open"].value
-        ):
-            return cand_cat in {"Fridge", "Shelf", "CounterTop"}
+        if target_cat == "Fridge":
+            if (
+                action == "CloseObject"
+                and target_node.action_states.get("open") is not None
+                and target_node.action_states["open"].value
+            ):
+                return cand_cat in {"Fridge", "Cabinet", "Shelf", "CounterTop"}
+            return cand_cat in {"Fridge", "Cabinet", "Shelf"}
         return False
     if action == "PutObject":
         if target_cat in {"SinkBasin", "BathtubBasin"}:
             return cand_cat in {"SinkBasin", "BathtubBasin"}
         if target_cat == "Fridge":
-            return cand_cat in {"Fridge", "Shelf", "CounterTop"}
+            return cand_cat in {"Fridge", "Cabinet", "Shelf", "CounterTop"}
         for family in _COMPATIBLE_FALLBACK_FAMILIES:
             if target_cat in family and cand_cat in family:
                 return True
@@ -805,12 +846,22 @@ class IncrementalSceneMemory:
         elif allow_spatial_fallback and resolved_id in self.objects:
             target_node = self.objects[resolved_id]
             fallback_candidates: list[tuple[int, float, int]] = []
-            max_dist = 0.25 if action in {"PickupObject", "SliceObject"} else 0.42
+            if action in {"PickupObject", "SliceObject"}:
+                max_dist = (
+                    0.55
+                    if not target_node.geometry_valid
+                    and target_node.reacquire_bounds is not None
+                    else 0.30
+                )
+            else:
+                max_dist = 0.68
             for idx, identity in self.current_detection_objects.items():
                 cand_id = self.resolve_object_id(identity)
                 if cand_id not in self.objects or cand_id == self.held_object_id:
                     continue
                 cand_node = self.objects[cand_id]
+                if cand_node.action_states.get(f"invalid_{action}") is not None:
+                    continue
                 if not _is_compatible_spatial_fallback(target_node, cand_node, action):
                     continue
                 dist = float(np.linalg.norm(cand_node.centroid - target_node.centroid))

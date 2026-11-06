@@ -63,12 +63,16 @@ class ObjectMemory:
 
     @property
     def centroid(self) -> FloatArray:
-        """Current or last-known centroid; navigation must require geometry_valid."""
+        """Current or last-known centroid; uses reacquire_bounds when placed."""
+        if not self.geometry_valid and self.reacquire_bounds is not None:
+            return np.asarray(self.reacquire_bounds.mean(axis=0), dtype=np.float64)
         return np.asarray(self.points.mean(axis=0), dtype=np.float64)
 
     @property
     def bounds(self) -> FloatArray:
         """Axis-aligned metric envelope of the current or last-known cloud."""
+        if not self.geometry_valid and self.reacquire_bounds is not None:
+            return self.reacquire_bounds.copy()
         return np.stack((self.points.min(axis=0), self.points.max(axis=0)))
 
 

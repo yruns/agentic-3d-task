@@ -33,7 +33,7 @@ class CodexRuntimePreflightResult:
 def preflight_codex_runtime(
     config: CodexAgentConfig,
     *,
-    timeout_seconds: float = 1.0,
+    timeout_seconds: float = 30.0,
 ) -> CodexRuntimePreflightResult:
     """Check local adapters before a turn, preserving explicit legacy providers.
 

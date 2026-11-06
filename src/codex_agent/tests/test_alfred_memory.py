@@ -466,3 +466,36 @@ def test_spatial_fallback_rejects_incompatible_categories(tmp_path: Path) -> Non
     assert len(memory.objects) == 2
     # SaltShaker must NOT be used as a fallback mask for PutObject on SinkBasin (#0)
     assert memory.select_interaction_mask(0, action="PutObject") is None
+
+
+def test_spatial_fallback_rejects_unrelated_pickupables_and_updates_placed_bounds(
+    tmp_path: Path,
+) -> None:
+    memory = IncrementalSceneMemory(
+        tmp_path / "memory",
+        MemoryConfig(mapping=MappingConfig(max_bbox_area_ratio=1.0)),
+    )
+    # Frame 0: observe TissueBox (#0) at x=0
+    memory.integrate(
+        _observation(tmp_path, 0, category="TissueBox", feature=(1.0, 0.0, 0.0))
+    )
+    # Frame 1: TissueBox is missed, but an unrelated Candle (#1) is detected at x=0
+    memory.integrate(
+        _observation(tmp_path, 1, category="Candle", feature=(0.0, 1.0, 0.0))
+    )
+    assert len(memory.objects) == 2
+    # Candle (#1) must NOT be used as a fallback mask for PickupObject on TissueBox (#0)
+    assert memory.select_interaction_mask(0, action="PickupObject") is None
+
+    # Pick up TissueBox (#0) and place it on Fridge (#2) at translation_x=3
+    memory.record_interaction("PickupObject", 0, success=True)
+    memory.integrate(
+        _observation(
+            tmp_path, 2, translation_x=3, category="Fridge", feature=(0.0, 0.0, 1.0)
+        )
+    )
+    memory.record_interaction("PutObject", 2, success=True)
+    # Before TissueBox (#0) is directly re-observed, its centroid/bounds reflect Fridge (#2)
+    np.testing.assert_allclose(
+        memory.objects[0].centroid, memory.objects[2].centroid, atol=0.05
+    )

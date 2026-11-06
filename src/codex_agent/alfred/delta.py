@@ -131,12 +131,16 @@ def format_visible_objects_now(
         existing = by_object_id.get(resolved_id)
         if existing is not None and existing[1] >= mask_pixels:
             continue
+        top_evidence = dict(
+            sorted(node.category_evidence.items(), key=lambda kv: (-kv[1], kv[0]))[:3]
+        )
         by_object_id[resolved_id] = (
             dist_m,
             mask_pixels,
             {
                 "object_id": resolved_id,
                 "category": node.category,
+                "category_evidence": top_evidence,
                 "distance_m": dist_m,
                 "confidence": round(float(conf), 3),
                 "mask_pixels": mask_pixels,
@@ -184,11 +188,15 @@ def compute_scene_delta(
             for view in node.views
             if view.frame_id > node.stale_through_frame
         ][-3:]
+        top_evidence = dict(
+            sorted(node.category_evidence.items(), key=lambda kv: (-kv[1], kv[0]))[:3]
+        )
         if obj_id not in before.objects:
             new_objects.append(
                 {
                     "object_id": obj_id,
                     "category": digest.category,
+                    "category_evidence": top_evidence,
                     "region": (
                         list(digest.region) if digest.region is not None else None
                     ),
@@ -226,6 +234,7 @@ def compute_scene_delta(
                 {
                     "object_id": obj_id,
                     "category": digest.category,
+                    "category_evidence": top_evidence,
                     "region": (
                         list(digest.region) if digest.region is not None else None
                     ),
