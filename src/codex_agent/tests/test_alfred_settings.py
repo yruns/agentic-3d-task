@@ -59,6 +59,7 @@ def write_scene_settings(
     values: dict[str, object] = {
         key: str(value) if isinstance(value, Path) else value
         for key, value in asdict(config).items()
+        if value is not None
     }
     values.update(replacements or {})
     path.write_text(
@@ -189,3 +190,24 @@ def test_settings_require_perception_and_table_sections(tmp_path: Path) -> None:
     path.write_text("perception = 'not a table'\n")
     with pytest.raises(ValueError, match="must be a table"):
         load_scene_settings(path)
+
+
+def test_scene_settings_accept_loopback_server_url_and_reject_remote(
+    tmp_path: Path,
+) -> None:
+    config = local_scene_config(tmp_path / "assets")
+    path = write_scene_settings(
+        tmp_path / "scene.toml",
+        config,
+        replacements={"server_url": "http://127.0.0.1:8791/"},
+    )
+    settings = load_scene_settings(path)
+    assert settings.perception.server_url == "http://127.0.0.1:8791"
+
+    bad_path = write_scene_settings(
+        tmp_path / "bad_scene.toml",
+        config,
+        replacements={"server_url": "http://192.168.1.10:8791"},
+    )
+    with pytest.raises(ValueError, match="loopback"):
+        load_scene_settings(bad_path)

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import math
 import os
 import re
+import urllib.error
+import urllib.request
+import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from types import TracebackType
@@ -17,8 +21,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from .depth_models import require_local_depth_model, validate_intrinsics
 from .model_runtime import physical_gpu_uuid
 from .provenance import PERCEPTION_PACKAGES, RuntimeProvenance, alfred_source_sha256
-from .vocabulary import ALFRED_CATEGORIES, detection_batches
-from .worker import JsonWorker
+from .vocabulary import ALFRED_CATEGORIES, detection_batches, vocabulary_sha256
+from .worker import JsonWorker, WorkerError
 
 PERCEPTION_PROFILE = "grounded_scene_rgb_v1"
 
@@ -46,8 +50,17 @@ class ScenePerceptionConfig:
     max_detections: int = 100
     timeout_seconds: float = 180.0
     depth_source: Literal["da3metric-large", "simulator_gt"] = "da3metric-large"
+    server_url: str | None = None
 
     def __post_init__(self) -> None:
+        if self.server_url is not None:
+            if not isinstance(self.server_url, str) or not re.fullmatch(
+                r"http://(127\.0\.0\.1|localhost):\d{1,5}/?", self.server_url
+            ):
+                raise ValueError(
+                    f"server_url={self.server_url!r} must be a loopback http://127.0.0.1:<port> URL"
+                )
+            object.__setattr__(self, "server_url", self.server_url.rstrip("/"))
         if self.depth_source not in ("da3metric-large", "simulator_gt"):
             raise ValueError(
                 f"depth_source={self.depth_source!r} must be 'da3metric-large' or 'simulator_gt'"
@@ -211,7 +224,9 @@ class PerceptionRuntimeStats(BaseModel):
     nms_suppressed: int = Field(ge=0)
     empty_masks: int = Field(ge=0)
     gpu_wait_seconds: float = Field(ge=0)
-    residency: Literal["sequential_cpu_offload"]
+    residency: Literal["sequential_cpu_offload", "gpu_server_pool"] = (
+        "sequential_cpu_offload"
+    )
 
 
 def validate_prediction_artifacts(
@@ -282,10 +297,62 @@ def validate_prediction_artifacts(
 
 
 class ScenePerception:
-    """Own one persistent isolated perception worker across sequential episodes."""
+    """Connect to a shared local perception HTTP server or own one isolated worker."""
 
     def __init__(self, config: ScenePerceptionConfig, *, log_path: Path) -> None:
         self.config = config
+        self.log_path = log_path
+        self._server_url = config.server_url
+        self._client_id = f"pid-{os.getpid()}-{uuid.uuid4().hex[:8]}"
+        self._worker: JsonWorker | None = None
+        self._frames = 0
+        self._load_seconds = 0.0
+        self._inference_seconds = 0.0
+        self._depth_seconds = 0.0
+        self._detection_seconds = 0.0
+        self._segmentation_seconds = 0.0
+        self._feature_seconds = 0.0
+        self._gpu_wait_seconds = 0.0
+        self._capped_detections = 0
+        self._nms_suppressed = 0
+        self._empty_masks = 0
+        self._peak_cuda_memory_bytes = 0
+        self._device: str = config.device
+        if self._server_url is not None:
+            self._initialize_http_client(self._server_url)
+        else:
+            self._initialize_local_worker(log_path)
+
+    def _initialize_http_client(self, server_url: str) -> None:
+        from .perception_server import canonical_model_config_signature
+
+        health = _http_json(
+            "GET",
+            f"{server_url}/health",
+            timeout_seconds=min(self.config.timeout_seconds, 30.0),
+        )
+        if health.get("backend") != PERCEPTION_PROFILE:
+            raise ValueError("perception server reported an unexpected backend")
+        if health.get("vocabulary_sha256") != vocabulary_sha256():
+            raise ValueError("perception server vocabulary_sha256 differs from client")
+        provenance = RuntimeProvenance.model_validate(health.get("runtime_provenance"))
+        if set(provenance.packages) != set(PERCEPTION_PACKAGES):
+            raise ValueError("perception server package provenance is incomplete")
+        if provenance.package_source_sha256 != alfred_source_sha256():
+            raise ValueError(
+                "perception server imported different project source bytes"
+            )
+        expected_sig = canonical_model_config_signature(self.config)
+        server_sig = health.get("configuration")
+        if server_sig != expected_sig:
+            raise ValueError(
+                f"perception server model configuration differs from client config: "
+                f"server={server_sig} vs client={expected_sig}"
+            )
+        self._runtime_provenance = provenance
+
+    def _initialize_local_worker(self, log_path: Path) -> None:
+        config = self.config
         environment = dict(os.environ)
         environment.update(
             {
@@ -370,17 +437,41 @@ class ScenePerception:
                     "rgb_path must contain an RGB image with positive dimensions"
                 )
             width, height = image.size
-        observation = PerceptionObservation.model_validate(
-            self._worker.request(
-                {
-                    "command": "predict",
+        if self._server_url is not None:
+            response = _http_json(
+                "POST",
+                f"{self._server_url}/predict",
+                payload={
+                    "client_id": self._client_id,
                     "rgb_path": str(path),
                     "frame_id": frame_id,
                     "intrinsics": matrix.tolist(),
                     "output_dir": str(output_dir.absolute()),
-                }
+                },
+                timeout_seconds=self.config.timeout_seconds,
             )
-        )
+            result = response.get("result")
+            if not isinstance(result, dict):
+                raise WorkerError("perception server returned invalid predict result")
+            observation = PerceptionObservation.model_validate(
+                result.get("observation")
+            )
+            self._accumulate_frame_stats(
+                result.get("frame_stats"), observation.diagnostics
+            )
+        else:
+            assert self._worker is not None
+            observation = PerceptionObservation.model_validate(
+                self._worker.request(
+                    {
+                        "command": "predict",
+                        "rgb_path": str(path),
+                        "frame_id": frame_id,
+                        "intrinsics": matrix.tolist(),
+                        "output_dir": str(output_dir.absolute()),
+                    }
+                )
+            )
         if observation.frame_id != frame_id or (
             observation.image_width,
             observation.image_height,
@@ -391,13 +482,57 @@ class ScenePerception:
         validate_prediction_artifacts(observation, output_dir=output_dir)
         return observation
 
+    def _accumulate_frame_stats(
+        self, raw_stats: object, diagnostics: PerceptionDiagnostics
+    ) -> None:
+        self._frames += 1
+        self._capped_detections += diagnostics.capped_detections
+        self._nms_suppressed += diagnostics.nms_suppressed
+        self._empty_masks += diagnostics.empty_masks
+        if not isinstance(raw_stats, dict):
+            return
+        self._load_seconds = max(
+            self._load_seconds, float(raw_stats.get("load_seconds", 0.0))
+        )
+        self._inference_seconds += float(raw_stats.get("inference_seconds", 0.0))
+        self._depth_seconds += float(raw_stats.get("depth_seconds", 0.0))
+        self._detection_seconds += float(raw_stats.get("detection_seconds", 0.0))
+        self._segmentation_seconds += float(raw_stats.get("segmentation_seconds", 0.0))
+        self._feature_seconds += float(raw_stats.get("feature_seconds", 0.0))
+        self._gpu_wait_seconds += float(raw_stats.get("gpu_wait_seconds", 0.0))
+        self._peak_cuda_memory_bytes = max(
+            self._peak_cuda_memory_bytes,
+            int(raw_stats.get("peak_cuda_memory_bytes", 0)),
+        )
+        if isinstance(raw_stats.get("device"), str):
+            self._device = str(raw_stats["device"])
+
     def statistics(self) -> PerceptionRuntimeStats:
+        if self._server_url is not None:
+            return PerceptionRuntimeStats(
+                load_seconds=self._load_seconds,
+                inference_seconds=self._inference_seconds,
+                frames=self._frames,
+                peak_cuda_memory_bytes=self._peak_cuda_memory_bytes,
+                device=self._device,
+                depth_seconds=self._depth_seconds,
+                detection_seconds=self._detection_seconds,
+                segmentation_seconds=self._segmentation_seconds,
+                feature_seconds=self._feature_seconds,
+                capped_detections=self._capped_detections,
+                nms_suppressed=self._nms_suppressed,
+                empty_masks=self._empty_masks,
+                gpu_wait_seconds=self._gpu_wait_seconds,
+                residency="gpu_server_pool",
+            )
+        assert self._worker is not None
         return PerceptionRuntimeStats.model_validate(
             self._worker.request({"command": "statistics"})
         )
 
     def close(self) -> None:
-        self._worker.close()
+        if self._worker is not None:
+            self._worker.close()
 
     def __enter__(self) -> ScenePerception:
         return self
@@ -409,3 +544,44 @@ class ScenePerception:
         traceback: TracebackType | None,
     ) -> None:
         self.close()
+
+
+def _http_json(
+    method: str,
+    url: str,
+    *,
+    payload: dict[str, object] | None = None,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Execute a loopback JSON request bypassing any ambient HTTP proxy."""
+    data = (
+        json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8")
+        if payload is not None
+        else None
+    )
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        method=method,
+    )
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(req, timeout=timeout_seconds) as resp:
+            raw = resp.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        body_text = exc.read().decode("utf-8", errors="replace")
+        try:
+            err_doc = json.loads(body_text)
+            err_type = err_doc.get("error_type", "HTTPError")
+            err_msg = err_doc.get("message", body_text)
+        except Exception:  # noqa: BLE001
+            err_type = f"HTTP_{exc.code}"
+            err_msg = body_text
+        raise WorkerError(f"perception server {err_type}: {err_msg}") from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise WorkerError(f"perception server request failed ({url}): {exc}") from exc
+    parsed = json.loads(raw)
+    if not isinstance(parsed, dict) or not parsed.get("ok", True):
+        raise WorkerError(f"perception server returned error: {raw}")
+    return parsed

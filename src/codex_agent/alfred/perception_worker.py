@@ -78,6 +78,7 @@ class SceneModels:
         self.capped_detections = 0
         self.nms_suppressed = 0
         self.empty_masks = 0
+        self.last_frame_stats: dict[str, object] = {}
 
     def predict(self, request: PredictionRequest) -> PerceptionObservation:
         """Hold the shared ALFRED lock for the complete GPU prediction pipeline."""
@@ -85,9 +86,19 @@ class SceneModels:
             self.config.gpu_lock_path, timeout_seconds=self.config.timeout_seconds
         ) as waited:
             self.gpu_wait_seconds += waited
-            return self._predict_frame(request)
+            return self._predict_frame(request, lock_wait_seconds=waited)
 
-    def _predict_frame(self, request: PredictionRequest) -> PerceptionObservation:
+    def predict_with_stats(self, request: PredictionRequest) -> dict[str, object]:
+        """Run one prediction frame and return both the observation and per-frame timings."""
+        observation = self.predict(request)
+        return {
+            "observation": observation.model_dump(mode="json"),
+            "frame_stats": dict(self.last_frame_stats),
+        }
+
+    def _predict_frame(
+        self, request: PredictionRequest, *, lock_wait_seconds: float = 0.0
+    ) -> PerceptionObservation:
         """Write one frame's predicted geometry and aligned CLIP evidence."""
         from PIL import Image
 
@@ -127,19 +138,26 @@ class SceneModels:
                 depth = np.asarray(np.clip(raw_gt, 1e-3, 5.0), dtype=np.float32)
             else:
                 depth = np.ones((rgb.shape[0], rgb.shape[1]), dtype=np.float32)
-        self.depth_seconds += time.monotonic() - stage
+        depth_dt = time.monotonic() - stage
+        self.depth_seconds += depth_dt
         stage = time.monotonic()
         boxes, candidates, suppressed, capped = self.detector.predict(rgb)
-        self.detection_seconds += time.monotonic() - stage
+        det_dt = time.monotonic() - stage
+        self.detection_seconds += det_dt
         stage = time.monotonic()
         instances, empty = self.segmenter.predict(rgb, boxes)
-        self.segmentation_seconds += time.monotonic() - stage
+        seg_dt = time.monotonic() - stage
+        self.segmentation_seconds += seg_dt
         stage = time.monotonic()
         image_features, text_features, frame_feature = self.features.predict(
             rgb, instances
         )
-        self.feature_seconds += time.monotonic() - stage
-        if self.config.device == "cuda:0":
+        feat_dt = time.monotonic() - stage
+        self.feature_seconds += feat_dt
+        if (
+            self.config.device == "cuda:0"
+            and self.torch.cuda.memory_reserved() > 8 * 1024**3
+        ):
             self.torch.cuda.empty_cache()
         if capped:
             logger.warning(
@@ -202,7 +220,27 @@ class SceneModels:
         self.capped_detections += capped
         self.nms_suppressed += suppressed
         self.empty_masks += empty
-        self.inference_seconds += time.monotonic() - started
+        inf_dt = time.monotonic() - started
+        self.inference_seconds += inf_dt
+        peak_mem = (
+            int(self.torch.cuda.max_memory_allocated())
+            if self.config.device == "cuda:0"
+            else 0
+        )
+        self.last_frame_stats = {
+            "load_seconds": self.load_seconds,
+            "inference_seconds": inf_dt,
+            "depth_seconds": depth_dt,
+            "detection_seconds": det_dt,
+            "segmentation_seconds": seg_dt,
+            "feature_seconds": feat_dt,
+            "gpu_wait_seconds": lock_wait_seconds,
+            "peak_cuda_memory_bytes": peak_mem,
+            "device": self.config.device,
+            "capped_detections": capped,
+            "nms_suppressed": suppressed,
+            "empty_masks": empty,
+        }
         return observation
 
     def statistics(self) -> PerceptionRuntimeStats:
@@ -266,6 +304,11 @@ def main() -> None:
                     result = models.predict(
                         PredictionRequest.model_validate(request)
                     ).model_dump(mode="json")
+                elif command == "predict_with_stats" and models is not None:
+                    req_payload = {**request, "command": "predict"}
+                    result = models.predict_with_stats(
+                        PredictionRequest.model_validate(req_payload)
+                    )
                 elif (
                     command == "statistics"
                     and models is not None
@@ -276,16 +319,26 @@ def main() -> None:
                     raise ValueError(f"unexpected perception command={command!r}")
             response = {"ok": True, "result": result}
         except Exception as exc:
-            # External process boundary: preserve a visible failure; never retry
-            # with a different model or invent empty predictions.
+            # Preserve a visible failure; request-level validation/file errors
+            # do not kill an already-initialized worker in a shared server pool.
             traceback.print_exc(file=sys.stderr)
+            recoverable = models is not None and isinstance(
+                exc, (ValueError, FileNotFoundError, FileExistsError, PermissionError)
+            )
             protocol_stdout.write(
                 json.dumps(
-                    {"ok": False, "error_type": type(exc).__name__, "message": str(exc)}
+                    {
+                        "ok": False,
+                        "error_type": type(exc).__name__,
+                        "message": str(exc),
+                        "recoverable": recoverable,
+                    }
                 )
                 + "\n"
             )
             protocol_stdout.flush()
+            if recoverable:
+                continue
             raise SystemExit(1) from exc
         protocol_stdout.write(json.dumps(response, allow_nan=False) + "\n")
         protocol_stdout.flush()

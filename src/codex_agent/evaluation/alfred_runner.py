@@ -406,7 +406,12 @@ def _adaptive_concurrency_slot(
                     for info in active_pids.values()
                     if isinstance(info, dict) and info.get("gpu") == gpu_idx
                 )
-                if len(active_pids) < max_active and gpu_active < per_gpu_limit:
+                gpu_ok = (
+                    True
+                    if config.perception.server_url is not None
+                    else gpu_active < per_gpu_limit
+                )
+                if len(active_pids) < max_active and gpu_ok:
                     active_pids[pid_str] = {
                         "shard": config.shard_index,
                         "gpu": gpu_idx,

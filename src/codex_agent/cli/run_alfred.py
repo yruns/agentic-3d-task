@@ -81,6 +81,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional physical GPU index override (e.g., 4, 5, 6; never 1).",
     )
+    parser.add_argument(
+        "--perception-server",
+        default=None,
+        help="Optional local HTTP perception server URL (e.g., http://127.0.0.1:8791).",
+    )
     parser.add_argument("--model", default=None)
     parser.add_argument(
         "--reasoning-effort",
@@ -155,6 +160,11 @@ def main(argv: list[str] | None = None) -> int:
             perception_cfg,
             physical_gpu_index=args.physical_gpu,
             gpu_lock_path=Path(f"/tmp/agentic3d-alfred-gpu{args.physical_gpu}.lock"),
+        )
+    if args.perception_server is not None:
+        perception_cfg = replace(
+            perception_cfg,
+            server_url=args.perception_server,
         )
     runtime = CodexAgentConfig.from_env(project_root=DEFAULT_PROJECT_ROOT)
     resolved_model = args.model or runtime.model

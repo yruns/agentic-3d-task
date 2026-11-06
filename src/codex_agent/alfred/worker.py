@@ -29,6 +29,7 @@ class _RpcResponse(BaseModel):
     result: dict[str, object] | None = None
     error_type: str | None = None
     message: str | None = None
+    recoverable: bool = False
 
 
 class JsonWorker:
@@ -103,7 +104,8 @@ class JsonWorker:
             self.close()
             raise WorkerError(f"worker RPC failed: {exc}; see {self.log_path}") from exc
         if not response.ok:
-            self.close()
+            if not response.recoverable:
+                self.close()
             raise WorkerError(
                 f"worker {response.error_type}: {response.message}; see {self.log_path}"
             )
