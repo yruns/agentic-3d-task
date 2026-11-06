@@ -107,11 +107,11 @@ class AlfredPolicyTask:
             "Tool CLI invocation syntax (run via exec_command with yield_time_ms=60000):\n"
             f"  {self.python_executable} -m codex_agent.alfred.tools <tool_name> --args '<json_object>'\n\n"
             "Examples:\n"
-            f'  {self.python_executable} -m codex_agent.alfred.tools execute_subgoal_program --args \'{{"subgoal": "clean_held", "target_id": 12, "receptacle_categories": ["SinkBasin"], "destination_categories": ["CounterTop", "DiningTable"]}}\'\n'
             f'  {self.python_executable} -m codex_agent.alfred.tools interact_object --args \'{{"action": "pickup", "object_id": 12}}\'\n'
             f"  {self.python_executable} -m codex_agent.alfred.tools navigate_to --args '{{\"object_id\": 12}}'\n"
             f'  {self.python_executable} -m codex_agent.alfred.tools explore_frontier --args \'{{"stop_on_categories": ["Ladle", "SinkBasin"]}}\'\n'
             f"  {self.python_executable} -m codex_agent.alfred.tools view_crop --args '{{\"object_id\": 12}}'\n"
+            f'  {self.python_executable} -m codex_agent.alfred.tools execute_subgoal_program --args \'{{"subgoal": "transfer_with_movable_receptacle", "target_id": 12, "receptacle_id": 18, "destination_id": 4}}\'\n'
             f'  {self.python_executable} -m codex_agent.alfred.tools finish_episode --args \'{{"summary": "Completed task"}}\'\n\n'
             "STRICT RULE: Do NOT run ls, cat, find, grep, head, or python -c. Only run `codex_agent.alfred.tools` commands!"
         )

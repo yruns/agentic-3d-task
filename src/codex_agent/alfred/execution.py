@@ -231,6 +231,21 @@ class EpisodeExecutor:
                                 self.output_tokens += totals["output_tokens"]
                             else:
                                 self._usage_complete = False
+                            meta_dict = turn_res.turn.metadata.as_dict()
+                            attempts_list = meta_dict.get("attempts")
+                            was_interrupted = isinstance(attempts_list, list) and any(
+                                isinstance(a, dict) and a.get("status") == "interrupted"
+                                for a in attempts_list
+                            )
+                            if (
+                                was_interrupted
+                                and not self.finish_requested
+                                and turn_res.outcome.status == "incomplete"
+                                and self.can_step()
+                                and self.decisions < self.config.max_decisions
+                                and cont_idx < max_turn_continuations
+                            ):
+                                continue
                             break
                         except (CodexTurnError, CodexResponseError) as exc:
                             turn_interrupted_error = f"{type(exc).__name__}: {exc}"
@@ -329,25 +344,23 @@ class EpisodeExecutor:
                     :3
                 ]
             )
-            catalog.append(
-                {
-                    "object_id": obj_id,
-                    "category": node.category,
-                    "category_evidence": top_evidence,
-                    "region": list(reg),
-                    "distance_m": dist_m,
-                    "centroid": [round(float(v), 2) for v in node.centroid],
-                    "provisional": node.provisional,
-                    "is_stable": bool(node.evidence_summary["is_stable"]),
-                    "state": node.state,
-                    "parent_receptacle_id": node.parent_receptacle_id,
-                    "contained_object_ids": sorted(node.contained_object_ids),
-                    "action_states": {
-                        name: st.value for name, st in node.action_states.items()
-                    },
-                    "best_frames": recent_frames,
-                }
-            )
+            catalog_item: dict[str, object] = {
+                "object_id": obj_id,
+                "category": node.category,
+                "category_evidence": top_evidence,
+                "region": list(reg),
+                "distance_m": dist_m,
+                "centroid": [round(float(v), 2) for v in node.centroid],
+                "provisional": node.provisional,
+                "state": node.state,
+                "action_states": {
+                    name: st.value for name, st in node.action_states.items()
+                },
+                "best_frames": recent_frames,
+            }
+            if node.parent_receptacle_id is not None:
+                catalog_item["parent_receptacle_id"] = node.parent_receptacle_id
+            catalog.append(catalog_item)
         frontiers = [
             {
                 "region": list(c.region),

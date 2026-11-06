@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 
 from .delta import capture_watermark
-from .memory import _COMPATIBLE_FALLBACK_FAMILIES, _STATIONARY_RECEPTACLE_CATEGORIES
+from .memory import _STATIONARY_RECEPTACLE_CATEGORIES
 
 if TYPE_CHECKING:
     from .execution import EpisodeExecutor
@@ -77,6 +77,15 @@ _UNLOAD_SURFACES: tuple[str, ...] = (
 )
 
 
+_STRICT_SYNONYM_GROUPS: tuple[frozenset[str], ...] = (
+    frozenset({"mug", "cup"}),
+    frozenset({"knife", "butterknife"}),
+    frozenset({"sinkbasin", "bathtubbasin"}),
+    frozenset({"desklamp", "floorlamp"}),
+    frozenset({"countertop", "diningtable", "desk", "sidetable", "coffeetable"}),
+)
+
+
 @dataclass(frozen=True)
 class SubgoalProgramSpec:
     """Declarative guarded subgoal policy block submitted by the agent."""
@@ -91,7 +100,7 @@ class SubgoalProgramSpec:
     auto_open_containers: bool = True
     try_sibling_candidates: bool = True
     require_stable_evidence: bool = False
-    max_candidates: int = 3
+    max_candidates: int = 2
 
 
 @dataclass
@@ -180,7 +189,7 @@ def parse_subgoal_program(args: dict[str, object]) -> SubgoalProgramSpec:
         args.get("destination_categories") or args.get("destination_category")
     )
     max_cands_raw = _int_or_none(args.get("max_candidates"))
-    max_cands = max(1, min(5, max_cands_raw if max_cands_raw is not None else 3))
+    max_cands = max(1, min(3, max_cands_raw if max_cands_raw is not None else 2))
 
     return SubgoalProgramSpec(
         subgoal=subgoal,
@@ -213,10 +222,9 @@ def rank_candidate_objects(
     cat_set = {c.strip().casefold() for c in categories if c.strip()}
     compatible_set = set(cat_set)
     for c in list(cat_set):
-        for fam in _COMPATIBLE_FALLBACK_FAMILIES:
-            fam_lower = {f.casefold() for f in fam}
-            if c in fam_lower:
-                compatible_set.update(fam_lower)
+        for grp in _STRICT_SYNONYM_GROUPS:
+            if c in grp:
+                compatible_set.update(grp)
 
     resolved_pref: int | None = None
     if preferred_id is not None:
@@ -249,19 +257,17 @@ def rank_candidate_objects(
         node_cat_lower = node.category.casefold()
         ev_lowers = {k.casefold(): v for k, v in node.category_evidence.items()}
 
-        if cat_set:
+        if is_pref == 0:
+            cat_tier = 0
+        elif cat_set:
             if node_cat_lower in cat_set:
                 cat_tier = 0
-            elif any(c in ev_lowers for c in cat_set):
+            elif any(ev_lowers.get(c, 0) >= 2 for c in cat_set):
                 cat_tier = 1
             elif node_cat_lower in compatible_set:
                 cat_tier = 2
-            elif is_pref == 0:
-                cat_tier = 0
             else:
                 continue
-        elif is_pref == 0:
-            cat_tier = 0
         else:
             continue
 
@@ -787,7 +793,7 @@ def verify_goal_predicates(executor: EpisodeExecutor) -> GoalVerificationReport:
     # Infer structural task requirements purely from the natural-language goal
     is_examine = bool(
         re.search(
-            r"\b(look at|examine|inspect|read|under the light|in the light|by the light|light of|turning on a lamp|turn on the lamp|lamp turned on)\b",
+            r"\b(look at|examine|inspect|read|under .*light|in .*light|by .*light|light of|turn(?:ing)? on (?:a |the )?(?:[\w-]+\s+){0,2}lamp|lamp turned on|lit lamp)\b",
             low,
         )
     )
@@ -939,7 +945,8 @@ def verify_goal_predicates(executor: EpisodeExecutor) -> GoalVerificationReport:
         placed_objects = [
             node
             for node in memory.objects.values()
-            if node.parent_receptacle_id is not None
+            if node.action_states.get("placed_by_agent") is not None
+            and node.action_states["placed_by_agent"].value
             and node.object_id != memory.held_object_id
         ]
         # Count distinct placed objects (excluding knives that were simply unloaded)
@@ -957,7 +964,7 @@ def verify_goal_predicates(executor: EpisodeExecutor) -> GoalVerificationReport:
                 f"two_objects_required_but_only_{len(non_knife_placed)}_placed"
             )
             hints.append(
-                f"The goal requires placing TWO objects (`two` / `both` / `pair`), but only {len(non_knife_placed)} object(s) have been placed into/onto a receptacle so far ({[f'#{n.object_id}:{n.category}' for n in non_knife_placed]}). Find and place the second instance before finishing!"
+                f"The goal requires placing TWO objects (`two` / `both` / `pair`), but only {len(non_knife_placed)} object(s) have been placed by `PutObject` so far ({[f'#{n.object_id}:{n.category}' for n in non_knife_placed]}). Find and place the second instance before finishing!"
             )
 
     return GoalVerificationReport(

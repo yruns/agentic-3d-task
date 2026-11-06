@@ -702,25 +702,34 @@ class IncrementalSceneMemory:
                     ].contained_object_ids.add(child.object_id)
 
     def _infer_spatial_containment(self, child: ObjectMemory, frame_id: int) -> None:
-        """Bind newly observed small objects inside open receptacles to their container."""
+        """Bind newly observed small objects inside enclosed appliances/basins to their container."""
         if not child.geometry_valid:
             return
         c_xyz = child.centroid
+        enclosed_cats = {
+            "Fridge",
+            "Microwave",
+            "Cabinet",
+            "Drawer",
+            "Safe",
+            "SinkBasin",
+            "BathtubBasin",
+        }
         best_recep: ObjectMemory | None = None
-        best_dist = 0.65
+        best_dist = 0.60
         for node in self.objects.values():
             if (
                 node.object_id == child.object_id
-                or node.category not in _STATIONARY_RECEPTACLE_CATEGORIES
+                or node.category not in enclosed_cats
                 or not node.geometry_valid
             ):
                 continue
             b = node.bounds
             in_xy = (
-                b[0, 0] - 0.12 <= c_xyz[0] <= b[1, 0] + 0.12
-                and b[0, 1] - 0.12 <= c_xyz[1] <= b[1, 1] + 0.12
+                b[0, 0] - 0.10 <= c_xyz[0] <= b[1, 0] + 0.10
+                and b[0, 1] - 0.10 <= c_xyz[1] <= b[1, 1] + 0.10
             )
-            in_z = b[0, 2] - 0.10 <= c_xyz[2] <= b[1, 2] + 0.35
+            in_z = b[0, 2] - 0.08 <= c_xyz[2] <= b[1, 2] + 0.25
             if not (in_xy and in_z):
                 continue
             dist = float(np.linalg.norm(node.centroid - c_xyz))
@@ -953,17 +962,10 @@ class IncrementalSceneMemory:
 
         eff_mask = self.current_detection_masks[chosen_idx]
         raw_mask = self.current_raw_detection_masks.get(chosen_idx, eff_mask)
-        if action in {"OpenObject", "CloseObject"} and int(raw_mask.sum()) > int(
-            eff_mask.sum()
-        ):
+        if action in {"OpenObject", "CloseObject", "PutObject"} and int(
+            raw_mask.sum()
+        ) > int(eff_mask.sum()):
             return chosen_idx, raw_mask, "current_raw_sam_mask"
-        if action == "PutObject":
-            # Prefer child-subtracted effective mask when it still has usable area (>= 150 px)
-            # so AI2-THOR places onto empty receptacle surface rather than colliding with items on it.
-            if int(eff_mask.sum()) >= 150:
-                return chosen_idx, eff_mask, mask_source
-            if int(raw_mask.sum()) > int(eff_mask.sum()):
-                return chosen_idx, raw_mask, "current_raw_sam_mask"
         return chosen_idx, eff_mask, mask_source
 
     def record_interaction(
@@ -993,6 +995,7 @@ class IncrementalSceneMemory:
                     object_id
                 )
             picked.parent_receptacle_id = None
+            picked.action_states.pop("placed_by_agent", None)
             self.held_object_id = object_id
         elif action == "PutObject":
             if self.held_object_id is not None:
@@ -1010,6 +1013,9 @@ class IncrementalSceneMemory:
                     else None
                 )
                 held.parent_receptacle_id = object_id
+                held.action_states["placed_by_agent"] = ActionState(
+                    True, self._latest_frame_id
+                )
                 if object_id is not None and object_id in self.objects:
                     self.objects[object_id].contained_object_ids.add(held.object_id)
                 affected.add(held.object_id)

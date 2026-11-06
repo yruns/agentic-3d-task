@@ -742,23 +742,44 @@ class MacroActionController:
         ):
             det_cat = self.executor._predicted.detections[det_idx].category
 
+        node = memory.objects[resolved_id]
+        if (
+            sim_action == "PutObject"
+            and node.category in {"Fridge", "Microwave", "Safe"}
+            and not (
+                node.action_states.get("open") is not None
+                and node.action_states["open"].value
+            )
+            and self.executor.can_step()
+        ):
+            if (
+                memory.select_interaction_mask(resolved_id, action="OpenObject")
+                is not None
+            ):
+                open_ok = self.executor.step_primitive(
+                    "OpenObject", object_id=resolved_id
+                )
+                steps += 1
+                if open_ok:
+                    self.executor.completed_macros.add("OpenObject")
+                    resolved_id = memory.resolve_object_id(resolved_id)
+                else:
+                    failed += 1
+
+        if not self.executor.can_step():
+            return (
+                steps,
+                failed,
+                False,
+                "Action or failure budget exhausted before interaction.",
+            )
+
         ok = self.executor.step_primitive(sim_action, object_id=resolved_id)
         steps += 1
         if ok:
             self.executor.completed_macros.add(sim_action)
             resolved_id = memory.resolve_object_id(resolved_id)
             node = memory.objects[resolved_id]
-            if (
-                sim_action == "OpenObject"
-                and node.category in _OPENABLE_CATEGORIES
-                and self.executor.can_step()
-                and self.executor.current_observation.horizon_degrees < 30.0 - 1e-3
-            ):
-                p_steps, p_fail = self._adjust_pitch_to(30.0)
-                steps += p_steps
-                failed += p_fail
-                resolved_id = memory.resolve_object_id(resolved_id)
-                node = memory.objects[resolved_id]
             top_ev = dict(
                 sorted(node.category_evidence.items(), key=lambda kv: (-kv[1], kv[0]))[
                     :3
