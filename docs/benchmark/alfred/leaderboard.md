@@ -11,6 +11,9 @@ v6 rows remain partial snapshots and are not matched full-cohort comparisons.
 | [v16 full seen](v16_full_valid1641_20261107.md) | Official `valid_seen` (full 820) | H; simulator GT depth + GroundingDINO/SAM/CLIP, online 3D memory/FMM + macro tools | 820/820 | **30.37% / 36.94% / 15.99% / 23.00%** |
 | [v16 full unseen](v16_full_valid1641_20261107.md) | Official `valid_unseen` (full 821) | Same setting | 821/821 | **18.64% / 30.47% / 9.38% / 17.54%** |
 | [v16 full combined](v16_full_valid1641_20261107.md) | Official `valid_full1641` (1,641) | Same setting | 1641/1641 | **24.50% / 33.70% / 12.83% / 20.39%** |
+| [v16 matched strat150 seen](valid_strat150_protocol_20261108.md) | Frozen `valid_strat150` seen75 | Same setting | 75/75 | **30.67% / 36.98% / 16.04% / 22.99%** |
+| [v16 matched strat150 unseen](valid_strat150_protocol_20261108.md) | Frozen `valid_strat150` unseen75 | Same setting | 75/75 | **18.67% / 30.26% / 9.38% / 17.56%** |
+| [v16 matched strat150 combined](valid_strat150_protocol_20261108.md) | Frozen `valid_strat150` (150) | Same setting | 150/150 | **24.67% / 33.59% / 12.84% / 20.38%** |
 | [v16 matched pilot50 seen](v16_full_valid1641_20261107.md) | Frozen pilot seen25 | Same setting | 25/25 | **44.00% / 42.86% / 30.62% / 35.42%** |
 | [v16 matched pilot50 unseen](v16_full_valid1641_20261107.md) | Frozen pilot unseen25 | Same setting | 25/25 | **20.00% / 28.57% / 8.93% / 15.40%** |
 | [v16 matched pilot50 combined](v16_full_valid1641_20261107.md) | Frozen pilot50 | Same setting | 50/50 | **32.00% / 35.71% / 20.28% / 25.87%** |

@@ -4,7 +4,7 @@ This track evaluates incremental scene memory during interactive ALFRED task
 execution. [Implementation and setup](../../codex_agent/alfred.md) describe the
 actor's observations and external dependencies.
 
-**Latest full-validation run (`1,641 / 1,641`): SR 24.50% (`402 / 1,641`), GC 33.70% (`1,425 / 4,229`), `valid_seen` SR 30.37% (`249 / 820`) / GC 36.94%, and `valid_unseen` SR 18.64% (`153 / 821`) / GC 30.47%.** On the matched `pilot50` subset (`50/50`), `v16` reaches **SR 32.00% (`16/50`), `valid_seen` SR 44.00% (`11/25`), `valid_unseen` SR 20.00% (`5/25`)** (`3.2×` over `v8`). See [v16 full validation results and bottleneck analysis](v16_full_valid1641_20261107.md).
+**Latest full-validation run (`1,641 / 1,641`): SR 24.50% (`402 / 1,641`), GC 33.70% (`1,425 / 4,229`), `valid_seen` SR 30.37% (`249 / 820`) / GC 36.94%, and `valid_unseen` SR 18.64% (`153 / 821`) / GC 30.47%.** On the canonical 150-episode stratified iteration subset [`valid_strat150`](valid_strat150_protocol_20261108.md) (`75 seen + 75 unseen`), `v16` scores **SR 24.67% (`37/150`), GC 33.59%, PLW-SR 12.84%, PLW-GC 20.38% (`valid_seen` SR 30.67% / GC 36.98%; `valid_unseen` SR 18.67% / GC 30.26%)**, matching full validation within `< 0.30 pp`. On the historical `pilot50` subset (`50/50`), `v16` reaches **SR 32.00% (`16/50`), `valid_seen` SR 44.00% (`11/25`), `valid_unseen` SR 20.00% (`5/25`)** (`3.2×` over `v8`). See [v16 full validation results and bottleneck analysis](v16_full_valid1641_20261107.md).
 
 **Earlier online-mapping prefix5 (`v15`): 5/5 scores, SR 3/5 (60.00%) and GC 7/12 (58.33%).** See [v15 root-cause fixes](v15_root_cause_fixes_prefix5_20261106.md) and [v10 results and two replays](v10_prefix5_20261105.md).
 The remaining planned tasks in pilot15 were cancelled; pilot15 is not a completed cohort.
@@ -42,6 +42,19 @@ this project's ALFRED comparisons, **not an official ALFRED subset**, and its
 balanced task distribution is not the full-split distribution. Preserve it for
 future comparisons; do not resample after seeing results. Report seen/unseen
 separately. Any combined pilot number is descriptive, not an official headline.
+
+For **rapid architectural iteration, policy-program optimization, and thesis
+ablations**, the canonical high-fidelity fold is **`folds/valid_strat150.json`**
+(**150 unique physical trajectories: `75 valid_seen + 75 valid_unseen`**; see
+[valid_strat150 protocol and verification](valid_strat150_protocol_20261108.md)).
+Unlike `pilot50.json` (which had uniform task-type quotas and a `+7.50 pp`
+optimistic bias on `v16`), `valid_strat150.json` uses exact Hamilton proportional
+allocation across all 14 `(split, task_type)` cells and aligns room distributions
+(`Kitchen`, `LivingRoom`, `Bedroom`, `Bathroom`), slicing requirements (`*Sliced*`),
+gold action lengths, and `(v16, v17)` empirical transition regimes so that all
+headline metrics (`SR`, `GC`, `PLW-SR`, `PLW-GC`) match the full 1,641-episode
+validation benchmark within `< 0.35 pp` at `10.9×` lower evaluation cost. Full
+milestone releases are subsequently certified on `folds/valid_full1641.json`.
 
 Default input is H (high-level goal), with H+L recorded separately. The initial
 research setting uses predicted depth and instance masks, motion odometry,
@@ -83,6 +96,7 @@ every episode attempt without overwriting old run IDs.
 
 | Record | Date | Scope | Result |
 |---|---|---|---|
+| [valid_strat150 canonical iteration fold](valid_strat150_protocol_20261108.md) | 2026-11-08 | Frozen 150-trajectory stratified fold (`75 valid_seen + 75 valid_unseen`, `folds/valid_strat150.json`) for rapid iteration and ablation | **Matches `valid_full1641` within `< 0.35 pp` across `v16` (`24.67%` vs `24.50%` SR; `33.59%` vs `33.70%` GC) and `v17` (`25.33%` vs `25.67%` SR; `36.43%` vs `36.49%` GC) at `10.9×` speedup** |
 | [v16 full validation 1641](v16_full_valid1641_20261107.md) | 2026-11-07 | Full official `oct21` validation (`820 valid_seen + 821 valid_unseen = 1,641`), resilient gateway pre-commit lease rejection + retries, 11-slot multi-GPU perception server, and 84-worker evaluation (`gemini-3.8-flash`) | **`1,641/1,641` scored (`0` errors): Overall SR 24.50% (`402/1,641`), GC 33.70% (`1,425/4,229`), PLW-SR 12.83%, PLW-GC 20.39%; `valid_seen` SR 30.37% (`249/820`), GC 36.94%; `valid_unseen` SR 18.64% (`153/821`), GC 30.47%; matched `pilot50` SR 32.00% (`16/50`)** |
 | [v15 root-cause fixes prefix5](v15_root_cause_fixes_prefix5_20261106.md) | 2026-11-06 | Held-object self-occlusion suppression, category-compatible spatial fallback, multi-pitch auto-framing, container geometry preservation, and CLI/SDK budget decoupling on `prefix5` | **5/5 scored, SR 3/5 (60.00%, `i00`, `i01`, `i04` solved), GC 7/12 (58.33%), PLW-SR 44.7%** |
 | [v14 simulator GT depth RGB-D prefix5](v14_simulator_gt_depth_prefix5_20261105.md) | 2026-11-05 | `depth_source = "simulator_gt"` RGB-D mode (`0.34s/f`), `6cm` 3D association on `prefix5` (`gemini-3.8-flash`) | **5/5 scored, SR 1/5 (20.00%, `i01` solved in 30 steps), GC 3/12 (25.00%)**; 3D XY error **0.19–0.24m**, Free/Occupied ratio **+183% (`0.66` $\rightarrow$ `1.87`)** |

@@ -198,6 +198,38 @@ association, and CPU raycasting (while AI2-THOR simulation itself takes
 
 ---
 
+## Canonical `valid_strat150` iteration & ablation fold (`75 seen + 75 unseen`)
+
+All rapid architectural iterations, policy-program refinements, and thesis
+ablations run on the frozen 150-trajectory stratified subset
+[`docs/benchmark/alfred/folds/valid_strat150.json`](../benchmark/alfred/valid_strat150_protocol_20261108.md)
+(`75 valid_seen + 75 valid_unseen`, matching full-validation SR/GC/PLW within
+`< 0.35 pp` at `10.9×` lower evaluation cost):
+
+```bash
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate agentic3d
+curl -fsS http://127.0.0.1:8787/health
+curl -fsS http://127.0.0.1:8791/health
+export XAUTHORITY=/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/Xauthority
+NO_PROXY="127.0.0.1,localhost,::1${NO_PROXY:+,$NO_PROXY}" \
+no_proxy="127.0.0.1,localhost,::1${no_proxy:+,$no_proxy}" \
+python -m codex_agent.cli.run_alfred \
+  --data-root /home/ysh/Datasets/FILM/alfred/data/json_2.1.0 \
+  --splits /home/ysh/Datasets/FILM/alfred/data/splits/oct21.json \
+  --fold docs/benchmark/alfred/folds/valid_strat150.json \
+  --output-dir outputs/alfred/strat150_<date>_<attempt> \
+  --simulator-python /home/ysh/codebase/FILM/.venv/bin/python \
+  --alfred-root /home/ysh/Datasets/FILM/alfred \
+  --scene-config configs/alfred/scene.toml \
+  --x-display 5 \
+  --perception-server http://127.0.0.1:8791 \
+  --model gemini-3.8-flash \
+  --reasoning-effort provider-default \
+  --max-actions 250 --max-failures 10 --max-decisions 35 \
+  --continue-on-error --resume
+```
+
 ## Frozen pilot15 invocation
 
 ```bash
