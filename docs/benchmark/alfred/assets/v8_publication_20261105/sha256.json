@@ -1,8 +1,0 @@
-{
-  "archive_safety_checks.json": "885ff3456093d427c96023bd04590fc1be38bdaa519c9be5eb4b7bf5fce67f31",
-  "checks.json": "dfd9db7e06e8bc7b6a2e75fe384b877bb17ba27856a3ad8e57ba70e79e7a9b6a",
-  "final_checks.json": "62f23c52185f8d7f48095cf9df1270076c6bdccd8bb150729671f897092e1789",
-  "mkdocs_final.log": "1dabe6a4b1820e0688de923d691de9334aa3784855e806eee5733614aa1816f0",
-  "mkdocs_initial.log": "37237c562f5c08106a350077fc1aab423115571053b1659eef9050ac3bf0d942",
-  "verify_publication.py": "bc376d4bade01c38dfdb4ad3af8066dca89834b500091211311320081630de22"
-}

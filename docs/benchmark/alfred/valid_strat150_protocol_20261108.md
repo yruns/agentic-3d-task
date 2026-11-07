@@ -8,14 +8,14 @@
 
 ---
 
-## 1. Motivation: Why `pilot50` Was Insufficient and Why `valid_strat150` Is the Core Iteration Fold
+## 1. Motivation: Why `valid_strat150` Is the Core Iteration Fold
 
 Evaluating all `1,641` official validation episodes (`valid_full1641.json`) takes `~4–6 hours` even under 36–84 worker concurrency and consumes `~1.5B` input tokens per run. While mandatory for final milestone certification, a `1,641`-episode loop is too slow for rapid iteration on policy-program synthesis (`run_policy_program`), visual disambiguation, and macro-controller refinements.
 
-Conversely, the earlier `pilot50.json` (`25 seen + 25 unseen`) exhibited a **`+7.50 pp` optimistic bias** on `v16` (**`32.00%` SR on `pilot50` vs. `24.50%` SR on `valid_full1641`**, and **`44.00%` vs. `30.37%` on `valid_seen`**) due to three structural limitations:
-1. **Uniform task-type quotas (`1/7 ≈ 14.3%`)** instead of the true non-uniform task-type proportions in `oct21.json` (where e.g. `look_at_obj_in_light` is `11.5%` of `valid_seen` but `21.1%` of `valid_unseen`, and `pick_two_obj_and_place` is `15.1%` of `valid_seen` but `9.9%` of `valid_unseen`).
-2. **Uncontrolled secondary structural covariates**: room types (`Kitchen` / `LivingRoom` / `Bedroom` / `Bathroom`), slicing subgoal requirements (`*Sliced*`), and expert trajectory lengths (`expert_actions`) were not stratified.
-3. **High quantization noise**: with only `3–4` episodes per `(split, task_type)` cell, a single episode flip shifted cell accuracy by `25%–33%`.
+Naive small subsets that use uniform task-type quotas (`1/7 ≈ 14.3%`) suffer from severe representational drift due to three structural factors:
+1. **Non-uniform task-type proportions in `oct21.json`** (where e.g. `look_at_obj_in_light` is `11.5%` of `valid_seen` but `21.1%` of `valid_unseen`, and `pick_two_obj_and_place` is `15.1%` of `valid_seen` but `9.9%` of `valid_unseen`).
+2. **Uncontrolled secondary structural covariates**: room types (`Kitchen` / `LivingRoom` / `Bedroom` / `Bathroom`), slicing subgoal requirements (`*Sliced*`), and expert trajectory lengths (`expert_actions`).
+3. **High quantization noise** when each `(split, task_type)` cell has too few samples.
 
 To enable fast, statistically faithful hillclimbing and thesis ablations, `docs/benchmark/alfred/folds/valid_strat150.json` (**150 episodes: `75 valid_seen` + `75 valid_unseen`**) is constructed via **six-dimensional structural stratification and dual-run (`v16` & `v17`) empirical distribution matching**.
 

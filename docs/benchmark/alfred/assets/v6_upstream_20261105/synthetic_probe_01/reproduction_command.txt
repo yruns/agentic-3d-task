@@ -1,1 +1,0 @@
-/home/ysh/miniconda3/envs/agentic3d/bin/python tmp/alfred_setup/upstream_recovery_probe.py --output tmp/alfred_setup/upstream_recovery_probe_01

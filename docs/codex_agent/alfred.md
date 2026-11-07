@@ -26,8 +26,7 @@ ALFRED uses our OpenEQA object–view mapping method incrementally inside a
    `RevisionWatermark`.
 
 The implementation replaces the earlier FILM perception and per-step reactive
-JSON polling loop. Historical code/configuration and 50 official scores remain
-archived in [v8](../benchmark/alfred/v8_pilot50_complete_20261105.md) and
+JSON polling loop. Diagnostic `prefix5` traces remain archived in
 [v10](../benchmark/alfred/v10_prefix5_20261105.md).
 
 ---

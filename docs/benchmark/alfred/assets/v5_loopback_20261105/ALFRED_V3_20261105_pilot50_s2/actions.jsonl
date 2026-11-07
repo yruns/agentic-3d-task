@@ -1,7 +1,0 @@
-{"index": 1, "action": "RotateRight", "object_id": null, "source_frame": 0, "result_frame": 1, "success": true, "error": ""}
-{"index": 2, "action": "LookUp", "object_id": null, "source_frame": 1, "result_frame": 2, "success": true, "error": ""}
-{"index": 3, "action": "OpenObject", "object_id": 32, "source_frame": 2, "result_frame": 3, "success": false, "error": "object not found: object"}
-{"index": 4, "action": "LookUp", "object_id": null, "source_frame": 3, "result_frame": 4, "success": true, "error": ""}
-{"index": 5, "action": "OpenObject", "object_id": 36, "source_frame": 4, "result_frame": 5, "success": false, "error": "object not found: object"}
-{"index": 6, "action": "RotateLeft", "object_id": null, "source_frame": 5, "result_frame": 6, "success": true, "error": ""}
-{"index": 7, "action": "RotateRight", "object_id": null, "source_frame": 6, "result_frame": 7, "success": true, "error": ""}

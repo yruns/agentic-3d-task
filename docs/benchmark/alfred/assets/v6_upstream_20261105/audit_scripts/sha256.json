@@ -1,9 +1,0 @@
-{
-  "source_report": "/home/ysh/codebase/agentic-3d-task/tmp/alfred_setup/pilot41_actor_boundary.json",
-  "source_report_sha256": "9acce6256adf0a9d8f200ded115928d6b36f2a6f078ef2c331658c6f9a2fa115",
-  "scripts": {
-    "audit_pilot_boundary.py": "261f7013da3a783160b90f8615a78e837ae94a3f9eccde7f9b7ae426c90b8a90",
-    "audit_recovered_pilot_boundary.py": "3227f7ee7fef53d2cbcaa934c8aa40ebd4663bcce7d5406f813fed5e3bb31cad",
-    "audit_partial_pilot_boundary.py": "68c0bfcaedd3037fff001ebd703e5d1e7b08bd07a87deef1bf0dd490020a1711"
-  }
-}

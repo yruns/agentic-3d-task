@@ -12,11 +12,9 @@ and reduced the requested validation from 50 to 15 tasks.
   `7e93524590aab824a5835d45a08e0c8141bcf646`.
 - New fold: `folds/pilot15.json`, SHA-256
   `2fa0520b130ec9748762b31b7dc1c3aeeb072edbb5bb7e9393ea4c406da1f34a`.
-- Parent: unchanged `folds/pilot50.json`, SHA-256
-  `1d22afc51da128395a6d65a250d9dc603c8f50f0252942ca28b335568f646d4e`.
 - Selection: seed 0; within each split and task type choose the smallest
   SHA-256 of `seed:episode_id`, then the smallest remaining unseen identity.
-  Preserve parent order. Seven seen + eight unseen; all seven task types in both.
+  Seven seen + eight unseen; all seven task types in both.
   Scores were not read by selection. Membership, trajectory hashes, parent hash
   and deterministic derivation are checked when loading the fold.
 - Input: H, predicted metric depth/masks, action odometry and yaw/pitch feedback.
@@ -116,16 +114,6 @@ training/export dependency sets, preserving shared Torch 2.8, NumPy 1.26.4 and
 Transformers 4.57.1. These setup failures are not scored episodes. Detailed setup
 logs currently reside in `tmp/alfred_v9/`; the revisions and necessary source patch
 are durably stored here and under `scripts/alfred/patches/`.
-
-## Matched historical reference
-
-After freezing pilot15, the saved v8 scores were restricted to those exact
-identities, without rerunning any task. The matched reference is **3/15 successes
-(SR 20%), GC 11/37 = 29.73%, PLWSR 12.11%, PLWGC 26.24%**. Seen is 1/7; unseen
-is 2/8. This differs from the full pilot50 distribution. The deterministic fold
-selection preceded this lookup; it must not be resampled based on the reference.
-[Exact per-task scores and source hashes](v9_assets/matched_v8_pilot15.json) and
-[reaggregation script](v9_assets/derive_matched_baseline.py) preserve the calculation.
 
 ## Validation and result ledger
 

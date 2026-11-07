@@ -10,8 +10,7 @@ and other assets stay beside the records that cite them.
   task execution; full `valid_full1641` (`1,641/1,641`, SR 24.50%, `valid_seen`
   30.37%, `valid_unseen` 18.64%), canonical 150-trajectory iteration fold
   [`valid_strat150`](alfred/valid_strat150_protocol_20261108.md) (SR 24.67%,
-  matching full validation within `< 0.35 pp`), matched `pilot50` (SR 32.00%,
-  `16/50`), and independent terminal audits.
+  matching full validation within `< 0.35 pp`), and independent terminal audits.
 - [NR3D Timeline](nr3d/README.md): visual grounding evaluations, stage-1
   keyframe coverage, tool-loop runs, and reasoning-path ablations.
 - [OpenEQA Timeline](openeqa/README.md): embodied QA evaluations, no-frame
