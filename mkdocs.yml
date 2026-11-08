@@ -71,6 +71,7 @@ nav:
           - v14 Simulator GT Depth Prefix5: benchmark/alfred/v14_simulator_gt_depth_prefix5_20261105.md
           - v15 Root-Cause Fixes Prefix5: benchmark/alfred/v15_root_cause_fixes_prefix5_20261106.md
           - v16 Full Validation 1641 and Bottleneck Analysis: benchmark/alfred/v16_full_valid1641_20261107.md
+          - v17 Guarded Subgoals Full Validation 1641: benchmark/alfred/v17_guarded_subgoals_valid1641_20261108.md
           - valid_strat150 Canonical Iteration Fold Protocol: benchmark/alfred/valid_strat150_protocol_20261108.md
       - Adapter Protocol Diagnostics:
           - Timeline: benchmark/adapter/README.md

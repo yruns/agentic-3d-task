@@ -47,23 +47,23 @@ To enable fast, statistically faithful hillclimbing and thesis ablations, `docs/
 
 ### 3.1 Split-Level & Overall Headline Metrics Alignment
 
-All headline metrics on `valid_strat150` match the full `1,641`-episode validation benchmark within **`0.00 pp – 0.34 pp`** (at the exact integer quantization limit of `1/150 = 0.67 pp` and `1/75 = 1.33 pp`):
+All headline metrics on `valid_strat150` match the full `1,641`-episode validation benchmark within **`0.00 pp – 0.89 pp`** (at the exact integer quantization limit of `1/150 = 0.67 pp` and `1/75 = 1.33 pp`):
 
 | Split / Metric | **`valid_strat150` (`150` eps)** | **`valid_full1641` (`1,641` eps)** | **Absolute Deviation ($\Delta$)** |
 |---|---:|---:|---:|
 | **Overall `v16` SR** | **24.67%** (`37 / 150`) | **24.50%** (`402 / 1,641`) | **`+0.17 pp`** |
 | **Overall `v16` GC** | **33.59%** (`129 / 384`) | **33.70%** (`1,425 / 4,229`) | **`-0.11 pp`** |
 | **Overall `v16` PLW-SR / PLW-GC** | **12.84% / 20.38%** | **12.83% / 20.39%** | **`+0.01 pp / -0.01 pp`** |
-| **Overall `v17` SR** | **25.33%** (`38 / 150`) | **25.67%** | **`-0.34 pp`** |
-| **Overall `v17` GC** | **36.43%** | **36.49%** | **`-0.06 pp`** |
-| **Overall `v17` PLW-SR / PLW-GC** | **13.37% / 22.62%** | **13.60% / 22.52%** | **`-0.23 pp / +0.10 pp`** |
+| **Overall `v17` SR** | **25.33%** (`38 / 150`) | **24.80%** (`407 / 1,641`) | **`+0.53 pp`** |
+| **Overall `v17` GC** | **36.43%** (`141 / 387`) | **35.54%** (`1,503 / 4,229`) | **`+0.89 pp`** |
+| **Overall `v17` PLW-SR / PLW-GC** | **13.37% / 22.62%** | **12.98% / 21.72%** | **`+0.39 pp / +0.90 pp`** |
 | **`valid_seen` `v16` SR / GC** | **30.67%** (`23 / 75`) / **36.98%** (`71 / 192`) | **30.37%** (`249 / 820`) / **36.94%** (`779 / 2,109`) | **`+0.30 pp / +0.04 pp`** |
 | **`valid_seen` `v16` PLW-SR / PLW-GC** | **16.04% / 22.99%** | **15.99% / 23.00%** | **`+0.05 pp / -0.01 pp`** |
-| **`valid_seen` `v17` SR / GC** | **28.00%** (`21 / 75`) / **36.98%** | **28.15% / 37.15%** | **`-0.15 pp / -0.17 pp`** |
+| **`valid_seen` `v17` SR / GC** | **28.00%** (`21 / 75`) / **36.98%** (`71 / 192`) | **27.32%** (`224 / 820`) / **36.32%** (`766 / 2,109`) | **`+0.68 pp / +0.66 pp`** |
 | **`valid_unseen` `v16` SR / GC** | **18.67%** (`14 / 75`) / **30.26%** (`59 / 195`) | **18.64%** (`153 / 821`) / **30.47%** (`646 / 2,120`) | **`+0.03 pp / -0.21 pp`** |
 | **`valid_unseen` `v16` PLW-SR / PLW-GC** | **9.38% / 17.56%** | **9.38% / 17.54%** | **`0.00 pp / +0.02 pp`** |
-| **`valid_unseen` `v17` SR / GC** | **22.67%** (`17 / 75`) / **35.90%** | **22.99% / 35.78%** | **`-0.32 pp / +0.12 pp`** |
-| **`valid_unseen` `v17` PLW-SR / PLW-GC** | **11.44% / 19.61%** | **11.65% / 19.60%** | **`-0.21 pp / +0.01 pp`** |
+| **`valid_unseen` `v17` SR / GC** | **22.67%** (`17 / 75`) / **35.90%** (`70 / 195`) | **22.29%** (`183 / 821`) / **34.76%** (`737 / 2,120`) | **`+0.38 pp / +1.14 pp`** |
+| **`valid_unseen` `v17` PLW-SR / PLW-GC** | **11.44% / 19.61%** | **10.95% / 18.91%** | **`+0.49 pp / +0.70 pp`** |
 
 ---
 
@@ -85,20 +85,20 @@ All headline metrics on `valid_strat150` match the full `1,641`-episode validati
 
 | Split | Task Type (`task_type`) | Quota (`strat150` % vs. `Full` %) | `v16` SR (`strat150` vs. `Full`) | `v16` GC (`strat150` vs. `Full`) | `v17` SR (`strat150` vs. `Full`) | `v17` GC (`strat150` vs. `Full`) |
 |---|---|---:|---:|---:|---:|---:|
-| `valid_seen` | `look_at_obj_in_light` | `9` (`12.0%` vs `11.5%`) | `66.7%` vs `61.7%` | `72.2%` vs `71.8%` | `55.6%` vs `53.3%` | `72.2%` vs `71.2%` |
-| `valid_seen` | `pick_and_place_simple` | `13` (`17.3%` vs `17.3%`) | `46.2%` vs `43.7%` | `46.2%` vs `43.7%` | `46.2%` vs `47.4%` | `46.2%` vs `47.4%` |
-| `valid_seen` | `pick_and_place_with_movable_recep` | `10` (`13.3%` vs `14.0%`) | `10.0%` vs `10.4%` | `21.2%` vs `21.3%` | `10.0%` vs `6.8%` | `18.2%` vs `18.4%` |
-| `valid_seen` | `pick_clean_then_place_in_recep` | `10` (`13.3%` vs `13.7%`) | `10.0%` vs `19.6%` | `32.3%` vs `33.0%` | `30.0%` vs `25.2%` | `41.9%` vs `40.7%` |
-| `valid_seen` | `pick_cool_then_place_in_recep` | `12` (`16.0%` vs `15.4%`) | `16.7%` vs `19.0%` | `29.3%` vs `29.0%` | `8.3%` vs `9.6%` | `24.4%` vs `24.1%` |
-| `valid_seen` | `pick_heat_then_place_in_recep` | `10` (`13.3%` vs `13.0%`) | `30.0%` vs `27.1%` | `38.2%` vs `39.1%` | `10.0%` vs `13.5%` | `35.3%` vs `34.8%` |
-| `valid_seen` | `pick_two_obj_and_place` | `11` (`14.7%` vs `15.1%`) | `36.4%` vs `33.9%` | `45.5%` vs `46.2%` | `36.4%` vs `38.3%` | `50.0%` vs `50.8%` |
-| `valid_unseen` | `look_at_obj_in_light` | `16` (`21.3%` vs `21.1%`) | `43.8%` vs `42.8%` | `62.5%` vs `61.8%` | `43.8%` vs `42.1%` | `65.6%` vs `64.5%` |
-| `valid_unseen` | `pick_and_place_simple` | `9` (`12.0%` vs `12.2%`) | `22.2%` vs `26.0%` | `22.2%` vs `26.0%` | `33.3%` vs `33.7%` | `33.3%` vs `33.7%` |
-| `valid_unseen` | `pick_and_place_with_movable_recep` | `10` (`13.3%` vs `13.3%`) | `0.0%` vs `1.8%` | `6.7%` vs `8.0%` | `10.0%` vs `11.3%` | `20.0%` vs `18.6%` |
-| `valid_unseen` | `pick_clean_then_place_in_recep` | `10` (`13.3%` vs `13.8%`) | `20.0%` vs `15.9%` | `35.5%` vs `35.6%` | `20.0%` vs `20.6%` | `41.9%` vs `41.6%` |
-| `valid_unseen` | `pick_cool_then_place_in_recep` | `10` (`13.3%` vs `13.3%`) | `10.0%` vs `7.3%` | `28.1%` vs `26.3%` | `10.0%` vs `8.8%` | `25.0%` vs `25.5%` |
-| `valid_unseen` | `pick_heat_then_place_in_recep` | `13` (`17.3%` vs `16.6%`) | `7.7%` vs `9.6%` | `23.3%` vs `24.3%` | `15.4%` vs `13.4%` | `30.2%` vs `29.5%` |
-| `valid_unseen` | `pick_two_obj_and_place` | `7` (`9.3%` vs `9.9%`) | `14.3%` vs `14.8%` | `27.8%` vs `27.6%` | `14.3%` vs `20.5%` | `33.3%` vs `34.9%` |
+| `valid_seen` | `look_at_obj_in_light` | `9` (`12.0%` vs `11.5%`) | `66.7%` vs `61.7%` | `72.2%` vs `71.8%` | `55.6%` vs `52.1%` | `72.2%` vs `69.7%` |
+| `valid_seen` | `pick_and_place_simple` | `13` (`17.3%` vs `17.3%`) | `46.2%` vs `43.7%` | `46.2%` vs `43.7%` | `46.2%` vs `46.5%` | `46.2%` vs `46.5%` |
+| `valid_seen` | `pick_and_place_with_movable_recep` | `10` (`13.3%` vs `14.0%`) | `10.0%` vs `10.4%` | `21.2%` vs `21.3%` | `10.0%` vs `7.0%` | `18.2%` vs `18.4%` |
+| `valid_seen` | `pick_clean_then_place_in_recep` | `10` (`13.3%` vs `13.7%`) | `10.0%` vs `19.6%` | `32.3%` vs `33.0%` | `30.0%` vs `25.0%` | `41.9%` vs `40.7%` |
+| `valid_seen` | `pick_cool_then_place_in_recep` | `12` (`16.0%` vs `15.4%`) | `16.7%` vs `19.0%` | `29.3%` vs `29.0%` | `8.3%` vs `8.7%` | `24.4%` vs `23.0%` |
+| `valid_seen` | `pick_heat_then_place_in_recep` | `10` (`13.3%` vs `13.0%`) | `30.0%` vs `27.1%` | `38.2%` vs `39.1%` | `10.0%` vs `13.1%` | `35.3%` vs `34.5%` |
+| `valid_seen` | `pick_two_obj_and_place` | `11` (`14.7%` vs `15.1%`) | `36.4%` vs `33.9%` | `45.5%` vs `46.2%` | `36.4%` vs `38.7%` | `50.0%` vs `51.2%` |
+| `valid_unseen` | `look_at_obj_in_light` | `16` (`21.3%` vs `21.1%`) | `43.8%` vs `42.8%` | `62.5%` vs `61.8%` | `43.8%` vs `43.4%` | `65.6%` vs `65.6%` |
+| `valid_unseen` | `pick_and_place_simple` | `9` (`12.0%` vs `12.2%`) | `22.2%` vs `26.0%` | `22.2%` vs `26.0%` | `33.3%` vs `34.0%` | `33.3%` vs `34.0%` |
+| `valid_unseen` | `pick_and_place_with_movable_recep` | `10` (`13.3%` vs `13.3%`) | `0.0%` vs `1.8%` | `6.7%` vs `8.0%` | `10.0%` vs `10.1%` | `20.0%` vs `17.1%` |
+| `valid_unseen` | `pick_clean_then_place_in_recep` | `10` (`13.3%` vs `13.8%`) | `20.0%` vs `15.9%` | `35.5%` vs `35.6%` | `20.0%` vs `19.5%` | `41.9%` vs `39.4%` |
+| `valid_unseen` | `pick_cool_then_place_in_recep` | `10` (`13.3%` vs `13.3%`) | `10.0%` vs `7.3%` | `28.1%` vs `26.3%` | `10.0%` vs `7.3%` | `25.0%` vs `23.7%` |
+| `valid_unseen` | `pick_heat_then_place_in_recep` | `13` (`17.3%` vs `16.6%`) | `7.7%` vs `9.6%` | `23.3%` vs `24.3%` | `15.4%` vs `11.8%` | `30.2%` vs `29.6%` |
+| `valid_unseen` | `pick_two_obj_and_place` | `7` (`9.3%` vs `9.9%`) | `14.3%` vs `14.8%` | `27.8%` vs `27.6%` | `14.3%` vs `21.0%` | `33.3%` vs `33.9%` |
 
 ---
 

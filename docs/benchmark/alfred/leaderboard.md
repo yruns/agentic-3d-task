@@ -4,6 +4,12 @@ Full milestone releases are certified on `valid_full1641` (`820 valid_seen + 821
 
 | Version | Fold | Observation setting | Scored episodes | SR / GC / PLWSR / PLWGC |
 |---|---|---|---:|---|
+| [v17 full seen](v17_guarded_subgoals_valid1641_20261108.md) | Official `valid_seen` (full 820) | H; simulator GT depth + GroundingDINO/SAM/CLIP, online 3D memory/FMM + guarded subgoals & verifier | 820/820 | **27.32% / 36.32% / 14.84% / 24.31%** |
+| [v17 full unseen](v17_guarded_subgoals_valid1641_20261108.md) | Official `valid_unseen` (full 821) | Same setting | 821/821 | **22.29% / 34.76% / 10.95% / 18.91%** |
+| [v17 full combined](v17_guarded_subgoals_valid1641_20261108.md) | Official `valid_full1641` (1,641) | Same setting | 1641/1641 | **24.80% / 35.54% / 12.98% / 21.72%** |
+| [v17 matched strat150 seen](v17_guarded_subgoals_valid1641_20261108.md) | Frozen `valid_strat150` seen75 | Same setting | 75/75 | **28.00% / 36.98% / 15.14% / 25.39%** |
+| [v17 matched strat150 unseen](v17_guarded_subgoals_valid1641_20261108.md) | Frozen `valid_strat150` unseen75 | Same setting | 75/75 | **22.67% / 35.90% / 11.44% / 19.61%** |
+| [v17 matched strat150 combined](v17_guarded_subgoals_valid1641_20261108.md) | Frozen `valid_strat150` (150) | Same setting | 150/150 | **25.33% / 36.43% / 13.37% / 22.62%** |
 | [v16 full seen](v16_full_valid1641_20261107.md) | Official `valid_seen` (full 820) | H; simulator GT depth + GroundingDINO/SAM/CLIP, online 3D memory/FMM + macro tools | 820/820 | **30.37% / 36.94% / 15.99% / 23.00%** |
 | [v16 full unseen](v16_full_valid1641_20261107.md) | Official `valid_unseen` (full 821) | Same setting | 821/821 | **18.64% / 30.47% / 9.38% / 17.54%** |
 | [v16 full combined](v16_full_valid1641_20261107.md) | Official `valid_full1641` (1,641) | Same setting | 1641/1641 | **24.50% / 33.70% / 12.83% / 20.39%** |
