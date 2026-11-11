@@ -16,6 +16,9 @@ files directly while people browse the rendered MkDocs Material site.
   runtime investigations for Codex-based 3D reasoning agents.
 - [Research Reports](research/index.md): literature reviews, benchmark protocol
   audits, and research planning for indoor 3D embodied tasks.
+- [Paper Surveys](papers/index.md): cross-checked related work for the three
+  research points, including citation metadata, novelty verdicts, and high-risk
+  claims for the thesis.
 - [Benchmarks](benchmark/index.md): durable evaluation records for NR3D,
   OpenEQA, SceneFunc3D and ALFRED, including timelines and preserved artifacts.
 - [Latest Handoff](handoff_2026-07-02_1313.md): current SceneFunc3D/Codex

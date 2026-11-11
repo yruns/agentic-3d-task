@@ -46,6 +46,17 @@ nav:
       - Indoor 3D LLM Capabilities: research/indoor_3d_llm_capability_survey_20261003.md
       - Frozen-Model Indoor Navigation: research/zero_shot_indoor_llm_navigation_20261003.md
       - Indoor Long-Horizon Vision-Language Navigation: research/indoor_long_horizon_vln_survey_20261003.md
+  - Papers:
+      - Overview: papers/index.md
+      - 3.1 Scene Representation and Retrieval: papers/3_1_scene_representation_retrieval.md
+      - 3.2 Multi-task Reasoning: papers/3_2_multi_task_reasoning.md
+      - 3.3 Embodied Execution: papers/3_3_embodied_execution.md
+      - Innovation Boundary and Risks: papers/innovation_boundary_and_risks.md
+      - Raw Codex Reports:
+          - Overview: papers/raw/README.md
+          - Research Point 1: papers/raw/codex_astra_3_1.md
+          - Research Point 2: papers/raw/codex_astra_3_2.md
+          - Research Point 3: papers/raw/codex_astra_3_3.md
   - Codex Agent:
       - Overview: codex_agent/index.md
       - ALFRED Incremental Execution: codex_agent/alfred.md

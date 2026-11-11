@@ -117,3 +117,8 @@ codex_modelhub_adapter/
 configs/codex_adapter.toml
 .codex-adapter/
 **/codex_adapter.local.toml
+
+# Private reference documents (never commit/distribute)
+docs/参考--中期报告（不要外传）.docx
+docs/**/参考--*.docx
+
